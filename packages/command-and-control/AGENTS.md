@@ -91,6 +91,7 @@ The brand adapter foundation is tracked in `docs/superpowers/plans/2026-05-21-br
 The Pomelli adapter stub is tracked in `docs/superpowers/plans/2026-05-21-pomelli-adapter-stub.md`.
 The layout adapter foundation is tracked in `docs/superpowers/plans/2026-05-21-layout-adapter.md`.
 The Stitch adapter stub is tracked in `docs/superpowers/plans/2026-05-21-stitch-adapter-stub.md`.
+The update-course-materials report shape is tracked in `docs/superpowers/plans/2026-05-21-update-course-materials-result.md`.
 
 ---
 

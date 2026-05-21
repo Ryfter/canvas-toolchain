@@ -43,6 +43,7 @@ Implemented:
 - `PomelliAdapter` is a no-API stub that logs the limitation and delegates to `ManualAdapter` by default.
 - Layout adapter foundation lives in `src/layout/layout_adapter.ts`; `PasteAdapter` points direct calls to the `paste_layout` MCP workflow.
 - `StitchAdapter` is a no-API stub that logs the limitation and delegates to `PasteAdapter`.
+- `updateCourseMaterials()` now returns the shared comprehensive report shape from `@canvas-toolchain/shared-types`.
 
 Still pending:
 
@@ -83,6 +84,7 @@ Keep the local archive as the source of truth. Google Drive is only a mirror.
 | Pomelli stub | `src/brand/pomelli_adapter.ts`, `docs/superpowers/plans/2026-05-21-pomelli-adapter-stub.md` |
 | Layout adapters | `src/layout/`, `docs/superpowers/plans/2026-05-21-layout-adapter.md` |
 | Stitch stub | `src/layout/stitch_adapter.ts`, `docs/superpowers/plans/2026-05-21-stitch-adapter-stub.md` |
+| Update course materials report | `packages/shared-types/src/index.ts`, `docs/superpowers/plans/2026-05-21-update-course-materials-result.md` |
 
 ## Verification
 

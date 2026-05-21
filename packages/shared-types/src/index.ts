@@ -6,8 +6,7 @@
  * two or more packages.
  *
  * TODO (issue #2): migrate Verdict, TopicMap, BrandKit, slot vocabulary,
- * TrajectoryEntry, UpdateCourseMaterialsInput/Result here as each is
- * refactored. Start with Verdict since it's needed by both CI and C&C.
+ * TrajectoryEntry and UpdateCourseMaterialsInput here as each is refactored.
  */
 
 // ── Verdict ──────────────────────────────────────────────────────────────────
@@ -85,4 +84,59 @@ export interface BrandKit {
     rawInput: BrandKitInput;
     fetchedAt: string;
   };
+}
+
+// ── Update course materials report ───────────────────────────────────────────
+
+export interface ResourceVersionRef {
+  id: string;
+  version: string;
+}
+
+export interface PendingTemplateSelection {
+  assignmentName: string;
+  verdict: Verdict;
+  candidates: Array<{
+    templateId: string;
+    templateVersion: string;
+    reason: string;
+  }>;
+}
+
+export interface UpdateCourseMaterialsPage {
+  assignmentName: string;
+  verdict: Verdict;
+  templateUsed: ResourceVersionRef;
+  themeUsed: ResourceVersionRef;
+  promptSetUsed: ResourceVersionRef;
+  htmlPath: string;
+  status: 'clean' | 'needs-review' | 'skipped';
+  needsReviewReasons?: string[];
+  autofixApplied?: string[];
+  unresolvedImagePrompts?: Array<{
+    slot: string;
+    prompt: string;
+  }>;
+}
+
+export interface UpdateCourseMaterialsResult {
+  courseId: string;
+  semesterId: string;
+  pendingSelections?: PendingTemplateSelection[];
+  pages: UpdateCourseMaterialsPage[];
+  droppedAssignments: Array<{
+    name: string;
+    rationale: string;
+  }>;
+  export: {
+    exportPath: string;
+  };
+  summary: {
+    totalAssignments: number;
+    cleanCount: number;
+    needsReviewCount: number;
+    droppedCount: number;
+    skippedCount: number;
+  };
+  status: 'complete' | 'pending-selections';
 }
