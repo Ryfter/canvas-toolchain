@@ -35,6 +35,7 @@ Implemented:
 - `list_installed_resources` and `uninstall_resource` operate on the local registry index and support bundle cascade metadata.
 - `search_registry` searches free GitHub `index.json` registries or the configured premium registry.
 - `install_resources_from_lockfile` installs plain-text or JSON URL lockfiles with per-resource status reporting.
+- Template resource validation lives in `src/resources/template.ts` with local runtime slot validation in `src/resources/slots.ts`.
 
 Still pending:
 
@@ -68,6 +69,7 @@ Keep the local archive as the source of truth. Google Drive is only a mirror.
 | List/uninstall registry tools | `src/registry/local_registry.ts`, `docs/superpowers/plans/2026-05-21-list-uninstall-resources.md` |
 | Search registry tool | `src/registry/search_registry.ts`, `docs/superpowers/plans/2026-05-21-search-registry.md` |
 | Lockfile install tool | `src/registry/lockfile_install.ts`, `docs/superpowers/plans/2026-05-21-lockfile-install.md` |
+| Template validator | `src/resources/template.ts`, `docs/superpowers/plans/2026-05-21-template-validator.md` |
 
 ## Verification
 

@@ -43,6 +43,10 @@ src/
     install_resource.ts     ← file/github/ryfter resolver and install_resource tool implementation
     search_registry.ts      ← free GitHub index search and premium registry search
     lockfile_install.ts     ← ordered lockfile install with per-resource reporting
+  resources/
+    slots.ts                ← runtime slot vocabulary validation
+    json_schema.ts          ← lightweight JSON Schema fragment validation
+    template.ts             ← template manifest/structure/slots validator
   tools/
     setup_cc.ts             ← configure providers, models, routing
     get_cc_status.ts        ← health snapshot
@@ -69,6 +73,7 @@ The `install_resource` resolver/tool layer is tracked in `docs/superpowers/plans
 The `list_installed_resources` and `uninstall_resource` tools are tracked in `docs/superpowers/plans/2026-05-21-list-uninstall-resources.md`.
 The `search_registry` tool is tracked in `docs/superpowers/plans/2026-05-21-search-registry.md`.
 The `install_resources_from_lockfile` tool is tracked in `docs/superpowers/plans/2026-05-21-lockfile-install.md`.
+The template validator is tracked in `docs/superpowers/plans/2026-05-21-template-validator.md`.
 
 ---
 
