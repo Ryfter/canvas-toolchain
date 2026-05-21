@@ -47,6 +47,9 @@ src/
     brand_adapter.ts        ← BrandAdapter interface for kit generation providers
     manual_adapter.ts       ← professor-provided BrandKit passthrough with defaults
     pomelli_adapter.ts      ← no-API Pomelli stub delegating to ManualAdapter
+  layout/
+    layout_adapter.ts       ← LayoutAdapter interface for layout generation providers
+    paste_adapter.ts        ← no-API paste workflow pointer for direct adapter calls
   resources/
     slots.ts                ← runtime slot vocabulary validation
     json_schema.ts          ← lightweight JSON Schema fragment validation
@@ -85,6 +88,7 @@ The prompt-set validator is tracked in `docs/superpowers/plans/2026-05-21-prompt
 The bundle installer is tracked in `docs/superpowers/plans/2026-05-21-bundle-install.md`.
 The brand adapter foundation is tracked in `docs/superpowers/plans/2026-05-21-brand-adapter.md`.
 The Pomelli adapter stub is tracked in `docs/superpowers/plans/2026-05-21-pomelli-adapter-stub.md`.
+The layout adapter foundation is tracked in `docs/superpowers/plans/2026-05-21-layout-adapter.md`.
 
 ---
 
