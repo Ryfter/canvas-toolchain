@@ -48,6 +48,7 @@ src/
     json_schema.ts          ← lightweight JSON Schema fragment validation
     template.ts             ← template manifest/structure/slots validator
     theme.ts                ← theme manifest/theme.json/image prompt validator
+    prompt_set.ts           ← prompt-set manifest/prompts.json validator
   tools/
     setup_cc.ts             ← configure providers, models, routing
     get_cc_status.ts        ← health snapshot
@@ -76,6 +77,7 @@ The `search_registry` tool is tracked in `docs/superpowers/plans/2026-05-21-sear
 The `install_resources_from_lockfile` tool is tracked in `docs/superpowers/plans/2026-05-21-lockfile-install.md`.
 The template validator is tracked in `docs/superpowers/plans/2026-05-21-template-validator.md`.
 The theme validator is tracked in `docs/superpowers/plans/2026-05-21-theme-validator.md`.
+The prompt-set validator is tracked in `docs/superpowers/plans/2026-05-21-prompt-set-validator.md`.
 
 ---
 

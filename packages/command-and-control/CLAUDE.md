@@ -37,6 +37,7 @@ Implemented:
 - `install_resources_from_lockfile` installs plain-text or JSON URL lockfiles with per-resource status reporting.
 - Template resource validation lives in `src/resources/template.ts` with local runtime slot validation in `src/resources/slots.ts`.
 - Theme resource validation lives in `src/resources/theme.ts` and enforces prompt-first image metadata.
+- Prompt-set validation lives in `src/resources/prompt_set.ts` and enforces slot keys, prompt strings, placeholders, and output schemas.
 
 Still pending:
 
@@ -72,6 +73,7 @@ Keep the local archive as the source of truth. Google Drive is only a mirror.
 | Lockfile install tool | `src/registry/lockfile_install.ts`, `docs/superpowers/plans/2026-05-21-lockfile-install.md` |
 | Template validator | `src/resources/template.ts`, `docs/superpowers/plans/2026-05-21-template-validator.md` |
 | Theme validator | `src/resources/theme.ts`, `docs/superpowers/plans/2026-05-21-theme-validator.md` |
+| Prompt-set validator | `src/resources/prompt_set.ts`, `docs/superpowers/plans/2026-05-21-prompt-set-validator.md` |
 
 ## Verification
 
