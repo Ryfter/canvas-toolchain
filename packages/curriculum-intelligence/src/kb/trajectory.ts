@@ -104,6 +104,30 @@ export function appendEntry(entry: TrajectoryEntry): void {
   appendFileSync(path, JSON.stringify(entry) + '\n', 'utf-8');
 }
 
+/** Pick the same-season prior semester (e.g., Fall2025 for Fall2026 input), if any. */
+export function findSameSeasonPrior(currentSemesterId: string, allSemesters: string[]): string | null {
+  const seasonMatch = currentSemesterId.match(/^([A-Za-z]+)(\d{4})$/);
+  if (!seasonMatch) return null;
+  const [, season, yearStr] = seasonMatch;
+  const currentYear = parseInt(yearStr, 10);
+  for (let y = currentYear - 1; y >= currentYear - 10; y--) {
+    const candidate = `${season}${y}`;
+    if (allSemesters.includes(candidate)) return candidate;
+  }
+  return null;
+}
+
+/** Pick the most recently registered semester strictly before `currentSemesterId`. */
+export function findMostRecentPrior(
+  currentSemesterId: string,
+  registeredSemesters: { id: string; registeredAt: string }[],
+): string | null {
+  const sorted = [...registeredSemesters]
+    .filter((s) => s.id !== currentSemesterId)
+    .sort((a, b) => b.registeredAt.localeCompare(a.registeredAt));
+  return sorted[0]?.id ?? null;
+}
+
 export function readEntries(courseId: CourseId, lookback?: number): TrajectoryEntry[] {
   let path: string;
   try {

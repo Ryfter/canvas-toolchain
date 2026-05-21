@@ -117,7 +117,7 @@ import { afterEach, beforeEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { appendEntry, readEntries, getHistoryPath } from '../../src/kb/trajectory.js';
+import { appendEntry, readEntries, getHistoryPath, findSameSeasonPrior, findMostRecentPrior } from '../../src/kb/trajectory.js';
 import { setupCourse } from '../../src/tools/setup_course.js';
 
 let tmpHome: string;
@@ -165,5 +165,22 @@ describe('trajectory log read/write', () => {
   test('getHistoryPath returns the expected location', () => {
     const p = getHistoryPath('TRJ101');
     expect(p.endsWith(join('courses', 'TRJ101', 'history.jsonl'))).toBe(true);
+  });
+});
+
+describe('prior-semester helpers', () => {
+  test('findSameSeasonPrior finds Fall2025 for Fall2026', () => {
+    expect(findSameSeasonPrior('Fall2026', ['Spring2025', 'Fall2025', 'Spring2026'])).toBe('Fall2025');
+  });
+  test('findSameSeasonPrior returns null when no match', () => {
+    expect(findSameSeasonPrior('Fall2026', ['Spring2025', 'Spring2026'])).toBeNull();
+  });
+  test('findMostRecentPrior sorts by registeredAt desc', () => {
+    const sems = [
+      { id: 'Spring2025', registeredAt: '2025-01-15T00:00:00Z' },
+      { id: 'Fall2025', registeredAt: '2025-08-15T00:00:00Z' },
+      { id: 'Spring2026', registeredAt: '2026-01-15T00:00:00Z' },
+    ];
+    expect(findMostRecentPrior('Spring2026', sems)).toBe('Fall2025');
   });
 });
