@@ -38,12 +38,14 @@ Implemented:
 - Template resource validation lives in `src/resources/template.ts` with local runtime slot validation in `src/resources/slots.ts`.
 - Theme resource validation lives in `src/resources/theme.ts` and enforces prompt-first image metadata.
 - Prompt-set validation lives in `src/resources/prompt_set.ts` and enforces slot keys, prompt strings, placeholders, and output schemas.
+- Bundle installation support is implemented in `src/registry/install_resource.ts` and records bundle includes for cascade uninstall.
+- Brand adapter foundation lives in `src/brand/brand_adapter.ts`; `ManualAdapter` fills and validates professor-provided kits.
 
 Still pending:
 
 - Bulk Panopto transcript download.
 - Course-wide publish as one reviewed transaction.
-- Remaining registry MCP tools (bundle install).
+- Pomelli and layout adapter stubs.
 - A single native installer.
 
 ## Reasoning Behind the Current Shape
@@ -74,6 +76,8 @@ Keep the local archive as the source of truth. Google Drive is only a mirror.
 | Template validator | `src/resources/template.ts`, `docs/superpowers/plans/2026-05-21-template-validator.md` |
 | Theme validator | `src/resources/theme.ts`, `docs/superpowers/plans/2026-05-21-theme-validator.md` |
 | Prompt-set validator | `src/resources/prompt_set.ts`, `docs/superpowers/plans/2026-05-21-prompt-set-validator.md` |
+| Bundle install | `src/registry/install_resource.ts`, `docs/superpowers/plans/2026-05-21-bundle-install.md` |
+| Brand adapters | `src/brand/`, `docs/superpowers/plans/2026-05-21-brand-adapter.md` |
 
 ## Verification
 

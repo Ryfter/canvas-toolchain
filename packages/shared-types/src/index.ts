@@ -40,3 +40,49 @@ export type SlotName = CoreSlot | ExtensionSlot;
 
 // ── Placeholders — to be migrated from individual packages ───────────────────
 // See GitHub issue #2 for the full list of types to move here.
+
+// ── Brand kits ────────────────────────────────────────────────────────────────
+
+export interface BrandKitInput {
+  /** A URL the adapter can crawl for brand context, OR a description. */
+  url?: string;
+  description?: string;
+  /** Audience hints to bias style choices. */
+  audience?: 'k12' | 'undergrad' | 'graduate' | 'professional';
+  /** Optional preferred mood. */
+  mood?: 'formal' | 'playful' | 'editorial' | 'technical';
+  /** Manual or pasted kit payload for passthrough adapters. */
+  kit?: Partial<BrandKit>;
+}
+
+export interface BrandKit {
+  /** Canonical name for this kit, used as a theme id seed. */
+  name: string;
+  colors: {
+    primary: string;
+    accent: string;
+    background: string;
+    text: string;
+    muted: string;
+  };
+  typography: {
+    headingFontStack: string;
+    bodyFontStack: string;
+    headingWeight: string;
+    bodyWeight: string;
+  };
+  imageStyle: {
+    descriptor: string;
+    avoid: string[];
+  };
+  voice: {
+    tone: string;
+    formality: 'casual' | 'mixed' | 'formal';
+    avoid: string[];
+  };
+  source: {
+    adapter: string;
+    rawInput: BrandKitInput;
+    fetchedAt: string;
+  };
+}

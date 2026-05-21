@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.0",
+    "@canvas-toolchain/shared-types": "*",
     "canvas-design-mcp": "*",
     "curriculum-intelligence-mcp": "*"
   },
