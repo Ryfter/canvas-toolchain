@@ -918,3 +918,5 @@ export { canvasSafeTransform } from './utils/transform.js';
 export type { TransformResult } from './utils/transform.js';
 export { renderPageDecoupled } from './utils/render-engine.js';
 export type { RenderEngineInput, RenderEngineResult } from './utils/render-engine.js';
+export { listPanoptoFolders, listSessionsInFolder, bulkDownloadPanoptoCaptions } from './tools/panopto.js';
+export type { PanoptoFolder, PanoptoSession, BulkDownloadResult, ProgressCallback } from './tools/panopto.js';

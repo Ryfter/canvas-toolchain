@@ -275,3 +275,239 @@ export async function embedPanoptoVideo(
   }
   return result;
 }
+
+export interface PanoptoFolder {
+  id: string;
+  name: string;
+  parentFolderId: string | null;
+  sessionCount: number;
+}
+
+export interface PanoptoSession {
+  id: string;
+  title: string;
+  startTime: string;        // ISO
+  duration: number;         // seconds
+  hasCaptions: boolean;
+}
+
+export interface BulkDownloadResult {
+  folderId: string;
+  outputDir: string;
+  downloaded: { sessionId: string; title: string; path: string }[];
+  failed: { sessionId: string; title: string; reason: string }[];
+  skippedNoCaptions: { sessionId: string; title: string }[];
+}
+
+export type ProgressCallback = (event: {
+  type: 'session-start' | 'session-complete' | 'session-failed';
+  sessionId: string;
+  title: string;
+  index: number;
+  total: number;
+  reason?: string;
+}) => void;
+
+export async function listPanoptoFolders(
+  input: { query?: string; parentFolderId?: string },
+  config: PanoptoConfig,
+): Promise<PanoptoFolder[]> {
+  if (!config.clientId || !config.clientSecret) {
+    throw new Error('API_NOT_CONFIGURED: Panopto API credentials are not set.');
+  }
+
+  const token = await getPanoptoToken(config);
+  const params = new URLSearchParams({ maxResults: '100', pageNumber: '0' });
+  if (input.query) params.set('searchQuery', input.query);
+  if (input.parentFolderId) params.set('parentFolderId', input.parentFolderId);
+
+  const res = await fetch(
+    `https://${config.domain}/Panopto/api/v1/folders?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`Panopto list folders failed: ${res.status}`);
+
+  const data = await res.json() as {
+    Results: Array<{
+      Id: string;
+      Name: string;
+      ParentFolder?: string | { Id: string } | null;
+      ParentFolderId?: string | null;
+      SessionCount?: number;
+    }>;
+  };
+
+  return (data.Results || []).map(v => {
+    let parentFolderId: string | null = null;
+    if (v.ParentFolder) {
+      if (typeof v.ParentFolder === 'object') {
+        parentFolderId = v.ParentFolder.Id || null;
+      } else {
+        parentFolderId = v.ParentFolder;
+      }
+    } else if (v.ParentFolderId) {
+      parentFolderId = v.ParentFolderId;
+    }
+    return {
+      id: v.Id,
+      name: v.Name,
+      parentFolderId,
+      sessionCount: v.SessionCount ?? 0,
+    };
+  });
+}
+
+export async function listSessionsInFolder(
+  folderId: string,
+  config: PanoptoConfig,
+): Promise<PanoptoSession[]> {
+  if (!config.clientId || !config.clientSecret) {
+    throw new Error('API_NOT_CONFIGURED: Panopto API credentials are not set.');
+  }
+
+  const token = await getPanoptoToken(config);
+  const results: PanoptoSession[] = [];
+  let pageNumber = 0;
+
+  while (true) {
+    const params = new URLSearchParams({ maxResults: '100', pageNumber: String(pageNumber) });
+    const res = await fetch(
+      `https://${config.domain}/Panopto/api/v1/folders/${encodeURIComponent(folderId)}/sessions?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) throw new Error(`Panopto list sessions in folder failed: ${res.status}`);
+
+    const data = await res.json() as {
+      Results: Array<{
+        Id: string;
+        Name: string;
+        StartTime?: string;
+        Duration?: number;
+        HasCaptions?: boolean;
+      }>;
+      TotalNumberOfResults?: number;
+    };
+
+    if (!data.Results || data.Results.length === 0) break;
+
+    for (const v of data.Results) {
+      results.push({
+        id: v.Id,
+        title: v.Name,
+        startTime: v.StartTime ?? new Date().toISOString(),
+        duration: Math.round(v.Duration ?? 0),
+        hasCaptions: v.HasCaptions ?? false,
+      });
+    }
+
+    if (data.Results.length < 100 || (data.TotalNumberOfResults !== undefined && results.length >= data.TotalNumberOfResults)) {
+      break;
+    }
+    pageNumber++;
+  }
+
+  return results;
+}
+
+export async function bulkDownloadPanoptoCaptions(
+  input: { folderId: string; outputDir: string },
+  config: PanoptoConfig,
+  onProgress?: ProgressCallback,
+): Promise<BulkDownloadResult> {
+  if (!config.clientId || !config.clientSecret) {
+    throw new Error('API_NOT_CONFIGURED: Panopto API credentials are not set.');
+  }
+
+  const sessions = await listSessionsInFolder(input.folderId, config);
+  const token = await getPanoptoToken(config);
+  
+  const result: BulkDownloadResult = {
+    folderId: input.folderId,
+    outputDir: input.outputDir,
+    downloaded: [],
+    failed: [],
+    skippedNoCaptions: [],
+  };
+
+  if (sessions.length === 0) {
+    return result;
+  }
+
+  mkdirSync(input.outputDir, { recursive: true });
+
+  const total = sessions.length;
+  for (let index = 0; index < total; index++) {
+    const session = sessions[index];
+    if (!session.hasCaptions) {
+      result.skippedNoCaptions.push({ sessionId: session.id, title: session.title });
+      continue;
+    }
+
+    onProgress?.({
+      type: 'session-start',
+      sessionId: session.id,
+      title: session.title,
+      index,
+      total,
+    });
+
+    try {
+      const listRes = await fetch(
+        `https://${config.domain}/Panopto/api/v1/sessions/${session.id}/captions`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!listRes.ok) {
+        throw new Error(`Panopto captions list failed with status ${listRes.status}`);
+      }
+
+      const captionsList = await listRes.json() as Array<{ Language: string; FileUrl: string; IsDefault: boolean }>;
+      if (captionsList.length === 0) {
+        throw new Error('No captions available returned from API captions list');
+      }
+
+      const caption = captionsList.find(c => c.IsDefault) ?? captionsList[0];
+      const vttRes = await fetch(caption.FileUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!vttRes.ok) {
+        throw new Error(`Panopto VTT download failed with status ${vttRes.status}`);
+      }
+
+      const vtt = await vttRes.text();
+      
+      const filename = `${sanitizeFilename(session.title)}.panopto.vtt`;
+      const filePath = join(input.outputDir, filename);
+      writeFileSync(filePath, vtt, 'utf-8');
+
+      result.downloaded.push({
+        sessionId: session.id,
+        title: session.title,
+        path: filePath,
+      });
+
+      onProgress?.({
+        type: 'session-complete',
+        sessionId: session.id,
+        title: session.title,
+        index,
+        total,
+      });
+    } catch (err: any) {
+      const reason = err instanceof Error ? err.message : String(err);
+      result.failed.push({
+        sessionId: session.id,
+        title: session.title,
+        reason,
+      });
+
+      onProgress?.({
+        type: 'session-failed',
+        sessionId: session.id,
+        title: session.title,
+        index,
+        total,
+        reason,
+      });
+    }
+  }
+
+  return result;
+}
