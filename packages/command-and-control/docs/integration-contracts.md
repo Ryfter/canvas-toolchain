@@ -112,6 +112,7 @@ Not implemented yet:
 Implemented since integration-hardening:
 
 - JSON-lines download progress bridged to MCP progress notifications. Canvas Backup emits `{"type":"progress","message":"..."}` lines during download and a `{"type":"complete","courseId":"...","archivePath":"..."}` completion event. C&C's `download_canvas_archive` case parses the completion event (replacing the fragile regex) and forwards progress events to the MCP client via `notifications/progress` when a `progressToken` is provided.
+- Real `analyze_course` workflow. C&C calls CI's `analyzeCourse` which ingests the archive, diffs against prior semesters (same-season + most-recent), scores currency, generates verdicts, and writes a trajectory entry. C&C then augments the report with RSS news, web search scans (when `BRAVE_SEARCH_API_KEY` is set), and transcript ingestion (when `transcriptsPath` is supplied). The trajectory entry is archive-only and immutable; external signals appear in `result.augmentations` but never modify the trajectory entry.
 
 ## Downloader Bridge
 
