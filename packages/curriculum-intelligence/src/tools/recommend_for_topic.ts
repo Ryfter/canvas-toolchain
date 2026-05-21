@@ -1,7 +1,5 @@
-import type { CourseId, SemesterId } from '../types.js';
+import type { CourseId, SemesterId, Verdict } from '../types.js';
 import { semestersBetween, type CurrencyClass } from './score_topic_currency.js';
-
-export type Verdict = 'KEEP' | 'UPDATE' | 'DROP' | 'ADD';
 
 export interface RecommendForTopicInput {
   courseId: CourseId;
