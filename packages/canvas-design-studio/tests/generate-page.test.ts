@@ -78,4 +78,18 @@ describe('generatePage', () => {
     expect(html).not.toContain('<h1');
     expect(html).not.toContain('box-shadow');
   });
+
+  it('supports custom templateId parameter', () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'gp-'));
+    const result = generatePage({
+      mdPath: join(fixturesDir, 'week-01/overview.md'),
+      courseDir: fixturesDir,
+      outputDir: outDir,
+      templateId: 'overview',
+    });
+    expect(result.pageType).toBe('overview');
+    expect(existsSync(result.savedTo)).toBe(true);
+    const html = readFileSync(result.savedTo, 'utf-8');
+    expect(html).toContain('Learning Objectives');
+  });
 });

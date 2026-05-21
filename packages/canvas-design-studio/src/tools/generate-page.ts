@@ -34,7 +34,7 @@ function weekFolderSegment(weekNumber: number): string {
 }
 
 export function generatePage(input: GeneratePageInput): GeneratePageResult {
-  const { mdPath, courseDir, outputDir } = input;
+  const { mdPath, courseDir, outputDir, templateId, themeId, promptSetId } = input;
   const absPath = resolve(mdPath);
   const configPath = findCourseConfig(dirname(absPath), courseDir);
   const config = parseCourseConfig(configPath);
@@ -42,7 +42,7 @@ export function generatePage(input: GeneratePageInput): GeneratePageResult {
   const pageType = detectPageType(absPath);
   const content = parsePageContent(absPath, pageType);
 
-  const html = renderPage(content, config);
+  const html = renderPage(content, config, { templateId, themeId, promptSetId });
 
   const weekNumber = content.frontMatter.week ?? 0;
   const filename = `${pageType}.html`;

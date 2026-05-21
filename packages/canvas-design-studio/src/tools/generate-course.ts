@@ -6,7 +6,7 @@ import { generateWeek } from './generate-week.js';
 import type { GenerateCourseInput, GenerateCourseResult, GenerateWeekResult } from '../course-types.js';
 
 export function generateCourse(input: GenerateCourseInput): GenerateCourseResult {
-  const { courseDir, outputDir } = input;
+  const { courseDir, outputDir, templateId, themeId, promptSetId } = input;
   const courseDirAbs = resolve(courseDir ?? 'course');
   const configPath = join(courseDirAbs, COURSE_CONFIG_FILENAME);
 
@@ -23,7 +23,14 @@ export function generateCourse(input: GenerateCourseInput): GenerateCourseResult
   if (config.pageTypes.includes('front-page')) {
     const fpPath = join(courseDirAbs, 'front-page.md');
     if (existsSync(fpPath)) {
-      generatePage({ mdPath: fpPath, courseDir: courseDirAbs, outputDir: baseOut });
+      generatePage({
+        mdPath: fpPath,
+        courseDir: courseDirAbs,
+        outputDir: baseOut,
+        templateId,
+        themeId,
+        promptSetId,
+      });
       totalPages++;
     } else {
       allWarnings.push('Skipped front-page: front-page.md not found');
@@ -35,6 +42,9 @@ export function generateCourse(input: GenerateCourseInput): GenerateCourseResult
       weekNumber: w,
       courseDir: courseDirAbs,
       outputDir: baseOut,
+      templateId,
+      themeId,
+      promptSetId,
     });
     weekResults.push(result);
     totalPages += result.pages.length;

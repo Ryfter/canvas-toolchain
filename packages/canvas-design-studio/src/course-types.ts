@@ -97,6 +97,9 @@ export interface GeneratePageInput {
   mdPath: string;
   courseDir?: string;
   outputDir?: string;
+  templateId?: string;
+  themeId?: string;
+  promptSetId?: string;
 }
 
 export interface GeneratePageResult {
@@ -111,6 +114,9 @@ export interface GenerateWeekInput {
   weekNumber: number;
   courseDir?: string;
   outputDir?: string;
+  templateId?: string;
+  themeId?: string;
+  promptSetId?: string;
 }
 
 export interface GenerateWeekResult {
@@ -123,6 +129,9 @@ export interface GenerateWeekResult {
 export interface GenerateCourseInput {
   courseDir?: string;
   outputDir?: string;
+  templateId?: string;
+  themeId?: string;
+  promptSetId?: string;
 }
 
 export interface GenerateCourseResult {

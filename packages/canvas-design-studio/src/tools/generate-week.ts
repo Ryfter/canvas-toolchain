@@ -9,7 +9,7 @@ function getWeekFolderName(week: number): string {
 }
 
 export function generateWeek(input: GenerateWeekInput): GenerateWeekResult {
-  const { weekNumber, courseDir, outputDir } = input;
+  const { weekNumber, courseDir, outputDir, templateId, themeId, promptSetId } = input;
   const courseDirAbs = resolve(courseDir ?? 'course');
   const configPath = join(courseDirAbs, COURSE_CONFIG_FILENAME);
 
@@ -36,6 +36,9 @@ export function generateWeek(input: GenerateWeekInput): GenerateWeekResult {
       mdPath,
       courseDir: courseDirAbs,
       outputDir: baseOut,
+      templateId,
+      themeId,
+      promptSetId,
     });
     pages.push(result);
   }

@@ -488,9 +488,14 @@ function wrap(parts: string[]): string {
   return `<div style="font-family: Lato, sans-serif; max-width: 900px; margin: 0 auto; color: #1A1A1A;">\n${parts.filter(Boolean).join('\n')}\n</div>`;
 }
 
-export function renderPage(content: PageContent, config: CourseConfig): string {
+export function renderPage(
+  content: PageContent,
+  config: CourseConfig,
+  options?: { templateId?: string; themeId?: string; promptSetId?: string }
+): string {
   // Load the structured layout from the template registry
-  const template = loadTemplate(content.pageType);
+  const templateId = options?.templateId || content.pageType;
+  const template = loadTemplate(templateId);
   
   // Construct all slot HTML values dynamically
   const slotMap: Record<string, string> = {};
