@@ -88,7 +88,7 @@ async function resolveResource(url: string): Promise<ResolvedResource> {
 function resolveFileResource(url: string): ResolvedResource {
   const root = fileURLToPath(url);
   const manifest = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf-8')) as ResourceManifest;
-  const files = manifest.files.map((filePath) => ({
+  const files = (manifest.files ?? []).map((filePath) => ({
     path: filePath,
     contents: readFileSync(join(root, ...filePath.split('/'))),
   }));
@@ -107,7 +107,7 @@ async function resolveGithubResource(url: string): Promise<ResolvedResource> {
   const tag = parsed.version.startsWith('v') ? parsed.version : `v${parsed.version}`;
   const baseUrl = `https://raw.githubusercontent.com/${parsed.ownerOrCollection}/${parsed.collection}/${tag}/${parsed.id}`;
   const manifest = await fetchJson<ResourceManifest>(`${baseUrl}/manifest.json`);
-  const files = await fetchFiles(baseUrl, manifest.files);
+  const files = await fetchFiles(baseUrl, manifest.files ?? []);
 
   return {
     manifest,
@@ -134,7 +134,7 @@ async function resolveRyfterResource(url: string): Promise<ResolvedResource> {
   const resourceBaseUrl = `${base.replace(/\/$/, '')}/${parsed.collection}/${parsed.id}@${parsed.version}`;
   const requestInit = { headers: { Authorization: `Bearer ${registry.token}` } };
   const manifest = await fetchJson<ResourceManifest>(`${resourceBaseUrl}/manifest.json`, requestInit);
-  const files = await fetchFiles(resourceBaseUrl, manifest.files, requestInit);
+  const files = await fetchFiles(resourceBaseUrl, manifest.files ?? [], requestInit);
 
   return {
     manifest,
@@ -185,7 +185,11 @@ function dependencyUrlsForManifest(
     | { resolverKind: 'github'; owner: string }
     | { resolverKind: 'ryfter' },
 ): string[] {
-  return (manifest.dependencies ?? []).map((dependency) => {
+  const deps = [...(manifest.dependencies ?? [])];
+  if (manifest.kind === 'bundle' && manifest.includes) {
+    deps.push(...manifest.includes);
+  }
+  return deps.map((dependency) => {
     const version = dependency.version ?? dependency.minVersion;
     if (!version) {
       throw new Error(`Dependency ${dependency.kind}:${dependency.id} must specify version or minVersion`);

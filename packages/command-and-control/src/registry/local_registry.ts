@@ -24,7 +24,8 @@ export interface ResourceManifest {
   description?: string;
   tier?: 'free' | 'premium';
   dependencies?: ResourceDependency[];
-  files: string[];
+  files?: string[];
+  includes?: ResourceDependency[];
   tags?: string[];
 }
 
@@ -122,10 +123,20 @@ export function validateResourceManifest(value: unknown): string[] {
   validateSafeSegment(value.id, 'id', issues);
   validateSafeVersion(value.version, 'version', issues);
 
-  if (!Array.isArray(value.files) || value.files.length === 0) {
-    issues.push('files must be a non-empty array');
+  if (value.kind !== 'bundle') {
+    if (!Array.isArray(value.files) || value.files.length === 0) {
+      issues.push('files must be a non-empty array');
+    } else {
+      value.files.forEach((file, index) => validateSafeRelativePath(file, `files[${index}]`, issues));
+    }
   } else {
-    value.files.forEach((file, index) => validateSafeRelativePath(file, `files[${index}]`, issues));
+    if (value.includes !== undefined) {
+      if (!Array.isArray(value.includes)) {
+        issues.push('includes must be an array when provided');
+      } else {
+        value.includes.forEach((include, index) => validateDependency(include, `includes[${index}]`, issues));
+      }
+    }
   }
 
   if (value.dependencies !== undefined) {
@@ -164,7 +175,7 @@ export function assertValidResourceManifest(value: unknown): asserts value is Re
 
 export function installResourceAtomically(input: InstallResourceAtomicallyInput): InstallResourceAtomicallyResult {
   assertValidResourceManifest(input.manifest);
-  validatePayload(input.manifest.files, input.files);
+  validatePayload(input.manifest.files ?? [], input.files);
 
   const targetDir = getResourceDirectory(input.manifest.kind, input.manifest.id, input.manifest.version);
   const tempDir = `${targetDir}.tmp-${process.pid}-${Date.now()}`;
@@ -191,6 +202,7 @@ export function installResourceAtomically(input: InstallResourceAtomicallyInput)
       installedAt: input.installedAt ?? new Date().toISOString(),
       source: input.source,
       path: targetDir,
+      includes: input.manifest.includes,
     };
     const index = upsertRegistryIndexEntry(readRegistryIndex(), entry);
     writeRegistryIndex(index);
