@@ -43,7 +43,7 @@ export function resolvePlaceholders(
   config: CourseConfig
 ): string {
   let resolved = prompt;
-  const topic = content.frontMatter.title || content.frontMatter.topic || '';
+  const topic = String(content.frontMatter.title || content.frontMatter.topic || '');
   resolved = resolved.replace(/\{\{\s*topic\s*\}\}/g, topic);
   resolved = resolved.replace(/\{\{\s*frontMatter\.title\s*\}\}/g, topic);
   resolved = resolved.replace(/\{\{\s*slotName\s*\}\}/g, slotName);

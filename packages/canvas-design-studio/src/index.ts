@@ -920,3 +920,6 @@ export { renderPageDecoupled } from './utils/render-engine.js';
 export type { RenderEngineInput, RenderEngineResult } from './utils/render-engine.js';
 export { listPanoptoFolders, listSessionsInFolder, bulkDownloadPanoptoCaptions } from './tools/panopto.js';
 export type { PanoptoFolder, PanoptoSession, BulkDownloadResult, ProgressCallback } from './tools/panopto.js';
+export { auditAccessibility } from './tools/accessibility.js';
+export type { AccessibilityWarning } from './tools/accessibility.js';
+

@@ -16,6 +16,7 @@ import { installResource } from './registry/install_resource.js';
 import { listInstalledResources, uninstallResource } from './registry/local_registry.js';
 import { searchRegistry } from './registry/search_registry.js';
 import { installResourcesFromLockfile } from './registry/lockfile_install.js';
+import { pasteLayout, saveLayoutAsTemplate } from './tools/layout_adapter.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -178,6 +179,45 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'paste_layout',
+      description: 'Paste raw HTML and CSS (e.g. from Stitch or Figma) to adapt it into a Canvas-safe slot layout and audit accessibility.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['html'],
+        properties: {
+          html: { type: 'string', description: 'Raw HTML structure.' },
+          css: { type: 'string', description: 'Optional raw CSS stylesheet to inline.' },
+          sourceTool: { type: 'string', description: 'Optional identifier of the origin tool (e.g. "stitch").' },
+          intent: { type: 'string', description: 'Optional semantic explanation of what the layout represents.' },
+          desiredSlots: { type: 'array', items: { type: 'string' }, description: 'Optional list of desired slot names.' },
+        },
+      },
+    },
+    {
+      name: 'save_layout_as_template',
+      description: 'Formulate and save a successfully adapted layout as a reusable template in the local registry.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['layout', 'templateId', 'templateVersion'],
+        properties: {
+          layout: {
+            type: 'object',
+            description: 'The AdaptedLayout result returned by paste_layout.',
+            required: ['canvasSafeHtml', 'slotMap', 'removed', 'violations', 'accessibility'],
+            properties: {
+              canvasSafeHtml: { type: 'string' },
+              slotMap: { type: 'object' },
+              removed: { type: 'array', items: { type: 'object' } },
+              violations: { type: 'array', items: { type: 'object' } },
+              accessibility: { type: 'object' },
+            },
+          },
+          templateId: { type: 'string', description: 'The custom template ID, e.g. "timeline-layout".' },
+          templateVersion: { type: 'string', description: 'The semantic version, e.g. "1.0.0".' },
+        },
+      },
+    },
     // ── Pass-through tools ──────────────────────────────────────────────────
     ...ALL_PASSTHROUGH.map((t) => ({
       name: t.name,
@@ -226,6 +266,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'install_resources_from_lockfile':
         result = await installResourcesFromLockfile(args as unknown as Parameters<typeof installResourcesFromLockfile>[0]);
+        break;
+      case 'paste_layout':
+        result = await pasteLayout(args as unknown as Parameters<typeof pasteLayout>[0]);
+        break;
+      case 'save_layout_as_template':
+        result = await saveLayoutAsTemplate(args as unknown as Parameters<typeof saveLayoutAsTemplate>[0]);
         break;
       case 'download_canvas_archive': {
         // Special-cased so we can forward Canvas Backup's per-download progress events
