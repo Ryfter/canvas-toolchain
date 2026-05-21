@@ -32,12 +32,13 @@ Implemented:
 - `npm run smoke:integration` verifies the cross-app contract with fixtures: archive analysis, Design Studio import, and HTML generation.
 - Local registry foundation for installable templates, themes, prompts, and adapter configs lives in `src/registry/local_registry.ts`.
 - `install_resource` installs registry resources from `file://`, `github://`, or `ryfter://` URLs through `src/registry/install_resource.ts`.
+- `list_installed_resources` and `uninstall_resource` operate on the local registry index and support bundle cascade metadata.
 
 Still pending:
 
 - Bulk Panopto transcript download.
 - Course-wide publish as one reviewed transaction.
-- Remaining registry MCP tools (`list_installed_resources`, `uninstall_resource`, `search_registry`, lockfile install, bundle install).
+- Remaining registry MCP tools (`search_registry`, lockfile install, bundle install).
 - A single native installer.
 
 ## Reasoning Behind the Current Shape
@@ -62,6 +63,7 @@ Keep the local archive as the source of truth. Google Drive is only a mirror.
 | Local registry foundation | `src/registry/local_registry.ts` |
 | Registry implementation plan | `docs/superpowers/plans/2026-05-21-local-registry.md` |
 | Install resource resolver/tool | `src/registry/install_resource.ts`, `docs/superpowers/plans/2026-05-21-install-resource.md` |
+| List/uninstall registry tools | `src/registry/local_registry.ts`, `docs/superpowers/plans/2026-05-21-list-uninstall-resources.md` |
 
 ## Verification
 

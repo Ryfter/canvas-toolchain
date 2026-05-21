@@ -13,6 +13,7 @@ import { planNextSemester } from './tools/workflows/plan_next_semester.js';
 import { updateCourseMaterials } from './tools/workflows/update_course_materials.js';
 import { fullPipeline } from './tools/workflows/full_pipeline.js';
 import { installResource } from './registry/install_resource.js';
+import { listInstalledResources, uninstallResource } from './registry/local_registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -127,6 +128,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'list_installed_resources',
+      description: 'List resources installed in the local registry, optionally filtered by kind.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          kind: { type: 'string', enum: ['template', 'theme', 'prompt', 'adapter-config', 'bundle'] },
+        },
+      },
+    },
+    {
+      name: 'uninstall_resource',
+      description: 'Remove a resource from the local registry by kind and id. Bundle entries also remove their included resources.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['kind', 'id'],
+        properties: {
+          kind: { type: 'string', enum: ['template', 'theme', 'prompt', 'adapter-config', 'bundle'] },
+          id: { type: 'string' },
+          version: { type: 'string', description: 'Optional version. When omitted, all installed versions for the kind/id are removed.' },
+        },
+      },
+    },
     // ── Pass-through tools ──────────────────────────────────────────────────
     ...ALL_PASSTHROUGH.map((t) => ({
       name: t.name,
@@ -163,6 +187,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'install_resource':
         result = await installResource(args as unknown as Parameters<typeof installResource>[0]);
+        break;
+      case 'list_installed_resources':
+        result = listInstalledResources(args as unknown as Parameters<typeof listInstalledResources>[0]);
+        break;
+      case 'uninstall_resource':
+        result = uninstallResource(args as unknown as Parameters<typeof uninstallResource>[0]);
         break;
       case 'download_canvas_archive': {
         // Special-cased so we can forward Canvas Backup's per-download progress events

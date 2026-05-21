@@ -64,6 +64,7 @@ See `CLAUDE.md`, `docs/integration-contracts.md`, and `docs/architecture-review-
 
 Registry foundation work for installable templates/themes/prompts/adapter configs is tracked in `docs/superpowers/plans/2026-05-21-local-registry.md`.
 The `install_resource` resolver/tool layer is tracked in `docs/superpowers/plans/2026-05-21-install-resource.md`.
+The `list_installed_resources` and `uninstall_resource` tools are tracked in `docs/superpowers/plans/2026-05-21-list-uninstall-resources.md`.
 
 ---
 

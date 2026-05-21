@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
 
 export const REGISTRY_SCHEMA_VERSION = 1 as const;
 
-export const RESOURCE_KINDS = ['template', 'theme', 'prompt', 'adapter-config'] as const;
+export const RESOURCE_KINDS = ['template', 'theme', 'prompt', 'adapter-config', 'bundle'] as const;
 
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
 
@@ -35,6 +35,7 @@ export interface RegistryIndexEntry {
   installedAt: string;
   source: string;
   path: string;
+  includes?: ResourceDependency[];
 }
 
 export interface RegistryIndex {
@@ -56,6 +57,21 @@ export interface InstallResourceAtomicallyInput {
 
 export interface InstallResourceAtomicallyResult {
   entry: RegistryIndexEntry;
+  index: RegistryIndex;
+}
+
+export interface ListInstalledResourcesInput {
+  kind?: ResourceKind;
+}
+
+export interface UninstallResourceInput {
+  kind: ResourceKind;
+  id: string;
+  version?: string;
+}
+
+export interface UninstallResourceResult {
+  removed: RegistryIndexEntry[];
   index: RegistryIndex;
 }
 
@@ -100,7 +116,7 @@ export function validateResourceManifest(value: unknown): string[] {
   }
 
   if (typeof value.kind !== 'string' || !kindSet.has(value.kind)) {
-    issues.push('kind must be template, theme, prompt, or adapter-config');
+    issues.push('kind must be template, theme, prompt, adapter-config, or bundle');
   }
 
   validateSafeSegment(value.id, 'id', issues);
@@ -186,6 +202,44 @@ export function installResourceAtomically(input: InstallResourceAtomicallyInput)
   }
 }
 
+export function listInstalledResources(input: ListInstalledResourcesInput = {}): RegistryIndexEntry[] {
+  const entries = input.kind
+    ? readRegistryIndex().installed.filter((entry) => entry.kind === input.kind)
+    : readRegistryIndex().installed;
+
+  return [...entries].sort((a, b) => entryKey(a).localeCompare(entryKey(b)));
+}
+
+export function uninstallResource(input: UninstallResourceInput): UninstallResourceResult {
+  assertSafeSegment(input.id, 'id');
+  if (input.version !== undefined) {
+    assertSafeVersion(input.version, 'version');
+  }
+
+  const index = readRegistryIndex();
+  const directMatches = index.installed.filter((entry) => isUninstallMatch(entry, input));
+  if (directMatches.length === 0) {
+    return { removed: [], index };
+  }
+
+  const includeKeys = new Set(directMatches.flatMap((entry) => entry.includes ?? []).map(dependencyKey));
+  const includedMatches = index.installed.filter((entry) => includeKeys.has(entryKey(entry)));
+  const removed = uniqueEntries([...directMatches, ...includedMatches]).sort((a, b) => entryKey(a).localeCompare(entryKey(b)));
+  const removedKeys = new Set(removed.map(entryKey));
+
+  for (const entry of removed) {
+    removeRegistryDirectory(entry.path);
+  }
+
+  const nextIndex: RegistryIndex = {
+    schemaVersion: REGISTRY_SCHEMA_VERSION,
+    installed: index.installed.filter((entry) => !removedKeys.has(entryKey(entry))),
+  };
+  writeRegistryIndex(nextIndex);
+
+  return { removed, index: nextIndex };
+}
+
 export function upsertRegistryIndexEntry(index: RegistryIndex, entry: RegistryIndexEntry): RegistryIndex {
   const installed = normalizeRegistryIndex(index).installed.filter(
     (candidate) =>
@@ -245,6 +299,7 @@ function normalizeRegistryIndexEntry(value: unknown): RegistryIndexEntry {
     installedAt: value.installedAt as string,
     source: value.source as string,
     path: value.path as string,
+    includes: Array.isArray(value.includes) ? value.includes.map((dependency, index) => normalizeDependency(dependency, `includes[${index}]`)) : undefined,
   };
 }
 
@@ -255,7 +310,7 @@ function validateDependency(value: unknown, field: string, issues: string[]): vo
   }
 
   if (typeof value.kind !== 'string' || !kindSet.has(value.kind)) {
-    issues.push(`${field}.kind must be template, theme, prompt, or adapter-config`);
+      issues.push(`${field}.kind must be template, theme, prompt, adapter-config, or bundle`);
   }
   validateSafeSegment(value.id, `${field}.id`, issues);
 
@@ -265,6 +320,15 @@ function validateDependency(value: unknown, field: string, issues: string[]): vo
   if (value.minVersion !== undefined) {
     validateSafeVersion(value.minVersion, `${field}.minVersion`, issues);
   }
+}
+
+function normalizeDependency(value: unknown, field: string): ResourceDependency {
+  const issues: string[] = [];
+  validateDependency(value, field, issues);
+  if (issues.length > 0) {
+    throw new Error(`Invalid registry index entry: ${issues.join('; ')}`);
+  }
+  return value as ResourceDependency;
 }
 
 function validatePayload(expectedPaths: string[], files: ResourceFilePayload[]): void {
@@ -351,6 +415,39 @@ function validateSafeRelativePath(value: unknown, field: string, issues: string[
 
 function entryKey(entry: Pick<RegistryIndexEntry, 'kind' | 'id' | 'version'>): string {
   return `${entry.kind}:${entry.id}:${entry.version}`;
+}
+
+function dependencyKey(dependency: ResourceDependency): string {
+  return `${dependency.kind}:${dependency.id}:${dependency.version ?? dependency.minVersion ?? ''}`;
+}
+
+function isUninstallMatch(entry: RegistryIndexEntry, input: UninstallResourceInput): boolean {
+  return entry.kind === input.kind && entry.id === input.id && (input.version === undefined || entry.version === input.version);
+}
+
+function uniqueEntries(entries: RegistryIndexEntry[]): RegistryIndexEntry[] {
+  const seen = new Set<string>();
+  const unique: RegistryIndexEntry[] = [];
+  for (const entry of entries) {
+    const key = entryKey(entry);
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(entry);
+    }
+  }
+  return unique;
+}
+
+function removeRegistryDirectory(path: string): void {
+  const registryRoot = resolve(getRegistryRootPath());
+  const target = resolve(path);
+  const rel = relative(registryRoot, target);
+
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    throw new Error(`Refusing to remove path outside registry root: ${path}`);
+  }
+
+  rmSync(target, { recursive: true, force: true });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

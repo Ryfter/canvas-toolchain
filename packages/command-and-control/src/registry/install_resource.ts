@@ -29,6 +29,7 @@ const collectionToKind: Record<string, ResourceKind> = {
   themes: 'theme',
   prompts: 'prompt',
   'adapter-configs': 'adapter-config',
+  bundles: 'bundle',
 };
 
 const kindToCollection: Record<ResourceKind, string> = {
@@ -36,6 +37,7 @@ const kindToCollection: Record<ResourceKind, string> = {
   theme: 'themes',
   prompt: 'prompts',
   'adapter-config': 'adapter-configs',
+  bundle: 'bundles',
 };
 
 export async function installResource(input: InstallResourceInput): Promise<InstallResourceResult> {
