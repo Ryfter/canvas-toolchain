@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "videos",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "x-videos",
+    "x-what-to-watch-for"
+  ],
+  "tags": [
+    "videos",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

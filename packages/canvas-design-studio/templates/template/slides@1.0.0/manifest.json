@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "slides",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "x-slide-deck",
+    "x-about-these-slides",
+    "x-key-topics"
+  ],
+  "tags": [
+    "slides",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

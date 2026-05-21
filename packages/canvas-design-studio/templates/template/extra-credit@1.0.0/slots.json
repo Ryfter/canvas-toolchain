@@ -1,0 +1,14 @@
+{
+  "hero": {
+    "required": true
+  },
+  "x-opportunity": {
+    "required": true
+  },
+  "x-requirements": {
+    "required": true
+  },
+  "x-points-deadline": {
+    "required": true
+  }
+}

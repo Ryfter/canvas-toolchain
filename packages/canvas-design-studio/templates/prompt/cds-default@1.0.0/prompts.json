@@ -1,0 +1,537 @@
+{
+  "body": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "callout": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "hero": {
+    "prompt": "Generate a premium hero visual card text for {{topic}} in {{semester}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ]
+    }
+  },
+  "x-about-these-slides": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-access": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-activities": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-as-you-read": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-course-introduction": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-deliverable": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-grading": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-how-this-course-works": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-instructions": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-instructor": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-introduction": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-key-topics": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-opportunity": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-other": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-points-deadline": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-quiz-details": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-readings": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-requirements": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-rubric": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-setup": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-slide-deck": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-slides": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-submission": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-submission-details": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-tasks": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-team": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-the-reading": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-time-deliverable": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-timeline": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-topics-covered": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-videos": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-what-to-watch-for": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-what-we-are-doing": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-what-you-will-learn": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "x-why-this-reading": {
+    "prompt": "Generate the content for slot {{slotName}} of {{topic}}.",
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    }
+  }
+}

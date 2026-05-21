@@ -1,0 +1,17 @@
+{
+  "hero": {
+    "required": true
+  },
+  "callout": {
+    "required": true
+  },
+  "x-setup": {
+    "required": false
+  },
+  "x-instructions": {
+    "required": true
+  },
+  "x-submission": {
+    "required": true
+  }
+}

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import type { CourseConfig, PageContent, PageFrontMatter, PageType } from '../course-types.js';
+import { loadTemplate } from '../utils/registry.js';
 
 export function markdownToHtml(md: string): string {
   const trimmed = md.trim();
@@ -488,22 +489,252 @@ function wrap(parts: string[]): string {
 }
 
 export function renderPage(content: PageContent, config: CourseConfig): string {
+  // Load the structured layout from the template registry
+  const template = loadTemplate(content.pageType);
+  
+  // Construct all slot HTML values dynamically
+  const slotMap: Record<string, string> = {};
+  
+  // 1. Render hero
+  const week = content.frontMatter.week;
+  let title = content.frontMatter.title || '';
+  let meta = '';
+  const heroImage = content.frontMatter.heroImage;
+  
   switch (content.pageType) {
-    case 'front-page':       return renderFrontPage(content, config);
-    case 'overview':         return renderOverview(content, config);
-    case 'resources':        return renderResources(content, config);
-    case 'slides':           return renderSlides(content, config);
-    case 'videos':           return renderVideos(content, config);
-    case 'assignment':       return renderAssignment(content, config);
-    case 'engage-assignment':return renderEngageAssignment(content, config);
-    case 'proj-assignment':    return renderProjAssignment(content, config);
-    case 'tech-assignment':    return renderTechAssignment(content, config);
-    case 'reading':          return renderReading(content, config);
-    case 'reading-quiz':     return renderQuizPage(content, config, 'reading-quiz', 'Reading Quiz');
-    case 'weekly-quiz':      return renderQuizPage(content, config, 'weekly-quiz', 'Weekly Quiz');
-    case 'lab':              return renderLab(content, config);
-    case 'discussion-board': return renderDiscussionBoard(content, config);
-    case 'extra-credit':     return renderExtraCredit(content, config);
-    case 'custom':           return renderCustom(content, config);
+    case 'front-page':
+      title = title || config.courseName;
+      meta = config.semester;
+      break;
+    case 'overview':
+      title = title || `Week ${String(week ?? '').padStart(2, '0')} Overview`;
+      break;
+    case 'resources':
+      title = title || `Week ${String(week ?? '').padStart(2, '0')} Resources`;
+      break;
+    case 'slides':
+      title = title || `Week ${String(week ?? '').padStart(2, '0')} Slides`;
+      break;
+    case 'videos':
+      title = title || `Week ${String(week ?? '').padStart(2, '0')} Videos`;
+      break;
+    case 'assignment': {
+      const assignNum = content.frontMatter.assignmentNumber ?? '';
+      title = title || `Assignment ${assignNum}`;
+      meta = [content.frontMatter.due ? `Due: ${content.frontMatter.due}` : '', content.frontMatter.points ? `${content.frontMatter.points} points` : ''].filter(Boolean).join(' &nbsp;·&nbsp; ');
+      break;
+    }
+    case 'engage-assignment':
+      title = title || 'Engage Assignment';
+      meta = 'In-Class Activity';
+      break;
+    case 'proj-assignment': {
+      const assignNum = content.frontMatter.assignmentNumber ?? '';
+      title = title || `Project ${assignNum}`;
+      const isTeam = content.frontMatter.team === true;
+      meta = [
+        isTeam ? 'Team Project' : 'Individual Project',
+        content.frontMatter.due ? `Due: ${content.frontMatter.due}` : '',
+        content.frontMatter.points ? `${content.frontMatter.points} points` : '',
+      ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+      break;
+    }
+    case 'tech-assignment': {
+      const assignNum = content.frontMatter.assignmentNumber ?? '';
+      title = title || `Tech Assignment ${assignNum}`;
+      const isTeam = content.frontMatter.team === true;
+      meta = [
+        isTeam ? 'Team' : 'Individual',
+        content.frontMatter.due ? `Due: ${content.frontMatter.due}` : '',
+        content.frontMatter.points ? `${content.frontMatter.points} points` : '',
+      ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+      break;
+    }
+    case 'reading':
+      title = title || 'Reading';
+      break;
+    case 'reading-quiz':
+      title = title || 'Reading Quiz';
+      break;
+    case 'weekly-quiz':
+      title = title || 'Weekly Quiz';
+      break;
+    case 'lab':
+      title = title || 'Lab';
+      break;
+    case 'discussion-board':
+      title = title || 'Discussion Board';
+      break;
+    case 'extra-credit':
+      title = title || 'Extra Credit';
+      meta = 'Optional';
+      break;
+    case 'custom':
+      title = title || 'Custom Page';
+      break;
   }
+  
+  slotMap['hero'] = heroHtml(config, content.pageType, week, title, meta, heroImage);
+  
+  // 2. Render callout (Brief, Objectives, discussion prompt, or learning objectives)
+  switch (content.pageType) {
+    case 'overview':
+      slotMap['callout'] = callout(
+        objectivesHeading(config) +
+        `<div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.7; color: #1A1A1A;">
+          ${markdownToHtml(content.sections['Learning Objectives'] ?? '')}
+        </div>`,
+        config,
+      );
+      break;
+    case 'assignment':
+    case 'proj-assignment':
+    case 'tech-assignment':
+      slotMap['callout'] = callout(
+        `<h2 style="color: ${config.colors.primary}; font-family: Lato, sans-serif; font-size: 13px; font-weight: 700; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px;">Brief</h2>` +
+        `<div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.7; color: #1A1A1A;">${markdownToHtml(content.sections['Brief'] ?? '')}</div>`,
+        config,
+      );
+      break;
+    case 'lab':
+      slotMap['callout'] = callout(
+        objectivesHeading(config) +
+        `<div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.7; color: #1A1A1A;">${markdownToHtml(content.sections['Objectives'] ?? '')}</div>`,
+        config,
+      );
+      break;
+    case 'discussion-board':
+      slotMap['callout'] = callout(
+        `<h2 style="color: ${config.colors.primary}; font-family: Lato, sans-serif; font-size: 13px; font-weight: 700; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px;">Discussion Prompt</h2>` +
+        `<div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.75; color: #1A1A1A;">${markdownToHtml(content.sections['Prompt'] ?? '')}</div>`,
+        config,
+      );
+      break;
+  }
+  
+  // 3. Render all other custom slots dynamically
+  const sectionHeadingMap: Record<string, string> = {
+    'x-introduction': 'Introduction',
+    'x-activities': "This Week's Activities",
+    'x-course-introduction': 'Course Introduction',
+    'x-what-you-will-learn': "What You'll Learn",
+    'x-how-this-course-works': 'How This Course Works',
+    'x-instructor': 'Instructor',
+    'x-slides': 'Slides',
+    'x-videos': 'Videos',
+    'x-readings': 'Readings',
+    'x-other': 'Other',
+    'x-slide-deck': 'Slide Deck',
+    'x-about-these-slides': 'About These Slides',
+    'x-key-topics': 'Key Topics',
+    'x-what-to-watch-for': 'What to Watch For',
+    'x-rubric': 'Rubric',
+    'x-submission-details': 'Submission Details',
+    'x-what-we-are-doing': "What We're Doing",
+    'x-instructions': 'Instructions',
+    'x-time-deliverable': 'Time',
+    'x-timeline': 'Project Timeline',
+    'x-team': 'Team',
+    'x-setup': 'Setup',
+    'x-tasks': 'Tasks',
+    'x-deliverable': 'Deliverable',
+    'x-the-reading': 'The Reading',
+    'x-why-this-reading': 'Why This Reading',
+    'x-as-you-read': 'As You Read',
+    'x-quiz-details': 'Quiz Details',
+    'x-topics-covered': content.pageType === 'reading-quiz' ? 'What It Covers' : 'Topics Covered',
+    'x-access': 'Access',
+    'x-submission': 'Submission',
+    'x-requirements': 'Requirements',
+    'x-grading': 'Grading',
+    'x-opportunity': 'Opportunity',
+    'x-points-deadline': 'Points &amp; Deadline'
+  };
+
+  for (const slot of template.manifest.slots) {
+    if (slot === 'hero' || slot === 'callout') continue;
+
+    if (slot === 'body' && content.pageType === 'custom') {
+      slotMap[slot] = Object.entries(content.sections)
+        .map(([heading, sectContent]) =>
+          card(sectionHeading(heading) + `<div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.75; color: #1A1A1A;">${markdownToHtml(sectContent)}</div>`)
+        )
+        .join('\n');
+      continue;
+    }
+
+    const sectionKey = sectionHeadingMap[slot];
+    if (!sectionKey) continue;
+
+    // Handle optional slot conditionals
+    if (slot === 'x-other' && !content.sections['Other']) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-about-these-slides' && !content.sections['About These Slides']) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-key-topics' && !content.sections['Key Topics']) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-what-to-watch-for' && !content.sections['What to Watch For']) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-rubric' && !content.sections['Rubric']) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-timeline' && content.frontMatter.timeline !== true) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-team' && content.frontMatter.team !== true) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-setup' && !content.sections['Setup']) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-as-you-read' && !content.sections['As You Read']) {
+      slotMap[slot] = '';
+      continue;
+    }
+    if (slot === 'x-grading' && !content.sections['Grading']) {
+      slotMap[slot] = '';
+      continue;
+    }
+
+    // Standard card rendering
+    let innerHtml = '';
+    if (slot === 'x-time-deliverable') {
+      innerHtml = markdownToHtml(content.sections['Time'] ?? '') +
+        (content.sections['Deliverable']
+          ? '<br>' + sectionHeading('Deliverable') + `<div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.75; color: #1A1A1A;">${markdownToHtml(content.sections['Deliverable'])}</div>`
+          : '');
+    } else if (slot === 'x-points-deadline') {
+      innerHtml = markdownToHtml((content.sections['Points'] ?? '') + '\n' + (content.sections['Deadline'] ?? ''));
+    } else if (slot === 'x-timeline') {
+      innerHtml = markdownToHtml(content.sections['Timeline'] ?? content.sections['Project Timeline'] ?? '');
+    } else {
+      innerHtml = markdownToHtml(content.sections[sectionKey] ?? '');
+    }
+
+    slotMap[slot] = card(
+      sectionHeading(sectionKey) +
+      `<div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.75; color: #1A1A1A;">${innerHtml}</div>`
+    );
+  }
+
+  // 4. Substitute slots into the structure HTML
+  let outputHtml = template.structureHtml;
+  for (const slot of template.manifest.slots) {
+    const val = slotMap[slot] || '';
+    outputHtml = outputHtml.replace(new RegExp(`\\{\\{\\s*slot:${slot}\\s*\\}\\}`, 'g'), val);
+  }
+
+  return outputHtml;
 }

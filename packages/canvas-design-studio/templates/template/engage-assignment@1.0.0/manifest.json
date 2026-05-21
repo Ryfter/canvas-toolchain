@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "engage-assignment",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "x-what-we-are-doing",
+    "x-instructions",
+    "x-time-deliverable"
+  ],
+  "tags": [
+    "engage-assignment",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

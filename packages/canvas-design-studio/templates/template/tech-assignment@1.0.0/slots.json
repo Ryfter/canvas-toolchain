@@ -1,0 +1,23 @@
+{
+  "hero": {
+    "required": true
+  },
+  "callout": {
+    "required": true
+  },
+  "x-setup": {
+    "required": false
+  },
+  "x-tasks": {
+    "required": true
+  },
+  "x-team": {
+    "required": false
+  },
+  "x-deliverable": {
+    "required": true
+  },
+  "x-rubric": {
+    "required": false
+  }
+}

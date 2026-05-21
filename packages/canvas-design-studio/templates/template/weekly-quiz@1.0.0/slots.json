@@ -1,0 +1,14 @@
+{
+  "hero": {
+    "required": true
+  },
+  "x-quiz-details": {
+    "required": true
+  },
+  "x-topics-covered": {
+    "required": true
+  },
+  "x-access": {
+    "required": true
+  }
+}

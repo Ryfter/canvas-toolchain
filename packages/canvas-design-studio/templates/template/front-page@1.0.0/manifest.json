@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "front-page",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "x-course-introduction",
+    "x-what-you-will-learn",
+    "x-how-this-course-works",
+    "x-instructor"
+  ],
+  "tags": [
+    "front-page",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

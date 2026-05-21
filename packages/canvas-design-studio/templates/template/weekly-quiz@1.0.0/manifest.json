@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "weekly-quiz",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "x-quiz-details",
+    "x-topics-covered",
+    "x-access"
+  ],
+  "tags": [
+    "weekly-quiz",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

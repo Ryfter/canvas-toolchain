@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "overview",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "callout",
+    "x-introduction",
+    "x-activities"
+  ],
+  "tags": [
+    "overview",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

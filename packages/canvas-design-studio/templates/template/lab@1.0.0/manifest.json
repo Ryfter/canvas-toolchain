@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "lab",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "callout",
+    "x-setup",
+    "x-instructions",
+    "x-submission"
+  ],
+  "tags": [
+    "lab",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

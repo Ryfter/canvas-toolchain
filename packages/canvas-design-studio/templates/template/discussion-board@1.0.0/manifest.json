@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "discussion-board",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "callout",
+    "x-requirements",
+    "x-grading"
+  ],
+  "tags": [
+    "discussion-board",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

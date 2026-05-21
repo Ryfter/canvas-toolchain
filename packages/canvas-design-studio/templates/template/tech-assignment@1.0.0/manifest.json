@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "tech-assignment",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "callout",
+    "x-setup",
+    "x-tasks",
+    "x-team",
+    "x-deliverable",
+    "x-rubric"
+  ],
+  "tags": [
+    "tech-assignment",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

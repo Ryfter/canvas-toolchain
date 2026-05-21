@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "resources",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "x-slides",
+    "x-videos",
+    "x-readings",
+    "x-other"
+  ],
+  "tags": [
+    "resources",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

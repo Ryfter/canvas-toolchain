@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "proj-assignment",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "callout",
+    "x-timeline",
+    "x-team",
+    "x-rubric",
+    "x-submission-details"
+  ],
+  "tags": [
+    "proj-assignment",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

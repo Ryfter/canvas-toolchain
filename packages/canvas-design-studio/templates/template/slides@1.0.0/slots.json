@@ -1,0 +1,14 @@
+{
+  "hero": {
+    "required": true
+  },
+  "x-slide-deck": {
+    "required": true
+  },
+  "x-about-these-slides": {
+    "required": false
+  },
+  "x-key-topics": {
+    "required": false
+  }
+}

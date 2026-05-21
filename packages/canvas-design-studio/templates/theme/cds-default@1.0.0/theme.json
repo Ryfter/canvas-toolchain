@@ -1,0 +1,168 @@
+{
+  "colors": {
+    "primary": "#002F6C",
+    "primaryLight": "#EBF2FA",
+    "primaryDark": "#001E44",
+    "text": "#1A1A1A",
+    "background": "#FFFFFF",
+    "border": "#E0E0D8"
+  },
+  "typography": {
+    "fontFamily": "Lato, sans-serif"
+  },
+  "slotStyles": {
+    "body": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "callout": {
+      "css": "border-left: 4px solid {{colors.primary}}; border-radius: 0 8px 8px 0; padding: 20px 24px; margin-bottom: 20px;",
+      "imagePrompt": "A subtle icon or abstract vector background related to {{topic}}"
+    },
+    "hero": {
+      "css": "min-height: 180px; display: flex; align-items: flex-end; padding: 24px; border-radius: 10px; margin-bottom: 24px; color: white;",
+      "imagePrompt": "A minimalist hero graphic representing {{topic}} for {{semester}} course"
+    },
+    "x-about-these-slides": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-access": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-activities": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-as-you-read": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-course-introduction": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-deliverable": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-grading": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-how-this-course-works": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-instructions": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-instructor": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-introduction": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-key-topics": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-opportunity": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-other": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-points-deadline": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-quiz-details": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-readings": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-requirements": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-rubric": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-setup": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-slide-deck": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-slides": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-submission": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-submission-details": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-tasks": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-team": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-the-reading": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-time-deliverable": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-timeline": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-topics-covered": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-videos": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-what-to-watch-for": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-what-we-are-doing": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-what-you-will-learn": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    },
+    "x-why-this-reading": {
+      "css": "background: white; border: 1px solid #e0e0d8; border-radius: 8px; padding: 24px; margin-bottom: 20px;",
+      "imagePrompt": "A clean illustration related to {{topic}}"
+    }
+  },
+  "globalCss": ""
+}

@@ -1,0 +1,14 @@
+{
+  "hero": {
+    "required": true
+  },
+  "x-what-we-are-doing": {
+    "required": true
+  },
+  "x-instructions": {
+    "required": true
+  },
+  "x-time-deliverable": {
+    "required": true
+  }
+}

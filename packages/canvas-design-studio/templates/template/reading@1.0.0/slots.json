@@ -1,0 +1,14 @@
+{
+  "hero": {
+    "required": true
+  },
+  "x-the-reading": {
+    "required": true
+  },
+  "x-why-this-reading": {
+    "required": true
+  },
+  "x-as-you-read": {
+    "required": false
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "hero": {
+    "required": true
+  },
+  "callout": {
+    "required": true
+  },
+  "x-timeline": {
+    "required": false
+  },
+  "x-team": {
+    "required": false
+  },
+  "x-rubric": {
+    "required": false
+  },
+  "x-submission-details": {
+    "required": true
+  }
+}

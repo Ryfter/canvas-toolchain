@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "kind": "bundle",
+  "id": "cds-defaults",
+  "version": "1.0.0",
+  "tier": "free",
+  "includes": [
+    {
+      "kind": "theme",
+      "id": "cds-default",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "prompt",
+      "id": "cds-default",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "front-page",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "overview",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "resources",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "slides",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "videos",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "assignment",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "engage-assignment",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "proj-assignment",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "tech-assignment",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "reading",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "reading-quiz",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "weekly-quiz",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "lab",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "discussion-board",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "extra-credit",
+      "version": "1.0.0"
+    },
+    {
+      "kind": "template",
+      "id": "custom",
+      "version": "1.0.0"
+    }
+  ]
+}

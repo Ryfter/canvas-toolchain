@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "template",
+  "id": "custom",
+  "version": "1.0.0",
+  "tier": "free",
+  "slots": [
+    "hero",
+    "body"
+  ],
+  "tags": [
+    "custom",
+    "default"
+  ],
+  "files": [
+    "structure.html",
+    "slots.json"
+  ]
+}

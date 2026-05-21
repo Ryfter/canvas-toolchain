@@ -1,0 +1,14 @@
+{
+  "hero": {
+    "required": true
+  },
+  "callout": {
+    "required": true
+  },
+  "x-requirements": {
+    "required": true
+  },
+  "x-grading": {
+    "required": false
+  }
+}

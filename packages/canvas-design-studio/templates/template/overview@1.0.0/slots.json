@@ -1,0 +1,14 @@
+{
+  "hero": {
+    "required": true
+  },
+  "callout": {
+    "required": true
+  },
+  "x-introduction": {
+    "required": true
+  },
+  "x-activities": {
+    "required": true
+  }
+}

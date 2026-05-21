@@ -1,0 +1,11 @@
+{
+  "hero": {
+    "required": true
+  },
+  "x-videos": {
+    "required": true
+  },
+  "x-what-to-watch-for": {
+    "required": false
+  }
+}

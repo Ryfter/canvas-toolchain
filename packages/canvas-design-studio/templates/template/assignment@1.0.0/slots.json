@@ -1,0 +1,14 @@
+{
+  "hero": {
+    "required": true
+  },
+  "callout": {
+    "required": true
+  },
+  "x-rubric": {
+    "required": false
+  },
+  "x-submission-details": {
+    "required": true
+  }
+}

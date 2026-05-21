@@ -1,0 +1,17 @@
+{
+  "hero": {
+    "required": true
+  },
+  "x-course-introduction": {
+    "required": true
+  },
+  "x-what-you-will-learn": {
+    "required": true
+  },
+  "x-how-this-course-works": {
+    "required": true
+  },
+  "x-instructor": {
+    "required": true
+  }
+}

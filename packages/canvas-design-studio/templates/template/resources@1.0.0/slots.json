@@ -1,0 +1,17 @@
+{
+  "hero": {
+    "required": true
+  },
+  "x-slides": {
+    "required": true
+  },
+  "x-videos": {
+    "required": true
+  },
+  "x-readings": {
+    "required": true
+  },
+  "x-other": {
+    "required": false
+  }
+}
