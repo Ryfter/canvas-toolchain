@@ -15,6 +15,7 @@ import { fullPipeline } from './tools/workflows/full_pipeline.js';
 import { installResource } from './registry/install_resource.js';
 import { listInstalledResources, uninstallResource } from './registry/local_registry.js';
 import { searchRegistry } from './registry/search_registry.js';
+import { installResourcesFromLockfile } from './registry/lockfile_install.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -166,6 +167,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'install_resources_from_lockfile',
+      description: 'Install resources listed in a plain-text or JSON lockfile, preserving order and skipping already-installed versions.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['path'],
+        properties: {
+          path: { type: 'string', description: 'Absolute path to a lockfile containing one URL per line or a JSON array of URLs.' },
+        },
+      },
+    },
     // ── Pass-through tools ──────────────────────────────────────────────────
     ...ALL_PASSTHROUGH.map((t) => ({
       name: t.name,
@@ -211,6 +223,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'search_registry':
         result = await searchRegistry(args as unknown as Parameters<typeof searchRegistry>[0]);
+        break;
+      case 'install_resources_from_lockfile':
+        result = await installResourcesFromLockfile(args as unknown as Parameters<typeof installResourcesFromLockfile>[0]);
         break;
       case 'download_canvas_archive': {
         // Special-cased so we can forward Canvas Backup's per-download progress events

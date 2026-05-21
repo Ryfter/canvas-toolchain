@@ -34,12 +34,13 @@ Implemented:
 - `install_resource` installs registry resources from `file://`, `github://`, or `ryfter://` URLs through `src/registry/install_resource.ts`.
 - `list_installed_resources` and `uninstall_resource` operate on the local registry index and support bundle cascade metadata.
 - `search_registry` searches free GitHub `index.json` registries or the configured premium registry.
+- `install_resources_from_lockfile` installs plain-text or JSON URL lockfiles with per-resource status reporting.
 
 Still pending:
 
 - Bulk Panopto transcript download.
 - Course-wide publish as one reviewed transaction.
-- Remaining registry MCP tools (lockfile install, bundle install).
+- Remaining registry MCP tools (bundle install).
 - A single native installer.
 
 ## Reasoning Behind the Current Shape
@@ -66,6 +67,7 @@ Keep the local archive as the source of truth. Google Drive is only a mirror.
 | Install resource resolver/tool | `src/registry/install_resource.ts`, `docs/superpowers/plans/2026-05-21-install-resource.md` |
 | List/uninstall registry tools | `src/registry/local_registry.ts`, `docs/superpowers/plans/2026-05-21-list-uninstall-resources.md` |
 | Search registry tool | `src/registry/search_registry.ts`, `docs/superpowers/plans/2026-05-21-search-registry.md` |
+| Lockfile install tool | `src/registry/lockfile_install.ts`, `docs/superpowers/plans/2026-05-21-lockfile-install.md` |
 
 ## Verification
 

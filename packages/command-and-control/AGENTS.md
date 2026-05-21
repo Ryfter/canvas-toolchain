@@ -42,6 +42,7 @@ src/
     local_registry.ts       ← local resource registry storage/index/manifest validation
     install_resource.ts     ← file/github/ryfter resolver and install_resource tool implementation
     search_registry.ts      ← free GitHub index search and premium registry search
+    lockfile_install.ts     ← ordered lockfile install with per-resource reporting
   tools/
     setup_cc.ts             ← configure providers, models, routing
     get_cc_status.ts        ← health snapshot
@@ -67,6 +68,7 @@ Registry foundation work for installable templates/themes/prompts/adapter config
 The `install_resource` resolver/tool layer is tracked in `docs/superpowers/plans/2026-05-21-install-resource.md`.
 The `list_installed_resources` and `uninstall_resource` tools are tracked in `docs/superpowers/plans/2026-05-21-list-uninstall-resources.md`.
 The `search_registry` tool is tracked in `docs/superpowers/plans/2026-05-21-search-registry.md`.
+The `install_resources_from_lockfile` tool is tracked in `docs/superpowers/plans/2026-05-21-lockfile-install.md`.
 
 ---
 
