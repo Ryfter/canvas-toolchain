@@ -1,4 +1,8 @@
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { TrajectoryEntry, TrajectoryFlag, Verdict } from '../types.js';
+import type { CourseId } from '../types.js';
+import { getCoursePath } from './course_state.js';
 
 /**
  * Compute the trajectory flag for a topic given its chronological verdict history.
@@ -84,4 +88,39 @@ export function identifyTrueEvergreens(entries: TrajectoryEntry[]): string[] {
   return latest.perAssignment
     .filter((t) => computeTrajectoryFlag(t.verdictHistory) === 'true-evergreen')
     .map((t) => t.topic);
+}
+
+// ---------------------------------------------------------------------------
+// JSONL persistence
+// ---------------------------------------------------------------------------
+
+export function getHistoryPath(courseId: CourseId): string {
+  return join(getCoursePath(courseId), 'history.jsonl');
+}
+
+export function appendEntry(entry: TrajectoryEntry): void {
+  const path = getHistoryPath(entry.courseId);
+  mkdirSync(dirname(path), { recursive: true });
+  appendFileSync(path, JSON.stringify(entry) + '\n', 'utf-8');
+}
+
+export function readEntries(courseId: CourseId, lookback?: number): TrajectoryEntry[] {
+  let path: string;
+  try {
+    path = getHistoryPath(courseId);
+  } catch {
+    return [];
+  }
+  if (!existsSync(path)) return [];
+  const content = readFileSync(path, 'utf-8');
+  const entries: TrajectoryEntry[] = [];
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    entries.push(JSON.parse(trimmed) as TrajectoryEntry);
+  }
+  if (lookback !== undefined && lookback > 0) {
+    return entries.slice(-lookback);
+  }
+  return entries;
 }

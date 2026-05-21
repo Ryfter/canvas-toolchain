@@ -112,3 +112,58 @@ describe('identifyTrueEvergreens', () => {
     expect(identifyTrueEvergreens(entries)).toEqual(['Ever']);
   });
 });
+
+import { afterEach, beforeEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { appendEntry, readEntries, getHistoryPath } from '../../src/kb/trajectory.js';
+import { setupCourse } from '../../src/tools/setup_course.js';
+
+let tmpHome: string;
+beforeEach(() => {
+  tmpHome = mkdtempSync(join(tmpdir(), 'ci-traj-'));
+  process.env.CURRICULUM_INTELLIGENCE_HOME = tmpHome;
+  setupCourse({ id: 'TRJ101', title: 'Trajectory Test' });
+});
+afterEach(() => {
+  delete process.env.CURRICULUM_INTELLIGENCE_HOME;
+  rmSync(tmpHome, { recursive: true, force: true });
+});
+
+describe('trajectory log read/write', () => {
+  test('round-trip — append then read', () => {
+    const entry = makeEntry('S26', [pt('A', ['KEEP'])]);
+    entry.courseId = 'TRJ101';
+    appendEntry(entry);
+    const read = readEntries('TRJ101');
+    expect(read).toHaveLength(1);
+    expect(read[0].semesterId).toBe('S26');
+  });
+
+  test('multiple appends preserve order', () => {
+    const e1 = makeEntry('S25', [pt('A', ['KEEP'])]); e1.courseId = 'TRJ101';
+    const e2 = makeEntry('F25', [pt('A', ['KEEP', 'KEEP'])]); e2.courseId = 'TRJ101';
+    const e3 = makeEntry('S26', [pt('A', ['KEEP', 'KEEP', 'KEEP'])]); e3.courseId = 'TRJ101';
+    appendEntry(e1); appendEntry(e2); appendEntry(e3);
+    const read = readEntries('TRJ101');
+    expect(read.map((e) => e.semesterId)).toEqual(['S25', 'F25', 'S26']);
+  });
+
+  test('readEntries respects lookback', () => {
+    for (const s of ['S24', 'F24', 'S25', 'F25', 'S26']) {
+      const e = makeEntry(s, [pt('A', ['KEEP'])]); e.courseId = 'TRJ101';
+      appendEntry(e);
+    }
+    expect(readEntries('TRJ101', 2).map((e) => e.semesterId)).toEqual(['F25', 'S26']);
+  });
+
+  test('readEntries on empty/missing course returns []', () => {
+    expect(readEntries('NEVER_EXISTED')).toEqual([]);
+  });
+
+  test('getHistoryPath returns the expected location', () => {
+    const p = getHistoryPath('TRJ101');
+    expect(p.endsWith(join('courses', 'TRJ101', 'history.jsonl'))).toBe(true);
+  });
+});
