@@ -191,3 +191,48 @@ describe('recommend_for_topic', () => {
     expect(result.details).toHaveProperty('newsHits');
   });
 });
+
+const baseInput = {
+  courseId: 'TRJ' as const,
+  semesterId: 'Spring2026' as const,
+  topic: 'Prompt engineering',
+  currencyClass: 'current' as const,
+  lastTaughtSemesterId: 'Fall2025',
+  newsHits: 3,
+};
+
+describe('recommend_for_topic trajectory annotation', () => {
+  test('appends unstable note to rationale when trajectoryFlag=unstable', () => {
+    const result = recommendForTopic({
+      ...baseInput,
+      trajectoryFlag: 'unstable',
+      verdictHistory: ['KEEP', 'UPDATE', 'KEEP', 'UPDATE'],
+    });
+    expect(result.rationale).toMatch(/flip|unstable|review/i);
+  });
+
+  test('appends evergreen note to rationale when trajectoryFlag=true-evergreen', () => {
+    const result = recommendForTopic({
+      ...baseInput,
+      topic: 'Calculus fundamentals',
+      currencyClass: 'evergreen',
+      newsHits: 0,
+      trajectoryFlag: 'true-evergreen',
+      verdictHistory: ['KEEP', 'KEEP', 'KEEP', 'KEEP'],
+    });
+    expect(result.rationale).toMatch(/evergreen|stable|consecutive/i);
+  });
+
+  test('verdict letter unchanged by trajectoryFlag', () => {
+    const noFlag = recommendForTopic({ ...baseInput });
+    const unstableFlag = recommendForTopic({ ...baseInput, trajectoryFlag: 'unstable' });
+    const evergreenFlag = recommendForTopic({ ...baseInput, trajectoryFlag: 'true-evergreen' });
+    expect(noFlag.verdict).toBe(unstableFlag.verdict);
+    expect(noFlag.verdict).toBe(evergreenFlag.verdict);
+  });
+
+  test('no annotation when trajectoryFlag absent', () => {
+    const result = recommendForTopic({ ...baseInput });
+    expect(result.rationale).not.toMatch(/flip|consecutive/i);
+  });
+});
