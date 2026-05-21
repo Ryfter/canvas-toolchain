@@ -189,3 +189,17 @@ This file records decisions made during design and implementation that are not o
 **Configuration:** Set `BRAVE_SEARCH_API_KEY` env var. Free tier covers 2,000 queries/month — more than enough for curriculum planning use. The adapter maps the `since` date to Brave's `freshness` buckets (`pw`/`pm`/`py`), or omits it for queries older than a year.
 
 **Prompt injection:** When snippets are available, they are formatted as a numbered list before the main instruction. The LLM synthesizes them with its own knowledge to produce the structured `developments` output.
+
+---
+
+## Trajectory log for analyze_course
+
+**Decision:** CI maintains an append-only `history.jsonl` per course recording each analyze_course run. Trajectory data is advisory only — `currencyClass` and verdict letter stay deterministic. External signals (RSS, web search, transcripts) are merged at the C&C layer and do not appear in the trajectory entry.
+
+**Why:** Per-semester verdicts alone don't reveal pedagogical patterns. A topic that flips KEEP→UPDATE→KEEP repeatedly is a structural problem; one that holds KEEP for four consecutive semesters has earned evergreen status. The history log makes these patterns visible without changing the deterministic core. Keeping external signals out of the entry means two runs of analyze_course on the same archive produce identical trajectory entries regardless of whether RSS or Brave keys were available — apples-to-apples comparison across time.
+
+**Storage:** Always written at full granularity. Granularity becomes a *display* choice via `getCourseTrajectory`'s `granularity` param. Storage is small (few KB per semester).
+
+**Diff baseline:** Both same-season (Fall→Fall) and most-recent (Fall→Spring) when both exist. Captures pedagogical year-over-year evolution and last-touched changes.
+
+**Trajectory flags:** new / stable / stabilising / unstable / true-evergreen. Flag annotates the verdict's `rationale` field; it does not change the verdict.
