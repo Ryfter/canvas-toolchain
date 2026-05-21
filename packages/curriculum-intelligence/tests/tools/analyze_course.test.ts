@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { setupCourse } from '../../src/tools/setup_course.js';
 import { analyzeCourse } from '../../src/tools/analyze_course.js';
 import { getHistoryPath, readEntries } from '../../src/kb/trajectory.js';
+import type { LlmClient } from '../../src/llm/client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -94,4 +95,41 @@ describe('CI analyzeCourse', () => {
     expect(result.trajectoryEntry.diff.sameSeason).toBeNull();
     expect(result.trajectoryEntry.diff.mostRecent).toBeNull();
   });
+});
+
+function mockLlm(response: string): LlmClient {
+  return { complete: async () => response };
+}
+
+const CONCEPT_RESPONSE = JSON.stringify({
+  concepts: [{ name: 'Test Concept', relatedAssignments: [] }],
+});
+
+test('perConcept populated when extractConcepts=true and llmClient provided', async () => {
+  const result = await analyzeCourse({
+    courseId: 'AC101', semesterId: 'Spring2026', archivePath: FIX_ARCHIVE,
+    extractConcepts: true, llmClient: mockLlm(CONCEPT_RESPONSE),
+  });
+  expect(result.perConcept).toBeDefined();
+  expect(result.perConcept!.length).toBeGreaterThan(0);
+  expect(result.trajectoryEntry.perConcept).toBeDefined();
+});
+
+test('perConcept omitted when extractConcepts=true but llmClient missing', async () => {
+  const result = await analyzeCourse({
+    courseId: 'AC101', semesterId: 'Spring2026', archivePath: FIX_ARCHIVE,
+    extractConcepts: true,
+  });
+  expect(result.perConcept).toBeUndefined();
+  expect(result.trajectoryEntry.perConcept).toBeUndefined();
+});
+
+test('concept extraction failures degrade silently', async () => {
+  const failingClient: LlmClient = { complete: async () => { throw new Error('rate limit'); } };
+  const result = await analyzeCourse({
+    courseId: 'AC101', semesterId: 'Spring2026', archivePath: FIX_ARCHIVE,
+    extractConcepts: true, llmClient: failingClient,
+  });
+  expect(result.perConcept).toBeUndefined();
+  expect(result.perAssignment.length).toBeGreaterThan(0);
 });

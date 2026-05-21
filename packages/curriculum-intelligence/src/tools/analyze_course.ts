@@ -1,4 +1,5 @@
 import type { CourseId, SemesterId, TrajectoryEntry, TrajectoryDiff, PerTopicTrajectory, Verdict } from '../types.js';
+import type { LlmClient } from '../llm/client.js';
 import { ingestCanvasArchive } from './ingest_canvas_archive.js';
 import { diffSemesters, type DiffSemestersResult } from './diff_semesters.js';
 import { scoreTopicCurrency } from './score_topic_currency.js';
@@ -13,11 +14,14 @@ import {
   findMostRecentPrior,
   getHistoryPath,
 } from '../kb/trajectory.js';
+import { extractCourseConcepts } from './extract_course_concepts.js';
 
 export interface AnalyzeCourseInput {
   courseId: CourseId;
   semesterId: SemesterId;
   archivePath: string;
+  extractConcepts?: boolean;
+  llmClient?: LlmClient;
 }
 
 export interface AnalyzeCourseReport {
@@ -125,6 +129,36 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
     ? tryDiff(courseId, mostRecent, semesterId)
     : diffSameSeason;
 
+  // 8.5. Optional concept extraction
+  let perConcept: PerTopicTrajectory[] | undefined;
+  if (input.extractConcepts && input.llmClient) {
+    try {
+      const extraction = await extractCourseConcepts({
+        assignments: topicMap.assignments.map((a) => ({ name: a.name })),
+        modules: topicMap.modules.map((m) => ({ name: m.name })),
+        llmClient: input.llmClient,
+      });
+      perConcept = extraction.concepts.map((c) => {
+        const related = perAssignment.filter((p) => c.relatedAssignments.includes(p.topic));
+        const verdict = pickMostUncertainVerdict(related);
+        const priorVerdicts = buildConceptVerdictHistory(c.name, priorEntries);
+        const fullHistory: Verdict[] = [...priorVerdicts, verdict];
+        return {
+          topic: c.name,
+          verdict,
+          currencyClass: related[0]?.currencyClass ?? ('current' as const),
+          newsHitCount: 0,
+          trajectoryFlag: computeTrajectoryFlag(fullHistory),
+          verdictPrior: priorVerdicts.length > 0 ? priorVerdicts[priorVerdicts.length - 1] : null,
+          verdictHistory: fullHistory.slice(-4),
+          relatedAssignments: c.relatedAssignments,
+        };
+      });
+    } catch (err) {
+      process.stderr.write(`[analyze_course] concept extraction failed: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
+  }
+
   // 9. Build trajectory entry
   const entry: TrajectoryEntry = {
     schemaVersion: 1,
@@ -138,6 +172,7 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
     assignmentCount: perAssignment.length,
     verdicts,
     perAssignment,
+    ...(perConcept ? { perConcept } : {}),
     diff: {
       sameSeason: diffSameSeason,
       mostRecent: diffMostRecent,
@@ -152,8 +187,24 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
     semesterId,
     historyPath: getHistoryPath(courseId),
     perAssignment,
+    ...(perConcept ? { perConcept } : {}),
     trajectoryEntry: entry,
   };
+}
+
+function pickMostUncertainVerdict(assignments: PerTopicTrajectory[]): Verdict {
+  const rank: Record<Verdict, number> = { UPDATE: 0, ADD: 1, DROP: 2, KEEP: 3 };
+  if (assignments.length === 0) return 'KEEP';
+  return [...assignments].sort((a, b) => rank[a.verdict] - rank[b.verdict])[0].verdict;
+}
+
+function buildConceptVerdictHistory(name: string, priorEntries: TrajectoryEntry[]): Verdict[] {
+  const verdicts: Verdict[] = [];
+  for (const entry of priorEntries) {
+    const found = entry.perConcept?.find((t) => t.topic === name);
+    if (found) verdicts.push(found.verdict);
+  }
+  return verdicts;
 }
 
 function tryDiff(
