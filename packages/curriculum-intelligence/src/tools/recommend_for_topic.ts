@@ -78,7 +78,7 @@ function buildRationale(
         `"${topic}" was taught ${semestersSince} semester(s) ago; ` +
         (newsHits >= 4
           ? `${newsHits} recent news hits suggest meaningful updates are available.`
-          : `it is ${currencyClass} and may benefit from fresh examples or examples.`)
+          : `it is ${currencyClass} and may benefit from fresh examples or context.`)
       );
   }
 }
