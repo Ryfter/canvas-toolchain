@@ -11,6 +11,7 @@ import {
   computeTrajectoryFlag,
   findSameSeasonPrior,
   findMostRecentPrior,
+  getHistoryPath,
 } from '../kb/trajectory.js';
 
 export interface AnalyzeCourseInput {
@@ -19,15 +20,16 @@ export interface AnalyzeCourseInput {
   archivePath: string;
 }
 
-export interface AnalyzeCourseResult {
+export interface AnalyzeCourseReport {
   courseId: CourseId;
   semesterId: SemesterId;
+  historyPath: string;
   perAssignment: PerTopicTrajectory[];
   perConcept?: PerTopicTrajectory[];
   trajectoryEntry: TrajectoryEntry;
 }
 
-export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeCourseResult> {
+export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeCourseReport> {
   const { courseId, semesterId, archivePath } = input;
 
   // 1. Ingest the archive (writes topic-map.json to disk, registers semester in config)
@@ -148,6 +150,7 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
   return {
     courseId,
     semesterId,
+    historyPath: getHistoryPath(courseId),
     perAssignment,
     trajectoryEntry: entry,
   };

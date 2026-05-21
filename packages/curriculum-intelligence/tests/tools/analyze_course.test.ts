@@ -32,6 +32,8 @@ describe('CI analyzeCourse', () => {
     expect(result.perConcept).toBeUndefined();
     expect(result.trajectoryEntry.semesterId).toBe('Spring2026');
     expect(existsSync(getHistoryPath('AC101'))).toBe(true);
+    expect(result.historyPath).toBeTruthy();
+    expect(result.historyPath.endsWith('history.jsonl')).toBe(true);
 
     const entries = readEntries('AC101');
     expect(entries).toHaveLength(1);
