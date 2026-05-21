@@ -30,11 +30,13 @@ Implemented:
 - `import_course` and `generate_course` call real Design Studio functions.
 - `download_canvas_archive` calls the Python Canvas Backup CLI through a bridge instead of pretending a downloader npm package exists.
 - `npm run smoke:integration` verifies the cross-app contract with fixtures: archive analysis, Design Studio import, and HTML generation.
+- Local registry foundation for installable templates, themes, prompts, and adapter configs lives in `src/registry/local_registry.ts`.
 
 Still pending:
 
 - Bulk Panopto transcript download.
 - Course-wide publish as one reviewed transaction.
+- Registry MCP tools and URL resolvers (`install_resource`, `list_installed_resources`, `uninstall_resource`, `search_registry`, lockfile install, bundle install).
 - A single native installer.
 
 ## Reasoning Behind the Current Shape
@@ -56,6 +58,8 @@ Keep the local archive as the source of truth. Google Drive is only a mirror.
 | Design Studio bridge | `src/passthrough/design_tools.ts` |
 | Canvas Backup bridge | `src/passthrough/downloader_tools.ts` |
 | Workflow tools | `src/tools/workflows/` |
+| Local registry foundation | `src/registry/local_registry.ts` |
+| Registry implementation plan | `docs/superpowers/plans/2026-05-21-local-registry.md` |
 
 ## Verification
 
