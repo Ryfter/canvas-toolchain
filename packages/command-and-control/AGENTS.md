@@ -47,6 +47,7 @@ src/
     slots.ts                ← runtime slot vocabulary validation
     json_schema.ts          ← lightweight JSON Schema fragment validation
     template.ts             ← template manifest/structure/slots validator
+    theme.ts                ← theme manifest/theme.json/image prompt validator
   tools/
     setup_cc.ts             ← configure providers, models, routing
     get_cc_status.ts        ← health snapshot
@@ -74,6 +75,7 @@ The `list_installed_resources` and `uninstall_resource` tools are tracked in `do
 The `search_registry` tool is tracked in `docs/superpowers/plans/2026-05-21-search-registry.md`.
 The `install_resources_from_lockfile` tool is tracked in `docs/superpowers/plans/2026-05-21-lockfile-install.md`.
 The template validator is tracked in `docs/superpowers/plans/2026-05-21-template-validator.md`.
+The theme validator is tracked in `docs/superpowers/plans/2026-05-21-theme-validator.md`.
 
 ---
 
