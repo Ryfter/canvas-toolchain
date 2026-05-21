@@ -1,4 +1,4 @@
-import type { TrajectoryFlag, Verdict } from '../types.js';
+import type { TrajectoryEntry, TrajectoryFlag, Verdict } from '../types.js';
 
 /**
  * Compute the trajectory flag for a topic given its chronological verdict history.
@@ -39,4 +39,49 @@ function countAdjacentChanges(verdicts: Verdict[]): number {
     if (verdicts[i] !== verdicts[i - 1]) n++;
   }
   return n;
+}
+
+/**
+ * Compute the average fraction of topics whose verdict changes between adjacent runs.
+ * Returns 0 for fewer than 2 entries.
+ */
+export function computeChurnRate(entries: TrajectoryEntry[]): number {
+  if (entries.length < 2) return 0;
+
+  const churnPerTransition: number[] = [];
+  for (let i = 1; i < entries.length; i++) {
+    const prev = entries[i - 1];
+    const curr = entries[i];
+    const prevByTopic = new Map(prev.perAssignment.map((t) => [t.topic, t.verdict]));
+    let changed = 0;
+    let comparable = 0;
+    for (const t of curr.perAssignment) {
+      const before = prevByTopic.get(t.topic);
+      if (before === undefined) continue;
+      comparable++;
+      if (before !== t.verdict) changed++;
+    }
+    if (comparable > 0) churnPerTransition.push(changed / comparable);
+  }
+
+  if (churnPerTransition.length === 0) return 0;
+  return churnPerTransition.reduce((a, b) => a + b, 0) / churnPerTransition.length;
+}
+
+/** Topics whose verdict flipped >=2 times in the last 4 runs. Operates on perAssignment. */
+export function identifyUnstableTopics(entries: TrajectoryEntry[]): string[] {
+  if (entries.length === 0) return [];
+  const latest = entries[entries.length - 1];
+  return latest.perAssignment
+    .filter((t) => computeTrajectoryFlag(t.verdictHistory) === 'unstable')
+    .map((t) => t.topic);
+}
+
+/** Topics in true-evergreen state in the most recent entry. Operates on perAssignment. */
+export function identifyTrueEvergreens(entries: TrajectoryEntry[]): string[] {
+  if (entries.length === 0) return [];
+  const latest = entries[entries.length - 1];
+  return latest.perAssignment
+    .filter((t) => computeTrajectoryFlag(t.verdictHistory) === 'true-evergreen')
+    .map((t) => t.topic);
 }
