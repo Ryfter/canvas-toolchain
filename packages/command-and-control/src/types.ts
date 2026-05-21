@@ -21,6 +21,11 @@ export interface CcConfig {
   downloader?: {
     executablePath?: string;
   };
+  /** Premium registry settings. Token is never logged or echoed by tools. */
+  registry?: {
+    token?: string;
+    premiumBaseUrl?: string;
+  };
   routing: {
     fast: ProviderName;
     judgment: ProviderName;

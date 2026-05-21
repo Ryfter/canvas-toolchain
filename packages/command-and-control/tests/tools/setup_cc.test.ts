@@ -44,6 +44,15 @@ describe('setupCc', () => {
     expect(config.downloader?.executablePath).toBe('C:/tools/canvas-backup.exe');
   });
 
+  it('persists registry token without echoing the raw token', () => {
+    const result = setupCc({ registryToken: 'secret-token', premiumRegistryBaseUrl: 'https://example.test/api/registry' });
+    const config = loadConfig();
+
+    expect(config.registry?.token).toBe('secret-token');
+    expect(config.registry?.premiumBaseUrl).toBe('https://example.test/api/registry');
+    expect(result.config.registry?.token).toBe('[configured]');
+  });
+
   it('partial update does not overwrite unrelated fields', () => {
     setupCc({ mode: 'advanced' });
     setupCc({ anthropicModel: 'claude-opus-4-7' });

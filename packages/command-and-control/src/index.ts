@@ -12,6 +12,7 @@ import { analyzeCourse } from './tools/workflows/analyze_course.js';
 import { planNextSemester } from './tools/workflows/plan_next_semester.js';
 import { updateCourseMaterials } from './tools/workflows/update_course_materials.js';
 import { fullPipeline } from './tools/workflows/full_pipeline.js';
+import { installResource } from './registry/install_resource.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -36,6 +37,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           routingFast: { type: 'string', enum: ['anthropic', 'ollama'] },
           routingJudgment: { type: 'string', enum: ['anthropic', 'ollama'] },
           downloaderPath: { type: 'string', description: 'Absolute path to the canvas-backup executable (or canvas-backup.exe). Persisted in config — professors set this once instead of managing env vars.' },
+          registryToken: { type: 'string', description: 'Premium registry token for ryfter:// resources. Stored locally and never echoed back.' },
+          premiumRegistryBaseUrl: { type: 'string', description: 'Optional premium registry API base URL override.' },
         },
       },
     },
@@ -112,6 +115,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    // ── Resource registry ──────────────────────────────────────────────────
+    {
+      name: 'install_resource',
+      description: 'Install a template, theme, prompt, or adapter-config resource from github://, ryfter://, or file:// into the local registry.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['url'],
+        properties: {
+          url: { type: 'string', description: 'Resource URL, e.g. github://canvas-toolchain/templates/comparison-layout-academic@1.2.0' },
+        },
+      },
+    },
     // ── Pass-through tools ──────────────────────────────────────────────────
     ...ALL_PASSTHROUGH.map((t) => ({
       name: t.name,
@@ -145,6 +160,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'full_pipeline':
         result = await fullPipeline(args as unknown as Parameters<typeof fullPipeline>[0]);
+        break;
+      case 'install_resource':
+        result = await installResource(args as unknown as Parameters<typeof installResource>[0]);
         break;
       case 'download_canvas_archive': {
         // Special-cased so we can forward Canvas Backup's per-download progress events

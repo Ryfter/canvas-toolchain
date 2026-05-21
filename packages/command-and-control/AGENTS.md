@@ -40,6 +40,7 @@ src/
     config.ts               ← load/save ~/.command-and-control/config.json
   registry/
     local_registry.ts       ← local resource registry storage/index/manifest validation
+    install_resource.ts     ← file/github/ryfter resolver and install_resource tool implementation
   tools/
     setup_cc.ts             ← configure providers, models, routing
     get_cc_status.ts        ← health snapshot
@@ -62,6 +63,7 @@ scripts/
 See `CLAUDE.md`, `docs/integration-contracts.md`, and `docs/architecture-review-followups.md` before changing data flow between apps.
 
 Registry foundation work for installable templates/themes/prompts/adapter configs is tracked in `docs/superpowers/plans/2026-05-21-local-registry.md`.
+The `install_resource` resolver/tool layer is tracked in `docs/superpowers/plans/2026-05-21-install-resource.md`.
 
 ---
 

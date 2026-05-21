@@ -10,6 +10,10 @@ export interface SetupCcInput {
   routingJudgment?: ProviderName;
   /** Absolute path to the canvas-backup executable (or canvas-backup.exe). Persisted in config.json so professors don't need env vars. */
   downloaderPath?: string;
+  /** Premium registry token for ryfter:// resources. */
+  registryToken?: string;
+  /** Optional premium registry base URL override. */
+  premiumRegistryBaseUrl?: string;
 }
 
 export interface SetupCcResult {
@@ -37,6 +41,30 @@ export function setupCc(input: SetupCcInput): SetupCcResult {
     config.downloader = { ...config.downloader, executablePath: input.downloaderPath };
   }
 
+  if (input.registryToken !== undefined || input.premiumRegistryBaseUrl !== undefined) {
+    config.registry = {
+      ...config.registry,
+      token: input.registryToken ?? config.registry?.token,
+      premiumBaseUrl: input.premiumRegistryBaseUrl ?? config.registry?.premiumBaseUrl,
+    };
+  }
+
   saveConfig(config);
-  return { config, message: 'Configuration saved.' };
+  return { config: redactSecrets(config), message: 'Configuration saved.' };
+}
+
+function redactSecrets(config: CcConfig): CcConfig {
+  return {
+    ...config,
+    providers: { ...config.providers, ollama: config.providers.ollama ? { ...config.providers.ollama } : undefined },
+    downloader: config.downloader ? { ...config.downloader } : undefined,
+    registry: config.registry
+      ? {
+          ...config.registry,
+          token: config.registry.token ? '[configured]' : undefined,
+        }
+      : undefined,
+    routing: { ...config.routing },
+    lastRun: { ...config.lastRun },
+  };
 }
