@@ -14,6 +14,8 @@ export interface SetupCcInput {
   registryToken?: string;
   /** Optional premium registry base URL override. */
   premiumRegistryBaseUrl?: string;
+  /** Optional GitHub org override for the free registry. Defaults to canvas-toolchain. */
+  registryGithubOrg?: string;
 }
 
 export interface SetupCcResult {
@@ -41,11 +43,12 @@ export function setupCc(input: SetupCcInput): SetupCcResult {
     config.downloader = { ...config.downloader, executablePath: input.downloaderPath };
   }
 
-  if (input.registryToken !== undefined || input.premiumRegistryBaseUrl !== undefined) {
+  if (input.registryToken !== undefined || input.premiumRegistryBaseUrl !== undefined || input.registryGithubOrg !== undefined) {
     config.registry = {
       ...config.registry,
       token: input.registryToken ?? config.registry?.token,
       premiumBaseUrl: input.premiumRegistryBaseUrl ?? config.registry?.premiumBaseUrl,
+      githubOrg: input.registryGithubOrg ?? config.registry?.githubOrg,
     };
   }
 

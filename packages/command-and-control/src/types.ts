@@ -25,6 +25,7 @@ export interface CcConfig {
   registry?: {
     token?: string;
     premiumBaseUrl?: string;
+    githubOrg?: string;
   };
   routing: {
     fast: ProviderName;

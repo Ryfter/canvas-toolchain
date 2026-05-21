@@ -14,6 +14,7 @@ import { updateCourseMaterials } from './tools/workflows/update_course_materials
 import { fullPipeline } from './tools/workflows/full_pipeline.js';
 import { installResource } from './registry/install_resource.js';
 import { listInstalledResources, uninstallResource } from './registry/local_registry.js';
+import { searchRegistry } from './registry/search_registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -40,6 +41,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           downloaderPath: { type: 'string', description: 'Absolute path to the canvas-backup executable (or canvas-backup.exe). Persisted in config — professors set this once instead of managing env vars.' },
           registryToken: { type: 'string', description: 'Premium registry token for ryfter:// resources. Stored locally and never echoed back.' },
           premiumRegistryBaseUrl: { type: 'string', description: 'Optional premium registry API base URL override.' },
+          registryGithubOrg: { type: 'string', description: 'Optional GitHub org override for the free registry. Defaults to canvas-toolchain.' },
         },
       },
     },
@@ -151,6 +153,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'search_registry',
+      description: 'Search available registry resources from the free GitHub registry or configured premium registry.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['query'],
+        properties: {
+          query: { type: 'string' },
+          kind: { type: 'string', enum: ['template', 'theme', 'prompt', 'adapter-config', 'bundle'] },
+          tier: { type: 'string', enum: ['free', 'premium'] },
+        },
+      },
+    },
     // ── Pass-through tools ──────────────────────────────────────────────────
     ...ALL_PASSTHROUGH.map((t) => ({
       name: t.name,
@@ -193,6 +208,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'uninstall_resource':
         result = uninstallResource(args as unknown as Parameters<typeof uninstallResource>[0]);
+        break;
+      case 'search_registry':
+        result = await searchRegistry(args as unknown as Parameters<typeof searchRegistry>[0]);
         break;
       case 'download_canvas_archive': {
         // Special-cased so we can forward Canvas Backup's per-download progress events

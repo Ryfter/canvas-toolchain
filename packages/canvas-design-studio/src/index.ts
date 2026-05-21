@@ -913,3 +913,6 @@ async function main() {
 }
 
 main().catch(console.error);
+
+export { canvasSafeTransform } from './utils/transform.js';
+export type { TransformResult } from './utils/transform.js';
