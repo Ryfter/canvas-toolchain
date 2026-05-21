@@ -1,0 +1,5 @@
+[
+  { "id": 2001, "type": "Page",       "title": "Week 2 Overview", "content_id": null, "position": 1 },
+  { "id": 2002, "type": "Assignment", "title": "Assignment 2.1",  "content_id": 202,  "position": 2 },
+  { "id": 2003, "type": "Quiz",       "title": "Week 2 Quiz",     "content_id": 302,  "position": 3 }
+]

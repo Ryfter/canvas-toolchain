@@ -1,0 +1,7 @@
+{
+  "page_id": 2,
+  "title": "Week 2 At A Glance",
+  "url": "week-2-at-a-glance",
+  "published": true,
+  "body": "<h2>Week 2: Agents and Tool Use</h2><p>Topics: ReAct, tool selection, agent loops. External resource: <a href=\"https://example.com/agents\">agents primer</a>.</p>"
+}

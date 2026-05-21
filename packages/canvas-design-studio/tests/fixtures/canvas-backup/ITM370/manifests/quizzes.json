@@ -1,0 +1,4 @@
+[
+  { "id": 301, "title": "Reading Quiz 1", "quiz_type": "assignment", "points_possible": 10 },
+  { "id": 302, "title": "Week 2 Quiz",    "quiz_type": "assignment", "points_possible": 15 }
+]

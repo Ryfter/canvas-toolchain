@@ -1,0 +1,22 @@
+[
+  {
+    "id": 9001,
+    "name": "Engage 1 - Introduce Yourself",
+    "position": 1,
+    "due_at": "2025-01-20T05:59:00Z",
+    "points_possible": 10,
+    "submission_types": ["online_text_entry"],
+    "published": true,
+    "description": "<p>Introduce yourself to the class. Tell us your name, major, and one thing you hope to learn about <strong>generative AI</strong> this semester. Visit <a href=\"https://example.com/prompting\">this prompting guide</a> for context.</p>"
+  },
+  {
+    "id": 9002,
+    "name": "Engage 2 - First Prompt",
+    "position": 2,
+    "due_at": "2025-01-27T05:59:00Z",
+    "points_possible": 20,
+    "submission_types": ["online_upload"],
+    "published": true,
+    "description": "<p>Write a prompt that gets ChatGPT to produce a useful summary of an article. Submit the prompt and the response.</p>"
+  }
+]

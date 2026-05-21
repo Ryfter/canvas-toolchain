@@ -1,0 +1,131 @@
+============================================================
+  CANVAS DESIGN STUDIO — Professor Quick Start Guide
+  Boise State University
+============================================================
+
+This tool generates polished, branded Canvas assignment pages
+using AI. You provide your assignment content; it handles the
+design, formatting, and Canvas compatibility.
+
+------------------------------------------------------------
+WHAT YOU NEED
+------------------------------------------------------------
+
+1. Claude Code (free at claude.ai/code)
+   Install it, sign in with your Anthropic or Google account.
+
+2. This project folder (canvas-design-studio/)
+   Open it in Claude Code as your working directory.
+
+That's it. No coding required.
+
+------------------------------------------------------------
+STEP 1 — ADD YOUR ASSIGNMENT CONTENT
+------------------------------------------------------------
+
+Open this file and paste your raw assignment instructions:
+
+   ingest/assignment-brief.md
+
+You can paste anything — Word doc text, bullet points, an
+old Canvas page, rough notes. Don't worry about formatting.
+Claude will clean it up.
+
+------------------------------------------------------------
+STEP 2 — RUN THIS PROMPT (copy and paste it exactly)
+------------------------------------------------------------
+
+   Read everything in ingest/, then generate a Canvas
+   assignment page using the design system in this project.
+   Save it to output/.
+
+Claude will notice if your course details are missing and
+ask you for them in one message. Just reply with:
+
+   Professor: [Your Name]
+   Course Number: [e.g., BusApp 105]
+   Course Name: [e.g., Business Applications]
+   Assignment Number: [e.g., 3.2]
+   Semester: [e.g., Fall 2026]
+
+It will fill those in automatically and then build the page.
+
+------------------------------------------------------------
+STEP 3 — GET YOUR HERO IMAGE (optional but recommended)
+------------------------------------------------------------
+
+After building, Claude will give you a prompt to use in
+ChatGPT (chatgpt.com) to generate a banner image.
+
+In ChatGPT:
+1. Start a new chat
+2. Click the image icon (or say "generate an image")
+3. Paste the prompt Claude gives you
+4. Download the image
+5. Upload it to your Canvas course Files tab
+6. Copy the file URL from Canvas
+
+Then tell Claude:
+
+   My hero image URL is: [paste URL here]
+
+It will drop it into your page automatically.
+
+If you skip the image, the page still looks great —
+the banner will show as a solid BSU blue gradient.
+
+------------------------------------------------------------
+STEP 4 — PASTE INTO CANVAS
+------------------------------------------------------------
+
+Your finished page is saved as a .html file in:
+
+   output/
+
+To put it in Canvas:
+
+1. Go to your Canvas course
+2. Create a new Page (or open an existing one)
+3. In the editor toolbar, click the HTML icon < >
+   (it may say "HTML Editor" or show angle brackets)
+4. Select all the existing content and delete it
+5. Paste your entire .html file contents
+6. Click Save
+
+Preview it — it should look exactly like the mockup.
+
+------------------------------------------------------------
+STEP 5 — REUSE FOR ANOTHER ASSIGNMENT
+------------------------------------------------------------
+
+Clear the ingest folder and start fresh:
+
+1. Delete (or overwrite) ingest/assignment-brief.md
+2. Run the same prompt again
+
+Claude will ask for your course details again if needed,
+or reuse them from the previous run if they're still in
+ingest/course-config.md.
+
+------------------------------------------------------------
+TIPS
+------------------------------------------------------------
+
+- You can ask Claude to adjust anything after it builds:
+  "Make the overview section shorter."
+  "Add a grading rubric section."
+  "Change the tone to be more casual."
+
+- To update your course colors (if BSU changes brand colors):
+  "Update the primary color to #XXXXXX in DESIGN.md and CLAUDE.md."
+
+- If something looks wrong in Canvas, tell Claude:
+  "The two columns aren't stacking on mobile. Fix it."
+
+------------------------------------------------------------
+QUESTIONS?
+------------------------------------------------------------
+
+Contact: kevinrank@boisestate.edu
+
+============================================================

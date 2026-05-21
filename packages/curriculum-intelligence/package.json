@@ -1,0 +1,36 @@
+{
+  "name": "curriculum-intelligence-mcp",
+  "version": "1.1.0",
+  "description": "Curriculum Intelligence — MCP server that reads past course archives and lecture transcripts, scores topic currency, and plans the next semester",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "curriculum-intelligence-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "files": [
+    "dist/",
+    "docs/",
+    "README.md"
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0",
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "fast-xml-parser": "^5.8.0",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

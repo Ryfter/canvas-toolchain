@@ -1,0 +1,6 @@
+{
+  "id": 99999,
+  "name": "Fa25 | TEST 101 - Tiny Fixture Course",
+  "course_code": "TEST101",
+  "term": { "id": 230, "name": "Fall 2025", "start_at": "2025-08-25T07:00:00Z", "end_at": "2025-12-19T07:00:00Z" }
+}

@@ -1,0 +1,39 @@
+[
+  {
+    "id": 100001,
+    "name": "Module 01 - Introductions",
+    "position": 1,
+    "published": true,
+    "items": [
+      {
+        "id": 1,
+        "position": 1,
+        "title": "Week 1 At A Glance",
+        "type": "Page",
+        "page_url": "week-1-at-a-glance"
+      },
+      {
+        "id": 2,
+        "position": 2,
+        "title": "Engage 1 - Introduce Yourself",
+        "type": "Assignment",
+        "content_id": 9001
+      }
+    ]
+  },
+  {
+    "id": 100002,
+    "name": "Module 02 - Prompt Engineering Basics",
+    "position": 2,
+    "published": true,
+    "items": [
+      {
+        "id": 3,
+        "position": 1,
+        "title": "Week 2 At A Glance",
+        "type": "Page",
+        "page_url": "week-2-at-a-glance"
+      }
+    ]
+  }
+]

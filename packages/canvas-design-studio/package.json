@@ -1,0 +1,51 @@
+{
+  "name": "canvas-design-mcp",
+  "version": "1.1.0",
+  "description": "Canvas Design Studio — MCP server for generating, validating, and publishing Canvas LMS pages",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "canvas-design-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "CLAUDE.md",
+    "DESIGN.md",
+    "dist/",
+    "docs/canvas-design-kb/",
+    "docs/feature-roadmap.md",
+    "docs/installation.md",
+    "docs/npm-publishing.md",
+    "docs/setup-worksheet.md",
+    "PROFESSOR-INSTRUCTIONS.txt",
+    "scripts/deploy-public.ps1",
+    "src/kb/",
+    "src/templates/"
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0",
+    "@inquirer/prompts": "^7.0.0",
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "color": "^4.2.3"
+  },
+  "devDependencies": {
+    "@types/color": "^3.0.6",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ryfter/canvas-design-studio"
+  }
+}

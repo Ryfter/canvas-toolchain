@@ -1,0 +1,20 @@
+node_modules/
+dist/
+*.js.map
+.env
+
+# Institution config — contains API tokens, never commit
+institution.json
+~/.canvas-design-mcp/
+
+# Generated output — these are artifacts, not source
+output/
+
+# Superpowers brainstorm server artifacts
+.superpowers/
+
+# Git worktrees
+.worktrees/
+
+# Claude Code local settings (personal dev environment, not project config)
+.claude/settings.local.json

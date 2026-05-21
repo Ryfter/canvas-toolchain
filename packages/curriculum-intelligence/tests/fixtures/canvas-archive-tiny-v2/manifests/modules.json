@@ -1,0 +1,20 @@
+[
+  {
+    "id": 100001,
+    "name": "Module 01 - Introductions",
+    "position": 1,
+    "published": true,
+    "items": [
+      { "id": 1, "position": 1, "title": "Week 1 At A Glance", "type": "Page", "page_url": "week-1-at-a-glance" }
+    ]
+  },
+  {
+    "id": 100003,
+    "name": "Module 02 - Agents and Tool Use",
+    "position": 2,
+    "published": true,
+    "items": [
+      { "id": 4, "position": 1, "title": "Week 2 At A Glance", "type": "Page", "page_url": "week-2-at-a-glance" }
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+1
+00:00:00,000 --> 00:00:04,500
+Last week we set up the foundations.
+
+2
+00:00:04,500 --> 00:00:09,200
+This week is about prompt engineering: chain of thought, role prompting, few shot examples.
+
+3
+00:00:09,200 --> 00:00:15,000
+We'll also touch on prompt injection attacks at the end of class.

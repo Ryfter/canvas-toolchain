@@ -1,0 +1,16 @@
+[
+  {
+    "id": 201,
+    "name": "Assignment 1.1",
+    "due_at": "2026-09-05T23:59:00Z",
+    "points_possible": 50,
+    "submission_types": ["online_upload"]
+  },
+  {
+    "id": 202,
+    "name": "Assignment 2.1",
+    "due_at": "2026-09-12T23:59:00Z",
+    "points_possible": 75,
+    "submission_types": ["online_upload"]
+  }
+]

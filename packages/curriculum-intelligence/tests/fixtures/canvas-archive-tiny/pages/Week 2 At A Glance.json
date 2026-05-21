@@ -1,0 +1,7 @@
+{
+  "page_id": 2,
+  "title": "Week 2 At A Glance",
+  "url": "week-2-at-a-glance",
+  "published": true,
+  "body": "<h2>Week 2: Prompt Engineering Basics</h2><p>Topics: chain-of-thought, few-shot prompting, role prompting. External resource: <a href=\"https://example.com/cot\">CoT paper</a>.</p>"
+}

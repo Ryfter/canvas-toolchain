@@ -1,0 +1,6 @@
+[
+  { "id": 1001, "type": "Page",       "title": "Week 1 Overview",   "content_id": null, "position": 1 },
+  { "id": 1002, "type": "Page",       "title": "Week 1 Resources",  "content_id": null, "position": 2 },
+  { "id": 1003, "type": "Assignment", "title": "Assignment 1.1",    "content_id": 201,  "position": 3 },
+  { "id": 1004, "type": "Discussion", "title": "Week 1 Discussion", "content_id": 401,  "position": 4 }
+]

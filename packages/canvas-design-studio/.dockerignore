@@ -1,0 +1,16 @@
+node_modules/
+dist/
+tests/
+docs/
+ingest/
+output/
+.github/
+.claude/
+*.md
+!package*.json
+CLAUDE.md
+DESIGN.md
+PROFESSOR-INSTRUCTIONS.txt
+.gitignore
+.npmignore
+.gitattributes

@@ -1,0 +1,12 @@
+tests/
+.github/
+*.test.ts
+tsconfig.json
+.gitignore
+docs/
+ingest/
+output/
+CLAUDE.md
+PROFESSOR-INSTRUCTIONS.txt
+DESIGN.md
+.superpowers/

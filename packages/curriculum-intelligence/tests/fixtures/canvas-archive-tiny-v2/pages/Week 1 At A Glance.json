@@ -1,0 +1,7 @@
+{
+  "page_id": 1,
+  "title": "Week 1 At A Glance",
+  "url": "week-1-at-a-glance",
+  "published": true,
+  "body": "<h2>Welcome to Week 1</h2><p>This week we'll cover an <strong>introduction to AI literacy</strong>. Key topics: history of LLMs, what is prompt engineering, ethical use. Read <a href=\"https://example.com/ai-intro\">this overview</a>.</p>"
+}
