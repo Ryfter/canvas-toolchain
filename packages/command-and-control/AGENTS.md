@@ -50,6 +50,7 @@ src/
   layout/
     layout_adapter.ts       ← LayoutAdapter interface for layout generation providers
     paste_adapter.ts        ← no-API paste workflow pointer for direct adapter calls
+    stitch_adapter.ts       ← no-API Stitch stub delegating to PasteAdapter
   resources/
     slots.ts                ← runtime slot vocabulary validation
     json_schema.ts          ← lightweight JSON Schema fragment validation
@@ -89,6 +90,7 @@ The bundle installer is tracked in `docs/superpowers/plans/2026-05-21-bundle-ins
 The brand adapter foundation is tracked in `docs/superpowers/plans/2026-05-21-brand-adapter.md`.
 The Pomelli adapter stub is tracked in `docs/superpowers/plans/2026-05-21-pomelli-adapter-stub.md`.
 The layout adapter foundation is tracked in `docs/superpowers/plans/2026-05-21-layout-adapter.md`.
+The Stitch adapter stub is tracked in `docs/superpowers/plans/2026-05-21-stitch-adapter-stub.md`.
 
 ---
 

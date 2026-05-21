@@ -42,12 +42,12 @@ Implemented:
 - Brand adapter foundation lives in `src/brand/brand_adapter.ts`; `ManualAdapter` fills and validates professor-provided kits.
 - `PomelliAdapter` is a no-API stub that logs the limitation and delegates to `ManualAdapter` by default.
 - Layout adapter foundation lives in `src/layout/layout_adapter.ts`; `PasteAdapter` points direct calls to the `paste_layout` MCP workflow.
+- `StitchAdapter` is a no-API stub that logs the limitation and delegates to `PasteAdapter`.
 
 Still pending:
 
 - Bulk Panopto transcript download.
 - Course-wide publish as one reviewed transaction.
-- Stitch adapter stub.
 - A single native installer.
 
 ## Reasoning Behind the Current Shape
@@ -82,6 +82,7 @@ Keep the local archive as the source of truth. Google Drive is only a mirror.
 | Brand adapters | `src/brand/`, `docs/superpowers/plans/2026-05-21-brand-adapter.md` |
 | Pomelli stub | `src/brand/pomelli_adapter.ts`, `docs/superpowers/plans/2026-05-21-pomelli-adapter-stub.md` |
 | Layout adapters | `src/layout/`, `docs/superpowers/plans/2026-05-21-layout-adapter.md` |
+| Stitch stub | `src/layout/stitch_adapter.ts`, `docs/superpowers/plans/2026-05-21-stitch-adapter-stub.md` |
 
 ## Verification
 
