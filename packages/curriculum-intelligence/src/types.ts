@@ -219,3 +219,77 @@ export interface BriefFrontMatter {
   staleness: Staleness;
   replacement_recommended: boolean;
 }
+
+// ── Verdict ──────────────────────────────────────────────────────────────────
+// Defined here (not in recommend_for_topic.ts) to avoid circular imports.
+
+export type Verdict = 'KEEP' | 'UPDATE' | 'DROP' | 'ADD';
+
+// ── Trajectory log types ─────────────────────────────────────────────────────
+
+export type TrajectoryFlag =
+  | 'new'             // first time we've seen this topic
+  | 'stable'          // unchanged over 2-3 runs (not yet 4)
+  | 'stabilising'     // changed once over last 3 runs
+  | 'unstable'        // changed >=2 times in last 4 runs
+  | 'true-evergreen'; // KEEP for last 4+ consecutive runs
+
+export interface PerTopicTrajectory {
+  /** Either an assignment.name verbatim, or an LLM-extracted concept name. */
+  topic: string;
+  verdict: Verdict;
+  currencyClass: 'evergreen' | 'current' | 'dated';
+  newsHitCount: number;
+  trajectoryFlag: TrajectoryFlag;
+  verdictPrior: Verdict | null;
+  verdictHistory: Verdict[];               // chronological, last up to 4
+  /** Only present on perConcept entries. */
+  relatedAssignments?: string[];
+}
+
+/**
+ * Mirrors the SemesterDiff shape from diff_semesters.ts.
+ * baselineSemester is the prior semester being compared against.
+ */
+export interface TrajectoryDiff {
+  baselineSemester: SemesterId;
+  modules: {
+    added: { name: string; position: number }[];
+    removed: { name: string; position: number }[];
+    common: { leftName: string; rightName: string }[];
+  };
+  assignments: {
+    added: { name: string; pointsPossible: number | null }[];
+    removed: { name: string; pointsPossible: number | null }[];
+    reusedVerbatim: { name: string; pointsPossible: number | null }[];
+    rewritten: { name: string; leftExcerpt: string; rightExcerpt: string }[];
+  };
+  pages: {
+    added: { url: string; title: string }[];
+    removed: { url: string; title: string }[];
+    commonCount: number;
+  };
+  resources: {
+    added: string[];
+    removed: string[];
+  };
+}
+
+export interface TrajectoryEntry {
+  schemaVersion: 1;
+  timestamp: string;
+  courseId: CourseId;
+  semesterId: SemesterId;
+  priorSemesters: {
+    sameSeason: SemesterId | null;
+    mostRecent: SemesterId | null;
+  };
+  assignmentCount: number;
+  verdicts: Record<Verdict, number>;       // counts across perAssignment only
+  perAssignment: PerTopicTrajectory[];     // always populated
+  perConcept?: PerTopicTrajectory[];       // optional, only when concept extraction ran
+  diff: {
+    sameSeason: TrajectoryDiff | null;
+    mostRecent: TrajectoryDiff | null;
+  };
+}

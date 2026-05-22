@@ -31,6 +31,8 @@ import { generateRecommendedOutline } from './tools/generate_recommended_outline
 import { draftAssignmentBrief } from './tools/draft_assignment_brief.js';
 import { updateExamples } from './tools/update_examples.js';
 import { exportCourseFolder } from './tools/export_course_folder.js';
+import { analyzeCourse as ciAnalyzeCourseFull } from './tools/analyze_course.js';
+import { getCourseTrajectory } from './tools/get_course_trajectory.js';
 import { AnthropicAdapter } from './llm/anthropic_adapter.js';
 import { OllamaAdapter } from './llm/ollama_adapter.js';
 import type { LlmClient } from './llm/client.js';
@@ -531,6 +533,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'analyze_course',
+      description:
+        'Run the full CI analysis pipeline: ingest the archive, diff against same-season and most-recent prior semesters, score currency per assignment, generate verdicts (KEEP/UPDATE/DROP/ADD), and append an entry to the course trajectory log. Returns a structured report including the trajectory snapshot. Set extractConcepts: true to additionally derive LLM-extracted concepts spanning multiple assignments.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId', 'semesterId', 'archivePath'],
+        properties: {
+          courseId: { type: 'string' },
+          semesterId: { type: 'string' },
+          archivePath: { type: 'string', description: 'Absolute path to the Canvas export folder.' },
+          semanticVerify: { type: 'boolean', description: 'Run the optional LLM verification pass on currency scoring.' },
+          extractConcepts: { type: 'boolean', description: 'When true and an LLM client is configured (ANTHROPIC_API_KEY env var), additionally derive LLM-extracted concepts spanning multiple assignments.' },
+        },
+      },
+    },
+    {
+      name: 'get_course_trajectory',
+      description:
+        'Read the course trajectory log and return analysis: churn rate across semesters, currently unstable topics (verdict flipping), true evergreens (KEEP for 4+ consecutive runs), and per-topic verdict timelines.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId'],
+        properties: {
+          courseId: { type: 'string' },
+          granularity: { type: 'string', enum: ['summary', 'standard', 'granular'], description: 'Defaults to "standard".' },
+          lookback: { type: 'number', description: 'Number of most-recent entries to consider.' },
+        },
+      },
+    },
   ],
 }));
 
@@ -743,6 +775,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     if (name === 'export_course_folder') {
       const result = exportCourseFolder(args as unknown as Parameters<typeof exportCourseFolder>[0]);
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
+    if (name === 'analyze_course') {
+      const raw = args as Record<string, unknown>;
+      const extractConcepts = raw.extractConcepts === true;
+      const result = await ciAnalyzeCourseFull({
+        courseId: raw.courseId as string,
+        semesterId: raw.semesterId as string,
+        archivePath: raw.archivePath as string,
+        extractConcepts,
+        ...(extractConcepts ? { llmClient: getLlmClient() } : {}),
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
+    if (name === 'get_course_trajectory') {
+      const raw = args as Record<string, unknown>;
+      const result = await getCourseTrajectory({
+        courseId: raw.courseId as string,
+        granularity: raw.granularity as 'summary' | 'standard' | 'granular' | undefined,
+        lookback: typeof raw.lookback === 'number' ? raw.lookback : undefined,
+      });
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
     throw new Error(`Unknown tool: ${name}`);

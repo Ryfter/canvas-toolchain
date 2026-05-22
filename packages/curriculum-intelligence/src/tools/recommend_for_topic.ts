@@ -1,7 +1,5 @@
-import type { CourseId, SemesterId } from '../types.js';
+import type { CourseId, SemesterId, Verdict, TrajectoryFlag } from '../types.js';
 import { semestersBetween, type CurrencyClass } from './score_topic_currency.js';
-
-export type Verdict = 'KEEP' | 'UPDATE' | 'DROP' | 'ADD';
 
 export interface RecommendForTopicInput {
   courseId: CourseId;
@@ -11,6 +9,8 @@ export interface RecommendForTopicInput {
   lastTaughtSemesterId: string | null;
   newsHits: number;
   includeDetails?: boolean;
+  trajectoryFlag?: TrajectoryFlag;
+  verdictHistory?: Verdict[];
 }
 
 export interface VerdictDetails {
@@ -30,7 +30,8 @@ export interface RecommendForTopicResult {
 export function recommendForTopic(input: RecommendForTopicInput): RecommendForTopicResult {
   const semestersSince = semestersBetween(input.lastTaughtSemesterId, input.semesterId);
   const verdict = computeVerdict(input.currencyClass, input.lastTaughtSemesterId, input.newsHits, semestersSince);
-  const rationale = buildRationale(verdict, input.topic, input.currencyClass, semestersSince, input.newsHits);
+  const baseRationale = buildRationale(verdict, input.topic, input.currencyClass, semestersSince, input.newsHits);
+  const rationale = baseRationale + trajectoryAnnotation(input.trajectoryFlag, input.verdictHistory);
 
   const result: RecommendForTopicResult = { topic: input.topic, verdict, rationale };
 
@@ -81,4 +82,16 @@ function buildRationale(
           : `it is ${currencyClass} and may benefit from fresh examples or context.`)
       );
   }
+}
+
+function trajectoryAnnotation(flag: TrajectoryFlag | undefined, history: Verdict[] | undefined): string {
+  if (!flag || flag === 'new' || flag === 'stable' || flag === 'stabilising') return '';
+  if (flag === 'unstable') {
+    const pattern = history ? history.slice(-4).join('→') : '';
+    return ` Trajectory note: this topic has flipped (${pattern}) over the last ${history?.length ?? 'few'} semesters — consider a structural review rather than another incremental update.`;
+  }
+  if (flag === 'true-evergreen') {
+    return ` Trajectory note: KEEP for ${history?.length ?? '4+'} consecutive semesters — strong evergreen signal.`;
+  }
+  return '';
 }
