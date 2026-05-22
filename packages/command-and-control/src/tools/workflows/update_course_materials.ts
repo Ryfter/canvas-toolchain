@@ -5,6 +5,7 @@ import { draftAssignmentBrief } from 'curriculum-intelligence-mcp/dist/tools/dra
 import { updateExamples } from 'curriculum-intelligence-mcp/dist/tools/update_examples.js';
 import { exportCourseFolder } from 'curriculum-intelligence-mcp/dist/tools/export_course_folder.js';
 import type { UpdateCourseMaterialsResult } from '@canvas-toolchain/shared-types';
+import { loadKb } from '../../lib/kb-bridge.js';
 
 export type { UpdateCourseMaterialsResult } from '@canvas-toolchain/shared-types';
 
@@ -36,6 +37,11 @@ export interface UpdateCourseMaterialsInput {
 
 export async function updateCourseMaterials(input: UpdateCourseMaterialsInput): Promise<UpdateCourseMaterialsResult> {
   const { courseId, semesterId, outputPath, sections } = input;
+
+  const kb = loadKb();
+  const philosophyKb = kb.philosophyKb() ?? undefined;
+  const studentPersonas = kb.studentPersonas() ?? undefined;
+  const context = philosophyKb || studentPersonas ? { philosophyKb, studentPersonas } : undefined;
 
   const briefPaths = getBriefPaths(courseId, semesterId);
 

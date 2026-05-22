@@ -126,12 +126,21 @@ export interface GenerateWeekResult {
   warnings: string[];
 }
 
+export interface CourseContext {
+  /** Professor's pedagogy and philosophy notes (markdown). */
+  philosophyKb?: string;
+  /** Student persona descriptions (markdown). */
+  studentPersonas?: string;
+}
+
 export interface GenerateCourseInput {
   courseDir?: string;
   outputDir?: string;
   templateId?: string;
   themeId?: string;
   promptSetId?: string;
+  /** Optional KB context loaded from the shared resource layer. */
+  context?: CourseContext;
 }
 
 export interface GenerateCourseResult {
