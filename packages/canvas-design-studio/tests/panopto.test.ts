@@ -10,6 +10,7 @@ import {
   searchPanoptoVideos,
   embedPanoptoVideo,
   fetchPanoptoCaptions,
+  bulkDownloadPanoptoCaptions,
 } from '../src/tools/panopto.js';
 import type { PanoptoConfig } from '../src/types.js';
 
@@ -238,5 +239,59 @@ describe('fetchPanoptoCaptions', () => {
     expect(result).toContain('transcripts');
     expect(result).toContain('.md');
     expect(result).toContain('Hello students.');
+  });
+});
+
+describe('bulkDownloadPanoptoCaptions — filename format', () => {
+  beforeEach(() => { vi.stubGlobal('fetch', vi.fn()); });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('prefixes filename with YYYY-MM-DD from session.startTime', async () => {
+    const mockFetch = vi.mocked(fetch);
+
+    // 1. OAuth2 token (for listSessionsInFolder)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'tok' }),
+    } as Response);
+    // 2. List sessions in folder
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        Results: [{
+          Id: 'sess-01',
+          Name: 'Week 03: Tableau Intro',
+          StartTime: '2026-06-01T14:00:00Z',
+          Duration: 3600,
+          HasCaptions: true,
+        }],
+        TotalNumberOfResults: 1,
+      }),
+    } as Response);
+    // 3. OAuth2 token (for bulkDownloadPanoptoCaptions own getPanoptoToken call)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'tok' }),
+    } as Response);
+    // 4. Captions list
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ([{ Language: 'en', FileUrl: 'https://bsu.hosted.panopto.com/captions/abc.vtt', IsDefault: true }]),
+    } as Response);
+    // 5. VTT content
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => 'WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nHello students.\n',
+    } as Response);
+
+    await bulkDownloadPanoptoCaptions({ folderId: 'folder-01', outputDir: '/transcripts' }, CFG_API);
+
+    // writeFileSync is mocked (from panopto-bulk.test.ts vi.mock at module level);
+    // verify the path written contains the date-prefixed filename
+    const { writeFileSync } = await import('node:fs');
+    const calls = vi.mocked(writeFileSync).mock.calls;
+    const writtenPaths = calls.map(c => String(c[0]));
+    const matched = writtenPaths.some(p => p.includes('2026-06-01_week-03-tableau-intro.panopto.vtt'));
+    expect(matched).toBe(true);
   });
 });

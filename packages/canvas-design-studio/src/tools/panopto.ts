@@ -473,7 +473,8 @@ export async function bulkDownloadPanoptoCaptions(
 
       const vtt = await vttRes.text();
       
-      const filename = `${sanitizeFilename(session.title)}.panopto.vtt`;
+      const datePrefix = session.startTime.slice(0, 10); // "YYYY-MM-DD"
+      const filename = `${datePrefix}_${sanitizeFilename(session.title)}.panopto.vtt`;
       const filePath = join(input.outputDir, filename);
       writeFileSync(filePath, vtt, 'utf-8');
 
