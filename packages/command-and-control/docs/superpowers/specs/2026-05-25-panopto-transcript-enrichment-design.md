@@ -109,6 +109,12 @@ Filename: `YYYY-MM-DD_sanitized-title.enriched.md` (alongside the `.panopto.vtt`
 Hello students. Welcome to Tableau. Today we'll cover data connections
 and basic visualization types...
 
+> The reason we use Tableau over Excel is that it handles millions of rows
+> without slowing down your machine.
+
+> I want you to remember: always connect to a live data source rather than
+> an extract when you are in development.
+
 [→ 5:00](https://bsu.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=a1b2c3d4-...&start=300)
 
 Next, let's look at data sources. You can connect to Excel, CSV...
@@ -119,7 +125,20 @@ Next, let's look at data sources. You can connect to Excel, CSV...
 - Deep link every 300 seconds (5 minutes), placed as a line break between prose blocks
 - Final block has no trailing link
 - Filler words stripped; vocab corrections applied; multiple spaces collapsed
+- Cues matching **key-statement triggers** are rendered as blockquotes (`> `) inline within their bucket, immediately after the cue text would appear in the prose flow
 - Raw `.panopto.vtt` is never modified
+
+**Key-statement triggers** (case-insensitive, checked against the cleaned cue text):
+
+| Trigger pattern | Category |
+|---|---|
+| `the reason`, `the reason is`, `that's why`, `because of this` | Causal |
+| `i want you to remember`, `don't forget`, `remember that`, `keep in mind` | Emphasis |
+| `in summary`, `to summarize`, `the key point`, `the key idea`, `the main idea` | Summary |
+| `is defined as`, `means that`, `what we mean by` | Definition |
+| `make sure`, `you need to`, `you must`, `always`, `never` | Imperative |
+
+A cue matches if its cleaned text contains any trigger phrase. Matched cues are formatted as blockquotes; unmatched cues are appended to the running prose paragraph. A single cue can only match one category (first match wins).
 
 ---
 
@@ -191,8 +210,9 @@ export function enrichVttFile(
 1. Parse VTT into `TranscriptCue[]` using `parseVtt` from `curriculum-intelligence-mcp/dist/parsers/transcript_vtt.js`
 2. Build filler regex: `new RegExp('\\b(' + fillerWords.join('|') + ')\\b[,]?', 'gi')`
 3. For each cue: apply filler regex (replace with ''), apply each correction (`replaceAll`), collapse multiple spaces, trim
-4. Group cues into 5-minute buckets by `Math.floor(cue.startSec / 300)`
-5. Render header:
+4. Classify each cleaned cue: if its text matches any key-statement trigger pattern (case-insensitive), mark it `isKeyStatement: true` (first match wins)
+5. Group cues into 5-minute buckets by `Math.floor(cue.startSec / 300)`
+6. Render header:
    ```
    # {title}
    **Date:** {weekday, Month D, YYYY} | **Duration:** {H:MM:SS}
@@ -201,8 +221,8 @@ export function enrichVttFile(
    ```
    Date formatted from `session.startTime` using `Intl.DateTimeFormat` (UTC, `{ weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }`)
    Duration formatted as `H:MM:SS` or `MM:SS` from `session.duration`
-6. For each bucket: join cue texts with a space, then (if not the last bucket) append a blank line + `[→ MM:SS](viewerUrl?start=SECONDS)` where `MM:SS` = `Math.floor(bucket * 300 / 60):padded seconds`, URL = `https://{domain}/Panopto/Pages/Viewer.aspx?id={sessionId}&start={bucket * 300}`
-7. Return joined markdown string
+7. For each bucket: render cues in order — plain cues are joined into a prose paragraph; `isKeyStatement` cues are rendered as individual blockquotes (`> {text}`) inserted inline at their position. Append (if not the last bucket) a blank line + `[→ MM:SS](viewerUrl?start=SECONDS)` where `MM:SS` = `Math.floor(bucket * 300 / 60):padded seconds`, URL = `https://{domain}/Panopto/Pages/Viewer.aspx?id={sessionId}&start={bucket * 300}`
+8. Return joined markdown string
 
 ---
 
@@ -308,6 +328,8 @@ interface EnrichPanoptoTranscriptsResult {
 - `enrichVtt` does NOT inject trailing link after the last bucket
 - `enrichVtt` link URL contains `?id={sessionId}&start=300`
 - `enrichVtt` header contains title, formatted date, and duration
+- `enrichVtt` renders a key-statement cue as a blockquote (`> text`) rather than inline prose
+- `enrichVtt` non-matching cues are joined as prose; matching cues are blockquoted at their position within the bucket
 - `enrichVtt` on empty cues array returns header-only markdown without errors
 - `panopto.ts` `bulkDownloadPanoptoCaptions` writes `_sessions.json` with correct shape
 
