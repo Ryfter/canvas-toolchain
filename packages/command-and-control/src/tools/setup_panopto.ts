@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPanoptoToken } from 'canvas-design-mcp/dist/tools/panopto.js';
 import { getCcHomePath } from '../kb/config.js';
@@ -44,7 +44,14 @@ export function loadPanoptoConfig(): PanoptoSetupConfig {
       'PANOPTO_NOT_CONFIGURED: Run setup_panopto with your Panopto domain, clientId, and clientSecret.',
     );
   }
-  const config = JSON.parse(readFileSync(configPath, 'utf-8')) as Partial<PanoptoSetupConfig>;
+  let config: Partial<PanoptoSetupConfig>;
+  try {
+    config = JSON.parse(readFileSync(configPath, 'utf-8'));
+  } catch {
+    throw new Error(
+      'PANOPTO_NOT_CONFIGURED: panopto-config.json is corrupt. Re-run setup_panopto.',
+    );
+  }
   if (!config.domain || !config.clientId || !config.clientSecret) {
     throw new Error(
       'PANOPTO_NOT_CONFIGURED: panopto-config.json is missing required fields. Re-run setup_panopto.',
@@ -85,7 +92,10 @@ export async function setupPanopto(input: SetupPanoptoInput): Promise<SetupPanop
 
   const home = getCcHomePath();
   mkdirSync(home, { recursive: true });
-  writeFileSync(getPanoptoConfigPath(), JSON.stringify(config, null, 2), 'utf-8');
+  const configPath = getPanoptoConfigPath();
+  const tmpPath = `${configPath}.tmp`;
+  writeFileSync(tmpPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  renameSync(tmpPath, configPath);
 
   return {
     configured: true,
