@@ -17,6 +17,12 @@ import { listInstalledResources, uninstallResource } from './registry/local_regi
 import { searchRegistry } from './registry/search_registry.js';
 import { installResourcesFromLockfile } from './registry/lockfile_install.js';
 import { pasteLayout, saveLayoutAsTemplate } from './tools/layout_adapter.js';
+import { setupPanopto } from './tools/setup_panopto.js';
+import {
+  bulkFetchPanoptoTranscripts,
+  type BulkFetchPanoptoTranscriptsInput,
+  type ProgressCallback,
+} from './tools/workflows/bulk_fetch_panopto_transcripts.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -117,6 +123,37 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           onBreakCollision: { type: 'string', enum: ['flag', 'bump-before', 'bump-after'] },
           sections: { type: 'array', items: { type: 'string' } },
           outputPath: { type: 'string' },
+        },
+      },
+    },
+    // ── Panopto transcripts ─────────────────────────────────────────────────
+    {
+      name: 'setup_panopto',
+      description: 'Configure Panopto integration: set domain, clientId, and clientSecret. Validates credentials before saving. Run this once per institution setup.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['domain', 'clientId', 'clientSecret'],
+        properties: {
+          domain: { type: 'string', description: 'Panopto hostname, e.g. "bsu.hosted.panopto.com".' },
+          clientId: { type: 'string', description: 'OAuth2 client ID from the Panopto admin panel.' },
+          clientSecret: { type: 'string', description: 'OAuth2 client secret. Stored locally, never echoed back.' },
+          iframeWhitelisted: { type: 'boolean', description: 'Whether your Canvas instance allows Panopto iframes. Null = unknown.', nullable: true },
+          test: { type: 'boolean', description: 'Validate credentials before saving (default: true). Set false for scripted setup.' },
+        },
+      },
+    },
+    {
+      name: 'bulk_fetch_panopto_transcripts',
+      description: 'Download all Panopto transcripts for a folder as VTT files. Optionally auto-ingests into Curriculum Intelligence. Requires setup_panopto to be run first.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['folderId', 'outputPath'],
+        properties: {
+          folderId: { type: 'string', description: 'Panopto folder ID (visible in the folder URL).' },
+          outputPath: { type: 'string', description: 'Absolute path where VTT files will be saved.' },
+          courseId: { type: 'string', description: 'If provided with semesterId, auto-ingests into Curriculum Intelligence.' },
+          semesterId: { type: 'string', description: 'If provided with courseId, auto-ingests into Curriculum Intelligence.' },
+          copy: { type: 'boolean', description: 'Copy VTT files into the CI semester folder during ingest (default: false).' },
         },
       },
     },
@@ -249,6 +286,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       case 'update_course_materials':
         result = await updateCourseMaterials(args as unknown as Parameters<typeof updateCourseMaterials>[0]);
         break;
+      case 'setup_panopto':
+        result = await setupPanopto(args as unknown as Parameters<typeof setupPanopto>[0]);
+        break;
+      case 'bulk_fetch_panopto_transcripts': {
+        const progressToken = extra._meta?.progressToken;
+        let progressCount = 0;
+        const onProgress: ProgressCallback | undefined = progressToken != null
+          ? (event) => {
+              progressCount++;
+              const icon =
+                event.type === 'session-complete' ? '✓'
+                : event.type === 'session-failed' ? '✗'
+                : '→';
+              const message = `[${event.index + 1}/${event.total}] ${icon} ${event.title}${
+                event.reason ? ` — ${event.reason}` : ''
+              }`;
+              void extra.sendNotification({
+                method: 'notifications/progress',
+                params: { progressToken, progress: progressCount, message },
+              });
+            }
+          : undefined;
+        result = await bulkFetchPanoptoTranscripts(
+          args as unknown as BulkFetchPanoptoTranscriptsInput,
+          onProgress,
+        );
+        break;
+      }
       case 'full_pipeline':
         result = await fullPipeline(args as unknown as Parameters<typeof fullPipeline>[0]);
         break;
