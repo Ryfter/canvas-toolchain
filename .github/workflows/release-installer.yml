@@ -150,3 +150,17 @@ jobs:
             --version ${{ steps.version.outputs.version }} \
             --install-location / \
             ${{ matrix.target.artifact }}
+
+      - name: Rename Windows artifact (no .pkg wrap needed)
+        if: matrix.target.goos == 'windows'
+        working-directory: installer
+        run: cp canvas-toolchain-installer-windows-x64.exe ${{ matrix.target.artifact }}
+
+      - name: Upload installer + updater to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            installer/${{ matrix.target.artifact }}
+            installer/${{ matrix.target.updater-artifact }}
+          body_path: .github/RELEASE_TEMPLATE/installer-release.md
+          fail_on_unmatched_files: true
