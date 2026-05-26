@@ -1,0 +1,59 @@
+name: Release Installer
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # required to create/update GitHub Releases
+
+jobs:
+  build:
+    name: Build (${{ matrix.target.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - label: windows-x64
+            runs-on: ubuntu-latest
+            goos: windows
+            goarch: amd64
+            node-target: win-x64
+            artifact: canvas-toolchain-installer-windows-x64.exe
+            updater-artifact: canvas-toolchain-updater-windows-x64.exe
+          - label: macos-arm64
+            runs-on: macos-latest
+            goos: darwin
+            goarch: arm64
+            node-target: darwin-arm64
+            artifact: canvas-toolchain-installer-macos-arm64.pkg
+            updater-artifact: canvas-toolchain-updater-macos-arm64
+          - label: macos-x64
+            runs-on: macos-13
+            goos: darwin
+            goarch: amd64
+            node-target: darwin-x64
+            artifact: canvas-toolchain-installer-macos-x64.pkg
+            updater-artifact: canvas-toolchain-updater-macos-x64
+
+    runs-on: ${{ matrix.target.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: installer/go.sum
+
+      - name: Install Linux Fyne deps (Windows cross-compile host)
+        if: matrix.target.goos == 'windows'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64 libgl1-mesa-dev xorg-dev
+
+      # Subsequent steps added in Tasks 5-8.
