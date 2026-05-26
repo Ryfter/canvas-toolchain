@@ -6,7 +6,8 @@
 | --- | --- |
 | Windows 10/11 (64-bit) | `canvas-toolchain-installer-windows-x64.exe` |
 | macOS 12+ (Apple Silicon) | `canvas-toolchain-installer-macos-arm64.pkg` |
-| macOS 12+ (Intel) | `canvas-toolchain-installer-macos-x64.pkg` |
+
+> **Intel Macs not supported.** Apple Silicon (M1 or later) only. Intel Mac builds were dropped in v0.9.1 because GitHub Actions' `macos-13` runner queue made releases unviable.
 
 ## First-run bypass
 

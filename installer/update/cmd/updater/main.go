@@ -138,7 +138,7 @@ func assetForCurrentOS() string {
 		if runtime.GOARCH == "arm64" {
 			return "canvas-toolchain-installer-macos-arm64.pkg"
 		}
-		return "canvas-toolchain-installer-macos-x64.pkg"
+		return ""
 	}
 	return ""
 }

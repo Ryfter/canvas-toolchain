@@ -29,13 +29,6 @@ jobs:
             node-target: darwin-arm64
             artifact: canvas-toolchain-installer-macos-arm64.pkg
             updater-artifact: canvas-toolchain-updater-macos-arm64
-          - label: macos-x64
-            runs-on: macos-13
-            goos: darwin
-            goarch: amd64
-            node-target: darwin-x64
-            artifact: canvas-toolchain-installer-macos-x64.pkg
-            updater-artifact: canvas-toolchain-updater-macos-x64
 
     runs-on: ${{ matrix.target.runs-on }}
     steps:
