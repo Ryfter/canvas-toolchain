@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -17,6 +18,17 @@ const (
 	pythonWindowsURL      = "https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe"
 	pythonMacUniversalURL = "https://www.python.org/ftp/python/3.12.7/python-3.12.7-macos11.pkg"
 )
+
+func DetectPython(ctx context.Context) (version string, found bool) {
+	candidates := []string{"python3", "python", "py"}
+	for _, name := range candidates {
+		out, err := exec.CommandContext(ctx, name, "--version").CombinedOutput()
+		if err == nil && len(out) > 0 {
+			return strings.TrimSpace(string(out)), true
+		}
+	}
+	return "", false
+}
 
 func InstallPython(ctx context.Context) error {
 	switch runtime.GOOS {

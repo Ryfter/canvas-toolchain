@@ -148,6 +148,9 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 
 	return []tasks.Step{
 		{Name: "Extract source", Run: func(ctx context.Context) error {
+			if len(payload.PayloadTarGz) == 0 {
+				return fmt.Errorf("embedded payload is empty (0 bytes) — this is a local dev build with no packed source. CI release builds populate this file at build time. To smoke-test the full install path locally, see installer/README.md \"Local dev (real payload)\"")
+			}
 			_, err := tasks.ExtractTarGz(ctx, payload.PayloadTarGz, st.InstallDir)
 			return err
 		}},

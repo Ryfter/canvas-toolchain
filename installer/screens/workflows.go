@@ -1,10 +1,14 @@
 package screens
 
 import (
+	"context"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/Ryfter/canvas-toolchain/installer/tasks"
 	"github.com/Ryfter/canvas-toolchain/installer/ui"
 )
 
@@ -28,6 +32,24 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 	pythonCheck := widget.NewCheck("Install Python 3 (needed later for Canvas Backup — not configured here)", func(b bool) { st.OptInPython = b })
 	pythonCheck.SetChecked(st.OptInPython)
 
+	pythonStatus := ui.NewStatusRow("Checking for Python 3 on this machine…")
+	pythonStatus.SetStatus(ui.StatusRunning, "")
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		version, found := tasks.DetectPython(ctx)
+		if found {
+			pythonStatus.SetStatus(ui.StatusOK, version+" detected — no install needed")
+			st.OptInPython = false
+			pythonCheck.SetChecked(false)
+			return
+		}
+		pythonStatus.SetStatus(ui.StatusWarn, "Not detected — checked the install box for you")
+		st.OptInPython = true
+		pythonCheck.SetChecked(true)
+	}()
+
 	form := container.NewVBox(
 		title,
 		hint,
@@ -39,6 +61,7 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Optional extras", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		pythonCheck,
+		pythonStatus,
 	)
 
 	back := ui.NewHoverButton("Back", ui.ButtonDefault, onBack)
