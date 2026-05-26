@@ -183,6 +183,19 @@ For changes inside a single package, the package-local `npm test` + `npm run bui
 
 ---
 
+## Active specs and plans
+
+The v1.0 native installer is the current gating item. Read these before picking up any installer work:
+
+- [`installer/docs/specs/2026-05-26-installer-design.md`](installer/docs/specs/2026-05-26-installer-design.md) — full installer design spec (locked 2026-05-26)
+- [`installer/docs/plans/2026-05-26-cc-credential-tools-and-update-nudge.md`](installer/docs/plans/2026-05-26-cc-credential-tools-and-update-nudge.md) — **Plan 1** (do first): C&C `setup_anthropic`, `setup_canvas`, and the update-availability MCP nudge. Ships as v0.9.1.
+- [`installer/docs/plans/2026-05-26-installer-go-fyne.md`](installer/docs/plans/2026-05-26-installer-go-fyne.md) — **Plan 2**: the Go + Fyne installer itself. Depends on Plan 1's contracts. Hand to Codex via `codex:codex-rescue`.
+- [`installer/docs/plans/2026-05-26-installer-ci-release-workflow.md`](installer/docs/plans/2026-05-26-installer-ci-release-workflow.md) — **Plan 3**: GitHub Actions release workflow. Depends on Plan 2's `installer/` directory existing.
+
+GitHub Project view: [Canvas Toolchain Roadmap](https://github.com/users/Ryfter/projects/4).
+
+---
+
 ## Per-package handoffs
 
 - [`packages/command-and-control/CLAUDE.md`](packages/command-and-control/CLAUDE.md) — coordinator, registry, adapters

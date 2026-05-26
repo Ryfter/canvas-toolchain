@@ -47,37 +47,26 @@ Implemented:
 
 Still pending:
 
-- Course-wide publish as one reviewed transaction.
-- A single native installer.
+- Course-wide publish as one reviewed transaction (GitHub issue #64).
+- A single native installer (GitHub issue #63 — spec + 3 implementation plans drafted, see below).
 
-## Native Installer Design (approved, spec pending)
+Shipping in v0.9.1 (Plan 1 — `installer/docs/plans/2026-05-26-cc-credential-tools-and-update-nudge.md`):
 
-**Tech stack:** Go + Fyne — compiled to a true native binary (.exe on Windows, .pkg on Mac) via GitHub Actions cross-compilation. No terminal required.
+- `setup_anthropic` MCP tool — atomic 0o600 write to `~/.command-and-control/anthropic-config.json`, validates against `api.anthropic.com/v1/messages`.
+- `setup_canvas` MCP tool — same pattern, validates against `/api/v1/users/self`.
+- Update-availability nudge — server checks GitHub Releases on startup (24h cache, 5s timeout) and appends a one-line "Update available" notice to every successful tool response when the bundled version is older than the latest release.
 
-**Why Go + Fyne over alternatives.** Kevin's hard constraint: "rational, intelligent people see (or hear) command line and just shut their brains down. It's easier to have a gui walkthrough for most people." Even with the one-time SmartScreen/Gatekeeper bypass (no $99-400/year code signing certificate), GUI >> terminal for professor adoption.
+## Native Installer Design (spec written, plans drafted)
 
-**Distribution:** GitHub Releases self-service download. Release notes include screenshots of the SmartScreen/Gatekeeper bypass — a one-time friction professors handle once and forget.
+**Spec:** [`installer/docs/specs/2026-05-26-installer-design.md`](../../installer/docs/specs/2026-05-26-installer-design.md).
+**Plans:** Plan 1 (C&C features above), Plan 2 (Go installer), Plan 3 (CI release workflow) — all under `installer/docs/plans/`.
+**Implementation:** Hand Plan 2 + Plan 3 to Codex via `codex:codex-rescue` once Plan 1 is merged.
 
-**5-screen wizard flow:**
+**TL;DR** — Go + Fyne native binary (.exe / .pkg). Self-contained: bundles canvas-toolchain source + Node 18 runtime. 5-screen wizard. Wires Claude Desktop + Claude Code. Auto-updater shortcut. All APIs optional with `setup_*` backfill. No code signing — release notes document the one-time SmartScreen/Gatekeeper bypass.
 
-1. **Prereq check.** Auto-detect Node 18+, Git, Python 3. Show green/red per prereq with a fix-link for anything missing. Continue button disabled until all green (or user explicitly skips).
-2. **Workflow selector.** Checkboxes for which workflows to enable:
-   - Canvas course management (checked by default, recommended)
-   - Panopto transcript pipeline
-   - Curriculum Intelligence analysis
-   - Registry (templates, themes, prompt-sets)
+The spec at `installer/docs/specs/2026-05-26-installer-design.md` is the canonical reference for every detail (screens, paths, error handling, update flow, CI). Don't duplicate it here.
 
-   Check for on, uncheck for off. Professors install only what they need.
-3. **API collection.** For each selected workflow, prompt for credentials with the URL where they live and a plain-English "why I need this." **All fields optional** — install with zero APIs and backfill later through `setup_*` MCP tools.
-   - Anthropic API key — `https://platform.anthropic.com/account/api-keys` — "Powers all AI features in the toolchain."
-   - Canvas API token (optional) — `<your-canvas>/profile/settings` → New Access Token — "Needed only if you want direct page publishing from the AI assistant. Manual paste always works without this."
-   - Panopto domain + OAuth client ID/secret (optional, shown only if Panopto workflow selected) — `<your-panopto>/System/ApiClients` — "Needed to pull lecture transcripts automatically."
-4. **Installation + progress bar.** Runs `npm install`, writes `~/.command-and-control/config.json`, registers the MCP server with the user's chosen AI client (Claude Desktop, ChatGPT, etc.).
-5. **Summary + next steps.** Shows what's installed, what's still needed (e.g., "No Anthropic key — set one later with `setup_anthropic`"), and the launch command for the AI client.
-
-**Backfill principle.** Every API in step 3 has a corresponding `setup_*` MCP tool that lets professors add or change credentials after install. The installer never blocks on missing credentials.
-
-**Implementation handoff.** Spec next (use `superpowers:brainstorming` to produce one), then hand the Go + Fyne implementation to Codex via `codex:codex-rescue`.
+**Kevin's hard constraint that drove all of this:** "rational, intelligent people see (or hear) command line and just shut their brains down. It's easier to have a gui walkthrough for most people."
 
 ## Future Ideas (not yet specced)
 
