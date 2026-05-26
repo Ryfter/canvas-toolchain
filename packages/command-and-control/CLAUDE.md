@@ -53,24 +53,35 @@ Still pending:
 ## Future Ideas (not yet specced)
 
 ### Canvas Capability Showcase + Template Creator
-A tool that demonstrates what's possible within Canvas HTML constraints and helps professors build pages. Two goals: (1) show off features so professors know what they can ask for, and (2) provide an assisted creation flow. Canvas's constraints (no JS, no `<style>`, inline CSS only) make "interactive" tricky — the showcase itself needs to work around those limits while demonstrating them.
+
+**Reasoning:** "I don't know what all is possible within the capacity of what Canvas gives us. So I need a way to show off features and capabilities and maybe even a way to help create pages."
+
+Canvas's constraints (no JS, no `<style>`, inline CSS only) make "interactive" genuinely tricky — professors don't know what to ask for because they've never seen what's achievable. Two goals: (1) demonstrate the full design surface so professors know the option space, and (2) provide an assisted creation flow that generates valid Canvas HTML from structured choices.
 
 ### Information Hierarchy / Content Priority System
+
+**Reasoning:** "Maybe create a ranking of sorts that helps identify what information on a page needs to be really easy to find — just a glance / get the gist — vs what is needed for a deeper look, all the deeper supporting docs."
+
 A "ranking" layer for Canvas page content that classifies each element by how urgently a student needs it:
 - **Tier 1 — At a glance:** The gist in 5 seconds (due date, deliverable, one-sentence context)
-- **Tier 2 — Working detail:** What a student needs to actually do the assignment
+- **Tier 2 — Working detail:** What a student needs to actually complete the assignment
 - **Tier 3 — Deep support:** Rubric breakdowns, examples, reference docs
 
-This could drive visual design decisions (prominence, placement, callout styles) and eventually feed into the template creator.
+This could drive visual design decisions (prominence, placement, callout styles) and feed into the template creator.
 
 ### AI-Friendly Rubric System
-Current Canvas rubrics are written for faculty, not students — dense, ambiguous, hard to act on. Ideas:
+
+**Reasoning:** "I have a rubric from this past semester. In reading it, I knew what it meant, but in reading it and trying to explain it to a student, I realized it sucked. Like it was HORRIBLE. Right now it is not simple to get the rubric."
+
+The core pain: Kevin could interpret the rubric as faculty but couldn't explain it to a student because the language wasn't written for students. Official Canvas rubrics are faculty-facing — dense, criterion-heavy, written to justify grades rather than guide work.
+
+Ideas:
 - Rewrite rubric criteria in student-facing language with per-criterion plain-English explainers
-- Visual presentation that works within Canvas HTML constraints
-- Optional tie-in to course personas (explain the same criterion differently for different learning styles)
-- **Markdown export** so students can paste the rubric directly into an LLM for help
-- Sync mechanism with the official Canvas rubric so rewrites stay current
 - "Rubric Help" component: a companion page or expandable section with worked examples per criterion
+- Optional tie-in to course personas (explain the same criterion differently for different learning styles)
+- **Markdown export** so students can paste the rubric directly into an LLM for help — "the ability to just download a markdown file for students to add to an LLM would be incredibly helpful"
+- Sync mechanism with the official Canvas rubric so rewrites stay current when the professor edits it
+- May be worthwhile as a standalone "Rubric Help" item separate from the assignment page
 
 These three ideas are related — the rubric system could use the hierarchy framework, and both could appear in the showcase.
 
