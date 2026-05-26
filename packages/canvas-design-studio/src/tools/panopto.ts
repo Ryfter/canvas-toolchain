@@ -523,7 +523,7 @@ export async function bulkDownloadPanoptoCaptions(
       filename: basename(d.path),
     })),
   };
-  writeFileSync(`${input.outputDir}/_sessions.json`, JSON.stringify(manifest, null, 2), 'utf-8');
+  writeFileSync(join(input.outputDir, '_sessions.json'), JSON.stringify(manifest, null, 2), 'utf-8');
 
   return result;
 }

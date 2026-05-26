@@ -193,6 +193,8 @@ describe('bulkDownloadPanoptoCaptions', () => {
     expect(result.downloaded[0].sessionId).toBe('sess-1');
     expect(result.downloaded[0].title).toBe('Lecture 1');
     expect(result.downloaded[0].path).toContain('lecture-1.panopto.vtt');
+    expect(result.downloaded[0].startTime).toBe('2026-05-01T12:00:00Z');
+    expect(result.downloaded[0].duration).toBe(3600);
 
     expect(result.skippedNoCaptions).toHaveLength(1);
     expect(result.skippedNoCaptions[0].sessionId).toBe('sess-2');
@@ -255,7 +257,7 @@ describe('bulkDownloadPanoptoCaptions', () => {
     expect(fs.writeFileSync).toHaveBeenCalledTimes(2);
 
     const manifestCall = vi.mocked(fs.writeFileSync).mock.calls[1];
-    expect(manifestCall[0]).toBe('/transcripts/_sessions.json');
+    expect(manifestCall[0]).toContain('_sessions.json');
     const manifest = JSON.parse(manifestCall[1] as string);
     expect(manifest.domain).toBe(DOMAIN);
     expect(manifest.sessions).toHaveLength(1);
@@ -267,5 +269,47 @@ describe('bulkDownloadPanoptoCaptions', () => {
       filename: expect.stringContaining('lecture-1.panopto.vtt'),
     });
     expect(manifest.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('writes _sessions.json with empty sessions array when all downloads fail', async () => {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'test-token' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          Results: [
+            { Id: 'sess-1', Name: 'Lecture 1', StartTime: '2026-05-01T12:00:00Z', Duration: 3600, HasCaptions: true },
+          ],
+          TotalNumberOfResults: 1,
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'test-token' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      } as Response);
+
+    const result = await bulkDownloadPanoptoCaptions(
+      { folderId: 'folder-1', outputDir: '/transcripts' },
+      CFG_API,
+    );
+
+    expect(result.downloaded).toHaveLength(0);
+    expect(result.failed).toHaveLength(1);
+
+    // Manifest is still written even when all sessions fail
+    const manifestCalls = vi.mocked(fs.writeFileSync).mock.calls.filter(
+      (c) => String(c[0]).includes('_sessions.json'),
+    );
+    expect(manifestCalls).toHaveLength(1);
+    const manifest = JSON.parse(manifestCalls[0][1] as string);
+    expect(manifest.sessions).toHaveLength(0);
   });
 });
