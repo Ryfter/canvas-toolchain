@@ -57,6 +57,9 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 	retryBtn := widget.NewButton("Retry", nil)
 	retryBtn.Disable()
 
+	backBtn := widget.NewButton("Back", onBack)
+	backBtn.Disable()
+
 	openDirBtn := widget.NewButton("Open install dir", func() {
 		_ = openInFinder(st.InstallDir)
 	})
@@ -94,6 +97,10 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 				}
 				rows[i].SetStatus(ui.StatusError, msg)
 				retryBtn.Enable()
+				backBtn.Enable()
+				if res.Err != nil {
+					logFn("\n[" + name + " failed] " + res.Err.Error() + "\n")
+				}
 				dialog.ShowError(fmt.Errorf("%s failed: %v", name, res.Err), parent)
 			}
 		},
@@ -122,7 +129,7 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 	}
 
 	bottom := container.NewBorder(nil, nil,
-		container.NewHBox(logToggle, retryBtn, openDirBtn, reportBtn, widget.NewButton("Cancel", parent.Close)),
+		container.NewHBox(backBtn, logToggle, retryBtn, openDirBtn, reportBtn, widget.NewButton("Cancel", parent.Close)),
 		nextBtn,
 	)
 	return container.NewBorder(

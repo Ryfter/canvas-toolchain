@@ -18,6 +18,7 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 	anthropicEntry.OnChanged = func(s string) { st.AnthropicAPIKey = s }
 
 	canvasHostEntry := widget.NewEntry()
+	canvasHostEntry.SetPlaceHolder("<school>.instructure.com")
 	canvasHostEntry.SetText(st.CanvasHost)
 	canvasHostEntry.OnChanged = func(s string) { st.CanvasHost = s }
 
@@ -45,7 +46,7 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 
 	if st.WorkflowPanopto {
 		panoptoDomain := widget.NewEntry()
-		panoptoDomain.SetPlaceHolder("bsu.hosted.panopto.com")
+		panoptoDomain.SetPlaceHolder("<school>.hosted.panopto.com")
 		panoptoDomain.SetText(st.PanoptoDomain)
 		panoptoDomain.OnChanged = func(s string) { st.PanoptoDomain = s }
 
@@ -60,7 +61,7 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 		fields = append(fields,
 			widget.NewSeparator(),
 			widget.NewLabelWithStyle("Panopto (optional)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			ui.HintedField{Label: "Panopto domain", Input: panoptoDomain, Hint: "e.g. bsu.hosted.panopto.com"}.AsCanvasObject(),
+			ui.HintedField{Label: "Panopto domain", Input: panoptoDomain, Hint: "e.g. <school>.hosted.panopto.com"}.AsCanvasObject(),
 			ui.HintedField{Label: "Client ID", Input: panoptoClient, Hint: "Panopto admin → API Clients."}.AsCanvasObject(),
 			ui.HintedField{Label: "Client secret", Input: panoptoSecret, Hint: "Same place as the client ID."}.AsCanvasObject(),
 		)

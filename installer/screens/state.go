@@ -63,6 +63,5 @@ func NewState(version string) *State {
 		InstallDir:     DefaultInstallDir(),
 		Mode:           ModeFresh,
 		WorkflowCanvas: true,
-		CanvasHost:     "bsu.instructure.com",
 	}
 }
