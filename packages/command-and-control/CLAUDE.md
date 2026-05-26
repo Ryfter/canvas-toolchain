@@ -47,7 +47,6 @@ Implemented:
 
 Still pending:
 
-- Bulk Panopto transcript download.
 - Course-wide publish as one reviewed transaction.
 - A single native installer.
 
