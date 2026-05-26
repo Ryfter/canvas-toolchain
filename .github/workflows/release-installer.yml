@@ -63,3 +63,54 @@ jobs:
       - name: Download bundled Node (${{ matrix.target.node-target }})
         shell: bash
         run: bash installer/scripts/download-node.sh ${{ matrix.target.node-target }}
+
+      - name: Set version variable
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build installer (Windows cross-compile)
+        if: matrix.target.goos == 'windows'
+        working-directory: installer
+        env:
+          GOOS: ${{ matrix.target.goos }}
+          GOARCH: ${{ matrix.target.goarch }}
+          CGO_ENABLED: '1'
+          CC: x86_64-w64-mingw32-gcc
+        run: |
+          go build -ldflags "-X main.Version=${{ steps.version.outputs.version }} -H windowsgui" \
+            -o canvas-toolchain-installer-windows-x64.exe .
+
+      - name: Build installer (macOS native)
+        if: matrix.target.goos == 'darwin'
+        working-directory: installer
+        env:
+          GOOS: ${{ matrix.target.goos }}
+          GOARCH: ${{ matrix.target.goarch }}
+          CGO_ENABLED: '1'
+        run: |
+          go build -ldflags "-X main.Version=${{ steps.version.outputs.version }}" \
+            -o canvas-toolchain-installer-${{ matrix.target.goarch }} .
+
+      - name: Build updater stub (Windows)
+        if: matrix.target.goos == 'windows'
+        working-directory: installer
+        env:
+          GOOS: ${{ matrix.target.goos }}
+          GOARCH: ${{ matrix.target.goarch }}
+          CGO_ENABLED: '1'
+          CC: x86_64-w64-mingw32-gcc
+        run: |
+          go build -tags updater_stub -ldflags "-X main.Version=${{ steps.version.outputs.version }} -H windowsgui" \
+            -o canvas-toolchain-updater-windows-x64.exe ./update
+
+      - name: Build updater stub (macOS)
+        if: matrix.target.goos == 'darwin'
+        working-directory: installer
+        env:
+          GOOS: ${{ matrix.target.goos }}
+          GOARCH: ${{ matrix.target.goarch }}
+          CGO_ENABLED: '1'
+        run: |
+          go build -tags updater_stub -ldflags "-X main.Version=${{ steps.version.outputs.version }}" \
+            -o canvas-toolchain-updater-${{ matrix.target.goarch }} ./update
