@@ -53,4 +53,4 @@ jobs:
 
       - name: go build (updater stub)
         working-directory: installer
-        run: go build -tags updater_stub -o /tmp/canvas-toolchain-updater ./update
+        run: go build -o /tmp/canvas-toolchain-updater ./update/cmd/updater

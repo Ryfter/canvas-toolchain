@@ -101,8 +101,8 @@ jobs:
           CGO_ENABLED: '1'
           CC: x86_64-w64-mingw32-gcc
         run: |
-          go build -tags updater_stub -ldflags "-X main.Version=${{ steps.version.outputs.version }} -H windowsgui" \
-            -o ${{ matrix.target.updater-artifact }} ./update
+          go build -ldflags "-X main.Version=${{ steps.version.outputs.version }} -H windowsgui" \
+            -o ${{ matrix.target.updater-artifact }} ./update/cmd/updater
 
       - name: Build updater stub (macOS)
         if: matrix.target.goos == 'darwin'
@@ -112,8 +112,8 @@ jobs:
           GOARCH: ${{ matrix.target.goarch }}
           CGO_ENABLED: '1'
         run: |
-          go build -tags updater_stub -ldflags "-X main.Version=${{ steps.version.outputs.version }}" \
-            -o ${{ matrix.target.updater-artifact }} ./update
+          go build -ldflags "-X main.Version=${{ steps.version.outputs.version }}" \
+            -o ${{ matrix.target.updater-artifact }} ./update/cmd/updater
 
       - name: Package macOS .pkg
         if: matrix.target.goos == 'darwin'

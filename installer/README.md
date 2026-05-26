@@ -17,7 +17,7 @@ see `.github/workflows/release-installer.yml` and Plan 3.
 
 ## Updater stub
 
-    go build -tags updater_stub -o canvas-toolchain-updater ./update
+    go build -o canvas-toolchain-updater ./update/cmd/updater
 
 ## Tests
 
