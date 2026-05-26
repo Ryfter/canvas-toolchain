@@ -19,6 +19,7 @@ import { installResourcesFromLockfile } from './registry/lockfile_install.js';
 import { pasteLayout, saveLayoutAsTemplate } from './tools/layout_adapter.js';
 import { setupPanopto } from './tools/setup_panopto.js';
 import { setupAnthropic } from './tools/setup_anthropic.js';
+import { setupCanvas } from './tools/setup_canvas.js';
 import {
   bulkFetchPanoptoTranscripts,
   type BulkFetchPanoptoTranscriptsInput,
@@ -69,6 +70,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           apiKey: { type: 'string', description: 'Anthropic API key starting with sk-ant-. Stored locally and never echoed back.' },
           model: { type: 'string', description: 'Anthropic model name for validation calls, e.g. "claude-haiku-4-5-20251001" (default).' },
           test: { type: 'boolean', description: 'Validate the key with a 1-token API call before saving (default: true).' },
+        },
+      },
+    },
+    {
+      name: 'setup_canvas',
+      description: 'Configure the Canvas LMS host and API token used for direct page publishing. Validates the token against /api/v1/users/self before saving. Stored locally at ~/.command-and-control/canvas-config.json with 0o600 permissions.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['host', 'token'],
+        properties: {
+          host: { type: 'string', description: 'Canvas hostname, e.g. "bsu.instructure.com". Leading https:// is stripped automatically.' },
+          token: { type: 'string', description: 'Canvas API access token from Canvas → Account → Settings → New Access Token. Stored locally and never echoed back.' },
+          test: { type: 'boolean', description: 'Validate the token with /api/v1/users/self before saving (default: true).' },
         },
       },
     },
@@ -327,6 +341,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'setup_anthropic':
         result = await setupAnthropic(args as unknown as Parameters<typeof setupAnthropic>[0]);
+        break;
+      case 'setup_canvas':
+        result = await setupCanvas(args as unknown as Parameters<typeof setupCanvas>[0]);
         break;
       case 'get_cc_status':
         result = await getCcStatus();
