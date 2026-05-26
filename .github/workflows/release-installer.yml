@@ -56,4 +56,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-mingw-w64 libgl1-mesa-dev xorg-dev
 
-      # Subsequent steps added in Tasks 5-8.
+      - name: Pack canvas-toolchain payload
+        shell: bash
+        run: bash installer/scripts/pack-payload.sh
+
+      - name: Download bundled Node (${{ matrix.target.node-target }})
+        shell: bash
+        run: bash installer/scripts/download-node.sh ${{ matrix.target.node-target }}
