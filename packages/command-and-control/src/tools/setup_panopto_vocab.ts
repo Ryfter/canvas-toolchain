@@ -1,3 +1,9 @@
+/**
+ * Manages panopto-vocab.json: the professor's custom filler-word list and
+ * vocabulary corrections used by enrich_panopto_transcripts.
+ *
+ * Config file: ~/.command-and-control/panopto-vocab.json (CC_HOME override for tests).
+ */
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
@@ -26,6 +32,13 @@ function getVocabPath(): string {
   return join(getCcHomePath(), 'panopto-vocab.json');
 }
 
+/**
+ * Load panopto-vocab.json, returning empty defaults when absent.
+ *
+ * Throws a PLAIN OBJECT `{ error, fix }` on corrupt JSON — not an Error instance.
+ * Callers (enrich_panopto_transcripts) catch it as `err: any` and forward
+ * `err.error` + `err.fix` directly into the structured MCP result shape.
+ */
 export function loadPanoptoVocab(): PanoptoVocab {
   const vocabPath = getVocabPath();
   if (!existsSync(vocabPath)) {
@@ -44,6 +57,8 @@ function saveVocab(vocab: PanoptoVocab): void {
   mkdirSync(home, { recursive: true });
   const vocabPath = getVocabPath();
   const tmpPath = `${vocabPath}.tmp`;
+  // Atomic write: tmp + rename prevents partial-write corruption on crash.
+  // mode 0o600: shares directory with panopto-config.json (OAuth credentials).
   writeFileSync(tmpPath, JSON.stringify(vocab, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmpPath, vocabPath);
 }

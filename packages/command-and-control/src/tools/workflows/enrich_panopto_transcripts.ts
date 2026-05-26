@@ -1,3 +1,12 @@
+/**
+ * Orchestrates Panopto transcript enrichment.
+ *
+ * Reads _sessions.json (written by bulk_fetch_panopto_transcripts), enriches each
+ * .panopto.vtt file via CDS's enrichVttFile, and writes a .enriched.md alongside it.
+ *
+ * All errors are returned as structured result objects — this function never throws.
+ * Per-session failures accumulate in result.failed[] so one bad VTT doesn't abort the batch.
+ */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -72,6 +81,8 @@ export async function enrichPanoptoTranscripts(
   try {
     vocab = loadPanoptoVocab();
   } catch (err: any) {
+    // loadPanoptoVocab throws a plain object { error, fix } on corrupt JSON.
+    // The ?? guard handles a future regression where a real Error is thrown instead.
     return {
       transcriptsPath,
       enriched: [],
@@ -82,6 +93,7 @@ export async function enrichPanoptoTranscripts(
     };
   }
 
+  // Spread so professor additions extend the built-in list; neither array is mutated.
   const allFillerWords = [...BUILTIN_FILLER_WORDS, ...vocab.fillerWords];
 
   const result: EnrichPanoptoTranscriptsResult = {
@@ -105,6 +117,7 @@ export async function enrichPanoptoTranscripts(
         corrections: vocab.corrections,
         domain,
       });
+      // Suffix replace preserves the date prefix and session title in the output filename.
       const mdPath = join(transcriptsPath, session.filename.replace(/\.panopto\.vtt$/, '.enriched.md'));
       writeFileSync(mdPath, markdown, 'utf-8');
       result.enriched.push({ sessionId: session.sessionId, title: session.title, mdPath });

@@ -60,14 +60,18 @@ src/
   tools/
     setup_cc.ts             ← configure providers, models, routing
     get_cc_status.ts        ← health snapshot
+    setup_panopto.ts        ← configure Panopto domain + OAuth credentials → panopto-config.json
+    setup_panopto_vocab.ts  ← manage panopto-vocab.json (filler words + corrections)
     workflows/
       analyze_course.ts     ← ingest → score → recommend
       plan_next_semester.ts ← shell → calendar → shift → outline
       update_course_materials.ts  ← draft → examples → export
       full_pipeline.ts      ← all three in sequence
+      bulk_fetch_panopto_transcripts.ts  ← download all session VTTs → writes _sessions.json manifest
+      enrich_panopto_transcripts.ts      ← reads _sessions.json, calls enrichVttFile per session → .enriched.md
   passthrough/
     ci_tools.ts             ← all 27 CI tools re-registered with taskCategory
-    downloader_tools.ts     ← Canvas Backup CLI bridge + Panopto transcript placeholder
+    downloader_tools.ts     ← Canvas Backup CLI bridge
     design_tools.ts         ← Canvas Design Studio import/generate pass-throughs
 
 tests/                      ← mirrors src/ structure
@@ -118,15 +122,91 @@ The update-course-materials report shape is tracked in `docs/superpowers/plans/2
 
 All 27 Curriculum Intelligence tools re-registered verbatim. See `src/passthrough/ci_tools.ts` for the complete list. Source schemas: `D:\Dev\Curriculum-Intelligence\src\index.ts`.
 
-### Downloader and Design Studio tools
+### Canvas tools (2)
 
 `download_canvas_archive` invokes Canvas Backup (`canvas-backup`) through a CLI bridge. It discovers Canvas Backup from `CANVAS_BACKUP_COMMAND`, `CANVAS_BACKUP_REPO`, a sibling `../Canvas-Download` checkout, or `canvas-backup` on PATH.
-
-`download_transcripts` is still a placeholder because bulk Panopto transcript download is not implemented in Canvas Backup yet.
 
 `import_course` and `generate_course` call real Canvas Design Studio functions from `canvas-design-mcp`.
 
 `publish_course` is still a placeholder because course-wide publishing needs a reviewed page-by-page transaction model.
+
+### Panopto tools (4)
+
+| Tool | File | What it does |
+|------|------|--------------|
+| `setup_panopto` | `src/tools/setup_panopto.ts` | Store domain + OAuth credentials in `panopto-config.json` |
+| `bulk_fetch_panopto_transcripts` | `src/tools/workflows/bulk_fetch_panopto_transcripts.ts` | Download all session VTTs; write `_sessions.json` manifest |
+| `setup_panopto_vocab` | `src/tools/setup_panopto_vocab.ts` | Add/remove filler words and vocabulary corrections in `panopto-vocab.json` |
+| `enrich_panopto_transcripts` | `src/tools/workflows/enrich_panopto_transcripts.ts` | Enrich downloaded VTTs into readable `.enriched.md` files |
+
+The intended professor workflow is: `setup_panopto` → `bulk_fetch_panopto_transcripts` → (optionally) `setup_panopto_vocab` → `enrich_panopto_transcripts`. The download and enrichment steps are deliberately decoupled via `_sessions.json` so professors can re-enrich with updated vocab without re-downloading.
+
+See the **Panopto transcript pipeline** section below for data flow, file contracts, and design decisions.
+
+---
+
+## Panopto transcript pipeline
+
+Professors record lectures in Panopto. This pipeline converts raw machine-generated VTT transcripts into clean, structured markdown notes with Panopto deep links and highlighted key statements.
+
+### Data flow
+
+```
+setup_panopto                    → panopto-config.json  (domain + OAuth credentials)
+bulk_fetch_panopto_transcripts   → 2026-01-15_Week-1.panopto.vtt × N
+                                 → _sessions.json        (download manifest)
+setup_panopto_vocab              → panopto-vocab.json   (filler words + corrections)
+enrich_panopto_transcripts       → 2026-01-15_Week-1.enriched.md × N
+```
+
+### `_sessions.json` — the download↔enrichment contract
+
+Written by `bulk_fetch_panopto_transcripts` (CDS `panopto.ts`), read by `enrich_panopto_transcripts`. Decoupling via this manifest means enrichment can run independently of the network — professors tweak vocab and re-enrich without re-downloading.
+
+Shape (typed as `SessionsManifest` in `canvas-design-mcp/dist/tools/panopto-enrich.js`):
+
+```json
+{
+  "domain": "bsu.instructure.com",
+  "generatedAt": "2026-05-01T12:00:00.000Z",
+  "sessions": [
+    {
+      "sessionId": "abc-123",
+      "title": "Week 1 Lecture",
+      "startTime": "2026-01-15T14:00:00Z",
+      "duration": 3600,
+      "filename": "2026-01-15_Week-1-Lecture.panopto.vtt"
+    }
+  ]
+}
+```
+
+### `panopto-vocab.json` — professor vocabulary config
+
+Stored at `~/.command-and-control/panopto-vocab.json` (env `CC_HOME` overrides for test isolation).
+
+```json
+{ "fillerWords": ["essentially"], "corrections": [{ "from": "KOBE", "to": "COBE" }] }
+```
+
+Written atomically: write to `.tmp` → `renameSync` to final path. `mode: 0o600` because it shares the config directory with `panopto-config.json` which contains OAuth credentials.
+
+`loadPanoptoVocab()` throws a **plain object** `{ error, fix }` (not an `Error` instance) when the file is corrupt. This is intentional: `enrich_panopto_transcripts.ts` catches it as `err: any` and forwards `err.error` + `err.fix` directly into the structured MCP result shape. An `Error` instance would require extra unwrapping.
+
+### Enrichment algorithm
+
+The enrichment logic lives in CDS at `src/tools/panopto-enrich.ts` and is called by C&C through `canvas-design-mcp`. See `packages/canvas-design-studio/AGENTS.md` for the algorithm walkthrough.
+
+### Error taxonomy
+
+All errors surface as structured result objects — the workflow never throws. Per-session failures accumulate in `result.failed[]` so one bad VTT does not abort the batch.
+
+| Code | Trigger | Fix hint |
+|------|---------|----------|
+| `MANIFEST_NOT_FOUND` | No `_sessions.json` in `transcriptsPath` | Run `bulk_fetch_panopto_transcripts` first |
+| `MANIFEST_CORRUPT` | `_sessions.json` is not valid JSON | Re-run `bulk_fetch_panopto_transcripts` |
+| `PANOPTO_NOT_CONFIGURED` | `panopto-config.json` missing/invalid | Run `setup_panopto` |
+| `VOCAB_CORRUPT` | `panopto-vocab.json` is not valid JSON | Delete it and re-run `setup_panopto_vocab` |
 
 ---
 

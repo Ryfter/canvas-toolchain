@@ -1,6 +1,20 @@
+/**
+ * Panopto VTT enrichment engine.
+ *
+ * Converts raw machine-generated VTT transcripts into readable markdown with:
+ * - Filler-word removal (built-in list + professor additions)
+ * - Vocabulary corrections (literal find-replace, e.g. KOBE → COBE)
+ * - Key-statement detection → blockquote rendering
+ * - 5-minute bucket structure with Panopto deep links between sections
+ * - Session header with UTC date and duration
+ *
+ * Lives in CDS (not C&C) because it depends on CI's VTT parser and produces
+ * markdown content — both are design/content concerns, not coordinator concerns.
+ */
 import { readFileSync } from 'node:fs';
 import { parseVtt } from 'curriculum-intelligence-mcp/dist/parsers/transcript_vtt.js';
 
+// Exported so callers can spread it with professor additions without mutating this constant.
 export const BUILTIN_FILLER_WORDS: string[] = [
   'uh', 'um', 'umm', 'like', 'right', 'you know', 'uh-huh', 'so', 'basically', 'actually',
 ];
@@ -49,6 +63,12 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+/**
+ * Enrich a VTT transcript string into structured markdown.
+ *
+ * Pipeline: parse → strip fillers → apply corrections → classify key statements
+ * → bucket by 5-minute windows → render header + prose/blockquotes + deep links.
+ */
 export function enrichVtt(
   vttContent: string,
   session: SessionManifestEntry,
@@ -56,6 +76,8 @@ export function enrichVtt(
 ): string {
   const rawCues = parseVtt(vttContent);
 
+  // Empty-list guard: compiling \b()\b throws a runtime error.
+  // [,]? eats a trailing comma left stranded after filler removal (e.g. "So, the" → "the").
   const fillerRegex =
     options.fillerWords.length > 0
       ? new RegExp('\\b(' + options.fillerWords.join('|') + ')\\b[,]?', 'gi')
@@ -66,6 +88,8 @@ export function enrichVtt(
     if (fillerRegex) {
       text = text.replace(fillerRegex, '');
     }
+    // replaceAll not regex: corrections are literal strings (acronyms like KOBE→COBE).
+    // Regex would require callers to escape metacharacters in their correction strings.
     for (const correction of options.corrections) {
       text = text.replaceAll(correction.from, correction.to);
     }
@@ -85,7 +109,8 @@ export function enrichVtt(
     bucketMap.get(bucketIndex)!.push(cue);
   }
 
-  // Render header
+  // UTC timezone: session.startTime is an ISO UTC string from the Panopto API.
+  // Local timezone would shift the displayed date for professors outside UTC.
   const date = new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -130,7 +155,8 @@ export function enrichVtt(
       lines.push('');
     }
 
-    // Deep link to start of next bucket (skip on last bucket)
+    // Deep link points to the START of the next bucket — a forward-navigation aid.
+    // Panopto viewer accepts &start=<seconds> to jump directly to that timestamp.
     if (!isLast) {
       const nextBucket = sortedBuckets[i + 1];
       const startSec = nextBucket * 300;
