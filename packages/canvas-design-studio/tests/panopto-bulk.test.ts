@@ -210,11 +210,62 @@ describe('bulkDownloadPanoptoCaptions', () => {
     ]);
 
     // Verify file write
-    expect(fs.writeFileSync).toHaveBeenCalledOnce();
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(2);
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       expect.stringContaining('lecture-1.panopto.vtt'),
       'WEBVTT\n\n00:01.000 --> 00:04.000\nHello from lecture 1',
       'utf-8'
     );
+  });
+
+  it('writes _sessions.json manifest with correct shape after download', async () => {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'test-token' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          Results: [
+            { Id: 'sess-1', Name: 'Lecture 1', StartTime: '2026-05-01T12:00:00Z', Duration: 3600, HasCaptions: true },
+          ],
+          TotalNumberOfResults: 1,
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'test-token' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ Language: 'en', FileUrl: 'https://panopto/1.vtt', IsDefault: true }],
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => 'WEBVTT\n\n00:01.000 --> 00:04.000\nHello',
+      } as Response);
+
+    await bulkDownloadPanoptoCaptions(
+      { folderId: 'folder-1', outputDir: '/transcripts' },
+      CFG_API,
+    );
+
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(2);
+
+    const manifestCall = vi.mocked(fs.writeFileSync).mock.calls[1];
+    expect(manifestCall[0]).toBe('/transcripts/_sessions.json');
+    const manifest = JSON.parse(manifestCall[1] as string);
+    expect(manifest.domain).toBe(DOMAIN);
+    expect(manifest.sessions).toHaveLength(1);
+    expect(manifest.sessions[0]).toMatchObject({
+      sessionId: 'sess-1',
+      title: 'Lecture 1',
+      startTime: '2026-05-01T12:00:00Z',
+      duration: 3600,
+      filename: expect.stringContaining('lecture-1.panopto.vtt'),
+    });
+    expect(manifest.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });

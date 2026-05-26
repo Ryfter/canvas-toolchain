@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import type { PanoptoConfig } from '../types.js';
 import { formatError } from '../utils/errors.js';
 
@@ -294,7 +294,7 @@ export interface PanoptoSession {
 export interface BulkDownloadResult {
   folderId: string;
   outputDir: string;
-  downloaded: { sessionId: string; title: string; path: string }[];
+  downloaded: { sessionId: string; title: string; path: string; startTime: string; duration: number }[];
   failed: { sessionId: string; title: string; reason: string }[];
   skippedNoCaptions: { sessionId: string; title: string }[];
 }
@@ -482,6 +482,8 @@ export async function bulkDownloadPanoptoCaptions(
         sessionId: session.id,
         title: session.title,
         path: filePath,
+        startTime: session.startTime,
+        duration: session.duration,
       });
 
       onProgress?.({
@@ -509,6 +511,19 @@ export async function bulkDownloadPanoptoCaptions(
       });
     }
   }
+
+  const manifest = {
+    domain: config.domain,
+    generatedAt: new Date().toISOString(),
+    sessions: result.downloaded.map((d) => ({
+      sessionId: d.sessionId,
+      title: d.title,
+      startTime: d.startTime,
+      duration: d.duration,
+      filename: basename(d.path),
+    })),
+  };
+  writeFileSync(`${input.outputDir}/_sessions.json`, JSON.stringify(manifest, null, 2), 'utf-8');
 
   return result;
 }
