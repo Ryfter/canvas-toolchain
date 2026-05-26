@@ -1,6 +1,6 @@
 module github.com/Ryfter/canvas-toolchain/installer
 
-go 1.26.3
+go 1.22
 
 require fyne.io/fyne/v2 v2.5.2
 
