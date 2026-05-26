@@ -20,6 +20,7 @@ import { pasteLayout, saveLayoutAsTemplate } from './tools/layout_adapter.js';
 import { setupPanopto } from './tools/setup_panopto.js';
 import { setupAnthropic } from './tools/setup_anthropic.js';
 import { setupCanvas } from './tools/setup_canvas.js';
+import { checkForUpdates, getUpdateNotice } from './update/check.js';
 import {
   bulkFetchPanoptoTranscripts,
   type BulkFetchPanoptoTranscriptsInput,
@@ -37,6 +38,9 @@ const server = new Server(
   { name: 'command-and-control', version: '1.0.0' },
   { capabilities: { tools: {} } }
 );
+
+// Fire-and-forget background check — never blocks startup.
+void checkForUpdates();
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
@@ -441,7 +445,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       }
     }
 
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    const notice = getUpdateNotice();
+    const text = JSON.stringify(result, null, 2) + (notice ?? '');
+    return { content: [{ type: 'text', text }] };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { content: [{ type: 'text', text: JSON.stringify({ error: message }) }], isError: true };
