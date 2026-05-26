@@ -85,6 +85,12 @@ Ideas:
 
 These three ideas are related — the rubric system could use the hierarchy framework, and both could appear in the showcase.
 
+### Local C&C Dashboard (lowest priority — function and awesome first)
+
+**Reasoning:** "I want it to function first, and be awesome, then we can move to something more."
+
+A local web dashboard for managing the toolchain: semester stats, course health at a glance, pipeline run history, vocab/config management UI. Stats pulled from previous semesters. Not worth building until the core workflow is solid and the installer makes setup frictionless for professors. This is the last thing on the list.
+
 ## Reasoning Behind the Current Shape
 
 Do not port the whole toolchain to Go yet. Go may be useful later for a single installer or for a future Canvas Backup rewrite, but the working product logic is already tested in TypeScript and Python. The lowest-risk path is to harden the TypeScript coordinator and reach Python through a small, explicit CLI bridge.
