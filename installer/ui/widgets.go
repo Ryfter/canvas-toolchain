@@ -90,3 +90,9 @@ func (h HintedField) AsCanvasObject() fyne.CanvasObject {
 		hintLabel,
 	)
 }
+
+func NewStatusRowWithStatus(label string, s RowStatus, hint string) *StatusRow {
+	r := NewStatusRow(label)
+	r.SetStatus(s, hint)
+	return r
+}
