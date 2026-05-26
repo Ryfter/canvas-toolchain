@@ -90,7 +90,10 @@ describe('setupAnthropic', () => {
     expect(saved.lastValidatedAt).toBeDefined();
   });
 
-  it('writes the config file with 0o600 permissions', async () => {
+  // Skipped on Windows: writeFileSync({mode: 0o600}) is silently ignored by Node on Windows;
+  // statSync().mode always reports 0o666 there. Permissions are still enforced on macOS/Linux
+  // (the real installer target along with Windows NTFS ACLs on the user's home directory).
+  it.skipIf(process.platform === 'win32')('writes the config file with 0o600 permissions', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ content: [{ type: 'text', text: '.' }] }),
@@ -483,7 +486,8 @@ describe('setupCanvas', () => {
     expect(saved.token).toBe('canvas-test-token');
   });
 
-  it('writes the config file with 0o600 permissions', async () => {
+  // Skipped on Windows — see note on setup_anthropic.test.ts.
+  it.skipIf(process.platform === 'win32')('writes the config file with 0o600 permissions', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ id: 1 }),
