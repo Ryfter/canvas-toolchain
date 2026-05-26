@@ -79,7 +79,7 @@ jobs:
           CC: x86_64-w64-mingw32-gcc
         run: |
           go build -ldflags "-X main.Version=${{ steps.version.outputs.version }} -H windowsgui" \
-            -o canvas-toolchain-installer-windows-x64.exe .
+            -o ${{ matrix.target.artifact }} .
 
       - name: Build installer (macOS native)
         if: matrix.target.goos == 'darwin'
@@ -102,7 +102,7 @@ jobs:
           CC: x86_64-w64-mingw32-gcc
         run: |
           go build -tags updater_stub -ldflags "-X main.Version=${{ steps.version.outputs.version }} -H windowsgui" \
-            -o canvas-toolchain-updater-windows-x64.exe ./update
+            -o ${{ matrix.target.updater-artifact }} ./update
 
       - name: Build updater stub (macOS)
         if: matrix.target.goos == 'darwin'
@@ -113,7 +113,7 @@ jobs:
           CGO_ENABLED: '1'
         run: |
           go build -tags updater_stub -ldflags "-X main.Version=${{ steps.version.outputs.version }}" \
-            -o canvas-toolchain-updater-${{ matrix.target.goarch }} ./update
+            -o ${{ matrix.target.updater-artifact }} ./update
 
       - name: Package macOS .pkg
         if: matrix.target.goos == 'darwin'
@@ -150,11 +150,6 @@ jobs:
             --version ${{ steps.version.outputs.version }} \
             --install-location / \
             ${{ matrix.target.artifact }}
-
-      - name: Rename Windows artifact (no .pkg wrap needed)
-        if: matrix.target.goos == 'windows'
-        working-directory: installer
-        run: cp canvas-toolchain-installer-windows-x64.exe ${{ matrix.target.artifact }}
 
       - name: Upload installer + updater to Release
         uses: softprops/action-gh-release@v2

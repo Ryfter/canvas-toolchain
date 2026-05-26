@@ -419,7 +419,7 @@ Append:
           CC: x86_64-w64-mingw32-gcc
         run: |
           go build -ldflags "-X main.Version=${{ steps.version.outputs.version }} -H windowsgui" \
-            -o canvas-toolchain-installer-windows-x64.exe .
+            -o ${{ matrix.target.artifact }} .
 
       - name: Build installer (macOS native)
         if: matrix.target.goos == 'darwin'
@@ -442,7 +442,7 @@ Append:
           CC: x86_64-w64-mingw32-gcc
         run: |
           go build -tags updater_stub -ldflags "-X main.Version=${{ steps.version.outputs.version }} -H windowsgui" \
-            -o canvas-toolchain-updater-windows-x64.exe ./update
+            -o ${{ matrix.target.updater-artifact }} ./update
 
       - name: Build updater stub (macOS)
         if: matrix.target.goos == 'darwin'
@@ -453,8 +453,10 @@ Append:
           CGO_ENABLED: '1'
         run: |
           go build -tags updater_stub -ldflags "-X main.Version=${{ steps.version.outputs.version }}" \
-            -o canvas-toolchain-updater-${{ matrix.target.goarch }} ./update
+            -o ${{ matrix.target.updater-artifact }} ./update
 ```
+
+> **Why `matrix.target.artifact` / `updater-artifact` directly:** earlier drafts had the build step write to a goarch-suffixed filename and a separate "rename" step copy/move it to the final artifact name. That introduced two issues: (1) for Windows, source and destination filenames were identical (`cp X X` errors on Linux coreutils with "are the same file"), and (2) for macOS the updater build's filename did not match the matrix-declared `updater-artifact` (build emitted `canvas-toolchain-updater-arm64` while upload looked for `canvas-toolchain-updater-macos-arm64`). Writing directly to the matrix artifact name eliminates both. The macOS *installer* build still uses a goarch-suffixed name because pkgbuild (Task 7) reads that file and produces the final `.pkg`.
 
 - [ ] **Step 2: Commit**
 
@@ -531,11 +533,6 @@ git -C D:/Dev/canvas-toolchain commit -m "ci: release workflow macOS .pkg packag
 Append:
 
 ```yaml
-      - name: Rename Windows artifact (no .pkg wrap needed)
-        if: matrix.target.goos == 'windows'
-        working-directory: installer
-        run: cp canvas-toolchain-installer-windows-x64.exe ${{ matrix.target.artifact }}
-
       - name: Upload installer + updater to Release
         uses: softprops/action-gh-release@v2
         with:
