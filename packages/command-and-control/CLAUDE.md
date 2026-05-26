@@ -50,6 +50,35 @@ Still pending:
 - Course-wide publish as one reviewed transaction.
 - A single native installer.
 
+## Native Installer Design (approved, spec pending)
+
+**Tech stack:** Go + Fyne — compiled to a true native binary (.exe on Windows, .pkg on Mac) via GitHub Actions cross-compilation. No terminal required.
+
+**Why Go + Fyne over alternatives.** Kevin's hard constraint: "rational, intelligent people see (or hear) command line and just shut their brains down. It's easier to have a gui walkthrough for most people." Even with the one-time SmartScreen/Gatekeeper bypass (no $99-400/year code signing certificate), GUI >> terminal for professor adoption.
+
+**Distribution:** GitHub Releases self-service download. Release notes include screenshots of the SmartScreen/Gatekeeper bypass — a one-time friction professors handle once and forget.
+
+**5-screen wizard flow:**
+
+1. **Prereq check.** Auto-detect Node 18+, Git, Python 3. Show green/red per prereq with a fix-link for anything missing. Continue button disabled until all green (or user explicitly skips).
+2. **Workflow selector.** Checkboxes for which workflows to enable:
+   - Canvas course management (checked by default, recommended)
+   - Panopto transcript pipeline
+   - Curriculum Intelligence analysis
+   - Registry (templates, themes, prompt-sets)
+
+   Check for on, uncheck for off. Professors install only what they need.
+3. **API collection.** For each selected workflow, prompt for credentials with the URL where they live and a plain-English "why I need this." **All fields optional** — install with zero APIs and backfill later through `setup_*` MCP tools.
+   - Anthropic API key — `https://platform.anthropic.com/account/api-keys` — "Powers all AI features in the toolchain."
+   - Canvas API token (optional) — `<your-canvas>/profile/settings` → New Access Token — "Needed only if you want direct page publishing from the AI assistant. Manual paste always works without this."
+   - Panopto domain + OAuth client ID/secret (optional, shown only if Panopto workflow selected) — `<your-panopto>/System/ApiClients` — "Needed to pull lecture transcripts automatically."
+4. **Installation + progress bar.** Runs `npm install`, writes `~/.command-and-control/config.json`, registers the MCP server with the user's chosen AI client (Claude Desktop, ChatGPT, etc.).
+5. **Summary + next steps.** Shows what's installed, what's still needed (e.g., "No Anthropic key — set one later with `setup_anthropic`"), and the launch command for the AI client.
+
+**Backfill principle.** Every API in step 3 has a corresponding `setup_*` MCP tool that lets professors add or change credentials after install. The installer never blocks on missing credentials.
+
+**Implementation handoff.** Spec next (use `superpowers:brainstorming` to produce one), then hand the Go + Fyne implementation to Codex via `codex:codex-rescue`.
+
 ## Future Ideas (not yet specced)
 
 ### Canvas Capability Showcase + Template Creator
