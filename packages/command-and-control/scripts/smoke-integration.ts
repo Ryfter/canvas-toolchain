@@ -27,7 +27,7 @@ try {
     archivePath: ARCHIVE_PATH,
   });
   console.log(
-    `analyze_course: status=${analysis.status} modules=${analysis.ingest.moduleCount} assignments=${analysis.ingest.assignmentCount}`,
+    `analyze_course: status=${analysis.status} assignments=${analysis.trajectoryEntry.assignmentCount} verdicts=${JSON.stringify(analysis.trajectoryEntry.verdicts)}`,
   );
 
   const courseDir = join(tmpHome, 'cds-course');
