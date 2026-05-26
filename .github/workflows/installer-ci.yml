@@ -1,0 +1,56 @@
+name: Installer CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'installer/**'
+      - '.github/workflows/installer-ci.yml'
+  pull_request:
+    paths:
+      - 'installer/**'
+      - '.github/workflows/installer-ci.yml'
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: installer/go.sum
+
+      - name: Install Fyne build prerequisites (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Stub embed files
+        shell: bash
+        working-directory: installer
+        run: |
+          touch payload/installer-payload.tar.gz
+          touch payload/node-runtime.tar.gz
+
+      - name: go vet
+        working-directory: installer
+        run: go vet ./...
+
+      - name: go test
+        working-directory: installer
+        run: go test ./...
+
+      - name: go build (installer)
+        working-directory: installer
+        run: go build -o /tmp/canvas-toolchain-installer .
+
+      - name: go build (updater stub)
+        working-directory: installer
+        run: go build -tags updater_stub -o /tmp/canvas-toolchain-updater ./update
