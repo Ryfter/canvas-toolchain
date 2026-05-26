@@ -1261,18 +1261,14 @@ git -C D:/Dev/canvas-toolchain commit -m "feat(cc): append update-available noti
 
 ---
 
-## Task 10: Bump C&C package version + final integration check
+## Task 10: Final integration check
 
 **Files:**
-- Modify: `packages/command-and-control/package.json`
+- None modified — verification only.
 
-- [ ] **Step 1: Bump version**
+**Note (Kevin's call 2026-05-26):** The C&C `package.json` version stays at 1.0.0. The originally-proposed bump down to 0.9.1 was rejected — package versions track the package's own API stability, not the bundled toolchain release tag (which is tracked in `<install-dir>/.canvas-toolchain-version` instead).
 
-In `packages/command-and-control/package.json`, change `"version": "1.0.0"` to `"version": "0.9.1"`.
-
-(The C&C package version was set to 1.0.0 prematurely. The installer v1.0 is the gating release for v1.0 of the toolchain; the C&C package should track the toolchain version, which is currently in the v0.9.x range pre-installer.)
-
-- [ ] **Step 2: Run the full monorepo test + build**
+- [ ] **Step 1 (was Step 2): Run the full monorepo test + build**
 
 Run:
 ```bash
@@ -1283,20 +1279,13 @@ npm run build
 
 Expected: All workspaces pass tests; clean build.
 
-- [ ] **Step 3: Run the C&C smoke integration test**
+- [ ] **Step 2 (was Step 3): Run the C&C smoke integration test**
 
 Run: `cd D:/Dev/canvas-toolchain && npm run smoke:integration --workspace=packages/command-and-control`
 
 Expected: Smoke test passes — no regressions in the integration paths.
 
-- [ ] **Step 4: Commit the version bump**
-
-```bash
-git -C D:/Dev/canvas-toolchain add packages/command-and-control/package.json
-git -C D:/Dev/canvas-toolchain commit -m "chore(cc): bump to 0.9.1 — credential tools + update-nudge (refs #63)"
-```
-
-- [ ] **Step 5: Finish with `superpowers:finishing-a-development-branch`**
+- [ ] **Step 3 (was Step 5): Finish with `superpowers:finishing-a-development-branch`**
 
 This plan does not push or create a PR. Hand off to `finishing-a-development-branch` to verify tests, surface options (merge locally / push & PR / keep / discard), and act on the chosen path.
 
