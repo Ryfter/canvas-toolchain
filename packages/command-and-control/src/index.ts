@@ -23,6 +23,11 @@ import {
   type BulkFetchPanoptoTranscriptsInput,
   type ProgressCallback,
 } from './tools/workflows/bulk_fetch_panopto_transcripts.js';
+import { setupPanoptoVocab } from './tools/setup_panopto_vocab.js';
+import {
+  enrichPanoptoTranscripts,
+  type EnrichPanoptoTranscriptsInput,
+} from './tools/workflows/enrich_panopto_transcripts.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -154,6 +159,38 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           courseId: { type: 'string', description: 'If provided with semesterId, auto-ingests into Curriculum Intelligence.' },
           semesterId: { type: 'string', description: 'If provided with courseId, auto-ingests into Curriculum Intelligence.' },
           copy: { type: 'boolean', description: 'Copy VTT files into the CI semester folder during ingest (default: false).' },
+        },
+      },
+    },
+    {
+      name: 'setup_panopto_vocab',
+      description: 'Manage professor vocabulary corrections and filler words for transcript enrichment. Add or remove vocab entries used by enrich_panopto_transcripts.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['action'],
+        properties: {
+          action: {
+            type: 'string',
+            enum: ['add-correction', 'add-filler', 'remove-correction', 'list'],
+            description: 'list: show current vocab. add-correction: add a find/replace pair. add-filler: add a word to the filler list. remove-correction: remove a correction by its from value.',
+          },
+          from: { type: 'string', description: 'Required for add-correction and remove-correction. The source word/phrase to find.' },
+          to: { type: 'string', description: 'Required for add-correction. The replacement word/phrase.' },
+          word: { type: 'string', description: 'Required for add-filler. The filler word to add.' },
+        },
+      },
+    },
+    {
+      name: 'enrich_panopto_transcripts',
+      description: 'Generate enriched markdown from downloaded Panopto VTT files. Adds Week/Date headers, deep links every 5 minutes, strips filler words, applies vocab corrections, and highlights key statements as blockquotes. Requires bulk_fetch_panopto_transcripts to have been run first.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['transcriptsPath'],
+        properties: {
+          transcriptsPath: {
+            type: 'string',
+            description: 'Absolute path to the folder where bulk_fetch_panopto_transcripts wrote VTT files and _sessions.json.',
+          },
         },
       },
     },
@@ -314,6 +351,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         );
         break;
       }
+      case 'setup_panopto_vocab':
+        result = setupPanoptoVocab(args as unknown as Parameters<typeof setupPanoptoVocab>[0]);
+        break;
+      case 'enrich_panopto_transcripts':
+        result = await enrichPanoptoTranscripts(args as unknown as EnrichPanoptoTranscriptsInput);
+        break;
       case 'full_pipeline':
         result = await fullPipeline(args as unknown as Parameters<typeof fullPipeline>[0]);
         break;
