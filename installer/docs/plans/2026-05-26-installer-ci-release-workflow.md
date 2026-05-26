@@ -143,6 +143,9 @@ echo "==> Packing payload to $PAYLOAD_OUT"
 
 # Include: package.json, package-lock.json, packages/ (post-build, with dist/),
 # tsconfig.base.json. Exclude every node_modules tree.
+# Note: tar writes to stdout (-cz, no f) and shell redirects to "$PAYLOAD_OUT".
+# This avoids tar parsing Windows-style D:/... paths as remote archive specs
+# under Git Bash, while remaining portable to BSD tar (macOS) and GNU tar.
 tar \
   --exclude='*/node_modules' \
   --exclude='node_modules' \
@@ -152,11 +155,12 @@ tar \
   --exclude='.claude' \
   --exclude='packages/canvas-design-studio/output' \
   --exclude='packages/curriculum-intelligence/output' \
-  -czf "$PAYLOAD_OUT" \
+  -cz \
   package.json \
   package-lock.json \
   tsconfig.base.json \
-  packages
+  packages \
+  > "$PAYLOAD_OUT"
 
 SIZE=$(stat -c%s "$PAYLOAD_OUT" 2>/dev/null || stat -f%z "$PAYLOAD_OUT")
 echo "==> Payload size: $((SIZE / 1024 / 1024)) MB"
@@ -245,7 +249,8 @@ if [[ "$FILENAME" == *.zip ]]; then
   cd "$TMP"
   unzip -q "$FILENAME"
   EXTRACTED_DIR="${FILENAME%.zip}"
-  tar -czf "$OUT" -C "$EXTRACTED_DIR" .
+  # Stdout redirect to avoid Git Bash treating "D:/..." as a remote archive.
+  tar -cz -C "$EXTRACTED_DIR" . > "$OUT"
 else
   echo "==> Copying tar.gz"
   cp "$TMP/$FILENAME" "$OUT"
