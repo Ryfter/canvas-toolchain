@@ -50,6 +50,30 @@ Still pending:
 - Course-wide publish as one reviewed transaction.
 - A single native installer.
 
+## Future Ideas (not yet specced)
+
+### Canvas Capability Showcase + Template Creator
+A tool that demonstrates what's possible within Canvas HTML constraints and helps professors build pages. Two goals: (1) show off features so professors know what they can ask for, and (2) provide an assisted creation flow. Canvas's constraints (no JS, no `<style>`, inline CSS only) make "interactive" tricky — the showcase itself needs to work around those limits while demonstrating them.
+
+### Information Hierarchy / Content Priority System
+A "ranking" layer for Canvas page content that classifies each element by how urgently a student needs it:
+- **Tier 1 — At a glance:** The gist in 5 seconds (due date, deliverable, one-sentence context)
+- **Tier 2 — Working detail:** What a student needs to actually do the assignment
+- **Tier 3 — Deep support:** Rubric breakdowns, examples, reference docs
+
+This could drive visual design decisions (prominence, placement, callout styles) and eventually feed into the template creator.
+
+### AI-Friendly Rubric System
+Current Canvas rubrics are written for faculty, not students — dense, ambiguous, hard to act on. Ideas:
+- Rewrite rubric criteria in student-facing language with per-criterion plain-English explainers
+- Visual presentation that works within Canvas HTML constraints
+- Optional tie-in to course personas (explain the same criterion differently for different learning styles)
+- **Markdown export** so students can paste the rubric directly into an LLM for help
+- Sync mechanism with the official Canvas rubric so rewrites stay current
+- "Rubric Help" component: a companion page or expandable section with worked examples per criterion
+
+These three ideas are related — the rubric system could use the hierarchy framework, and both could appear in the showcase.
+
 ## Reasoning Behind the Current Shape
 
 Do not port the whole toolchain to Go yet. Go may be useful later for a single installer or for a future Canvas Backup rewrite, but the working product logic is already tested in TypeScript and Python. The lowest-risk path is to harden the TypeScript coordinator and reach Python through a small, explicit CLI bridge.
