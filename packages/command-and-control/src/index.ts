@@ -18,6 +18,7 @@ import { searchRegistry } from './registry/search_registry.js';
 import { installResourcesFromLockfile } from './registry/lockfile_install.js';
 import { pasteLayout, saveLayoutAsTemplate } from './tools/layout_adapter.js';
 import { setupPanopto } from './tools/setup_panopto.js';
+import { setupAnthropic } from './tools/setup_anthropic.js';
 import {
   bulkFetchPanoptoTranscripts,
   type BulkFetchPanoptoTranscriptsInput,
@@ -55,6 +56,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           registryToken: { type: 'string', description: 'Premium registry token for ryfter:// resources. Stored locally and never echoed back.' },
           premiumRegistryBaseUrl: { type: 'string', description: 'Optional premium registry API base URL override.' },
           registryGithubOrg: { type: 'string', description: 'Optional GitHub org override for the free registry. Defaults to canvas-toolchain.' },
+        },
+      },
+    },
+    {
+      name: 'setup_anthropic',
+      description: 'Configure the Anthropic API key used by all AI-powered tools. Validates the key against the Anthropic API before saving. Stored locally at ~/.command-and-control/anthropic-config.json with 0o600 permissions.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['apiKey'],
+        properties: {
+          apiKey: { type: 'string', description: 'Anthropic API key starting with sk-ant-. Stored locally and never echoed back.' },
+          model: { type: 'string', description: 'Anthropic model name for validation calls, e.g. "claude-haiku-4-5-20251001" (default).' },
+          test: { type: 'boolean', description: 'Validate the key with a 1-token API call before saving (default: true).' },
         },
       },
     },
@@ -310,6 +324,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     switch (name) {
       case 'setup_cc':
         result = setupCc(args as Parameters<typeof setupCc>[0]);
+        break;
+      case 'setup_anthropic':
+        result = await setupAnthropic(args as unknown as Parameters<typeof setupAnthropic>[0]);
         break;
       case 'get_cc_status':
         result = await getCcStatus();
