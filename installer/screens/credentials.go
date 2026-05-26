@@ -70,7 +70,7 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 	form := container.NewVBox(append([]fyne.CanvasObject{title, hint, widget.NewSeparator()}, fields...)...)
 	scroll := container.NewVScroll(form)
 
-	skip := widget.NewButton("Skip — I'll add these later", func() {
+	skip := ui.NewHoverButton("Skip — I'll add these later", ui.ButtonDefault, func() {
 		st.AnthropicAPIKey = ""
 		st.CanvasToken = ""
 		st.PanoptoDomain = ""
@@ -78,11 +78,10 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 		st.PanoptoSecret = ""
 		onNext()
 	})
-	back := widget.NewButton("Back", onBack)
-	next := widget.NewButton("Next", onNext)
-	next.Importance = widget.HighImportance
+	back := ui.NewHoverButton("Back", ui.ButtonDefault, onBack)
+	next := ui.NewHoverButton("Next", ui.ButtonPrimary, onNext)
 	bottom := container.NewBorder(nil, nil,
-		container.NewHBox(back, widget.NewButton("Cancel", parent.Close), skip),
+		container.NewHBox(back, ui.NewHoverButton("Cancel", ui.ButtonDefault, parent.Close), skip),
 		next,
 	)
 	return container.NewBorder(nil, bottom, nil, nil, scroll)

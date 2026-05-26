@@ -62,12 +62,11 @@ func NewSummaryScreen(parent fyne.Window, st *State, onClose func()) fyne.Canvas
 		),
 	)
 
-	launch := widget.NewButton("Launch Claude Desktop", func() {
+	launch := ui.NewHoverButton("Launch Claude Desktop", ui.ButtonPrimary, func() {
 		_ = launchClaudeDesktop()
 		onClose()
 	})
-	launch.Importance = widget.HighImportance
-	done := widget.NewButton("Done", onClose)
+	done := ui.NewHoverButton("Done", ui.ButtonDefault, onClose)
 
 	bottom := container.NewBorder(nil, nil, done, launch)
 	return container.NewBorder(

@@ -4,6 +4,8 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+
+	"github.com/Ryfter/canvas-toolchain/installer/ui"
 )
 
 func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne.CanvasObject {
@@ -39,9 +41,8 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 		pythonCheck,
 	)
 
-	back := widget.NewButton("Back", onBack)
-	next := widget.NewButton("Next", onNext)
-	next.Importance = widget.HighImportance
-	bottom := container.NewBorder(nil, nil, container.NewHBox(back, widget.NewButton("Cancel", parent.Close)), next)
+	back := ui.NewHoverButton("Back", ui.ButtonDefault, onBack)
+	next := ui.NewHoverButton("Next", ui.ButtonPrimary, onNext)
+	bottom := container.NewBorder(nil, nil, container.NewHBox(back, ui.NewHoverButton("Cancel", ui.ButtonDefault, parent.Close)), next)
 	return container.NewBorder(form, bottom, nil, nil)
 }

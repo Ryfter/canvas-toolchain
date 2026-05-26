@@ -42,7 +42,7 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 	logBox := container.NewBorder(nil, nil, nil, nil, logArea)
 	logBox.Hide()
 
-	logToggle := widget.NewButton("Show log", func() {
+	logToggle := ui.NewHoverButton("Show log", ui.ButtonDefault, func() {
 		if logBox.Visible() {
 			logBox.Hide()
 		} else {
@@ -50,21 +50,20 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 		}
 	})
 
-	nextBtn := widget.NewButton("Next", onNext)
+	nextBtn := ui.NewHoverButton("Next", ui.ButtonPrimary, onNext)
 	nextBtn.Disable()
-	nextBtn.Importance = widget.HighImportance
 
-	retryBtn := widget.NewButton("Retry", nil)
+	retryBtn := ui.NewHoverButton("Retry", ui.ButtonDefault, nil)
 	retryBtn.Disable()
 
-	backBtn := widget.NewButton("Back", onBack)
+	backBtn := ui.NewHoverButton("Back", ui.ButtonDefault, onBack)
 	backBtn.Disable()
 
-	openDirBtn := widget.NewButton("Open install dir", func() {
+	openDirBtn := ui.NewHoverButton("Open install dir", ui.ButtonDefault, func() {
 		_ = openInFinder(st.InstallDir)
 	})
 
-	reportBtn := widget.NewButton("Report issue", func() {
+	reportBtn := ui.NewHoverButton("Report issue", ui.ButtonDefault, func() {
 		_ = openInBrowser("https://github.com/Ryfter/canvas-toolchain/issues/new?template=installer-bug.md")
 	})
 
@@ -120,16 +119,16 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 		}
 	}()
 
-	retryBtn.OnTapped = func() {
+	retryBtn.SetOnTapped(func() {
 		retryBtn.Disable()
 		for _, r := range rows {
 			r.SetStatus(ui.StatusPending, "")
 		}
 		go runner.Run(context.Background())
-	}
+	})
 
 	bottom := container.NewBorder(nil, nil,
-		container.NewHBox(backBtn, logToggle, retryBtn, openDirBtn, reportBtn, widget.NewButton("Cancel", parent.Close)),
+		container.NewHBox(backBtn, logToggle, retryBtn, openDirBtn, reportBtn, ui.NewHoverButton("Cancel", ui.ButtonDefault, parent.Close)),
 		nextBtn,
 	)
 	return container.NewBorder(

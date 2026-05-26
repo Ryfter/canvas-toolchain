@@ -34,7 +34,7 @@ func NewWelcomeScreen(parent fyne.Window, st *State, onNext func()) fyne.CanvasO
 		refreshDiskRow(s, diskRow)
 	}
 
-	browseButton := widget.NewButton("Browse…", func() {
+	browseButton := ui.NewHoverButton("Browse…", ui.ButtonDefault, func() {
 		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
 			if err != nil || uri == nil {
 				return
@@ -46,7 +46,7 @@ func NewWelcomeScreen(parent fyne.Window, st *State, onNext func()) fyne.CanvasO
 	advancedExpander := widget.NewAccordion(
 		widget.NewAccordionItem("Advanced",
 			container.NewVBox(
-				widget.NewButton("Reset to default", func() {
+				ui.NewHoverButton("Reset to default", ui.ButtonDefault, func() {
 					pathEntry.SetText(DefaultInstallDir())
 				}),
 				widget.NewLabel("The installer creates this directory if it doesn't exist."),
@@ -54,7 +54,7 @@ func NewWelcomeScreen(parent fyne.Window, st *State, onNext func()) fyne.CanvasO
 		),
 	)
 
-	nextButton := widget.NewButton("Next", func() {
+	nextButton := ui.NewHoverButton("Next", ui.ButtonPrimary, func() {
 		if !checkDiskSpace(st.InstallDir) {
 			dialog.ShowError(fmt.Errorf("not enough disk space at %s", st.InstallDir), parent)
 			return
@@ -62,7 +62,6 @@ func NewWelcomeScreen(parent fyne.Window, st *State, onNext func()) fyne.CanvasO
 		st.Mode = detectMode(st.InstallDir)
 		onNext()
 	})
-	nextButton.Importance = widget.HighImportance
 
 	refreshDiskRow(st.InstallDir, diskRow)
 
@@ -78,7 +77,7 @@ func NewWelcomeScreen(parent fyne.Window, st *State, onNext func()) fyne.CanvasO
 		advancedExpander,
 	)
 
-	bottom := container.NewBorder(nil, nil, widget.NewButton("Cancel", parent.Close), nextButton)
+	bottom := container.NewBorder(nil, nil, ui.NewHoverButton("Cancel", ui.ButtonDefault, parent.Close), nextButton)
 	return container.NewBorder(form, bottom, nil, nil)
 }
 
