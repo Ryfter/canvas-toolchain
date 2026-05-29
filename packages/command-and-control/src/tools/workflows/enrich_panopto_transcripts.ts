@@ -16,6 +16,7 @@ import {
 } from 'canvas-design-mcp/dist/tools/panopto-enrich.js';
 import { loadPanoptoConfig } from '../setup_panopto.js';
 import { loadPanoptoVocab } from '../setup_panopto_vocab.js';
+import { loadTranscriptConfig } from '../setup_transcript_source.js';
 
 export interface EnrichPanoptoTranscriptsInput {
   transcriptsPath: string;
@@ -23,7 +24,7 @@ export interface EnrichPanoptoTranscriptsInput {
 
 export interface EnrichPanoptoTranscriptsResult {
   transcriptsPath: string;
-  enriched: { sessionId: string; title: string; mdPath: string }[];
+  enriched: { sessionId: string; title: string; mdPath: string; note?: string }[];
   failed: { sessionId: string; title: string; reason: string }[];
   summary: { total: number; enrichedCount: number; failedCount: number };
   error?: string;
@@ -103,8 +104,19 @@ export async function enrichPanoptoTranscripts(
     summary: { total: manifest.sessions.length, enrichedCount: 0, failedCount: 0 },
   };
 
+  const tconf = loadTranscriptConfig();
+
   for (const session of manifest.sessions) {
-    const vttPath = join(transcriptsPath, session.filename);
+    let vttPath = join(transcriptsPath, session.filename);
+    let sourceNote = '';
+    if (tconf.source === 'whisper') {
+      const whisperPath = join(transcriptsPath, session.filename.replace(/\.panopto\.vtt$/, '.whisper.vtt'));
+      if (existsSync(whisperPath)) {
+        vttPath = whisperPath;
+      } else {
+        sourceNote = 'no .whisper.vtt — fell back to Panopto';
+      }
+    }
 
     if (!existsSync(vttPath)) {
       result.failed.push({ sessionId: session.sessionId, title: session.title, reason: 'VTT file not found' });
@@ -120,7 +132,13 @@ export async function enrichPanoptoTranscripts(
       // Suffix replace preserves the date prefix and session title in the output filename.
       const mdPath = join(transcriptsPath, session.filename.replace(/\.panopto\.vtt$/, '.enriched.md'));
       writeFileSync(mdPath, markdown, 'utf-8');
-      result.enriched.push({ sessionId: session.sessionId, title: session.title, mdPath });
+      const entry: { sessionId: string; title: string; mdPath: string; note?: string } = {
+        sessionId: session.sessionId,
+        title: session.title,
+        mdPath,
+      };
+      if (sourceNote) entry.note = sourceNote;
+      result.enriched.push(entry);
     } catch (err) {
       result.failed.push({
         sessionId: session.sessionId,

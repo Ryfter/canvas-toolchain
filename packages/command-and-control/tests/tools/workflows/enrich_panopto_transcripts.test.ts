@@ -13,9 +13,13 @@ vi.mock('canvas-design-mcp/dist/tools/panopto-enrich.js', () => ({
   enrichVttFile: vi.fn(),
   BUILTIN_FILLER_WORDS: ['uh', 'um'],
 }));
+vi.mock('../../../src/tools/setup_transcript_source.js', () => ({
+  loadTranscriptConfig: vi.fn(),
+}));
 
 import { loadPanoptoConfig } from '../../../src/tools/setup_panopto.js';
 import { loadPanoptoVocab } from '../../../src/tools/setup_panopto_vocab.js';
+import { loadTranscriptConfig } from '../../../src/tools/setup_transcript_source.js';
 import { enrichVttFile } from 'canvas-design-mcp/dist/tools/panopto-enrich.js';
 import { enrichPanoptoTranscripts } from '../../../src/tools/workflows/enrich_panopto_transcripts.js';
 
@@ -66,6 +70,12 @@ beforeEach(() => {
   vi.mocked(loadPanoptoConfig).mockReturnValue(MOCK_CONFIG);
   vi.mocked(loadPanoptoVocab).mockReturnValue(MOCK_VOCAB);
   vi.mocked(enrichVttFile).mockReturnValue('# Lecture\n\nContent');
+  vi.mocked(loadTranscriptConfig).mockReturnValue({
+    source: 'panopto',
+    engine: 'faster-whisper',
+    model: 'medium',
+    audioMode: 'auto',
+  });
 });
 
 afterEach(() => {
@@ -141,5 +151,42 @@ describe('enrichPanoptoTranscripts', () => {
     const mdPath = join(tmpDir, '2026-06-01_lecture-1.enriched.md');
     expect(existsSync(mdPath)).toBe(true);
     expect(result.enriched[0].mdPath).toBe(mdPath);
+  });
+
+  it('reads .whisper.vtt when source is whisper and the file exists', async () => {
+    vi.mocked(loadTranscriptConfig).mockReturnValue({
+      source: 'whisper', engine: 'faster-whisper', model: 'medium', audioMode: 'auto',
+    });
+    writeFileSync(
+      join(tmpDir, '_sessions.json'),
+      JSON.stringify({ ...MANIFEST, sessions: [MANIFEST.sessions[0]] }),
+      'utf-8',
+    );
+    writeFileSync(join(tmpDir, '2026-06-01_lecture-1.panopto.vtt'), 'WEBVTT\n\n', 'utf-8');
+    writeFileSync(join(tmpDir, '2026-06-01_lecture-1.whisper.vtt'), 'WEBVTT\n\n', 'utf-8');
+
+    const result = await enrichPanoptoTranscripts({ transcriptsPath: tmpDir });
+
+    const calledPath = vi.mocked(enrichVttFile).mock.calls[0][0] as string;
+    expect(calledPath).toContain('.whisper.vtt');
+    expect(result.enriched[0].note).toBeUndefined();
+  });
+
+  it('falls back to .panopto.vtt with a note when no .whisper.vtt exists', async () => {
+    vi.mocked(loadTranscriptConfig).mockReturnValue({
+      source: 'whisper', engine: 'faster-whisper', model: 'medium', audioMode: 'auto',
+    });
+    writeFileSync(
+      join(tmpDir, '_sessions.json'),
+      JSON.stringify({ ...MANIFEST, sessions: [MANIFEST.sessions[0]] }),
+      'utf-8',
+    );
+    writeFileSync(join(tmpDir, '2026-06-01_lecture-1.panopto.vtt'), 'WEBVTT\n\n', 'utf-8');
+
+    const result = await enrichPanoptoTranscripts({ transcriptsPath: tmpDir });
+
+    const calledPath = vi.mocked(enrichVttFile).mock.calls[0][0] as string;
+    expect(calledPath).toContain('.panopto.vtt');
+    expect(result.enriched[0].note).toContain('fell back to Panopto');
   });
 });
