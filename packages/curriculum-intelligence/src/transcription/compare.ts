@@ -65,3 +65,98 @@ export function diffAlignedWords(panopto: TranscriptCue[], whisper: TranscriptCu
   }
   return diffs;
 }
+
+export interface Disagreement {
+  panopto: string;
+  whisper: string;
+  occurrences: number;
+  firstAtSec: number;
+  category: 'repeated' | 'caps' | 'known-term' | 'proper-noun' | 'other';
+  score: number;
+}
+
+export interface SuggestedCorrection {
+  from: string;
+  to: string;
+  occurrences: number;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface RankOptions {
+  knownTerms: string[];
+  fillerWords: string[];
+}
+
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'but', 'to', 'of', 'in', 'on', 'is', 'it', 'we', 'you',
+]);
+
+function isTrivial(word: string | undefined, fillers: Set<string>): boolean {
+  if (!word) return true;
+  const lower = word.toLowerCase();
+  if (fillers.has(lower)) return true;
+  if (STOPWORDS.has(lower)) return true;
+  if (!/[a-z0-9]/i.test(word)) return true; // pure punctuation
+  return false;
+}
+
+function categorize(p: string, w: string, occ: number, known: Set<string>): Disagreement['category'] {
+  if (occ >= 3) return 'repeated';
+  if (p.toUpperCase() === p && p !== p.toLowerCase()) return 'caps';
+  if (w.toUpperCase() === w && w !== w.toLowerCase()) return 'caps';
+  if (known.has(w) || known.has(p)) return 'known-term';
+  if (/^[A-Z][a-z]+$/.test(w)) return 'proper-noun';
+  return 'other';
+}
+
+function scoreFor(cat: Disagreement['category'], occ: number): number {
+  const base = { repeated: 100, caps: 80, 'known-term': 70, 'proper-noun': 50, other: 10 }[cat];
+  return base + Math.min(occ, 20);
+}
+
+export function rankDisagreements(
+  diffs: WordDiff[],
+  opts: RankOptions,
+): { ranked: Disagreement[]; suggestedCorrections: SuggestedCorrection[] } {
+  const fillers = new Set(opts.fillerWords.map((f) => f.toLowerCase()));
+  const known = new Set(opts.knownTerms);
+
+  const groups = new Map<string, { panopto: string; whisper: string; occ: number; first: number }>();
+  for (const d of diffs) {
+    if (d.kind !== 'sub') continue; // ins/del are segmentation noise
+    if (isTrivial(d.panopto, fillers) || isTrivial(d.whisper, fillers)) continue;
+    const key = `${d.panopto} ${d.whisper}`;
+    const g = groups.get(key);
+    if (g) {
+      g.occ++;
+      g.first = Math.min(g.first, d.atSec);
+    } else {
+      groups.set(key, { panopto: d.panopto!, whisper: d.whisper!, occ: 1, first: d.atSec });
+    }
+  }
+
+  const ranked: Disagreement[] = [];
+  for (const g of groups.values()) {
+    const category = categorize(g.panopto, g.whisper, g.occ, known);
+    ranked.push({
+      panopto: g.panopto,
+      whisper: g.whisper,
+      occurrences: g.occ,
+      firstAtSec: g.first,
+      category,
+      score: scoreFor(category, g.occ),
+    });
+  }
+  ranked.sort((a, b) => b.score - a.score);
+
+  const suggestedCorrections: SuggestedCorrection[] = ranked
+    .filter((d) => d.score >= 70)
+    .map((d) => ({
+      from: d.panopto,
+      to: d.whisper,
+      occurrences: d.occurrences,
+      confidence: d.score >= 100 ? 'high' : d.score >= 80 ? 'medium' : 'low',
+    }));
+
+  return { ranked, suggestedCorrections };
+}
