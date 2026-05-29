@@ -6,6 +6,8 @@
 
 **Depends on:** Sub-project 1 (bulk caption download — ships `.panopto.vtt` + `_sessions.json`) and Sub-project 2 (enrichment + `panopto-vocab.json`). Both shipped.
 
+**Universality (load-bearing):** canvas-toolchain is a universal tool, not a BSU tool. The author's institution (BSU) happens to grant Panopto API access AND enable recording downloads — **most institutions grant neither.** Therefore the baseline assumption for this feature is **no API audio access**: the manual / guided-web-download path (`audioMode`, Decision 6) is the path that must always work, and the API auto-fetch is a bonus accelerator for the minority who have it. Do not optimize for, or assume, the API download path. See `docs/institutions/boise-state.md` for why.
+
 **Out of scope:** answers bot (#61), local LLM (#62), GPU tuning, streaming/real-time transcription, non-English languages, true accuracy scoring (impossible without a human-verified reference — see "No Ground Truth" below).
 
 ---
