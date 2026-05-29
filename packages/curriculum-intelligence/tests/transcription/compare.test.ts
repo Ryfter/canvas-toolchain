@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   diffAlignedWords,
   rankDisagreements,
+  compareTranscripts,
+  renderComparisonMd,
   type WordDiff,
   type RankOptions,
 } from '../../src/transcription/compare.js';
@@ -74,5 +76,39 @@ describe('rankDisagreements', () => {
     expect(suggestedCorrections).toContainEqual(
       expect.objectContaining({ from: 'tableau', to: 'Tableau', occurrences: 8 }),
     );
+  });
+});
+
+describe('compareTranscripts + renderComparisonMd', () => {
+  const ctx = {
+    knownTerms: ['COBE'],
+    fillerWords: ['uh'],
+    domain: 'bsu.hosted.panopto.com',
+    sessionId: 'sess-1',
+    title: 'Week 03 — Tableau Intro',
+  };
+
+  it('produces a report with divergence rate and suggestions', () => {
+    const report = compareTranscripts(panopto, whisper, ctx);
+    expect(report.sessionId).toBe('sess-1');
+    expect(report.divergenceRate).toBeGreaterThan(0);
+    expect(report.divergenceRate).toBeLessThanOrEqual(1);
+    expect(report.suggestedCorrections.length).toBeGreaterThan(0);
+  });
+
+  it('divergence rate is 0 for identical transcripts', () => {
+    const report = compareTranscripts(panopto, panopto, ctx);
+    expect(report.divergenceRate).toBe(0);
+    expect(report.ranked).toHaveLength(0);
+  });
+
+  it('renders markdown with title, divergence line, table, and suggestions', () => {
+    const report = compareTranscripts(panopto, whisper, ctx);
+    const md = renderComparisonMd(report);
+    expect(md).toContain('# Comparison: Week 03 — Tableau Intro');
+    expect(md).toContain('Divergence:');
+    expect(md).toContain('| # | Panopto | Whisper |');
+    expect(md).toContain('## Suggested corrections');
+    expect(md).toContain('bsu.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=sess-1&start=');
   });
 });

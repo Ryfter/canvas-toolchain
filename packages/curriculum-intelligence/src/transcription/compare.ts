@@ -160,3 +160,87 @@ export function rankDisagreements(
 
   return { ranked, suggestedCorrections };
 }
+
+export interface ComparisonReport {
+  sessionId: string;
+  title: string;
+  divergenceRate: number;
+  totalDisagreements: number;
+  likelyVocabCount: number;
+  ranked: Disagreement[];
+  suggestedCorrections: SuggestedCorrection[];
+  domain: string;
+}
+
+export interface CompareContext {
+  knownTerms: string[];
+  fillerWords: string[];
+  domain: string;
+  sessionId: string;
+  title: string;
+}
+
+function totalAlignedWords(panopto: TranscriptCue[]): number {
+  return panopto.reduce((n, c) => n + c.text.split(/\s+/).filter(Boolean).length, 0);
+}
+
+export function compareTranscripts(
+  panopto: TranscriptCue[],
+  whisper: TranscriptCue[],
+  ctx: CompareContext,
+): ComparisonReport {
+  const diffs = diffAlignedWords(panopto, whisper);
+  const { ranked, suggestedCorrections } = rankDisagreements(diffs, {
+    knownTerms: ctx.knownTerms,
+    fillerWords: ctx.fillerWords,
+  });
+  const totalWords = totalAlignedWords(panopto);
+  const differingWords = diffs.filter((d) => d.kind === 'sub').length;
+  const divergenceRate = totalWords === 0 ? 0 : differingWords / totalWords;
+  return {
+    sessionId: ctx.sessionId,
+    title: ctx.title,
+    divergenceRate,
+    totalDisagreements: ranked.length,
+    likelyVocabCount: ranked.filter((d) => d.score >= 70).length,
+    ranked,
+    suggestedCorrections,
+    domain: ctx.domain,
+  };
+}
+
+function mmss(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+export function renderComparisonMd(report: ComparisonReport): string {
+  const pct = (report.divergenceRate * 100).toFixed(1);
+  const lines: string[] = [];
+  lines.push(`# Comparison: ${report.title}`);
+  lines.push(
+    `Divergence: ${pct}% of words · ${report.totalDisagreements} disagreements · ${report.likelyVocabCount} likely vocabulary`,
+  );
+  lines.push('');
+  lines.push('| # | Panopto | Whisper | × | When | Category |');
+  lines.push('|---|---------|---------|---|------|----------|');
+  report.ranked.forEach((d, idx) => {
+    const start = Math.floor(d.firstAtSec);
+    const url = `https://${report.domain}/Panopto/Pages/Viewer.aspx?id=${report.sessionId}&start=${start}`;
+    lines.push(
+      `| ${idx + 1} | ${d.panopto} | ${d.whisper} | ${d.occurrences} | [→ ${mmss(d.firstAtSec)}](${url}) | ${d.category} |`,
+    );
+  });
+  lines.push('');
+  lines.push('## Suggested corrections (you approve these — nothing is written automatically)');
+  if (report.suggestedCorrections.length === 0) {
+    lines.push('_None above the confidence threshold._');
+  } else {
+    for (const s of report.suggestedCorrections) {
+      lines.push(`- \`${s.from} → ${s.to}\` (${s.occurrences}×, ${s.confidence})`);
+    }
+  }
+  lines.push('');
+  return lines.join('\n');
+}
