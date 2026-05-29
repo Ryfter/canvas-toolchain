@@ -31,6 +31,14 @@ import {
   enrichPanoptoTranscripts,
   type EnrichPanoptoTranscriptsInput,
 } from './tools/workflows/enrich_panopto_transcripts.js';
+import {
+  setupTranscriptSource,
+  type SetupTranscriptSourceInput,
+} from './tools/setup_transcript_source.js';
+import {
+  compareTranscriptsWorkflow,
+  type CompareTranscriptsInput,
+} from './tools/workflows/compare_transcripts.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -226,6 +234,35 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'setup_transcript_source',
+      description: 'Configure which transcript source enrichment uses (panopto default, or whisper) plus the Whisper engine, model, and audioMode. action=get reads current config; action=set updates provided fields.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['action'],
+        properties: {
+          action: { type: 'string', enum: ['get', 'set'], description: 'get: show current config. set: update provided fields.' },
+          source: { type: 'string', enum: ['panopto', 'whisper'], description: 'Which transcript enrichment reads. Default panopto (Whisper off).' },
+          engine: { type: 'string', description: 'Transcription engine name. Default faster-whisper.' },
+          model: { type: 'string', description: 'Whisper model size: tiny | base | small | medium | large-v3. Default medium.' },
+          audioMode: { type: 'string', enum: ['auto', 'manual'], description: 'auto: try API audio download then guided web-download fallback. manual: skip API, go straight to guided web-download.' },
+        },
+      },
+    },
+    {
+      name: 'compare_transcripts',
+      description: 'Opt-in: transcribe Panopto lecture audio locally with Whisper and compare it against the Panopto VTT. Writes a .comparison.md per session ranking disagreements, and returns suggested vocab corrections for you to approve (nothing is written to panopto-vocab.json automatically). Needs audio — auto-fetched when available, otherwise follow the returned guided web-download instructions. Requires bulk_fetch_panopto_transcripts first.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['transcriptsPath'],
+        properties: {
+          transcriptsPath: { type: 'string', description: 'Absolute path to the folder bulk_fetch_panopto_transcripts wrote to.' },
+          sessionIds: { type: 'array', items: { type: 'string' }, description: 'Optional subset of session IDs to compare. Default: all sessions in the manifest.' },
+          model: { type: 'string', description: 'Optional one-run Whisper model override (otherwise uses transcript-config model).' },
+          keepAudio: { type: 'boolean', description: 'Keep auto-fetched audio after transcription. Default false (deletes it; manually-supplied audio is always kept).' },
+        },
+      },
+    },
     // ── Resource registry ──────────────────────────────────────────────────
     {
       name: 'install_resource',
@@ -394,6 +431,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'enrich_panopto_transcripts':
         result = await enrichPanoptoTranscripts(args as unknown as EnrichPanoptoTranscriptsInput);
+        break;
+      case 'setup_transcript_source':
+        result = await setupTranscriptSource(args as unknown as SetupTranscriptSourceInput);
+        break;
+      case 'compare_transcripts':
+        result = await compareTranscriptsWorkflow(args as unknown as CompareTranscriptsInput);
         break;
       case 'full_pipeline':
         result = await fullPipeline(args as unknown as Parameters<typeof fullPipeline>[0]);
