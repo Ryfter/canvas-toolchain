@@ -14,9 +14,10 @@
 
 1. **Opt-in, off by default.** The normal flow stays caption-download → enrich. Whisper runs only when the professor explicitly invokes it. No Whisper dependency is imposed on anyone who never opts in.
 2. **Output is both** a comparison report AND a usable alternative transcript. The professor can stay on Panopto (using the comparison only to harvest vocab corrections) or flip the source to Whisper.
-3. **On-demand audio fetch with manual fallback.** Audio is downloaded only for the sessions being transcribed. Panopto's download/podcast capability is admin-gated, so the fetch is best-effort; on failure the tool tells the professor exactly which audio file to drop in.
-4. **No ground truth → arbitration, not auto-scoring.** Neither transcript is "correct." The tool finds where they disagree, ranks disagreements by how vocabulary-error-shaped they are, and returns suggested corrections for the professor to approve. It never declares an accuracy percentage and never writes to the vocab file on its own.
-5. **Local `faster-whisper` via Python bridge, behind a swappable engine interface.** Reuses the existing Python-bridge pattern (Canvas Backup) and the installer's optional Python 3. The engine is abstracted so `whisper.cpp`, a cloud engine, or a future model is a one-class swap.
+3. **On-demand audio fetch with manual fallback.** Audio is downloaded only for the sessions being transcribed. Panopto's download/podcast capability is admin-gated, so the fetch is best-effort. **Why on-demand:** lecture audio is large (hundreds of MB/hour); storing every session's audio permanently is wasteful when Whisper is an occasional, opt-in step. Fetched audio is deleted after transcription; manually-supplied audio is left alone.
+4. **No ground truth → arbitration, not auto-scoring.** Neither transcript is "correct." The tool finds where they disagree, ranks disagreements by how vocabulary-error-shaped they are, and returns suggested corrections for the professor to approve. It never declares an accuracy percentage and never writes to the vocab file on its own. **Why:** without a human-verified reference, any accuracy number would be fiction; the honest, useful output is "here's where they differ — you judge." The professor's judgment is the only authority, and it feeds the existing vocab-correction system rather than a new one.
+5. **Local `faster-whisper` via Python bridge, behind a swappable engine interface.** Reuses the existing Python-bridge pattern (Canvas Backup) and the installer's optional Python 3. **Why local over cloud:** lectures may contain student voices (FERPA), $0 cost, and Kevin specified local. **Why the interface:** Kevin's explicit requirement — newer transcription models should swap in without touching the pipeline. The engine is abstracted so `whisper.cpp`, a cloud engine, or a future model is a one-class swap.
+6. **`audioMode` setting: `auto` (default) or `manual`, with guided web-interface download.** Because Panopto's API/podcast download is admin-gated and may be blocked entirely at an institution, the manual fallback is a first-class path, not just a degraded one. When audio can't be auto-fetched (or when `audioMode: manual` skips the API attempt entirely), the tool returns **step-by-step instructions to download the recording through the Panopto web viewer** — the direct viewer URL for that session, where the Download control lives, and the exact filename to save it as in the transcripts folder. **Why:** "drop a file named X here" is useless to a professor who doesn't know Panopto exposes downloads or where; a guided per-session walkthrough (with the clickable link) turns the fallback into something a non-technical user can actually complete. `manual` mode is for institutions where the professor already knows the API is blocked and doesn't want the tool wasting a round-trip attempting it.
 
 ---
 
@@ -109,26 +110,44 @@ Stdlib + `faster-whisper` only. Reads args, transcribes, emits JSON. Exits non-z
 ```ts
 // packages/canvas-design-studio/src/tools/panopto-audio.ts
 
+export type AudioMode = 'auto' | 'manual';
+
 export interface AudioFetchResult {
   ok: boolean;
   path?: string;             // local audio path when ok
   source?: 'panopto' | 'manual';
   reason?: 'DOWNLOAD_DISABLED' | 'NOT_FOUND' | 'NETWORK' | 'MANUAL_MISSING';
-  manualHint?: string;       // exact filename to drop in when ok === false
+  viewerUrl?: string;        // direct Panopto viewer link for guided download
+  manualInstructions?: string[]; // step-by-step web-download walkthrough when ok === false
 }
 
 export async function fetchSessionAudio(
   session: SessionManifestEntry,
   config: PanoptoConfig,
   destDir: string,
+  mode: AudioMode = 'auto',
 ): Promise<AudioFetchResult>;
 ```
 
 **Attempt order:**
-1. **Panopto podcast/download.** Try the authenticated podcast download URL for the session (audio-only podcast if exposed, else video podcast). **IMPLEMENTER MUST VERIFY** the exact endpoint against the institution's Panopto — the download surface is admin-gated and version-dependent; the documented candidate is `https://{domain}/Panopto/Podcast/Download/{sessionId}.mp4?mediaTargetType=audioPodcast` with the bearer token. A 403/404 means downloads are disabled for that session.
-2. **Manual fallback.** If the fetch fails, look for a professor-supplied audio file in `destDir` whose stem matches the session filename (e.g. `2026-06-01_week-03-tableau-intro.{mp3,m4a,mp4,wav}`). If present, return it with `source: 'manual'`. If absent, return `ok: false` with a `manualHint` naming the exact expected filename.
+1. **API/podcast download** (skipped entirely when `mode === 'manual'`). Try the authenticated podcast download URL for the session (audio-only podcast if exposed, else video podcast). **IMPLEMENTER MUST VERIFY** the exact endpoint against the institution's Panopto — the download surface is admin-gated and version-dependent; the documented candidate is `https://{domain}/Panopto/Podcast/Download/{sessionId}.mp4?mediaTargetType=audioPodcast` with the bearer token. A 403/404 means downloads are disabled for that session.
+2. **Manual file already present.** Look for a professor-supplied audio file in `destDir` whose stem matches the session filename (e.g. `2026-06-01_week-03-tableau-intro.{mp3,m4a,mp4,wav}`). If present, return it with `source: 'manual'`.
+3. **Guided web-interface download.** If neither succeeds, return `ok: false` with `viewerUrl` (= `buildViewerUrl(domain, sessionId)`) and a `manualInstructions` array — a per-session walkthrough the orchestrator surfaces to the professor:
+   ```
+   1. Open the recording: https://{domain}/Panopto/Pages/Viewer.aspx?id={sessionId}
+   2. Click the settings/⋯ menu → "Download" (or the download icon below the player).
+      If you see no Download option, your Panopto admin has downloads disabled —
+      ask them to enable "Make available for download" for this folder, or record
+      audio another way.
+   3. Save the file, rename it to exactly:  {expected filename stem}.mp3  (or .m4a/.mp4/.wav)
+   4. Place it in:  {destDir}
+   5. Re-run compare_transcripts.
+   ```
+   The `{expected filename stem}` is the session's `.panopto.vtt` filename with the suffix stripped, so audio and transcript pair up automatically.
 
-Fetched (non-manual) audio is written to a temp subdir and deleted after transcription by the orchestrator (Approach C — don't hoard GBs). Manually-supplied audio is never deleted.
+Fetched (non-manual) audio is written to the transcripts dir and deleted after transcription by the orchestrator (Approach C — don't hoard GBs). Manually-supplied audio is never deleted.
+
+`mode` comes from `transcript-config.json.audioMode` (default `auto`). `manual` mode jumps straight to steps 2-3, never touching the API — for institutions where the professor already knows API download is blocked.
 
 ---
 
@@ -206,12 +225,13 @@ Deep links use the existing `buildViewerUrl` + `&start=` pattern from `panopto.t
 Path: `join(getCcHomePath(), 'transcript-config.json')` (env override `CC_HOME`, same as the others).
 
 ```json
-{ "source": "panopto", "engine": "faster-whisper", "model": "medium" }
+{ "source": "panopto", "engine": "faster-whisper", "model": "medium", "audioMode": "auto" }
 ```
 
 - `source`: `"panopto"` (default) | `"whisper"`. Default keeps Whisper fully off; pipeline unchanged for non-opters.
 - `engine`: engine name passed to `getTranscriptionEngine`. Default `"faster-whisper"`.
 - `model`: default `"medium"` (good vocabulary accuracy at tolerable CPU speed; `small` for speed, `large-v3` for max accuracy).
+- `audioMode`: `"auto"` (default) | `"manual"`. `auto` tries API download then falls back to guided web download; `manual` skips the API and goes straight to the guided web-download walkthrough.
 
 ### `setup_transcript_source` tool (C&C)
 
@@ -221,6 +241,7 @@ interface SetupTranscriptSourceInput {
   source?: 'panopto' | 'whisper';
   engine?: string;
   model?: string;
+  audioMode?: 'auto' | 'manual';
 }
 ```
 
@@ -270,8 +291,9 @@ interface CompareTranscriptsInput {
 | `_sessions.json` absent | `{ error: 'MANIFEST_NOT_FOUND', fix: ['Run bulk_fetch_panopto_transcripts first'] }` |
 | `panopto-config.json` absent | `{ error: 'PANOPTO_NOT_CONFIGURED', fix: ['Run setup_panopto first'] }` |
 | Engine deps missing (Python/faster-whisper/ffmpeg) | Return early with `EngineStatus.setupSteps`; no sessions processed |
-| Panopto audio download disabled (403/404) | Per-session: try manual fallback; if absent, `failed[]` entry with exact `manualHint` filename |
-| Manual audio absent | `failed[]` with `manualHint`; batch continues |
+| Panopto audio download disabled (403/404) | Per-session: check for a manual file; if absent, `failed[]` entry carrying `viewerUrl` + `manualInstructions` (guided web-download walkthrough); batch continues |
+| `audioMode: manual` | API attempt skipped; manual file used if present, else guided `manualInstructions` returned |
+| Manual audio absent | `failed[]` with `viewerUrl` + `manualInstructions`; batch continues |
 | faster-whisper model download fails | Per-session `failed[]` with reason; batch continues |
 | Transcription throws / empty output | Per-session `failed[]`; batch continues |
 | VTT parse error (Panopto or Whisper side) | Per-session `failed[]`; batch continues |
@@ -302,7 +324,8 @@ Real Whisper is too heavy for unit tests, so the engine interface is the seam: t
 
 ### CDS `panopto-audio.test.ts`
 - `fetchSessionAudio` returns `source: 'manual'` when a matching local file exists and the download is mocked to fail
-- Returns `ok:false` + correct `manualHint` filename when both download and manual are absent
+- Returns `ok:false` with `viewerUrl` + `manualInstructions` (guided web-download steps naming the exact filename) when both download and manual are absent
+- `manual` mode skips the API call entirely (fetch not invoked) and uses a present manual file
 - Download success path writes audio to destDir and returns `source: 'panopto'` (mock fetch)
 
 ### C&C `setup_transcript_source.test.ts`

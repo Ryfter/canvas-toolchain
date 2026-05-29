@@ -902,12 +902,14 @@ describe('fetchSessionAudio', () => {
     expect(res.path).toBe(join(dir, '2026-06-01_week-03.mp3'));
   });
 
-  it('returns ok:false with a manualHint when download fails and no manual file exists', async () => {
+  it('returns ok:false with guided web-download instructions when no audio is available', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(new Response('', { status: 404 }));
     const res = await fetchSessionAudio(SESSION, CONFIG, dir);
     expect(res.ok).toBe(false);
     expect(res.reason).toBe('MANUAL_MISSING');
-    expect(res.manualHint).toContain('2026-06-01_week-03');
+    expect(res.viewerUrl).toContain('Viewer.aspx?id=s1');
+    expect(res.manualInstructions?.join('\n')).toContain('2026-06-01_week-03');
+    expect(res.manualInstructions?.join('\n')).toMatch(/Download/i);
   });
 
   it('writes audio and reports source panopto on a successful download', async () => {
@@ -919,6 +921,15 @@ describe('fetchSessionAudio', () => {
     expect(res.ok).toBe(true);
     expect(res.source).toBe('panopto');
     expect(existsSync(res.path!)).toBe(true);
+  });
+
+  it('manual mode skips the API entirely and uses a present manual file', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch');
+    writeFileSync(join(dir, '2026-06-01_week-03.m4a'), 'audio-bytes');
+    const res = await fetchSessionAudio(SESSION, CONFIG, dir, 'manual');
+    expect(res.ok).toBe(true);
+    expect(res.source).toBe('manual');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 ```
@@ -936,7 +947,7 @@ Expected: FAIL — cannot find `panopto-audio.js`.
 import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PanoptoConfig } from '../types.js';
-import { getPanoptoToken } from './panopto.js';
+import { getPanoptoToken, buildViewerUrl } from './panopto.js';
 import type { SessionManifestEntry } from './panopto-enrich.js';
 
 // VERIFY against a live Panopto before relying on auto-fetch (spec Open Question #1).
@@ -945,12 +956,15 @@ const DOWNLOAD_URL = (domain: string, sessionId: string) =>
 
 const MANUAL_EXTS = ['mp3', 'm4a', 'mp4', 'wav'];
 
+export type AudioMode = 'auto' | 'manual';
+
 export interface AudioFetchResult {
   ok: boolean;
   path?: string;
   source?: 'panopto' | 'manual';
   reason?: 'DOWNLOAD_DISABLED' | 'NOT_FOUND' | 'NETWORK' | 'MANUAL_MISSING';
-  manualHint?: string;
+  viewerUrl?: string;
+  manualInstructions?: string[];
 }
 
 function stem(filename: string): string {
@@ -965,42 +979,60 @@ function findManual(dir: string, fileStem: string): string | null {
   return null;
 }
 
+function guidedInstructions(
+  config: PanoptoConfig,
+  session: SessionManifestEntry,
+  destDir: string,
+  fileStem: string,
+): { viewerUrl: string; manualInstructions: string[] } {
+  const viewerUrl = buildViewerUrl(config.domain, session.sessionId);
+  return {
+    viewerUrl,
+    manualInstructions: [
+      `1. Open the recording: ${viewerUrl}`,
+      `2. Click the settings/⋯ menu → "Download" (or the download icon below the player).`,
+      `   If there is no Download option, your Panopto admin has downloads disabled —`,
+      `   ask them to enable "Make available for download" for this folder.`,
+      `3. Save the file and rename it to exactly: ${fileStem}.mp3  (.m4a/.mp4/.wav also accepted)`,
+      `4. Place it in: ${destDir}`,
+      `5. Re-run compare_transcripts.`,
+    ],
+  };
+}
+
 export async function fetchSessionAudio(
   session: SessionManifestEntry,
   config: PanoptoConfig,
   destDir: string,
+  mode: AudioMode = 'auto',
 ): Promise<AudioFetchResult> {
   const fileStem = stem(session.filename);
 
-  // 1. Best-effort Panopto download.
-  try {
-    const token = await getPanoptoToken(config);
-    const res = await fetch(DOWNLOAD_URL(config.domain, session.sessionId), {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      const outPath = join(destDir, `${fileStem}.audio.mp4`);
-      writeFileSync(outPath, buf);
-      return { ok: true, path: outPath, source: 'panopto' };
+  // 1. Best-effort Panopto download (skipped in manual mode).
+  if (mode === 'auto') {
+    try {
+      const token = await getPanoptoToken(config);
+      const res = await fetch(DOWNLOAD_URL(config.domain, session.sessionId), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer());
+        const outPath = join(destDir, `${fileStem}.audio.mp4`);
+        writeFileSync(outPath, buf);
+        return { ok: true, path: outPath, source: 'panopto' };
+      }
+      // fall through to manual on 403/404/etc.
+    } catch {
+      // network/token error → fall through to manual
     }
-    // fall through to manual on 403/404/etc.
-  } catch {
-    // network/token error → fall through to manual
   }
 
-  // 2. Manual fallback.
+  // 2. Manual file already present.
   const manual = findManual(destDir, fileStem);
   if (manual) return { ok: true, path: manual, source: 'manual' };
 
-  return {
-    ok: false,
-    reason: 'MANUAL_MISSING',
-    manualHint: `Panopto audio download unavailable. Drop the lecture audio at ${join(
-      destDir,
-      `${fileStem}.{${MANUAL_EXTS.join(',')}}`,
-    )} and re-run.`,
-  };
+  // 3. Guided web-interface download instructions.
+  return { ok: false, reason: 'MANUAL_MISSING', ...guidedInstructions(config, session, destDir, fileStem) };
 }
 ```
 
@@ -1057,7 +1089,7 @@ afterEach(() => {
 
 describe('loadTranscriptConfig', () => {
   it('returns defaults when the file is absent', () => {
-    expect(loadTranscriptConfig()).toEqual({ source: 'panopto', engine: 'faster-whisper', model: 'medium' });
+    expect(loadTranscriptConfig()).toEqual({ source: 'panopto', engine: 'faster-whisper', model: 'medium', audioMode: 'auto' });
   });
 
   it('throws TRANSCRIPT_CONFIG_CORRUPT on malformed JSON', () => {
@@ -1102,9 +1134,10 @@ export interface TranscriptConfig {
   source: 'panopto' | 'whisper';
   engine: string;
   model: string;
+  audioMode: 'auto' | 'manual';
 }
 
-const DEFAULTS: TranscriptConfig = { source: 'panopto', engine: 'faster-whisper', model: 'medium' };
+const DEFAULTS: TranscriptConfig = { source: 'panopto', engine: 'faster-whisper', model: 'medium', audioMode: 'auto' };
 
 function configPath(): string {
   return join(getCcHomePath(), 'transcript-config.json');
@@ -1135,6 +1168,7 @@ export interface SetupTranscriptSourceInput {
   source?: 'panopto' | 'whisper';
   engine?: string;
   model?: string;
+  audioMode?: 'auto' | 'manual';
 }
 
 export interface SetupTranscriptSourceResult {
@@ -1153,9 +1187,10 @@ export async function setupTranscriptSource(
     source: input.source ?? current.source,
     engine: input.engine ?? current.engine,
     model: input.model ?? current.model,
+    audioMode: input.audioMode ?? current.audioMode,
   };
   atomicWrite(next);
-  return { config: next, message: `transcriptSource set to ${next.source} (engine ${next.engine}, model ${next.model}).` };
+  return { config: next, message: `transcriptSource set to ${next.source} (engine ${next.engine}, model ${next.model}, audioMode ${next.audioMode}).` };
 }
 ```
 
@@ -1352,9 +1387,10 @@ export async function compareTranscriptsWorkflow(
       base.failed.push({ sessionId: session.sessionId, title: session.title, reason: 'VTT missing' });
       continue;
     }
-    const audio = await fetchSessionAudio(session, panoptoConfig, input.transcriptsPath);
+    const audio = await fetchSessionAudio(session, panoptoConfig, input.transcriptsPath, tconf.audioMode);
     if (!audio.ok || !audio.path) {
-      base.failed.push({ sessionId: session.sessionId, title: session.title, reason: audio.manualHint ?? 'audio unavailable' });
+      const reason = audio.manualInstructions ? audio.manualInstructions.join('\n') : 'audio unavailable';
+      base.failed.push({ sessionId: session.sessionId, title: session.title, reason });
       continue;
     }
     try {
@@ -1553,6 +1589,6 @@ Not automated — requires Python + faster-whisper + ffmpeg + a real lecture aud
 
 **Placeholder scan:** Task 10's two test bodies are described rather than fully written — intentional, because they must reuse the existing `enrich_panopto_transcripts.test.ts` fixture scaffolding which the implementer has in front of them; the sentinel-string assertion strategy is specified exactly. All other steps contain complete code.
 
-**Type consistency:** `TranscriptCue {startSec,endSec,text}` consistent across CI parser, engine, compare. `SuggestedCorrection {from,to,occurrences,confidence}` consistent between compare.ts (Task 3) and the workflow merge (Task 9). `AudioFetchResult` fields consistent between Task 7 definition and Task 9 consumption (`ok`, `path`, `source`, `manualHint`). `TranscriptConfig {source,engine,model}` consistent between Task 8 and Tasks 9/10.
+**Type consistency:** `TranscriptCue {startSec,endSec,text}` consistent across CI parser, engine, compare. `SuggestedCorrection {from,to,occurrences,confidence}` consistent between compare.ts (Task 3) and the workflow merge (Task 9). `AudioFetchResult` fields consistent between Task 7 definition and Task 9 consumption (`ok`, `path`, `source`, `manualInstructions`); `fetchSessionAudio` 4th param `mode: AudioMode` threaded from `tconf.audioMode` in Task 9. `TranscriptConfig {source,engine,model,audioMode}` consistent between Task 8 and Tasks 9/10.
 
 **Known verification points flagged for the implementer:** (1) Panopto download URL — verify against live Panopto (spec Open Q#1); (2) `getCcHomePath` import path — match `setup_panopto.ts`; (3) cross-package `dist/...` import specifiers — match `enrich_panopto_transcripts.ts`; (4) tool-registration schema style in `index.ts` — match neighbors.
