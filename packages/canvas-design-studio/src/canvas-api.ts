@@ -1,5 +1,5 @@
 import type { CanvasCourse, CanvasPage, InstitutionConfig } from './types.js';
-import type { CanvasAssignmentRaw } from './tools/list-canvas-objects.js';
+import type { CanvasAssignment, CanvasAssignmentRaw } from './tools/list-canvas-objects.js';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT';
 type QueryValue = string | string[] | undefined;
@@ -123,6 +123,12 @@ export class CanvasApiClient {
   async updatePage(courseId: number, pageUrl: string, html: string): Promise<CanvasPage> {
     return this.request<CanvasPage>('PUT', `courses/${courseId}/pages/${encodeURIComponent(pageUrl)}`, {
       wiki_page: { body: html },
+    });
+  }
+
+  async updateAssignmentDescription(courseId: number, assignmentId: number, html: string): Promise<CanvasAssignment> {
+    return this.request<CanvasAssignment>('PUT', `courses/${courseId}/assignments/${assignmentId}`, {
+      assignment: { description: html },
     });
   }
 
