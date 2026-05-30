@@ -10,11 +10,11 @@ const ASSIGNMENT_LIKE: ReadonlySet<PageType> = new Set<PageType>([
   'assignment', 'engage-assignment', 'proj-assignment', 'tech-assignment',
 ]);
 
-const SKIPPED_RECOMMENDATIONS: Record<PageType, string> = {
+const SKIPPED_RECOMMENDATIONS: Partial<Record<PageType, string>> = {
   'reading-quiz': 'Quiz publishing arrives in v1.x. For now, create the quiz manually in Canvas.',
   'weekly-quiz': 'Quiz publishing arrives in v1.x. For now, create the quiz manually in Canvas.',
   'discussion-board': 'Discussion publishing arrives in v1.x. For now, create the discussion manually in Canvas.',
-} as Partial<Record<PageType, string>> as Record<PageType, string>;
+};
 
 export interface RoutedPages {
   pages: GeneratePageResult[];

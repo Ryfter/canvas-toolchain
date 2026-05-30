@@ -77,4 +77,11 @@ describe('routePages', () => {
     expect(routed.pages).toHaveLength(2);
     expect(routed.assignments).toHaveLength(2);
   });
+
+  it('returns empty buckets for an empty result', () => {
+    const result: GenerateCourseResult = {
+      totalPages: 0, outputDir: '/tmp', warnings: [], weekResults: [],
+    };
+    expect(routePages(result)).toEqual({ pages: [], assignments: [], skipped: [] });
+  });
 });
