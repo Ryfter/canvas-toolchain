@@ -136,6 +136,14 @@ export class CanvasApiClient {
     await this.request<unknown>('DELETE', `courses/${courseId}/pages/${encodeURIComponent(pageUrl)}`);
   }
 
+  async getPageBody(courseId: number, pageUrl: string): Promise<string> {
+    const page = await this.request<CanvasPage & { body?: string }>(
+      'GET',
+      `courses/${courseId}/pages/${encodeURIComponent(pageUrl)}`,
+    );
+    return page.body ?? '';
+  }
+
   private async paginatedGet<T>(path: string, params?: Record<string, QueryValue>): Promise<T[]> {
     let nextUrl: string | undefined = joinApiUrl(this.config.canvasUrl, path, params);
     const all: T[] = [];
