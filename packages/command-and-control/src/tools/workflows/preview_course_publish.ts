@@ -31,19 +31,10 @@ export interface PreviewCoursePublishResult {
   fix?: string[];
 }
 
-function htmlTextContent(html: string): string {
-  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function bestAssignmentMatch(intendedTitle: string, html: string, all: CanvasAssignment[]) {
-  // Try both the filename-derived title and the stripped body text so that
-  // abbreviated filenames (e.g. asn.html) can still match by content.
-  const bodyTitle = htmlTextContent(html);
+function bestAssignmentMatch(intendedTitle: string, all: CanvasAssignment[]) {
   let best: { a: CanvasAssignment; score: number } | undefined;
   for (const a of all) {
-    const scoreByTitle = titleSimilarity(a.name, intendedTitle);
-    const scoreByBody = bodyTitle ? titleSimilarity(a.name, bodyTitle) : 0;
-    const score = Math.max(scoreByTitle, scoreByBody);
+    const score = titleSimilarity(a.name, intendedTitle);
     if (!best || score > best.score) best = { a, score };
   }
   return best && best.score >= MATCH_THRESHOLD ? best : undefined;
@@ -134,7 +125,7 @@ export async function previewCoursePublish(
 
   for (const a of routed.assignments) {
     const intendedTitle = intendedTitleFor(a.filename);
-    const match = bestAssignmentMatch(intendedTitle, a.html, canvasAssignments);
+    const match = bestAssignmentMatch(intendedTitle, canvasAssignments);
     if (!match) {
       entries.push({
         type: 'skipped',

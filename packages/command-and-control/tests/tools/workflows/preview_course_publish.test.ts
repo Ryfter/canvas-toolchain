@@ -40,7 +40,7 @@ afterEach(() => {
 describe('previewCoursePublish', () => {
   it('produces a manifest with pages, assignments, and skipped buckets', async () => {
     writeFileSync(join(course, 'output', 'overview.html'), '<h2>Week 1</h2><p>hello</p>');
-    writeFileSync(join(course, 'output', 'asn.html'), '<p>do the thing</p>');
+    writeFileSync(join(course, 'output', 'do-the-thing.html'), '<p>do the thing</p>');
     writeFileSync(join(course, 'output', 'quiz.html'), '<p>quiz</p>');
     vi.mocked(generateCourse).mockReturnValue({
       totalPages: 3, outputDir: join(course, 'output'), warnings: [],
@@ -48,7 +48,7 @@ describe('previewCoursePublish', () => {
         weekNumber: 1, outputDir: join(course, 'output'), warnings: [],
         pages: [
           { html: '<h2>Week 1</h2><p>hello</p>', filename: 'overview.html', weekNumber: 1, pageType: 'overview', savedTo: join(course, 'output', 'overview.html') },
-          { html: '<p>do the thing</p>', filename: 'asn.html', weekNumber: 1, pageType: 'assignment', savedTo: join(course, 'output', 'asn.html') },
+          { html: '<p>do the thing</p>', filename: 'do-the-thing.html', weekNumber: 1, pageType: 'assignment', savedTo: join(course, 'output', 'do-the-thing.html') },
           { html: '<p>quiz</p>', filename: 'quiz.html', weekNumber: 1, pageType: 'weekly-quiz', savedTo: join(course, 'output', 'quiz.html') },
         ],
       }],
