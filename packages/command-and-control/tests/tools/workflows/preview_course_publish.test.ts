@@ -104,6 +104,35 @@ describe('previewCoursePublish', () => {
     }
   });
 
+  it('uses front-matter title when present so wk1-overview.html matches "Week 1 Overview"', async () => {
+    writeFileSync(join(course, 'output', 'wk1-overview.html'), '<h2>Week 1</h2>');
+    vi.mocked(generateCourse).mockReturnValue({
+      totalPages: 1, outputDir: join(course, 'output'), warnings: [],
+      weekResults: [{
+        weekNumber: 1, outputDir: join(course, 'output'), warnings: [],
+        pages: [{
+          html: '<h2>Week 1</h2>', filename: 'wk1-overview.html', weekNumber: 1,
+          pageType: 'overview', savedTo: join(course, 'output', 'wk1-overview.html'),
+          title: 'Week 1 Overview',  // ← from front-matter
+        }],
+      }],
+    });
+    vi.mocked(listCanvasPages).mockResolvedValue([
+      { url: 'week-1-overview', title: 'Week 1 Overview', html_url: 'https://x/wk1' } as any,
+    ]);
+    vi.mocked(listCanvasAssignments).mockResolvedValue([]);
+
+    const r = await previewCoursePublish({ courseDir: course, courseId: 12345 });
+
+    const page = r.manifest!.entries.find(e => e.type === 'page');
+    expect(page?.type).toBe('page');
+    if (page?.type === 'page') {
+      expect(page.intendedTitle).toBe('Week 1 Overview');
+      expect(page.canvasMatch).toBeDefined();
+      expect(page.collisionAction).toBe('update'); // matched → update, not create
+    }
+  });
+
   it('flags an unmatched assignment as skipped with reason unmatched-assignment', async () => {
     writeFileSync(join(course, 'output', 'asn.html'), '<p>do</p>');
     vi.mocked(generateCourse).mockReturnValue({

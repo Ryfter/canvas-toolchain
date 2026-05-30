@@ -54,5 +54,5 @@ export function generatePage(input: GeneratePageInput): GeneratePageResult {
   const savedTo = join(weekOut, filename);
   writeFileSync(savedTo, html, 'utf-8');
 
-  return { html, filename, weekNumber, pageType, savedTo };
+  return { html, filename, weekNumber, pageType, savedTo, title: content.frontMatter.title };
 }

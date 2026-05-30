@@ -108,6 +108,10 @@ export interface GeneratePageResult {
   weekNumber: number;
   pageType: PageType;
   savedTo: string;
+  /** Title from PageFrontMatter.title (when present in source markdown). Used by
+   *  command-and-control's publish_course to match against existing Canvas page titles
+   *  instead of relying on the lossy filename-derivation fallback. */
+  title?: string;
 }
 
 export interface GenerateWeekInput {

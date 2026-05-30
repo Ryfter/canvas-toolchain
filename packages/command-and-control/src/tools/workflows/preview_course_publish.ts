@@ -98,7 +98,7 @@ export async function previewCoursePublish(
   const entries: ManifestEntry[] = [];
 
   for (const p of routed.pages) {
-    const intendedTitle = intendedTitleFor(p.filename);
+    const intendedTitle = p.title ?? intendedTitleFor(p.filename);
     const match = bestPageMatch(intendedTitle, canvasPages);
     let priorHtml: string | null = null;
     let priorFetchError: string | undefined;
@@ -139,7 +139,7 @@ export async function previewCoursePublish(
   }
 
   for (const a of routed.assignments) {
-    const intendedTitle = intendedTitleFor(a.filename);
+    const intendedTitle = a.title ?? intendedTitleFor(a.filename);
     const match = bestAssignmentMatch(intendedTitle, canvasAssignments);
     if (!match) {
       entries.push({
