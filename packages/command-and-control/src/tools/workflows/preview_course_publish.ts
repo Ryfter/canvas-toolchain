@@ -101,14 +101,29 @@ export async function previewCoursePublish(
     const intendedTitle = intendedTitleFor(p.filename);
     const match = bestPageMatch(intendedTitle, canvasPages);
     let priorHtml: string | null = null;
+    let priorFetchError: string | undefined;
     if (match) {
       try { priorHtml = await api.getPageBody(input.courseId, match.p.url); }
-      catch { priorHtml = ''; }
+      catch (e) {
+        // Don't silently store empty string — that would let rollback wipe real Canvas content.
+        // Flag with a block-severity warning so publish refuses this entry until the prior body
+        // can be re-fetched (typically by re-running preview).
+        priorFetchError = e instanceof Error ? e.message : String(e);
+        priorHtml = null;
+      }
     }
     writePriorHtml(dir, p.filename, priorHtml ?? '');
     writeNewHtml(dir, p.filename, p.html);
     const diff = buildDiffSummary(priorHtml, p.html);
     writeFullDiff(dir, p.filename, computeUnifiedDiff(priorHtml, p.html));
+    const warnings = scanWarnings(p.html);
+    if (priorFetchError) {
+      warnings.push({
+        kind: 'validation',
+        severity: 'block',
+        message: `Could not fetch current Canvas body for rollback baseline: ${priorFetchError}. Re-run preview_course_publish when Canvas is reachable.`,
+      });
+    }
     entries.push({
       type: 'page',
       filename: p.filename,
@@ -119,7 +134,7 @@ export async function previewCoursePublish(
         : undefined,
       collisionAction: match ? 'update' : 'create',
       diff,
-      warnings: scanWarnings(p.html),
+      warnings,
     });
   }
 

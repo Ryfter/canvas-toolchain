@@ -65,6 +65,33 @@ export async function publishCourse(input: PublishCourseInput): Promise<PublishC
     };
   }
 
+  // Phase guard: refuse re-running against a snapshot that already finished or got rolled back,
+  // and refuse a partial snapshot unless the caller explicitly opted into resume. Without this,
+  // a second invocation silently orphans the prior published[] from the final state and breaks
+  // rollback coverage.
+  if (state.phase === 'published') {
+    return {
+      snapshotId: input.snapshotId, phase: state.phase, published: state.published,
+      error: 'ALREADY_PUBLISHED',
+      fix: ['This snapshot has already been published. Run preview_course_publish for a fresh snapshot.'],
+    };
+  }
+  if (state.phase === 'rolled-back') {
+    return {
+      snapshotId: input.snapshotId, phase: state.phase, published: state.published,
+      error: 'ALREADY_ROLLED_BACK',
+      fix: ['This snapshot has been rolled back. Run preview_course_publish for a fresh snapshot.'],
+    };
+  }
+  if (state.phase === 'partial' && !input.resume) {
+    return {
+      snapshotId: input.snapshotId, phase: state.phase, published: state.published,
+      error: 'PARTIAL_SNAPSHOT_REQUIRES_RESUME',
+      message: `Snapshot ${input.snapshotId} stopped partway. Call publish_course again with resume:true to continue, or rollback_course_publish to undo the ${state.published.length} entries already published.`,
+      fix: ['Pass resume:true to continue from the failed entry, or call rollback_course_publish.'],
+    };
+  }
+
   let cfg;
   try { cfg = loadInstitutionConfig(); }
   catch (e) {

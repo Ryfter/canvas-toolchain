@@ -76,6 +76,34 @@ describe('previewCoursePublish', () => {
     expect(r.error).toBe('GENERATE_FAILED');
   });
 
+  it('attaches a block-severity warning when getPageBody fails (rollback safety)', async () => {
+    const { CanvasApiClient } = await import('canvas-design-mcp/dist/canvas-api.js');
+    vi.mocked(CanvasApiClient as any).mockImplementationOnce(() => ({
+      getPageBody: vi.fn().mockRejectedValue(new Error('429 rate limited')),
+    }));
+    writeFileSync(join(course, 'output', 'wk1-overview.html'), '<h2>Week 1</h2>');
+    vi.mocked(generateCourse).mockReturnValue({
+      totalPages: 1, outputDir: join(course, 'output'), warnings: [],
+      weekResults: [{
+        weekNumber: 1, outputDir: join(course, 'output'), warnings: [],
+        pages: [{ html: '<h2>Week 1</h2>', filename: 'wk1-overview.html', weekNumber: 1, pageType: 'overview', savedTo: join(course, 'output', 'wk1-overview.html') }],
+      }],
+    });
+    vi.mocked(listCanvasPages).mockResolvedValue([
+      { url: 'wk1-overview', title: 'Wk1 Overview', html_url: 'https://x/wk1' } as any,
+    ]);
+    vi.mocked(listCanvasAssignments).mockResolvedValue([]);
+
+    const r = await previewCoursePublish({ courseDir: course, courseId: 12345 });
+
+    const page = r.manifest!.entries.find(e => e.type === 'page');
+    expect(page?.type).toBe('page');
+    if (page?.type === 'page') {
+      const blocking = page.warnings.find(w => w.severity === 'block' && /Could not fetch current Canvas body/.test(w.message));
+      expect(blocking).toBeDefined();
+    }
+  });
+
   it('flags an unmatched assignment as skipped with reason unmatched-assignment', async () => {
     writeFileSync(join(course, 'output', 'asn.html'), '<p>do</p>');
     vi.mocked(generateCourse).mockReturnValue({

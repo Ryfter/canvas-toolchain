@@ -114,4 +114,36 @@ describe('publishCourse', () => {
     expect(r.published.find(p => p.filename === 'b.html')).toBeDefined();
     expect(r.phase).toBe('published');
   });
+
+  it('refuses PARTIAL_SNAPSHOT_REQUIRES_RESUME when called without resume on a partial snapshot', async () => {
+    seedSnapshot('snap-partial', [PAGE_ENTRY('a.html', 'A'), PAGE_ENTRY('b.html', 'B')]);
+    writeState(join(cc, 'publish-snapshots', 'snap-partial'), {
+      phase: 'partial',
+      published: [{ filename: 'a.html', type: 'page', canvasUrl: 'https://x/a', action: 'updated', publishedAt: '2026-05-30T00:00:00Z' }],
+      lastUpdatedAt: '2026-05-30T00:00:01Z',
+    });
+    const r = await publishCourse({ snapshotId: 'snap-partial', approvals: { 'a.html': 'approve', 'b.html': 'approve' } });
+    expect(r.error).toBe('PARTIAL_SNAPSHOT_REQUIRES_RESUME');
+    expect(publishToCanvas).not.toHaveBeenCalled();
+  });
+
+  it('refuses ALREADY_PUBLISHED on a fully-published snapshot', async () => {
+    seedSnapshot('snap-pub', [PAGE_ENTRY('a.html', 'A')]);
+    writeState(join(cc, 'publish-snapshots', 'snap-pub'), {
+      phase: 'published',
+      published: [{ filename: 'a.html', type: 'page', canvasUrl: 'https://x/a', action: 'updated', publishedAt: '2026-05-30T00:00:00Z' }],
+      lastUpdatedAt: '2026-05-30T00:00:01Z',
+    });
+    const r = await publishCourse({ snapshotId: 'snap-pub', approvals: { 'a.html': 'approve' } });
+    expect(r.error).toBe('ALREADY_PUBLISHED');
+  });
+
+  it('refuses ALREADY_ROLLED_BACK on a rolled-back snapshot', async () => {
+    seedSnapshot('snap-rb', [PAGE_ENTRY('a.html', 'A')]);
+    writeState(join(cc, 'publish-snapshots', 'snap-rb'), {
+      phase: 'rolled-back', published: [], lastUpdatedAt: '2026-05-30T00:00:00Z',
+    });
+    const r = await publishCourse({ snapshotId: 'snap-rb', approvals: { 'a.html': 'approve' } });
+    expect(r.error).toBe('ALREADY_ROLLED_BACK');
+  });
 });
