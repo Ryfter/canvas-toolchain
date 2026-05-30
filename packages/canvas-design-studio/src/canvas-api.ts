@@ -1,4 +1,5 @@
 import type { CanvasCourse, CanvasPage, InstitutionConfig } from './types.js';
+import type { CanvasAssignmentRaw } from './tools/list-canvas-objects.js';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT';
 type QueryValue = string | string[] | undefined;
@@ -107,6 +108,10 @@ export class CanvasApiClient {
 
   async listPages(courseId: number): Promise<CanvasPage[]> {
     return this.paginatedGet<CanvasPage>(`courses/${courseId}/pages`, { per_page: '50' });
+  }
+
+  async listAssignments(courseId: number): Promise<CanvasAssignmentRaw[]> {
+    return this.paginatedGet<CanvasAssignmentRaw>(`courses/${courseId}/assignments`, { per_page: '100' });
   }
 
   async createPage(courseId: number, title: string, html: string): Promise<CanvasPage> {
