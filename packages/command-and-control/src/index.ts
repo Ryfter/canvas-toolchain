@@ -39,6 +39,18 @@ import {
   compareTranscriptsWorkflow,
   type CompareTranscriptsInput,
 } from './tools/workflows/compare_transcripts.js';
+import {
+  previewCoursePublish,
+  type PreviewCoursePublishInput,
+} from './tools/workflows/preview_course_publish.js';
+import {
+  publishCourse,
+  type PublishCourseInput,
+} from './tools/workflows/publish_course.js';
+import {
+  rollbackCoursePublish,
+  type RollbackCoursePublishInput,
+} from './tools/workflows/rollback_course_publish.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -263,6 +275,49 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    // ── Course publish ─────────────────────────────────────────────────────
+    {
+      name: 'preview_course_publish',
+      description: 'Generate a publish preview: per-page diffs, warnings, and a manifest. No Canvas writes occur.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseDir', 'courseId'],
+        properties: {
+          courseDir: { type: 'string', description: 'Canvas Design Studio course folder.' },
+          courseId:  { type: 'number', description: 'Canvas course numeric ID.' },
+          outputDir: { type: 'string', description: 'Override for generate_course\'s output folder.' },
+          fullDiffFor: { type: 'array', items: { type: 'string' }, description: 'Filenames to surface the full unified diff for.' },
+        },
+      },
+    },
+    {
+      name: 'publish_course',
+      description: 'Publish the previewed manifest to Canvas with explicit per-entry approvals. Stops on first failure.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['snapshotId', 'approvals'],
+        properties: {
+          snapshotId: { type: 'string' },
+          approvals:  {
+            type: 'object',
+            description: 'Map of manifest entry filename → \'approve\' or \'skip\'. Every non-skipped manifest entry must appear.',
+            additionalProperties: { enum: ['approve', 'skip'] as const },
+          },
+          resume:     { type: 'boolean', description: 'Continue a prior partial publish from its failure point.' },
+          gitCommit:  { type: 'boolean', description: 'Commit + tag in courseDir. Defaults to true when courseDir is a git repo.' },
+          pushTag:    { type: 'boolean', description: 'If a git remote is configured, push the success tag.' },
+        },
+      },
+    },
+    {
+      name: 'rollback_course_publish',
+      description: 'Restore every successfully-published entry from a snapshot to its prior Canvas state.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['snapshotId'],
+        properties: { snapshotId: { type: 'string' } },
+      },
+    },
     // ── Resource registry ──────────────────────────────────────────────────
     {
       name: 'install_resource',
@@ -437,6 +492,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'compare_transcripts':
         result = await compareTranscriptsWorkflow(args as unknown as CompareTranscriptsInput);
+        break;
+      case 'preview_course_publish':
+        result = await previewCoursePublish(args as unknown as PreviewCoursePublishInput);
+        break;
+      case 'publish_course':
+        result = await publishCourse(args as unknown as PublishCourseInput);
+        break;
+      case 'rollback_course_publish':
+        result = await rollbackCoursePublish(args as unknown as RollbackCoursePublishInput);
         break;
       case 'full_pipeline':
         result = await fullPipeline(args as unknown as Parameters<typeof fullPipeline>[0]);

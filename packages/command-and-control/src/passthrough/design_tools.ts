@@ -4,12 +4,6 @@ import { generateCourse } from 'canvas-design-mcp/dist/tools/generate-course.js'
 import type { ImportCourseInput } from 'canvas-design-mcp/dist/tools/import-course.js';
 import type { GenerateCourseInput } from 'canvas-design-mcp/dist/course-types.js';
 
-const COURSE_PUBLISH_NOT_AVAILABLE = {
-  error:
-    'Course-wide publishing is not exposed as a single Canvas Design Studio tool yet. ' +
-    'Use generate_course here, then publish reviewed pages with canvas-design-mcp/publish_to_canvas.',
-};
-
 export const DESIGN_TOOLS: PassthroughTool[] = [
   {
     name: 'import_course',
@@ -39,18 +33,5 @@ export const DESIGN_TOOLS: PassthroughTool[] = [
       },
     },
     handler: (args) => generateCourse((args ?? {}) as GenerateCourseInput),
-  },
-  {
-    name: 'publish_course',
-    taskCategory: 'none',
-    description: '[canvas-design-mcp] Placeholder for future course-wide publishing after reviewed page generation.',
-    inputSchema: {
-      type: 'object',
-      required: ['courseId'],
-      properties: {
-        courseId: { type: 'string' },
-      },
-    },
-    handler: () => COURSE_PUBLISH_NOT_AVAILABLE,
   },
 ];
