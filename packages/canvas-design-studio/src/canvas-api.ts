@@ -1,7 +1,7 @@
 import type { CanvasCourse, CanvasPage, InstitutionConfig } from './types.js';
 import type { CanvasAssignment, CanvasAssignmentRaw } from './tools/list-canvas-objects.js';
 
-type HttpMethod = 'GET' | 'POST' | 'PUT';
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 type QueryValue = string | string[] | undefined;
 
 export interface CanvasApiClientOptions {
@@ -130,6 +130,10 @@ export class CanvasApiClient {
     return this.request<CanvasAssignment>('PUT', `courses/${courseId}/assignments/${assignmentId}`, {
       assignment: { description: html },
     });
+  }
+
+  async deletePage(courseId: number, pageUrl: string): Promise<void> {
+    await this.request<unknown>('DELETE', `courses/${courseId}/pages/${encodeURIComponent(pageUrl)}`);
   }
 
   private async paginatedGet<T>(path: string, params?: Record<string, QueryValue>): Promise<T[]> {
