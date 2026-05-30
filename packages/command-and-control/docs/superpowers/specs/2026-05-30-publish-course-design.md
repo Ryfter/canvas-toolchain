@@ -4,7 +4,7 @@
 **Issue:** #64 (last v0.9 feature)
 **Scope:** Replace the C&C `publish_course` placeholder with a real, reviewed, page-by-page Canvas publishing transaction. Course-wide publish becomes a three-tool flow: preview → publish-with-approvals → optional rollback. Publishes Canvas Pages and Canvas Assignment *descriptions* (not grading settings); updates only — never auto-creates assignments.
 
-**Depends on:** `publishToCanvas` in canvas-design-mcp (page-level publish, FERPA/validation/a11y/collision already shipped). `generate_course` in canvas-design-mcp (produces structured `GenerateCourseResult` keyed by `pageType`). Canvas API token via `setup_institution`.
+**Depends on:** `publishToCanvas` in canvas-design-mcp (page-level publish, FERPA/validation/a11y/collision already shipped). `generate_course` in canvas-design-mcp (produces structured `GenerateCourseResult` keyed by `pageType`). Canvas API token via `setup_canvas`.
 
 **Out of scope (v0.9):** auto-creating new Canvas assignments (C2 — deferred to v1.x); publishing quizzes, discussions, modules, files (S3/S4 — deferred to v1.x); grading settings (points, due date, rubric attachments — never in scope for this tool); concurrent multi-course publishes; a "watch and re-publish on change" mode.
 
@@ -30,7 +30,7 @@
 
 ## Architecture
 
-Three new tools in C&C. New per-assignment-description function in CDS. No changes to `generate_course`, `publishToCanvas`, or `setup_institution`.
+Three new tools in C&C. New per-assignment-description function in CDS. No changes to `generate_course`, `publishToCanvas`, or `setup_canvas`.
 
 ```
 C&C: preview_course_publish (workflow)
@@ -283,7 +283,7 @@ The placeholder `publish_course` entry in `src/passthrough/design_tools.ts` (the
 
 | Code                              | When                                                          | Action |
 |-----------------------------------|---------------------------------------------------------------|--------|
-| `MISSING_API_TOKEN`               | No Canvas token in institution config                         | Preview refuses with `setup_institution` fix steps. |
+| `MISSING_API_TOKEN`               | No Canvas token in institution config                         | Preview refuses with `setup_canvas` fix steps. |
 | `COURSE_ID_REQUIRED`              | `courseId` missing                                            | Preview refuses with `list_canvas_courses` fix step. |
 | `COURSE_DIR_NOT_FOUND`            | `courseDir` doesn't exist or has no `course-config.md`        | Preview refuses with import_course fix step. |
 | `GENERATE_FAILED`                 | `generateCourse()` itself throws                              | Preview refuses; surface generate_course's error verbatim. |
@@ -385,7 +385,7 @@ No real Canvas calls in CI. The single "did this work against a live Canvas" che
 
 ## Relation to other work
 
-* **[[project-installer-design]]** — `publish_course` does not change the installer surface; the existing `setup_institution` flow already covers the Canvas token requirement.
+* **[[project-installer-design]]** — `publish_course` does not change the installer surface; the existing `setup_canvas` flow already covers the Canvas token requirement.
 * **[[project-current-state]]** — closes the last v0.9 milestone item. After publish_course ships, `v0.9 — Core Workflow` is empty and the milestone closes.
 * **#65 (Canvas capability showcase) and v1.x cluster** — out of scope here; publish_course is a transport tool, not a design tool. The showcase work pulls in template creation; publishing remains the same surface either way.
 * **C2 / S3 deferred work** — if real-world usage demands creating assignments from the toolchain, that becomes a v1.x issue with its own brainstorm (it adds points/group/due-date design surface). If module reordering surfaces, same.
