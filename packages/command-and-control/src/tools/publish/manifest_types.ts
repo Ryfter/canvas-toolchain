@@ -91,6 +91,10 @@ export interface PublishedEntry {
   filename: string;
   type: 'page' | 'assignment';
   canvasUrl?: string;
+  /** Raw Canvas API slug for pages (from canvasMatch.pageId at publish time).
+   *  Stored here so rollback doesn't have to re-derive it from html_url,
+   *  which Canvas may have already percent-encoded — re-encoding produces a 404. */
+  canvasPageSlug?: string;
   action: 'updated' | 'created';
   publishedAt: string;
 }

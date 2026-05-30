@@ -154,6 +154,7 @@ export async function publishCourse(input: PublishCourseInput): Promise<PublishC
         if ('error' in out) throw new CanvasApiError(0, (out.code as string) ?? 'PUBLISH_FAILED', out.error ?? 'publish failed');
         published.push({
           filename: entry.filename, type: 'page', canvasUrl: out.url, action: out.action,
+          canvasPageSlug: entry.canvasMatch?.pageId,
           publishedAt: new Date().toISOString(),
         });
       } else if (entry.type === 'assignment') {

@@ -57,7 +57,7 @@ export async function rollbackCoursePublish(
       if (entry.type === 'page') {
         await restorePage(
           manifest.courseId,
-          (entry.canvasUrl ?? entry.filename).split('/').pop()!,
+          entry.canvasPageSlug ?? (entry.canvasUrl ?? entry.filename).split('/').pop()!,
           isCreated ? null : priorHtml,
           api as any,
         );

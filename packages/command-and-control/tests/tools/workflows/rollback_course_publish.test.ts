@@ -79,4 +79,30 @@ describe('rollbackCoursePublish', () => {
     expect(r.restoreFailed).toHaveLength(1);
     expect(r.restoreFailed[0].filename).toBe('a.html');
   });
+
+  it('uses canvasPageSlug directly to avoid URL double-encoding for special-char titles', async () => {
+    const dir = createSnapshotDir('snap-amp');
+    writeManifest(dir, {
+      snapshotId: 'snap-amp', courseId: 1, courseDir: '/x', generatedAt: '2026-05-30T00:00:00Z',
+      git: { isRepo: false }, entries: [],
+      summary: { total: 0, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
+    });
+    writePriorHtml(dir, 'wk1-amp.html', '<p>old</p>');
+    writeState(dir, {
+      phase: 'partial',
+      published: [{
+        filename: 'wk1-amp.html', type: 'page',
+        canvasUrl: 'https://canvas.example.edu/courses/1/pages/week-1-%26-2',
+        canvasPageSlug: 'week-1-&-2',
+        action: 'updated', publishedAt: '2026-05-30T00:00:00Z',
+      }],
+      lastUpdatedAt: '2026-05-30T00:00:01Z',
+    });
+
+    await rollbackCoursePublish({ snapshotId: 'snap-amp' });
+
+    const calls = vi.mocked(restorePage).mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0][1]).toBe('week-1-&-2');
+  });
 });
