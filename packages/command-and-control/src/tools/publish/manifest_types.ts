@@ -25,6 +25,7 @@ export interface PageEntry {
   filename: string;
   pageType: PageType;
   intendedTitle: string;
+  /** Optional: pages may be newly created when no Canvas match exists (collisionAction:'create'). */
   canvasMatch?: { pageId: string; url: string; existingTitle: string; similarity: number };
   collisionAction: 'update' | 'create';
   diff: DiffSummary;
@@ -35,6 +36,7 @@ export interface AssignmentEntry {
   filename: string;
   pageType: PageType;
   intendedTitle: string;
+  /** Required: per spec C1, unmatched assignments are emitted as SkippedEntry instead — never as AssignmentEntry. */
   canvasMatch: { assignmentId: number; name: string; similarity: number };
   diff: DiffSummary;
   warnings: Warning[];
@@ -104,6 +106,7 @@ export interface FailedEntry {
 export interface PublishState {
   phase: 'preview' | 'partial' | 'published' | 'rolled-back';
   published: PublishedEntry[];
+  /** Singular by design: spec R2 (stop-on-failure) halts publishing on the first failure, so at most one entry is recorded here. */
   failed?: FailedEntry;
   lastUpdatedAt: string;
 }
