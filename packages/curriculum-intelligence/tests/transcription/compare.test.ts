@@ -68,6 +68,19 @@ describe('rankDisagreements', () => {
     expect(ranked).toHaveLength(0);
   });
 
+  it('filters fillers regardless of capitalization or trailing punctuation', () => {
+    // Real Panopto/Whisper output capitalizes sentence-initial fillers and trails
+    // commas/periods. Without normalization these slipped through and corrupted
+    // the ranked list (caught during #60 verification on ITM310 Week 16).
+    const diffs: WordDiff[] = [
+      { kind: 'sub', panopto: 'Uh,', whisper: 'So', atSec: 1 },
+      { kind: 'sub', panopto: 'Um.', whisper: 'I', atSec: 2 },
+      { kind: 'sub', panopto: 'uh.', whisper: 'and', atSec: 3 },
+    ];
+    const { ranked } = rankDisagreements(diffs, RANK_OPTS);
+    expect(ranked).toHaveLength(0);
+  });
+
   it('emits suggested corrections for high-signal substitutions', () => {
     const diffs: WordDiff[] = Array.from({ length: 8 }, () => ({
       kind: 'sub' as const, panopto: 'tableau', whisper: 'Tableau', atSec: 5,

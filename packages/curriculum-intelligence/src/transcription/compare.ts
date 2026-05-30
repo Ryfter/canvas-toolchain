@@ -91,11 +91,18 @@ const STOPWORDS = new Set([
   'the', 'a', 'an', 'and', 'or', 'but', 'to', 'of', 'in', 'on', 'is', 'it', 'we', 'you',
 ]);
 
+/** Lowercase + strip leading/trailing non-alphanumerics so "Uh," and "uh." both
+ *  match the filler-word entry "uh". Without this, the per-word LCS diff sees
+ *  punctuated/capitalized variants as substantive disagreements. */
+function normalizeWord(word: string): string {
+  return word.toLowerCase().replace(/^[^a-z0-9]+/, '').replace(/[^a-z0-9]+$/, '');
+}
+
 function isTrivial(word: string | undefined, fillers: Set<string>): boolean {
   if (!word) return true;
-  const lower = word.toLowerCase();
-  if (fillers.has(lower)) return true;
-  if (STOPWORDS.has(lower)) return true;
+  const norm = normalizeWord(word);
+  if (fillers.has(norm)) return true;
+  if (STOPWORDS.has(norm)) return true;
   if (!/[a-z0-9]/i.test(word)) return true; // pure punctuation
   return false;
 }

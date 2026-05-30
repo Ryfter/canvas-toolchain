@@ -37,6 +37,20 @@ async function resolvePython(): Promise<string | null> {
   return null;
 }
 
+/** Find the first python candidate that has faster_whisper installed.
+ *  Multiple pythons commonly exist on Windows (python3/python/py); only one may
+ *  have the dependency. The basic resolvePython picks the first that runs at all,
+ *  which can mismatch the install location. */
+async function resolvePythonWithFasterWhisper(): Promise<string | null> {
+  for (const c of PY_CANDIDATES) {
+    const v = await probe(c, ['--version']);
+    if (!v.ok) continue;
+    const imp = await probe(c, ['-c', 'import faster_whisper']);
+    if (imp.ok) return c;
+  }
+  return null;
+}
+
 class FasterWhisperEngine implements TranscriptionEngine {
   readonly name = 'faster-whisper';
 
@@ -50,12 +64,13 @@ class FasterWhisperEngine implements TranscriptionEngine {
         setupSteps: ['Install Python 3', 'pip install faster-whisper', 'Install ffmpeg'],
       };
     }
-    const imp = await probe(python, ['-c', 'import faster_whisper']);
-    if (!imp.ok) {
+    // Prefer a python where faster_whisper is actually importable, not just the first that runs.
+    const pythonWithDep = await resolvePythonWithFasterWhisper();
+    if (!pythonWithDep) {
       return {
         available: false,
         engine: this.name,
-        detail: 'faster-whisper not installed',
+        detail: `faster-whisper not installed in any Python on PATH (checked: ${PY_CANDIDATES.join(', ')})`,
         setupSteps: [`${python} -m pip install faster-whisper`, 'Install ffmpeg'],
       };
     }
@@ -68,11 +83,11 @@ class FasterWhisperEngine implements TranscriptionEngine {
         setupSteps: ['Install ffmpeg and ensure it is on PATH'],
       };
     }
-    return { available: true, engine: this.name, detail: `Python ${python}, faster-whisper, ffmpeg present` };
+    return { available: true, engine: this.name, detail: `Python ${pythonWithDep}, faster-whisper, ffmpeg present` };
   }
 
   async transcribe(audioPath: string, opts: TranscribeOptions): Promise<TranscriptCue[]> {
-    const python = (await resolvePython()) ?? 'python';
+    const python = (await resolvePythonWithFasterWhisper()) ?? (await resolvePython()) ?? 'python';
     const args = [
       bridgePath(),
       '--audio', audioPath,
