@@ -1,5 +1,18 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.1.0
+
+- **`publish_course` workflow (#64)** — push an entire Canvas Design Studio course folder to a Canvas course as one reviewed transaction. Three MCP tools work together:
+  - `preview_course_publish` — read-only manifest with per-page diffs, FERPA/accessibility warnings, and collision detection (no Canvas writes).
+  - `publish_course` — explicit per-entry approvals, stop-on-failure, snapshot bundles for rollback (under `~/.command-and-control/publish-snapshots/`), optional git commit + tag of the source folder.
+  - `rollback_course_publish` — restore every successfully-published entry to its prior Canvas state.
+  - Verified end-to-end against a real BSU sandbox course before this release.
+- **Panopto Whisper transcript comparison (#60)** — opt-in side-by-side accuracy comparison between Panopto's auto-captions and locally-run Whisper. Useful for figuring out which source you trust for a given lecturer's voice + discipline vocabulary. Disabled by default (`setup_transcript_source` to enable).
+- **#79 publish_course polish** — rollback URL double-encoding fix for titles with special characters; front-matter title now flows through to `intendedTitle` matching so `wk1-overview.html` correctly matches a Canvas page titled "Week 1 Overview"; `fullDiffFor` parameter now surfaces inline unified diffs in the manifest; HTML entity stripping handles numeric/hex entities (`&#160;`, `&#x2019;`).
+- **Two production bugs fixed during #60 verification:** multi-Python-version detection now probes for `faster_whisper` availability before picking a Python; filler-word filter is now case + punctuation insensitive ("Uh," matches "uh").
+
+Full diff: [v1.0.0...v1.1.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.0.0...v1.1.0)
+
 ## Download
 
 | OS | File |
