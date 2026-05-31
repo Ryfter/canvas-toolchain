@@ -14,3 +14,6 @@ packages/curriculum-intelligence/output/
 
 # Worktrees
 .worktrees/
+
+# Verification sandbox course folder (created by scripts/verify-64-publish-course.mts)
+.test-course-64/
