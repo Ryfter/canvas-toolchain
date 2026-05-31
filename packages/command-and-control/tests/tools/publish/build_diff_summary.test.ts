@@ -40,6 +40,13 @@ describe('buildDiffSummary', () => {
     const summary = buildDiffSummary(prior, next);
     expect(summary.imagesChanged).toBeGreaterThanOrEqual(1);
   });
+
+  it('strips numeric and hex HTML entities (&#160;, &#x2019;) so they do not count as words', () => {
+    // entities act as separators, so this counts as 6 tokens after stripping: Mike s hello world non breaking
+    const html = '<p>Mike&#x2019;s hello&#160;world non&#x2013;breaking</p>';
+    const summary = buildDiffSummary(null, html);
+    expect(summary.newWords).toBe(6);
+  });
 });
 
 describe('computeUnifiedDiff', () => {

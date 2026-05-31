@@ -96,6 +96,7 @@ export async function previewCoursePublish(
   const snapshotId = newSnapshotId();
   const dir = createSnapshotDir(snapshotId);
   const entries: ManifestEntry[] = [];
+  const fullDiffSet = new Set(input.fullDiffFor ?? []);
 
   for (const p of routed.pages) {
     const intendedTitle = p.title ?? intendedTitleFor(p.filename);
@@ -115,7 +116,9 @@ export async function previewCoursePublish(
     writePriorHtml(dir, p.filename, priorHtml ?? '');
     writeNewHtml(dir, p.filename, p.html);
     const diff = buildDiffSummary(priorHtml, p.html);
-    writeFullDiff(dir, p.filename, computeUnifiedDiff(priorHtml, p.html));
+    const unified = computeUnifiedDiff(priorHtml, p.html);
+    writeFullDiff(dir, p.filename, unified);
+    if (fullDiffSet.has(p.filename)) diff.fullDiff = unified;
     const warnings = scanWarnings(p.html);
     if (priorFetchError) {
       warnings.push({
@@ -155,7 +158,9 @@ export async function previewCoursePublish(
     writePriorHtml(dir, a.filename, priorHtml ?? '');
     writeNewHtml(dir, a.filename, a.html);
     const diff = buildDiffSummary(priorHtml, a.html);
-    writeFullDiff(dir, a.filename, computeUnifiedDiff(priorHtml, a.html));
+    const unified = computeUnifiedDiff(priorHtml, a.html);
+    writeFullDiff(dir, a.filename, unified);
+    if (fullDiffSet.has(a.filename)) diff.fullDiff = unified;
     entries.push({
       type: 'assignment',
       filename: a.filename,

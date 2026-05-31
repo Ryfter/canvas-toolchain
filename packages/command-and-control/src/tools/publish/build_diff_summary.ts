@@ -1,7 +1,7 @@
 import type { DiffSummary } from './manifest_types.js';
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+  return html.replace(/<[^>]*>/g, ' ').replace(/&(?:[a-z]+|#\d+|#x[0-9a-f]+);/gi, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function wordCount(html: string): number {

@@ -19,6 +19,10 @@ export interface DiffSummary {
   calloutsRemoved: number;
   imagesChanged: number;
   hasFullDiff: boolean;
+  /** Inline unified diff text. Set only when the entry's filename appears in
+   *  preview_course_publish's `fullDiffFor` input. Otherwise read the .diff
+   *  file from the snapshot directory. */
+  fullDiff?: string;
 }
 
 export interface PageEntry {

@@ -133,6 +133,40 @@ describe('previewCoursePublish', () => {
     }
   });
 
+  it('embeds inline unified diff on entries whose filenames appear in fullDiffFor', async () => {
+    writeFileSync(join(course, 'output', 'wk1-overview.html'), '<h2>Week 1 NEW</h2>');
+    writeFileSync(join(course, 'output', 'wk2-overview.html'), '<h2>Week 2 NEW</h2>');
+    vi.mocked(generateCourse).mockReturnValue({
+      totalPages: 2, outputDir: join(course, 'output'), warnings: [],
+      weekResults: [{
+        weekNumber: 1, outputDir: join(course, 'output'), warnings: [],
+        pages: [
+          { html: '<h2>Week 1 NEW</h2>', filename: 'wk1-overview.html', weekNumber: 1, pageType: 'overview', savedTo: join(course, 'output', 'wk1-overview.html'), title: 'Week 1 Overview' },
+          { html: '<h2>Week 2 NEW</h2>', filename: 'wk2-overview.html', weekNumber: 2, pageType: 'overview', savedTo: join(course, 'output', 'wk2-overview.html'), title: 'Week 2 Overview' },
+        ],
+      }],
+    });
+    vi.mocked(listCanvasPages).mockResolvedValue([]);
+    vi.mocked(listCanvasAssignments).mockResolvedValue([]);
+
+    const r = await previewCoursePublish({
+      courseDir: course, courseId: 12345,
+      fullDiffFor: ['wk1-overview.html'],
+    });
+
+    const w1 = r.manifest!.entries.find(e => e.type === 'page' && e.filename === 'wk1-overview.html');
+    const w2 = r.manifest!.entries.find(e => e.type === 'page' && e.filename === 'wk2-overview.html');
+    expect(w1?.type).toBe('page');
+    expect(w2?.type).toBe('page');
+    if (w1?.type === 'page') {
+      expect(w1.diff.fullDiff).toBeDefined();
+      expect(w1.diff.fullDiff).toContain('Week 1 NEW');
+    }
+    if (w2?.type === 'page') {
+      expect(w2.diff.fullDiff).toBeUndefined();
+    }
+  });
+
   it('flags an unmatched assignment as skipped with reason unmatched-assignment', async () => {
     writeFileSync(join(course, 'output', 'asn.html'), '<p>do</p>');
     vi.mocked(generateCourse).mockReturnValue({
