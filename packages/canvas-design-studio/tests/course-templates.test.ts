@@ -367,3 +367,97 @@ ZIP file.
     expect(html).toContain('Work in pairs');
   });
 });
+
+describe('parsePageContent — verbatim mode (#80)', () => {
+  it('detects imported_verbatim sentinel and captures body as verbatimBody', () => {
+    const p = writeTmp(`---
+week: 1
+title: "Week 1 Overview"
+imported_verbatim: true
+---
+
+<div class="brand-header"><h2>Course Introduction</h2></div>
+<table>
+  <tr><th>Due Wednesday</th><th>Due Friday</th></tr>
+  <tr><td>Quiz 1</td><td>Assignment 1.1</td></tr>
+</table>
+<p>Inline prose with <strong>formatting</strong>.</p>
+`);
+    const content = parsePageContent(p, 'overview');
+    expect(content.frontMatter.importedVerbatim).toBe(true);
+    expect(content.verbatimBody).toBeDefined();
+    expect(content.verbatimBody).toContain('<div class="brand-header">');
+    expect(content.verbatimBody).toContain('<table>');
+    expect(content.verbatimBody).toContain('Due Wednesday');
+    expect(content.verbatimBody).toContain('<strong>formatting</strong>');
+    expect(content.sections).toEqual({});
+  });
+
+  it('treats imported_verbatim:false the same as no sentinel (section parsing runs)', () => {
+    const p = writeTmp(`---
+week: 1
+title: "Week 1 Overview"
+imported_verbatim: false
+---
+
+## Learning Objectives
+- Objective one
+
+## Activities
+- Activity one
+`);
+    const content = parsePageContent(p, 'overview');
+    expect(content.frontMatter.importedVerbatim).toBe(false);
+    expect(content.verbatimBody).toBeUndefined();
+    expect(content.sections['Learning Objectives']).toContain('Objective one');
+  });
+});
+
+describe('renderPage — verbatim mode (#80)', () => {
+  const config = makeConfig();
+
+  it('emits verbatimBody inside the Lato/max-width container, bypassing the page template', () => {
+    const p = writeTmp(`---
+week: 2
+title: "Week 2 Overview"
+imported_verbatim: true
+---
+
+<table style="width: 80%;"><caption>Week 2 assignments</caption>
+  <tr><td>Quiz 2</td><td>Lab 2</td></tr>
+</table>
+<p><a href="https://canvas.example.com/course/mylab">MyLab IT</a> link.</p>
+`);
+    const content = parsePageContent(p, 'overview');
+    const html = renderPage(content, config);
+
+    // The Lato/max-width shell wraps the verbatim body
+    expect(html).toContain('font-family: Lato');
+    expect(html).toContain('max-width: 900px');
+
+    // Source HTML structure preserved verbatim
+    expect(html).toContain('<caption>Week 2 assignments</caption>');
+    expect(html).toContain('<td>Quiz 2</td>');
+    expect(html).toContain('<a href="https://canvas.example.com/course/mylab">MyLab IT</a>');
+
+    // The standard template's default title is absent — verbatim mode intentionally
+    // skips the hero so the source HTML's own structure shows through
+    expect(html).not.toContain('Week 02 Overview');
+  });
+
+  it('skips the section-based template when verbatimBody is set even for pageType=assignment', () => {
+    const p = writeTmp(`---
+week: 3
+title: "Some Assignment"
+imported_verbatim: true
+---
+
+<p>Just the source assignment HTML, lifted verbatim.</p>
+`);
+    const content = parsePageContent(p, 'assignment');
+    const html = renderPage(content, config);
+    expect(html).toContain('Just the source assignment HTML, lifted verbatim.');
+    // The 'assignment' template emits an uppercase "BRIEF" heading; verbatim mode does not
+    expect(html).not.toContain('>BRIEF<');
+  });
+});

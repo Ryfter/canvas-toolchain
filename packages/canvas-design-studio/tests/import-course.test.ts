@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { importCourse } from '../src/tools/import-course.js';
+import { parsePageContent, renderPage } from '../src/tools/course-templates.js';
+import type { CourseConfig } from '../src/course-types.js';
 
 const archiveDir = join(import.meta.dirname, 'fixtures/canvas-backup/ITM370');
 
@@ -209,5 +211,70 @@ describe('importCourse — engage assignment detection', () => {
   it('each type uses its own counter independently', () => {
     expect(existsSync(join(outDir, 'week-01', 'assignment-1.2.md'))).toBe(false);
     expect(existsSync(join(outDir, 'week-01', 'engage-assignment-1.2.md'))).toBe(false);
+  });
+});
+
+describe('importCourse — preserveOriginalHtml mode (#80)', () => {
+  it('writes imported_verbatim: true in front matter when flag is set', () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'ic-verbatim-'));
+    importCourse({ archivePath: archiveDir, outputDir: outDir, preserveOriginalHtml: true });
+    const overview = readFileSync(join(outDir, 'week-01', 'overview.md'), 'utf-8');
+    expect(overview).toMatch(/^---\n[\s\S]*\nimported_verbatim: true\n[\s\S]*---/);
+  });
+
+  it('lifts the source HTML body verbatim instead of extracting sections', () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'ic-verbatim-'));
+    importCourse({ archivePath: archiveDir, outputDir: outDir, preserveOriginalHtml: true });
+    const overview = readFileSync(join(outDir, 'week-01', 'overview.md'), 'utf-8');
+    expect(overview).toContain('<h2>Learning Objectives</h2>');
+    expect(overview).toContain('<ul>');
+    expect(overview).toContain('<li>Define AI augmentation');
+    expect(overview).not.toContain('[NEEDS REVIEW');
+  });
+
+  it('default mode (no flag) still uses extraction-based scaffold (regression check)', () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'ic-extract-'));
+    importCourse({ archivePath: archiveDir, outputDir: outDir });
+    const overview = readFileSync(join(outDir, 'week-01', 'overview.md'), 'utf-8');
+    expect(overview).toContain('## Learning Objectives');
+    expect(overview).not.toContain('imported_verbatim: true');
+    expect(overview).not.toContain('<ul>');
+  });
+
+  it('verbatim mode applies to assignments and keeps assignment_number, due, points in front matter', () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'ic-verbatim-'));
+    importCourse({ archivePath: archiveDir, outputDir: outDir, preserveOriginalHtml: true });
+    const asnPath = join(outDir, 'week-01', 'assignment-1.1.md');
+    expect(existsSync(asnPath)).toBe(true);
+    const asn = readFileSync(asnPath, 'utf-8');
+    expect(asn).toContain('imported_verbatim: true');
+    expect(asn).toContain('assignment_number:');
+    expect(asn).toContain('due:');
+    expect(asn).toContain('points:');
+  });
+
+  it('round-trip: importCourse(preserveOriginalHtml) → parsePageContent → renderPage preserves source HTML', () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'ic-verbatim-roundtrip-'));
+    importCourse({ archivePath: archiveDir, outputDir: outDir, preserveOriginalHtml: true });
+    const mdPath = join(outDir, 'week-01', 'overview.md');
+    const content = parsePageContent(mdPath, 'overview');
+    expect(content.verbatimBody).toBeDefined();
+    const config: CourseConfig = {
+      institution: 'Boise State University',
+      courseName: 'AI Augmented Projects',
+      courseNumber: 'ITM 370',
+      professor: 'Dr. Rank',
+      semester: 'Fall 2026',
+      weeks: 2,
+      pageTypes: ['overview'],
+      layoutFixed: true,
+      colors: { primary: '#0033A0', primaryDark: '#002277', primaryLight: '#E6ECF9', secondary: '#D64309' },
+      heroImages: {},
+      weekOutline: [],
+    };
+    const html = renderPage(content, config);
+    expect(html).toContain('<h2>Learning Objectives</h2>');
+    expect(html).toContain('Define AI augmentation');
+    expect(html).toContain('font-family: Lato');
   });
 });
