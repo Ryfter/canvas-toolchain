@@ -51,6 +51,8 @@ import {
   rollbackCoursePublish,
   type RollbackCoursePublishInput,
 } from './tools/workflows/rollback_course_publish.js';
+import { snapshotCourse } from './tools/workflows/snapshot_course.js';
+import type { SnapshotInput } from './tools/snapshot/types.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -318,6 +320,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: { snapshotId: { type: 'string' } },
       },
     },
+    {
+      name: 'snapshot_course',
+      description: 'Write or update a course reference markdown doc capturing course identifiers, assignment groups, modules, and an append-only Update Log. Re-running against the same outputPath regenerates the auto-managed sections (delimited by AUTO:start/AUTO:end HTML comment markers) and preserves all hand-edited prose around them.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId', 'outputPath'],
+        properties: {
+          courseId:   { type: 'number',  description: 'Canvas course numeric ID.' },
+          outputPath: { type: 'string',  description: 'Absolute path to the markdown file. Created on first run, updated on re-runs.' },
+        },
+      },
+    },
     // ── Resource registry ──────────────────────────────────────────────────
     {
       name: 'install_resource',
@@ -501,6 +515,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'rollback_course_publish':
         result = await rollbackCoursePublish(args as unknown as RollbackCoursePublishInput);
+        break;
+      case 'snapshot_course':
+        result = await snapshotCourse(args as unknown as SnapshotInput);
         break;
       case 'full_pipeline':
         result = await fullPipeline(args as unknown as Parameters<typeof fullPipeline>[0]);

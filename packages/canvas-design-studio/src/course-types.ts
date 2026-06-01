@@ -86,6 +86,11 @@ export interface PageFrontMatter {
   points?: number;
   team?: boolean;
   timeline?: boolean;
+  /** Sentinel set by import_course's preserveOriginalHtml mode. When true, the
+   *  page body is raw HTML lifted verbatim from the source archive and
+   *  generate_page should pass it through unchanged instead of running it
+   *  through the section-based template. */
+  importedVerbatim?: boolean;
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -93,6 +98,11 @@ export interface PageContent {
   pageType: PageType;
   frontMatter: PageFrontMatter;
   sections: Record<string, string>;
+  /** Set when frontMatter.importedVerbatim is true. Contains the entire body
+   *  HTML lifted verbatim from the source archive — bypasses section parsing.
+   *  When set, renderPage emits this body inside a minimal Lato/max-width
+   *  shell with no hero or template-driven structure. */
+  verbatimBody?: string;
 }
 
 export interface GeneratePageInput {

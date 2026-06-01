@@ -37,6 +37,14 @@ export interface ImportCourseInput {
   outputDir: string;
   weekNumber?: number;
   assignmentName?: string;
+  /** When true, lift each source page/assignment/discussion body HTML verbatim
+   *  into the imported markdown instead of attempting to extract structured
+   *  sections (Learning Objectives, Activities, etc.) which is lossy for
+   *  pages whose HTML doesn't follow CDS's expected section layout.
+   *
+   *  The generated markdown carries `imported_verbatim: true` in its front
+   *  matter so generate_page knows to pass the body through unchanged. */
+  preserveOriginalHtml?: boolean;
 }
 
 export interface ImportCourseResult {
@@ -193,6 +201,40 @@ ${prompt}
 `;
 }
 
+/** Build a markdown file whose body is the source page's HTML verbatim.
+ *  Used when import_course is called with preserveOriginalHtml: true.
+ *  generate_page detects imported_verbatim: true in front matter and emits
+ *  the body unchanged inside the standard Lato/max-width container. */
+function buildVerbatimMd(week: number, title: string, bodyHtml: string): string {
+  const cleanTitle = title.trim().replace(/"/g, '\\"');
+  return `---
+week: ${week}
+title: "${cleanTitle}"
+hero_image: ""
+imported_verbatim: true
+---
+
+${bodyHtml.trim()}
+`;
+}
+
+function buildVerbatimAssignmentMd(week: number, assignment: AssignmentJson, bodyHtml: string): string {
+  const due = formatDate(assignment.due_at);
+  const cleanName = assignment.name.trim().replace(/"/g, '\\"');
+  return `---
+week: ${week}
+title: "${cleanName}"
+hero_image: ""
+assignment_number: "${cleanName}"
+due: "${due}"
+points: ${assignment.points_possible}
+imported_verbatim: true
+---
+
+${bodyHtml.trim()}
+`;
+}
+
 function buildQuizMd(week: number, quizTitle: string, quizType: 'weekly-quiz' | 'reading-quiz'): string {
   return `---
 week: ${week}
@@ -219,7 +261,10 @@ function readJson<T>(filePath: string): T {
 }
 
 function readHtmlFile(dir: string, title: string): string {
-  const htmlPath = join(dir, `${title}.html`);
+  // Canvas's items.json sometimes serializes page titles with trailing
+  // whitespace (e.g. "1.0 Week 1 Overview   "); the on-disk filename canvas-backup
+  // wrote drops that whitespace. Trim before joining or the lookup misses.
+  const htmlPath = join(dir, `${title.trim()}.html`);
   return existsSync(htmlPath) ? readFileSync(htmlPath, 'utf-8') : '';
 }
 
@@ -236,7 +281,7 @@ function findModuleFolders(modulesDir: string): Array<{ position: number; folder
 }
 
 export function importCourse(input: ImportCourseInput): ImportCourseResult {
-  const { archivePath, outputDir, weekNumber, assignmentName } = input;
+  const { archivePath, outputDir, weekNumber, assignmentName, preserveOriginalHtml } = input;
   const archiveAbs = resolve(archivePath);
   const outAbs = resolve(outputDir);
   mkdirSync(outAbs, { recursive: true });
@@ -303,7 +348,9 @@ export function importCourse(input: ImportCourseInput): ImportCourseResult {
       mkdirSync(weekDir, { recursive: true });
       const pageType = detectAssignmentType(target.title);
       const html = readHtmlFile(assignmentsDir, target.title);
-      const mdContent = buildAssignmentMd(weekNum, assignData, html);
+      const mdContent = preserveOriginalHtml
+        ? buildVerbatimAssignmentMd(weekNum, assignData, html)
+        : buildAssignmentMd(weekNum, assignData, html);
       writeFileSync(join(weekDir, `${pageType}-${weekNum}.1.md`), mdContent, 'utf-8');
       filesCreated++;
       weeksImported++;
@@ -327,15 +374,20 @@ export function importCourse(input: ImportCourseInput): ImportCourseResult {
 
     for (const item of pageItems) {
       const html = readHtmlFile(pagesDir, item.title);
-      const sections = extractSectionsFromHtml(html);
       const pageType = detectPageTypeFromTitle(item.title);
       const filename = resolveSimple(pageType);
       if (filename !== `${pageType}.md`) {
         warnings.push(`Week ${weekNum}: multiple "${pageType}" pages — "${item.title}" written as ${filename}`);
       }
-      const content = pageType === 'resources'
-        ? buildResourcesMd(weekNum, item.title, sections)
-        : buildOverviewMd(weekNum, item.title, sections);
+      let content: string;
+      if (preserveOriginalHtml) {
+        content = buildVerbatimMd(weekNum, item.title, html);
+      } else {
+        const sections = extractSectionsFromHtml(html);
+        content = pageType === 'resources'
+          ? buildResourcesMd(weekNum, item.title, sections)
+          : buildOverviewMd(weekNum, item.title, sections);
+      }
       writeFileSync(join(weekDir, filename), content, 'utf-8');
       filesCreated++;
     }
@@ -349,7 +401,9 @@ export function importCourse(input: ImportCourseInput): ImportCourseResult {
       const aType = detectAssignmentType(item.title);
       const filename = resolveIndexed(aType);
       const html = readHtmlFile(assignmentsDir, item.title);
-      const mdContent = buildAssignmentMd(weekNum, assignData, html);
+      const mdContent = preserveOriginalHtml
+        ? buildVerbatimAssignmentMd(weekNum, assignData, html)
+        : buildAssignmentMd(weekNum, assignData, html);
       writeFileSync(join(weekDir, filename), mdContent, 'utf-8');
       filesCreated++;
     }
@@ -368,7 +422,9 @@ export function importCourse(input: ImportCourseInput): ImportCourseResult {
       if (filename !== 'discussion-board.md') {
         warnings.push(`Week ${weekNum}: multiple discussions — "${item.title}" written as ${filename}`);
       }
-      const mdContent = buildDiscussionMd(weekNum, item.title, html);
+      const mdContent = preserveOriginalHtml
+        ? buildVerbatimMd(weekNum, item.title, html)
+        : buildDiscussionMd(weekNum, item.title, html);
       writeFileSync(join(weekDir, filename), mdContent, 'utf-8');
       filesCreated++;
     }
