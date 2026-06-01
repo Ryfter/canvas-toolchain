@@ -53,6 +53,7 @@ function parseFrontMatterSimple(yaml: string): PageFrontMatter {
     if (key === 'due')    { result.due = val || undefined; continue; }
     if (key === 'team')              { result.team = val === 'true'; continue; }
     if (key === 'timeline')          { result.timeline = val === 'true'; continue; }
+    if (key === 'imported_verbatim') { result.importedVerbatim = val === 'true'; continue; }
     (result as Record<string, string | number | boolean | undefined>)[key] = val || undefined;
   }
   return result;
@@ -63,6 +64,14 @@ export function parsePageContent(filePath: string, pageType: PageType): PageCont
   const fmMatch = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   const frontMatter = fmMatch ? parseFrontMatterSimple(fmMatch[1]) : {};
   const body = fmMatch ? fmMatch[2] : raw;
+
+  // Verbatim-imported pages: skip section extraction. The body is raw HTML
+  // lifted from the source archive by import_course's preserveOriginalHtml
+  // mode; renderPage will embed it inside a minimal Lato shell with no
+  // template-driven structure.
+  if (frontMatter.importedVerbatim) {
+    return { pageType, frontMatter, sections: {}, verbatimBody: body.trim() };
+  }
 
   const sections: Record<string, string> = {};
   const sectionRegex = /^## (.+)$/gm;
@@ -493,6 +502,14 @@ export function renderPage(
   config: CourseConfig,
   options?: { templateId?: string; themeId?: string; promptSetId?: string }
 ): string {
+  // Verbatim-imported pages bypass the template registry entirely. The body
+  // is raw HTML from the source archive — embed it as-is inside the standard
+  // Lato/max-width container so it inherits the global page chrome but keeps
+  // its own internal structure (tables, brand divs, callouts, whatever).
+  if (content.verbatimBody !== undefined) {
+    return wrap([content.verbatimBody]);
+  }
+
   // Load the structured layout from the template registry
   const templateId = options?.templateId || content.pageType;
   const template = loadTemplate(templateId);
