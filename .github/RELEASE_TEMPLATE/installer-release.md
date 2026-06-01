@@ -1,5 +1,33 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.2.0
+
+Five features landed since v1.1.0, all in the refresh + content-creation surface of the toolchain.
+
+### Refresh workflow improvements
+
+- **Lossless `import_course` (#80)** — new `preserveOriginalHtml: true` mode lifts source HTML body verbatim from a Canvas Backup archive into the imported markdown, bypassing the structural extractor that was silently dropping ~90% of body content for any course whose HTML didn't follow CDS's expected `## Learning Objectives` / `## Activities` section layout. With the flag, ~100× more content survives the import. Default behavior (no flag) is unchanged.
+- **Pre-existing whitespace-trim bug fixed in passing** — Canvas's `items.json` sometimes serializes page titles with trailing whitespace, which canvas-backup strips on disk; the exact-match lookup was silently returning empty bodies. Fix benefits extraction mode too.
+
+### Course documentation as a first-class output
+
+- **`snapshot_course` MCP tool (#81)** — writes (and on re-run, updates) a per-course markdown reference doc capturing live course identifiers, assignment groups, modules, and an append-only Update Log. Four auto-managed sections live inside `<!-- AUTO:start id="..." -->` markers; hand-edited prose between markers is preserved verbatim across re-runs. Missing sections (manually deleted) are appended on recovery. Pattern: snapshot the toolchain-observed state alongside the prof's hand-written reference content.
+
+### Rubric system end-to-end
+
+- **`rubric` page type (#67 Part A)** — new CDS page type for student-facing rubrics with three blocks per criterion (student-facing rewrite, worked example, faculty rubric language). `generate_course` produces a Canvas-safe HTML page AND emits a `.md` file alongside for students to download and paste into an LLM for personalized help. Render uses BSU brand tokens, callouts, and a collapsible `<details>` for the faculty rubric language.
+- **`draft_student_rubric` MCP tool (#67 Part B)** — takes a faculty-facing rubric and uses the Anthropic API to produce a student-facing rewrite + worked examples per criterion. Outputs the markdown matching the Part A schema. Faculty rubric language is preserved verbatim for sync.
+
+### Interactive widget brainstorming
+
+- **`brainstorm_interactive` MCP tool (#45)** — propose 2-3 distinct interactive Canvas widget concepts (sliders, card flips, sortable orderings, branching scenarios, etc.) for a given topic + learning goal. Returns structured `InteractiveSpec`s ready for a future render step. Optional context: professor philosophy KB, student personas, audience tags. Built against the May 2026 design spec already on disk.
+
+### Test coverage
+
+CDS suite: **450 passing** (was 433, +17). C&C suite: **273 passing** (was 247, +26). **Zero regressions.**
+
+Full diff: [v1.1.0...v1.2.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.1.0...v1.2.0)
+
 ## What's new in v1.1.0
 
 - **`publish_course` workflow (#64)** — push an entire Canvas Design Studio course folder to a Canvas course as one reviewed transaction. Three MCP tools work together:
