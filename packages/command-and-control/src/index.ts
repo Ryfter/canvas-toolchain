@@ -53,6 +53,8 @@ import {
 } from './tools/workflows/rollback_course_publish.js';
 import { snapshotCourse } from './tools/workflows/snapshot_course.js';
 import type { SnapshotInput } from './tools/snapshot/types.js';
+import { draftStudentRubric } from './tools/workflows/draft_student_rubric.js';
+import type { DraftStudentRubricInput } from './tools/rubric/types.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -332,6 +334,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'draft_student_rubric',
+      description: 'Take a faculty-facing rubric and use the Anthropic API to produce a student-facing rewrite plus worked examples per criterion. Writes a markdown file matching the CDS rubric page-type schema so generate_course can render it as a Canvas page + downloadable .md for students to paste into an LLM. Run setup_anthropic first if not configured.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['facultyRubricText', 'outputPath'],
+        properties: {
+          facultyRubricText:  { type: 'string', description: 'Raw faculty-facing rubric text. Can be markdown, plain text, or pasted from Canvas/Word.' },
+          assignmentBrief:    { type: 'string', description: 'Optional: what the assignment actually asks students to do. Used to ground worked examples in concrete task language.' },
+          courseContext:      { type: 'string', description: 'Optional: course title, level, modality, anything for tailoring student-facing tone.' },
+          outputPath:         { type: 'string', description: 'Absolute path to write the generated markdown file.' },
+          week:               { type: 'number', description: 'Front matter: week number for the page.' },
+          title:              { type: 'string', description: 'Front matter: page title. Defaults to "Rubric — Assignment {assignmentNumber}".' },
+          totalPoints:        { type: 'number', description: 'Front matter: total points for the assignment.' },
+          assignmentNumber:   { type: 'string', description: 'Front matter: assignment number, e.g. "7.3".' },
+        },
+      },
+    },
     // ── Resource registry ──────────────────────────────────────────────────
     {
       name: 'install_resource',
@@ -518,6 +538,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'snapshot_course':
         result = await snapshotCourse(args as unknown as SnapshotInput);
+        break;
+      case 'draft_student_rubric':
+        result = await draftStudentRubric(args as unknown as DraftStudentRubricInput);
         break;
       case 'full_pipeline':
         result = await fullPipeline(args as unknown as Parameters<typeof fullPipeline>[0]);
