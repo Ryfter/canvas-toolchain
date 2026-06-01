@@ -14,6 +14,7 @@ export const PAGE_TYPES = [
   'lab',
   'discussion-board',
   'extra-credit',
+  'rubric',
   'custom',
 ] as const;
 
@@ -35,6 +36,7 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   'lab':               'Lab',
   'discussion-board':  'Discussion Board',
   'extra-credit':      'Extra Credit',
+  'rubric':            'Rubric (student-facing rubric with worked examples + LLM-paste export)',
   'custom':            'Custom (professor-defined sections)',
 };
 
