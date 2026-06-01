@@ -55,6 +55,8 @@ import { snapshotCourse } from './tools/workflows/snapshot_course.js';
 import type { SnapshotInput } from './tools/snapshot/types.js';
 import { draftStudentRubric } from './tools/workflows/draft_student_rubric.js';
 import type { DraftStudentRubricInput } from './tools/rubric/types.js';
+import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
+import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -352,6 +354,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: 'brainstorm_interactive',
+      description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via setup_anthropic.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['topic', 'learningGoal'],
+        properties: {
+          topic:              { type: 'string', description: 'Topic the interactive should illuminate, e.g. "comparing VLOOKUP vs XLOOKUP".' },
+          learningGoal:       { type: 'string', description: 'What students should be able to do after engaging with the widget.' },
+          audienceTags:       { type: 'array', items: { type: 'string' }, description: 'Optional audience tags, e.g. ["undergraduate", "first-time-AI-user"].' },
+          includePhilosophy:  { type: 'boolean', description: 'When true, the prompt is prefixed with `philosophyKb` text to bias concepts toward the professor\'s pedagogical style.' },
+          includePersonas:    { type: 'boolean', description: 'When true, the prompt is prefixed with `studentPersonas` text so concepts include per-persona considerations.' },
+          philosophyKb:       { type: 'string', description: 'Optional: professor philosophy KB text. Required when includePhilosophy is true.' },
+          studentPersonas:    { type: 'string', description: 'Optional: student persona text. Required when includePersonas is true.' },
+          count:              { type: 'number', description: 'How many concepts to generate. Default 3.' },
+        },
+      },
+    },
     // ── Resource registry ──────────────────────────────────────────────────
     {
       name: 'install_resource',
@@ -541,6 +561,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'draft_student_rubric':
         result = await draftStudentRubric(args as unknown as DraftStudentRubricInput);
+        break;
+      case 'brainstorm_interactive':
+        result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
         break;
       case 'full_pipeline':
         result = await fullPipeline(args as unknown as Parameters<typeof fullPipeline>[0]);
