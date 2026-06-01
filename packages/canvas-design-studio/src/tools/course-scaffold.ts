@@ -186,6 +186,32 @@ const PAGE_PROMPTS: Record<PageType, string> = {
 ## Deadline
 [Date — note: late submissions not accepted]
 `,
+  'rubric': `## Criterion 1: [Criterion Name] — [N] pts
+
+**For students:**
+[Plain-English explanation: what this criterion is checking for, in language a student new to the topic can act on.]
+
+**Worked example:**
+[Concrete description of what a full-credit submission looks like for this criterion. Use specific values, cell references, or step-by-step examples.]
+
+**Faculty rubric language:**
+[The actual Canvas rubric language. Kept here so the student rewrite and the official rubric stay synchronized.]
+
+## Criterion 2: [Criterion Name] — [N] pts
+
+**For students:**
+[...]
+
+**Worked example:**
+[...]
+
+**Faculty rubric language:**
+[...]
+
+## Notes for students
+
+[Optional: how to use this rubric, where to ask questions, how to download as markdown for LLM-paste.]
+`,
   'custom': `## [Section 1 Title]
 [Content for section 1]
 

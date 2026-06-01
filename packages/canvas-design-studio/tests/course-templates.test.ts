@@ -368,6 +368,126 @@ ZIP file.
   });
 });
 
+describe('renderPage — rubric page type (#67)', () => {
+  const config = makeConfig();
+
+  const sampleRubric = `---
+week: 5
+title: "Excel Capstone Rubric"
+assignment_number: "7.3"
+hero_image: ""
+points: 100
+---
+
+## Criterion 1: Formula Correctness — 30 pts
+
+**For students:**
+Your formulas reference the right cells and use the right functions.
+No #VALUE!, #REF!, or #DIV/0! errors.
+
+**Worked example:**
+For "calculate the total revenue per region," your formula in column F is
+\`=SUM(C2:E2)\` (uses a function), copies cleanly down all rows, and shows
+the expected totals.
+
+**Faculty rubric language:**
+Formulas are syntactically correct, semantically appropriate to the task,
+and demonstrate proper use of relative/absolute references. Excel error
+codes are absent.
+
+## Criterion 2: Formatting — 20 pts
+
+**For students:**
+Your workbook is easy to read at a glance.
+
+**Worked example:**
+Bold column headers, consistent number formats per column, and frozen panes
+on the header row.
+
+**Faculty rubric language:**
+Consistent visual formatting per CoBE conventions.
+
+## Notes for students
+
+Use this to self-check before you submit. Download the markdown copy and
+paste it into Claude or ChatGPT for personalized help.
+`;
+
+  it('parses criteria headings with em-dash, en-dash, and --', () => {
+    const variants = [
+      'Criterion 1: A — 10 pts',
+      'Criterion 2: B – 20 pts',
+      'Criterion 3: C -- 30 pts',
+    ];
+    const synthetic = `---\nweek: 1\ntitle: ""\nhero_image: ""\n---\n\n` +
+      variants.map((h, i) => `## ${h}\n\n**For students:**\nfs ${i + 1}\n\n**Worked example:**\nwe ${i + 1}\n\n**Faculty rubric language:**\nfac ${i + 1}\n`).join('\n');
+    const p = writeTmp(synthetic);
+    const content = parsePageContent(p, 'rubric');
+    const html = renderPage(content, config);
+    expect(html).toContain('1. A');
+    expect(html).toContain('10 pts');
+    expect(html).toContain('2. B');
+    expect(html).toContain('20 pts');
+    expect(html).toContain('3. C');
+    expect(html).toContain('30 pts');
+  });
+
+  it('renders each criterion as a card with all three blocks', () => {
+    const p = writeTmp(sampleRubric);
+    const content = parsePageContent(p, 'rubric');
+    const html = renderPage(content, config);
+    // Each criterion's For Students content present
+    expect(html).toContain('formulas reference the right cells');
+    expect(html).toContain('easy to read at a glance');
+    // Worked examples present
+    expect(html).toContain('=SUM(C2:E2)');
+    expect(html).toContain('Bold column headers');
+    // Faculty rubric language present (inside collapsible details)
+    expect(html).toContain('Faculty rubric language');
+    expect(html).toContain('relative/absolute references');
+    expect(html).toContain('<details');
+    expect(html).toContain('<summary');
+  });
+
+  it('renders the title + total points + assignment number meta in the hero', () => {
+    const p = writeTmp(sampleRubric);
+    const content = parsePageContent(p, 'rubric');
+    const html = renderPage(content, config);
+    expect(html).toContain('Excel Capstone Rubric');
+    expect(html).toContain('Assignment 7.3');
+    expect(html).toContain('100 pts total');
+  });
+
+  it('renders the LLM-paste hint and notes section', () => {
+    const p = writeTmp(sampleRubric);
+    const content = parsePageContent(p, 'rubric');
+    const html = renderPage(content, config);
+    expect(html).toContain('paste it into an LLM');
+    expect(html).toContain('Notes for students');
+    expect(html).toContain('Download the markdown copy');
+  });
+
+  it('produces Canvas-safe HTML (no <style>, <script>, <h1>, no box-shadow)', () => {
+    const p = writeTmp(sampleRubric);
+    const content = parsePageContent(p, 'rubric');
+    const html = renderPage(content, config);
+    expect(html).not.toContain('<style');
+    expect(html).not.toContain('<script');
+    expect(html).not.toContain('<h1');
+    expect(html).not.toContain('box-shadow');
+  });
+
+  it('handles missing student-facing / worked-example gracefully (placeholder)', () => {
+    const partial = `---\nweek: 1\ntitle: "Partial"\nhero_image: ""\npoints: 10\n---\n\n## Criterion 1: Foo — 10 pts\n\n**Faculty rubric language:**\nonly faculty here.\n`;
+    const p = writeTmp(partial);
+    const content = parsePageContent(p, 'rubric');
+    const html = renderPage(content, config);
+    expect(html).toContain('(no student-facing explanation yet)');
+    expect(html).toContain('(no worked example yet)');
+    expect(html).toContain('only faculty here');
+  });
+});
+
 describe('parsePageContent — verbatim mode (#80)', () => {
   it('detects imported_verbatim sentinel and captures body as verbatimBody', () => {
     const p = writeTmp(`---

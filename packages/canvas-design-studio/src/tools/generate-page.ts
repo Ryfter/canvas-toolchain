@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join, dirname, basename, resolve } from 'node:path';
 import { parseCourseConfig, COURSE_CONFIG_FILENAME } from './course-config.js';
 import { parsePageContent, renderPage } from './course-templates.js';
@@ -53,6 +53,15 @@ export function generatePage(input: GeneratePageInput): GeneratePageResult {
   mkdirSync(weekOut, { recursive: true });
   const savedTo = join(weekOut, filename);
   writeFileSync(savedTo, html, 'utf-8');
+
+  // Rubric pages: also emit the source markdown alongside the HTML so students
+  // can download it and paste into an LLM for personalized help. The .md is
+  // the original input verbatim — no transform — so it includes both
+  // student-facing and faculty-rubric-language for full transparency.
+  if (pageType === 'rubric') {
+    const mdSavedTo = join(weekOut, `${pageType}.md`);
+    writeFileSync(mdSavedTo, readFileSync(absPath, 'utf-8'), 'utf-8');
+  }
 
   return { html, filename, weekNumber, pageType, savedTo, title: content.frontMatter.title };
 }

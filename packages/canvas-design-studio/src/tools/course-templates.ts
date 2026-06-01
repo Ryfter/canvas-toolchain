@@ -478,6 +478,118 @@ function renderExtraCredit(c: PageContent, cfg: CourseConfig): string {
   ]);
 }
 
+/** Parsed structure for a single rubric criterion. Pulled out of a section
+ *  whose heading matches `Criterion N: Name — Y pts` (em-dash or `--`). The
+ *  three blocks come from `**For students:**`, `**Worked example:**`, and
+ *  `**Faculty rubric language:**` markers within the section body. */
+interface RubricCriterion {
+  number: string;
+  name: string;
+  points: number;
+  studentFacing: string;
+  workedExample: string;
+  facultyFacing: string;
+}
+
+/** Parse a section body that contains the three bold-marker blocks. Each
+ *  block runs until the next `**Block name:**` marker or end-of-section. */
+function parseCriterionBody(body: string): { studentFacing: string; workedExample: string; facultyFacing: string } {
+  const markers = ['**For students:**', '**Worked example:**', '**Faculty rubric language:**'];
+  const result = { studentFacing: '', workedExample: '', facultyFacing: '' };
+  const keys: Array<keyof typeof result> = ['studentFacing', 'workedExample', 'facultyFacing'];
+
+  // Build an index of marker positions in the body
+  const positions: Array<{ marker: string; index: number; key: keyof typeof result }> = [];
+  for (let i = 0; i < markers.length; i += 1) {
+    const idx = body.indexOf(markers[i]);
+    if (idx !== -1) positions.push({ marker: markers[i], index: idx, key: keys[i] });
+  }
+  positions.sort((a, b) => a.index - b.index);
+
+  for (let i = 0; i < positions.length; i += 1) {
+    const start = positions[i].index + positions[i].marker.length;
+    const end = i + 1 < positions.length ? positions[i + 1].index : body.length;
+    result[positions[i].key] = body.slice(start, end).trim();
+  }
+  return result;
+}
+
+function parseRubricCriteria(sections: Record<string, string>): RubricCriterion[] {
+  const out: RubricCriterion[] = [];
+  // Match "Criterion 1: Name — 30 pts" with em-dash, en-dash, or "--"
+  const headingRe = /^Criterion\s+(\d+(?:\.\d+)?)\s*:\s*(.+?)\s*(?:—|–|--)\s*(\d+)\s*pts?$/i;
+  for (const [heading, body] of Object.entries(sections)) {
+    const m = heading.match(headingRe);
+    if (!m) continue;
+    const parsed = parseCriterionBody(body);
+    out.push({
+      number: m[1],
+      name: m[2].trim(),
+      points: parseInt(m[3], 10),
+      ...parsed,
+    });
+  }
+  return out;
+}
+
+function renderRubric(c: PageContent, cfg: CourseConfig): string {
+  const week = c.frontMatter.week;
+  const totalPoints = typeof c.frontMatter.points === 'number' ? c.frontMatter.points : undefined;
+  const assignNum = c.frontMatter.assignmentNumber ?? '';
+  const title = c.frontMatter.title || `Rubric — Assignment ${assignNum}`.trim();
+  const meta = [
+    assignNum ? `Assignment ${assignNum}` : '',
+    totalPoints !== undefined ? `${totalPoints} pts total` : '',
+  ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+
+  const criteria = parseRubricCriteria(c.sections);
+
+  // Intro callout — "use this rubric to self-check; download below for LLM-paste"
+  const intro = callout(
+    `<p style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.7; color: #1A1A1A; margin: 0 0 8px;"><strong>How to use this rubric:</strong> read each criterion, look at the worked example, then compare your work to it before you submit. The worked examples are the clearest guide to what full credit looks like.</p>` +
+    `<p style="font-family: Lato, sans-serif; font-size: 14px; color: #555550; margin: 8px 0 0;">Want personalized help? Download this rubric as a markdown file (saved next to this page as <code>rubric.md</code>) and paste it into an LLM along with your work. Use it to start a conversation, not to outsource the thinking.</p>`,
+    cfg,
+  );
+
+  const criterionCards = criteria.map(cr => `
+<div style="background: #ffffff; border: 1px solid #e0e0d8; border-radius: 8px; padding: 20px 24px; margin-bottom: 16px;">
+  <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px;">
+    <h3 style="font-family: Lato, sans-serif; font-size: 18px; font-weight: 700; color: #1A1A1A; margin: 0;">${escapeHtml(cr.number)}. ${escapeHtml(cr.name)}</h3>
+    <span style="font-family: Lato, sans-serif; font-size: 14px; font-weight: 700; color: ${cfg.colors.primary};">${cr.points} pts</span>
+  </div>
+
+  <div style="background: ${cfg.colors.primaryLight}; border-left: 4px solid ${cfg.colors.primary}; border-radius: 0 6px 6px 0; padding: 12px 16px; margin-bottom: 12px;">
+    <p style="font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: ${cfg.colors.primary}; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 1px;">For Students</p>
+    <div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.7; color: #1A1A1A;">${markdownToHtml(cr.studentFacing || '_(no student-facing explanation yet)_')}</div>
+  </div>
+
+  <div style="background: #EAF3DE; border-left: 4px solid #3B6D11; border-radius: 0 6px 6px 0; padding: 12px 16px; margin-bottom: 12px;">
+    <p style="font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: #3B6D11; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 1px;">Worked Example</p>
+    <div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.7; color: #1A1A1A;">${markdownToHtml(cr.workedExample || '_(no worked example yet)_')}</div>
+  </div>
+
+  ${cr.facultyFacing ? `<details style="margin-top: 8px;"><summary style="font-family: Lato, sans-serif; font-size: 13px; color: #555550; cursor: pointer;">Faculty rubric language</summary><div style="font-family: Lato, sans-serif; font-size: 14px; line-height: 1.65; color: #555550; padding: 8px 12px 0;">${markdownToHtml(cr.facultyFacing)}</div></details>` : ''}
+</div>
+`.trim());
+
+  const notes = c.sections['Notes for students'] ?? c.sections['Notes for Students'] ?? '';
+  const notesCard = notes ? card(
+    sectionHeading('Notes for students') +
+    `<div style="font-family: Lato, sans-serif; font-size: 15px; line-height: 1.75; color: #1A1A1A;">${markdownToHtml(notes)}</div>`
+  ) : '';
+
+  return wrap([
+    heroHtml(cfg, 'rubric', week, title, meta, c.frontMatter.heroImage),
+    intro,
+    ...criterionCards,
+    notesCard,
+  ]);
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function renderCustom(c: PageContent, cfg: CourseConfig): string {
   const week = c.frontMatter.week;
   const title = c.frontMatter.title || 'Custom Page';
@@ -508,6 +620,13 @@ export function renderPage(
   // its own internal structure (tables, brand divs, callouts, whatever).
   if (content.verbatimBody !== undefined) {
     return wrap([content.verbatimBody]);
+  }
+
+  // Rubric pages have a fundamentally different shape (criteria as repeating
+  // cards with student-facing + worked-example + faculty-facing blocks)
+  // that doesn't map onto the slot-based template registry. Render directly.
+  if (content.pageType === 'rubric') {
+    return renderRubric(content, config);
   }
 
   // Load the structured layout from the template registry
