@@ -12,7 +12,10 @@ const FIXTURE_CONTENT: Record<WidgetKind, Record<string, unknown>> = {
     items: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }, { id: 'c', label: 'C' }],
     correctOrder: ['a', 'b', 'c'],
   },
-  'drag-to-categorize': {} as Record<string, unknown>,
+  'drag-to-categorize': {
+    items: [{ id: 'a', label: 'A', correctBin: 'b1' }],
+    bins: [{ id: 'b1', label: 'B1' }, { id: 'b2', label: 'B2' }],
+  },
   'branching-scenario': {} as Record<string, unknown>,
   'multi-step-reveal': {} as Record<string, unknown>,
   'hotspot-image': {} as Record<string, unknown>,
