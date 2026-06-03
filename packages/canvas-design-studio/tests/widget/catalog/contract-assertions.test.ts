@@ -8,7 +8,10 @@ import type { InteractiveSpec, WidgetKind } from '../../../src/tools/widget/type
 const FIXTURE_CONTENT: Record<WidgetKind, Record<string, unknown>> = {
   'card-flip-reveal': { cards: [{ front: 'F', back: 'B' }] },
   // Plan B will populate the rest.
-  'sortable-ordering': {} as Record<string, unknown>,
+  'sortable-ordering': {
+    items: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }, { id: 'c', label: 'C' }],
+    correctOrder: ['a', 'b', 'c'],
+  },
   'drag-to-categorize': {} as Record<string, unknown>,
   'branching-scenario': {} as Record<string, unknown>,
   'multi-step-reveal': {} as Record<string, unknown>,
