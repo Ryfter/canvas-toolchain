@@ -1,63 +1,18 @@
+// Compat shim — real implementation lives in @canvas-toolchain/shared-llm.
+// Existing imports of `LlmClient`, `LlmResponse`, `AnthropicLlmClient` continue to work
+// but new construction now requires passing AnthropicConfig.
+export type { LlmClient, LlmResponse, AnthropicConfig } from '@canvas-toolchain/shared-llm';
+export { AnthropicLlmClient as SharedAnthropicLlmClient } from '@canvas-toolchain/shared-llm';
+
+import { AnthropicLlmClient as SharedClient } from '@canvas-toolchain/shared-llm';
 import { loadAnthropicConfig } from '../setup_anthropic.js';
 
-export interface LlmResponse {
-  text: string;
-  usage?: { inputTokens: number; outputTokens: number };
-}
-
-export interface LlmClient {
-  /** Send a system + user prompt to the LLM and return the response text +
-   *  usage metadata. Implementations: production (Anthropic API), test (mock). */
-  complete(systemPrompt: string, userPrompt: string, opts?: { model?: string; maxTokens?: number }): Promise<LlmResponse>;
-}
-
-interface AnthropicResponse {
-  content: Array<{ type: string; text?: string }>;
-  usage?: { input_tokens?: number; output_tokens?: number };
-}
-
-/** Production LLM client that calls api.anthropic.com using the key stored
- *  by setup_anthropic. */
-export class AnthropicLlmClient implements LlmClient {
-  async complete(
-    systemPrompt: string,
-    userPrompt: string,
-    opts: { model?: string; maxTokens?: number } = {},
-  ): Promise<LlmResponse> {
+/** Backward-compat wrapper that auto-loads config from setup_anthropic, so existing
+ *  callers (and tests) don't need to be updated immediately. New code should use
+ *  SharedAnthropicLlmClient directly with explicit config. */
+export class AnthropicLlmClient extends SharedClient {
+  constructor() {
     const cfg = loadAnthropicConfig();
-    const model = opts.model ?? cfg.model;
-    const maxTokens = opts.maxTokens ?? 4096;
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': cfg.apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-      }),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text().catch(() => '');
-      throw new Error(`Anthropic API ${response.status}: ${detail.slice(0, 200)}`);
-    }
-
-    const payload = await response.json() as AnthropicResponse;
-    const text = (payload.content ?? [])
-      .filter(c => c.type === 'text' && typeof c.text === 'string')
-      .map(c => c.text as string)
-      .join('');
-    return {
-      text,
-      usage: payload.usage
-        ? { inputTokens: payload.usage.input_tokens ?? 0, outputTokens: payload.usage.output_tokens ?? 0 }
-        : undefined,
-    };
+    super({ apiKey: cfg.apiKey, model: cfg.model });
   }
 }

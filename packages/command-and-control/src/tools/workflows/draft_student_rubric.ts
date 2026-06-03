@@ -5,7 +5,8 @@ import type {
 } from '../rubric/types.js';
 import { SYSTEM_PROMPT, buildUserPrompt } from '../rubric/prompts.js';
 import { renderRubricMarkdown } from '../rubric/render_md.js';
-import { AnthropicLlmClient, type LlmClient } from '../rubric/llm_client.js';
+import { AnthropicLlmClient, type LlmClient } from '@canvas-toolchain/shared-llm';
+import { loadAnthropicConfig } from '../setup_anthropic.js';
 
 export interface DraftStudentRubricHooks {
   /** Injectable LLM client for testing. Production uses AnthropicLlmClient. */
@@ -66,7 +67,7 @@ export async function draftStudentRubric(
   input: DraftStudentRubricInput,
   hooks: DraftStudentRubricHooks = {},
 ): Promise<DraftStudentRubricResult> {
-  const llm = hooks.llm ?? new AnthropicLlmClient();
+  const llm = hooks.llm ?? new AnthropicLlmClient(loadAnthropicConfig());
 
   const systemPrompt = SYSTEM_PROMPT;
   const userPrompt = buildUserPrompt(input);
