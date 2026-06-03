@@ -2,6 +2,44 @@ import { readFileSync } from 'node:fs';
 import type { CourseConfig, PageContent, PageFrontMatter, PageType } from '../course-types.js';
 import { loadTemplate } from '../utils/registry.js';
 
+/**
+ * Replace `{{ widget:<id> }}` placeholders in rendered HTML with a local
+ * <iframe> pointing at `<pageSlug>/widgets/<id>.html` (relative to the
+ * generated page's output directory). Faculty can open the rendered HTML in
+ * a browser locally and see the widget render in context before publishing.
+ *
+ * Runs on the FINAL post-markdown HTML so the iframe tag survives the
+ * markdown→HTML conversion intact. Any wrapping `<p>...</p>` whose entire
+ * content is a single placeholder is also stripped — `<iframe>` inside
+ * `<p>` is invalid HTML, and the markdown converter wraps standalone
+ * paragraph-level placeholders in `<p>` by default.
+ *
+ * Widget id grammar: lowercase letters, digits, and hyphens. The id is
+ * also used as the iframe's accessible title and as the filename of the
+ * widget asset (no extension manipulation).
+ *
+ * @param html The rendered HTML for a page (post markdown→HTML).
+ * @param pageSlug The page's filename stem (e.g., `assignment`, `overview`)
+ *   — used to compute the iframe `src` so the widget loads from the
+ *   sibling `<pageSlug>/widgets/` directory.
+ */
+export function substituteWidgetPlaceholders(html: string, pageSlug: string): string {
+  const widgetRe = /\{\{\s*widget:([a-z0-9-]+)\s*\}\}/g;
+  const iframeFor = (widgetId: string): string =>
+    `<iframe src="${pageSlug}/widgets/${widgetId}.html" width="100%" height="400" style="min-height:200px;border:0;" title="${widgetId} widget" sandbox="allow-scripts allow-same-origin allow-forms" loading="lazy">Widget preview unavailable; open ${pageSlug}/widgets/${widgetId}.html directly.</iframe>`;
+
+  // First pass: unwrap `<p style="...">{{ widget:foo }}</p>` so the iframe
+  // doesn't end up inside an invalid `<p>` parent. Matches the wrapping
+  // paragraph emitted by markdownToHtml above.
+  let out = html.replace(
+    /<p[^>]*>\s*(\{\{\s*widget:[a-z0-9-]+\s*\}\})\s*<\/p>/g,
+    '$1',
+  );
+  // Second pass: replace any remaining inline placeholders.
+  out = out.replace(widgetRe, (_, widgetId: string) => iframeFor(widgetId));
+  return out;
+}
+
 export function markdownToHtml(md: string): string {
   const trimmed = md.trim();
   if (!trimmed) return '';
