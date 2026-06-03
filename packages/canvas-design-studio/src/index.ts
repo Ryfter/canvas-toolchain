@@ -50,6 +50,7 @@ import { parseWorksheet, validateWorksheet } from './utils/worksheet.js';
 import { validateWorksheetTool, formatWorksheetErrors } from './tools/validate-worksheet.js';
 import { fetchBrandColors } from './tools/fetch-brand-colors.js';
 import { renderWidget } from './tools/render-widget.js';
+import { publishWidget } from './tools/publish-widget.js';
 
 async function main() {
   if (!configExists()) {
@@ -445,6 +446,24 @@ async function main() {
             allowExperimental: { type: 'boolean', description: 'If true, kinds not in the catalog are rendered via the LLM-generated path. Default false.' },
           },
           required: ['specPath'],
+        },
+      },
+      {
+        name: 'publish_widget',
+        description: 'Upload a rendered widget HTML file to Canvas Files and return the iframe embed code. Faculty typically does not call this directly; publish_course invokes it for every widget reference in a published course folder.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            htmlPath: { type: 'string', description: 'Absolute path to the rendered <id>.html file.' },
+            courseId: { type: 'number', description: 'Canvas course id where the widget should be uploaded.' },
+            canvasConfig: {
+              type: 'object',
+              properties: { host: { type: 'string' }, token: { type: 'string' } },
+              required: ['host', 'token'],
+            },
+            widgetSpec: { type: 'object', description: 'The InteractiveSpec the HTML was rendered from. Used for the iframe title, dimensions, and SR fallback.' },
+          },
+          required: ['htmlPath', 'courseId', 'canvasConfig', 'widgetSpec'],
         },
       },
       {
@@ -908,6 +927,11 @@ async function main() {
 
       if (name === 'render_widget') {
         const result = await renderWidget(args as { specPath: string; allowExperimental?: boolean });
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (name === 'publish_widget') {
+        const result = await publishWidget(args as unknown as Parameters<typeof publishWidget>[0]);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
