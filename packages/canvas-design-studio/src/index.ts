@@ -49,6 +49,7 @@ import { getSetupWorksheet } from './tools/get-setup-worksheet.js';
 import { parseWorksheet, validateWorksheet } from './utils/worksheet.js';
 import { validateWorksheetTool, formatWorksheetErrors } from './tools/validate-worksheet.js';
 import { fetchBrandColors } from './tools/fetch-brand-colors.js';
+import { renderWidget } from './tools/render-widget.js';
 
 async function main() {
   if (!configExists()) {
@@ -432,6 +433,18 @@ async function main() {
             },
           },
           required: ['url'],
+        },
+      },
+      {
+        name: 'render_widget',
+        description: 'Render an InteractiveSpec to a self-contained Canvas-embeddable HTML widget file. Writes <spec-id>.html next to the spec. For a kind not in the catalog, pass allowExperimental: true to use the LLM-generated path (when available — currently stubbed).',
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            specPath: { type: 'string', description: 'Absolute path to the .spec.json file.' },
+            allowExperimental: { type: 'boolean', description: 'If true, kinds not in the catalog are rendered via the LLM-generated path. Default false.' },
+          },
+          required: ['specPath'],
         },
       },
       {
@@ -891,6 +904,11 @@ async function main() {
       if (name === 'fetch_brand_colors') {
         const { url } = args as { url: string };
         return { content: [{ type: 'text', text: await fetchBrandColors(url) }] };
+      }
+
+      if (name === 'render_widget') {
+        const result = await renderWidget(args as { specPath: string; allowExperimental?: boolean });
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       }
 
       if (name === 'validate_worksheet') {
