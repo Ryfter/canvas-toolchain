@@ -91,6 +91,19 @@ export interface PreviewManifest {
   };
 }
 
+export interface WidgetPublishResult {
+  /** Widget id from the iframe src (e.g., "data-types-categorize"). */
+  id: string;
+  /** Per-widget status — fail-soft: one widget's failure does not abort
+   *  the rest of the page or sibling widgets. */
+  status: 'published' | 'failed';
+  /** Set on success — the Canvas Files API file_id (changes on every overwrite,
+   *  per Phase 0 finding 2026-06-03; iframe src is rewritten in lockstep). */
+  canvasFileId?: number;
+  /** Set on failure — human-readable reason. */
+  error?: string;
+}
+
 export interface PublishedEntry {
   filename: string;
   type: 'page' | 'assignment';
@@ -101,6 +114,11 @@ export interface PublishedEntry {
   canvasPageSlug?: string;
   action: 'updated' | 'created';
   publishedAt: string;
+  /** Per-widget results when the page contained {{ widget:<id> }} placeholders
+   *  rendered into local-relative <iframe> by generate_course. Each widget was
+   *  uploaded via publish_widget and the iframe src rewritten to the Canvas
+   *  Files URL before the page HTML was pushed. Omitted when no widgets. */
+  widgets?: WidgetPublishResult[];
 }
 
 export interface FailedEntry {

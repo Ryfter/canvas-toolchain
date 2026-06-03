@@ -3,14 +3,21 @@ import { join } from 'node:path';
 import { publishToCanvas } from 'canvas-design-mcp/dist/tools/publish.js';
 import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
 import { CanvasApiClient, CanvasApiError } from 'canvas-design-mcp/dist/canvas-api.js';
+import { publishWidget as publishWidgetReal } from 'canvas-design-mcp/dist/tools/publish-widget.js';
 import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
 import {
   readManifest, readState, writeState, snapshotDir,
 } from '../publish/snapshot_store.js';
 import { validateApprovals } from '../publish/approvals.js';
 import { detectGitState, gitCommitPrePublish, gitTagSuccess, gitPushTag } from '../publish/git_state.js';
+import {
+  discoverWidgetRefs,
+  substituteWidgetIframeSrc,
+  resolveWidgetFiles,
+  loadWidgetSpec,
+} from '../publish/widget_discovery.js';
 import type {
-  PreviewManifest, PublishState, PublishedEntry, FailedEntry,
+  PreviewManifest, PublishState, PublishedEntry, FailedEntry, WidgetPublishResult,
 } from '../publish/manifest_types.js';
 import type { ApprovalMap } from '../publish/approvals.js';
 
@@ -20,6 +27,13 @@ export interface PublishCourseInput {
   resume?: boolean;
   gitCommit?: boolean;
   pushTag?: boolean;
+}
+
+/** Optional dependency-injection hooks for tests. Production callers pass nothing. */
+export interface PublishCourseHooks {
+  /** Override the publish_widget function (canvas-design-mcp). Tests inject a mock
+   *  to avoid round-tripping through real Canvas Files. */
+  publishWidget?: typeof publishWidgetReal;
 }
 
 export interface PublishCourseResult {
@@ -42,7 +56,53 @@ function tagFor(manifest: PreviewManifest): string {
   return `published-${manifest.generatedAt.slice(0, 10)}-${manifest.courseId}`;
 }
 
-export async function publishCourse(input: PublishCourseInput): Promise<PublishCourseResult> {
+/** Process widgets referenced by the page HTML: discover iframe refs, upload each
+ *  via publish_widget, substitute Canvas URLs into the HTML. Per-widget fail-soft —
+ *  a single widget failure leaves its local-relative iframe untouched and records
+ *  the error, but does NOT abort the page or other widgets. */
+async function processPageWidgets(
+  pageHtml: string,
+  courseId: number,
+  courseDir: string,
+  canvasConfig: { host: string; token: string },
+  publishWidgetFn: typeof publishWidgetReal,
+): Promise<{ rewrittenHtml: string; widgets: WidgetPublishResult[] }> {
+  const refs = discoverWidgetRefs(pageHtml);
+  if (refs.length === 0) return { rewrittenHtml: pageHtml, widgets: [] };
+
+  const widgets: WidgetPublishResult[] = [];
+  let html = pageHtml;
+
+  for (const ref of refs) {
+    try {
+      const files = resolveWidgetFiles(courseDir, ref);
+      if (!existsSync(files.htmlPath)) {
+        widgets.push({ id: ref.id, status: 'failed', error: `widget HTML not found at ${files.htmlPath}` });
+        continue;
+      }
+      const spec = loadWidgetSpec(files.specPath);
+      const result = await publishWidgetFn({
+        htmlPath: files.htmlPath,
+        courseId,
+        canvasConfig,
+        widgetSpec: spec,
+      });
+      html = substituteWidgetIframeSrc(html, ref, result.embedSrc);
+      widgets.push({ id: ref.id, status: 'published', canvasFileId: result.canvasFileId });
+    } catch (e) {
+      widgets.push({
+        id: ref.id,
+        status: 'failed',
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  return { rewrittenHtml: html, widgets };
+}
+
+export async function publishCourse(input: PublishCourseInput, hooks: PublishCourseHooks = {}): Promise<PublishCourseResult> {
+  const publishWidgetFn = hooks.publishWidget ?? publishWidgetReal;
   const dir = snapshotDir(input.snapshotId);
   if (!existsSync(dir)) {
     return {
@@ -143,11 +203,22 @@ export async function publishCourse(input: PublishCourseInput): Promise<PublishC
       writeState(dir, { phase: 'partial', published, failed, lastUpdatedAt: failed.failedAt });
       return { snapshotId: input.snapshotId, phase: 'partial', published, failed };
     }
-    const newHtml = readNewHtml(dir, entry.filename);
+    const newHtmlRaw = readNewHtml(dir, entry.filename);
     try {
       if (entry.type === 'page') {
+        // Process any widget iframe references before publishing the page HTML.
+        // The host is derived from canvasUrl (which includes scheme + maybe port);
+        // publish_widget's CanvasConfig wants the bare host.
+        const canvasHost = new URL(cfg.canvasUrl).host;
+        const { rewrittenHtml, widgets } = await processPageWidgets(
+          newHtmlRaw,
+          manifest.courseId,
+          manifest.courseDir,
+          { host: canvasHost, token: cfg.apiToken },
+          publishWidgetFn,
+        );
         const out = await publishToCanvas(
-          { courseId: manifest.courseId, html: newHtml, pageTitle: entry.intendedTitle,
+          { courseId: manifest.courseId, html: rewrittenHtml, pageTitle: entry.intendedTitle,
             collisionAction: entry.canvasMatch ? 'update' : 'create' },
           { canvasUrl: cfg.canvasUrl, apiToken: cfg.apiToken } as any, api as any,
         );
@@ -156,8 +227,10 @@ export async function publishCourse(input: PublishCourseInput): Promise<PublishC
           filename: entry.filename, type: 'page', canvasUrl: out.url, action: out.action,
           canvasPageSlug: entry.canvasMatch?.pageId,
           publishedAt: new Date().toISOString(),
+          ...(widgets.length > 0 ? { widgets } : {}),
         });
       } else if (entry.type === 'assignment') {
+        const newHtml = newHtmlRaw;
         await updateAssignmentDescription(
           manifest.courseId, entry.canvasMatch.assignmentId, newHtml, api as any,
         );
