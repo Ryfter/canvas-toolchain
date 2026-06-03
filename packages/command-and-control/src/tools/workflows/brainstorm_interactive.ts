@@ -2,7 +2,8 @@ import type {
   BrainstormInteractiveInput, BrainstormInteractiveResult, WidgetConcept,
 } from '../brainstorm/types.js';
 import { SYSTEM_PROMPT, buildUserPrompt } from '../brainstorm/prompts.js';
-import { AnthropicLlmClient, type LlmClient } from '../brainstorm/llm_client.js';
+import { AnthropicLlmClient, type LlmClient } from '@canvas-toolchain/shared-llm';
+import { loadAnthropicConfig } from '../setup_anthropic.js';
 
 export interface BrainstormInteractiveHooks {
   /** Injectable LLM client for testing. */
@@ -108,7 +109,7 @@ export async function brainstormInteractive(
   input: BrainstormInteractiveInput,
   hooks: BrainstormInteractiveHooks = {},
 ): Promise<BrainstormInteractiveResult> {
-  const llm = hooks.llm ?? new AnthropicLlmClient();
+  const llm = hooks.llm ?? new AnthropicLlmClient(loadAnthropicConfig());
   const response = await llm.complete(SYSTEM_PROMPT, buildUserPrompt(input), { maxTokens: 4096 });
   const concepts = parseConcepts(response.text);
   return {
