@@ -25,6 +25,21 @@ export interface DiffSummary {
   fullDiff?: string;
 }
 
+export interface WidgetPreviewStatus {
+  /** Widget id (basename of the iframe src, e.g. "data-types-categorize"). */
+  id: string;
+  /** Page slug — first path segment of the iframe src (e.g. "assignment"). */
+  slug: string;
+  /** Local HTML file path the publisher will try to upload. */
+  htmlPath: string;
+  /** Local spec.json path used to derive iframe dimensions + title. */
+  specPath: string;
+  /** `ready` = both HTML and spec exist on disk; publish will attempt upload.
+   *  `missing-html` / `missing-spec` = file not found; publish will record a
+   *  per-widget failure and leave the iframe pointing at the local path. */
+  status: 'ready' | 'missing-html' | 'missing-spec';
+}
+
 export interface PageEntry {
   filename: string;
   pageType: PageType;
@@ -34,6 +49,10 @@ export interface PageEntry {
   collisionAction: 'update' | 'create';
   diff: DiffSummary;
   warnings: Warning[];
+  /** Widget references found in the rendered HTML (from {{ widget:<id> }} placeholders
+   *  expanded by generate_course). Each lists its on-disk paths and a readiness status.
+   *  Omitted when the page has no widget references. */
+  widgets?: WidgetPreviewStatus[];
 }
 
 export interface AssignmentEntry {

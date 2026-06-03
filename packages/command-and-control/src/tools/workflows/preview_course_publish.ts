@@ -12,7 +12,9 @@ import {
   createSnapshotDir, newSnapshotId, writeManifest, writePriorHtml, writeNewHtml,
   writeFullDiff, writeState, findStaleSnapshot,
 } from '../publish/snapshot_store.js';
-import type { PreviewManifest, ManifestEntry } from '../publish/manifest_types.js';
+import { discoverWidgetRefs, resolveWidgetFiles } from '../publish/widget_discovery.js';
+import { existsSync } from 'node:fs';
+import type { PreviewManifest, ManifestEntry, WidgetPreviewStatus } from '../publish/manifest_types.js';
 
 const MATCH_THRESHOLD = 0.8;
 
@@ -54,6 +56,21 @@ function intendedTitleFor(filename: string): string {
     .replace(/\.html$/, '')
     .replace(/[-_]+/g, ' ')
     .replace(/\b([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
+/** Find every widget iframe reference in `html` and report each one's on-disk
+ *  readiness so faculty can see at preview time what will publish later. Status
+ *  surfaces missing files as warnings without blocking the manifest. */
+function buildWidgetStatuses(html: string, courseDir: string): WidgetPreviewStatus[] {
+  const refs = discoverWidgetRefs(html);
+  return refs.map(ref => {
+    const files = resolveWidgetFiles(courseDir, ref);
+    let status: WidgetPreviewStatus['status'];
+    if (!existsSync(files.htmlPath)) status = 'missing-html';
+    else if (!existsSync(files.specPath)) status = 'missing-spec';
+    else status = 'ready';
+    return { id: ref.id, slug: ref.slug, htmlPath: files.htmlPath, specPath: files.specPath, status };
+  });
 }
 
 export async function previewCoursePublish(
@@ -127,6 +144,18 @@ export async function previewCoursePublish(
         message: `Could not fetch current Canvas body for rollback baseline: ${priorFetchError}. Re-run preview_course_publish when Canvas is reachable.`,
       });
     }
+    const widgets = buildWidgetStatuses(p.html, input.courseDir);
+    // Surface any missing widget files as warnings so faculty can see them in the
+    // preview review pass. Not a block — publish handles per-widget failure soft.
+    for (const w of widgets) {
+      if (w.status !== 'ready') {
+        warnings.push({
+          kind: 'validation',
+          severity: 'warn',
+          message: `Widget "${w.id}" (slug "${w.slug}"): ${w.status === 'missing-html' ? 'HTML file' : 'spec.json'} not found at ${w.status === 'missing-html' ? w.htmlPath : w.specPath}. publish_course will skip this widget.`,
+        });
+      }
+    }
     entries.push({
       type: 'page',
       filename: p.filename,
@@ -138,6 +167,7 @@ export async function previewCoursePublish(
       collisionAction: match ? 'update' : 'create',
       diff,
       warnings,
+      ...(widgets.length > 0 ? { widgets } : {}),
     });
   }
 
