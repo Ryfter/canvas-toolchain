@@ -26,7 +26,11 @@ const FIXTURE_CONTENT: Record<WidgetKind, Record<string, unknown>> = {
   'multi-step-reveal': {
     steps: [{ title: 'T1', body: 'B1' }, { title: 'T2', body: 'B2' }],
   },
-  'hotspot-image': {} as Record<string, unknown>,
+  'hotspot-image': {
+    imageUrl: 'data:image/png;base64,iVBORw0KGgo=',
+    imageAlt: 'tiny test image',
+    hotspots: [{ x: 0, y: 0, width: 10, height: 10, label: 'H', info: 'I' }],
+  },
 };
 
 function makeSpec(kind: WidgetKind): InteractiveSpec {
