@@ -23,7 +23,9 @@ const FIXTURE_CONTENT: Record<WidgetKind, Record<string, unknown>> = {
       b: { prompt: 'end', choices: [], isEnd: true },
     },
   },
-  'multi-step-reveal': {} as Record<string, unknown>,
+  'multi-step-reveal': {
+    steps: [{ title: 'T1', body: 'B1' }, { title: 'T2', body: 'B2' }],
+  },
   'hotspot-image': {} as Record<string, unknown>,
 };
 

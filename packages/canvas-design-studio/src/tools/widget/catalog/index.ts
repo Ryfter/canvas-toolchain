@@ -5,6 +5,7 @@ import { cardFlipRevealRenderer } from './card-flip-reveal.js';
 import { sortableOrderingRenderer } from './sortable-ordering.js';
 import { dragToCategorizeRenderer } from './drag-to-categorize.js';
 import { branchingScenarioRenderer } from './branching-scenario.js';
+import { multiStepRevealRenderer } from './multi-step-reveal.js';
 
 /** Registry of all catalog renderers. Plan B adds the remaining 5 entries.
  *  An UNKNOWN kind (not in this map) routes to the experimental renderer
@@ -14,4 +15,5 @@ export const CATALOG: Partial<Record<WidgetKind, Renderer>> = {
   'sortable-ordering': sortableOrderingRenderer,
   'drag-to-categorize': dragToCategorizeRenderer,
   'branching-scenario': branchingScenarioRenderer,
+  'multi-step-reveal': multiStepRevealRenderer,
 };
