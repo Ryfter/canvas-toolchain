@@ -1,12 +1,21 @@
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { restorePage } from 'canvas-design-mcp/dist/tools/restore-page.js';
 import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
 import { CanvasApiClient } from 'canvas-design-mcp/dist/canvas-api.js';
 import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
-import { readManifest, readState, snapshotDir, readPriorHtml, writeState } from '../publish/snapshot_store.js';
+import { readManifest, readState, snapshotDir, readPriorHtml, writeState, snapshotsRootFor, snapshotDirFor } from '../publish/snapshot_store.js';
+import { readPublishStateMeta, updateCurrentlyLive } from '../publish/state_meta.js';
 import type { PublishedEntry, PublishState } from '../publish/manifest_types.js';
 
-export interface RollbackCoursePublishInput { snapshotId: string; }
+export interface RollbackCoursePublishInput {
+  /** Snapshot being undone — the one whose state.phase will become 'rolled-back'. */
+  snapshotId: string;
+  /** NEW: target snapshot to restore TO. When omitted, defaults to the snapshot
+   *  immediately PRIOR to currently-live (matches today's "undo last publish"
+   *  behavior). */
+  targetSnapshotId?: string;
+}
 
 export interface WidgetRollbackResult {
   /** Widget id (matches PublishedEntry.widgets[].id). */
@@ -135,6 +144,37 @@ export async function rollbackCoursePublish(
       }
     } catch (e) {
       restoreFailed.push({ filename: entry.filename, reason: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  // V&R Pattern B: flip the pointer file. Determine the rollback target:
+  // - If input.targetSnapshotId is set, use it directly.
+  // - Otherwise, default to the snapshot immediately PRIOR to input.snapshotId
+  //   from the pointer file's history (matches "undo my last publish" semantics).
+  const snapshotsRoot = snapshotsRootFor(manifest.courseDir);
+  const meta = readPublishStateMeta(snapshotsRoot, manifest.courseId);
+  let pointerTarget: string | null = input.targetSnapshotId ?? null;
+
+  if (!pointerTarget && meta) {
+    const idxOfRolledBack = meta.history.findIndex(h => h.snapshotId === input.snapshotId);
+    if (idxOfRolledBack > 0) {
+      pointerTarget = meta.history[idxOfRolledBack - 1]!.snapshotId;
+    }
+  }
+
+  if (pointerTarget) {
+    updateCurrentlyLive(snapshotsRoot, manifest.courseId, pointerTarget, 'rollback', new Date().toISOString());
+
+    // Update the TARGET snapshot's state.phase to 'restored' and bump restoredCount.
+    const targetDir = snapshotDirFor(pointerTarget, manifest.courseDir);
+    if (existsSync(join(targetDir, 'state.json'))) {
+      const targetState = readState(targetDir);
+      writeState(targetDir, {
+        ...targetState,
+        phase: 'restored',
+        restoredCount: (targetState.restoredCount ?? 0) + 1,
+        lastUpdatedAt: new Date().toISOString(),
+      });
     }
   }
 
