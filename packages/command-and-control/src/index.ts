@@ -51,6 +51,10 @@ import {
   rollbackCoursePublish,
   type RollbackCoursePublishInput,
 } from './tools/workflows/rollback_course_publish.js';
+import {
+  listPublishSnapshots,
+  type ListPublishSnapshotsInput,
+} from './tools/workflows/list_publish_snapshots.js';
 import { snapshotCourse } from './tools/workflows/snapshot_course.js';
 import type { SnapshotInput } from './tools/snapshot/types.js';
 import { draftStudentRubric } from './tools/workflows/draft_student_rubric.js';
@@ -325,6 +329,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'list_publish_snapshots',
+      description: 'List all publish snapshots for a course in oldest-to-newest order, showing which is currently live in Canvas and which can be rolled back to / rolled forward to. Pipe the snapshotId from a row into rollback_course_publish to restore that version.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId', 'courseDir'],
+        properties: {
+          courseId: { type: 'number', description: 'Canvas course numeric ID.' },
+          courseDir: { type: 'string', description: 'Canvas Design Studio course folder (used to locate the project-local snapshots dir).' },
+        },
+      },
+    },
+    {
       name: 'snapshot_course',
       description: 'Write or update a course reference markdown doc capturing course identifiers, assignment groups, modules, and an append-only Update Log. Re-running against the same outputPath regenerates the auto-managed sections (delimited by AUTO:start/AUTO:end HTML comment markers) and preserves all hand-edited prose around them.',
       inputSchema: {
@@ -555,6 +571,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'rollback_course_publish':
         result = await rollbackCoursePublish(args as unknown as RollbackCoursePublishInput);
+        break;
+      case 'list_publish_snapshots':
+        result = await listPublishSnapshots(args as unknown as ListPublishSnapshotsInput);
         break;
       case 'snapshot_course':
         result = await snapshotCourse(args as unknown as SnapshotInput);
