@@ -10,6 +10,8 @@ import {
 } from '../publish/snapshot_store.js';
 import { snapshotsRootFor } from '../publish/snapshot_store.js';
 import { updateCurrentlyLive } from '../publish/state_meta.js';
+import { pruneSnapshots, type PruneSnapshotsResult } from '../publish/pruning.js';
+import { cleanupCanvasBreadcrumbsForSnapshot } from '../publish/breadcrumbs.js';
 import { validateApprovals } from '../publish/approvals.js';
 import { detectGitState, gitCommitPrePublish, gitTagSuccess, gitPushTag } from '../publish/git_state.js';
 import { detectBackupState } from '../publish/backup_detection.js';
@@ -52,6 +54,9 @@ export interface PublishCourseResult {
   fix?: string[];
   /** NEW (V&R Plan C): backup recommendation at publish time. */
   backup?: BackupStatus;
+  /** NEW (V&R Plan C): auto-prune summary. Failure is swallowed; an empty result
+   *  here means pruning errored, not that there was nothing to prune. */
+  pruning?: PruneSnapshotsResult;
 }
 
 function readNewHtml(dir: string, filename: string): string {
@@ -281,5 +286,20 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
   updateCurrentlyLive(snapshotsRoot, manifest.courseId, input.snapshotId, 'publish', new Date().toISOString());
 
   writeState(dir, { phase: 'published', published, lastUpdatedAt: new Date().toISOString() });
-  return { snapshotId: input.snapshotId, phase: 'published', published, gitTag, pushResult, backup };
+
+  // V&R Plan C: auto-prune after a successful publish. Failure here must NEVER
+  // mask a successful publish — swallow the error, return an empty pruning result.
+  const pruning = await pruneSnapshots({
+    courseId: manifest.courseId,
+    courseDir: manifest.courseDir,
+    dryRun: false,
+    onBeforeDelete: (snapshotId) =>
+      cleanupCanvasBreadcrumbsForSnapshot({
+        snapshotId,
+        courseId: manifest.courseId,
+        courseDir: manifest.courseDir,
+      }),
+  }).catch((): PruneSnapshotsResult => ({ wouldPrune: [], pruned: [], kept: 0 }));
+
+  return { snapshotId: input.snapshotId, phase: 'published', published, gitTag, pushResult, backup, pruning };
 }
