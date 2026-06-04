@@ -149,9 +149,36 @@ export interface FailedEntry {
 }
 
 export interface PublishState {
-  phase: 'preview' | 'partial' | 'published' | 'rolled-back';
+  phase: 'preview' | 'partial' | 'published' | 'rolled-back' | 'restored';
   published: PublishedEntry[];
   /** Singular by design: spec R2 (stop-on-failure) halts publishing on the first failure, so at most one entry is recorded here. */
   failed?: FailedEntry;
   lastUpdatedAt: string;
+  /** NEW: incremented each time this snapshot becomes currently-live via rollback or roll-forward.
+   *  Diagnostic only; not load-bearing for restore logic. */
+  restoredCount?: number;
+}
+
+/** Tracks the currently-live snapshot per course. Lives at the top level of the
+ *  snapshots dir (NOT inside any specific snapshot's directory). Pattern B
+ *  rollback updates this pointer rather than creating new snapshot dirs. */
+export interface PublishStateMeta {
+  courseId: number;
+  /** Snapshot whose content matches what's currently live in Canvas. Null when
+   *  no successful publish has happened yet. */
+  currentlyLiveSnapshotId: string | null;
+  /** ISO timestamp when currentlyLiveSnapshotId was last updated. */
+  currentlyLiveSince: string;
+  /** Append-only audit log. Each entry records when a snapshot became live and
+   *  via what mechanism. Pruned snapshots leave their history[] entries here
+   *  (faculty can see "you've published 12 times this semester, 3 still on disk"). */
+  history: PublishStateMetaHistoryEntry[];
+}
+
+export interface PublishStateMetaHistoryEntry {
+  snapshotId: string;
+  becameLiveAt: string;
+  /** Unset for the currently-live entry. */
+  becameStaleAt?: string;
+  becameLiveVia: 'publish' | 'rollback' | 'roll-forward';
 }
