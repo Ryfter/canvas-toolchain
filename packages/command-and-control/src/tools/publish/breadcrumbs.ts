@@ -4,6 +4,12 @@
  *  [ARCHIVED] + unpublished, files copied to /canvas-toolchain-archive/<date>/).
  *  Tasks C4.1, C4.2, C4.3. */
 
+import { existsSync } from 'node:fs';
+import { loadInstitutionConfig } from './canvas_config_bridge.js';
+import { snapshotDir, snapshotDirFor } from './snapshot_store.js';
+import { readPagesMeta } from './pages_meta.js';
+import { readWidgetsMeta } from './widgets_meta.js';
+
 export interface BreadcrumbCleanupResult {
   canvasBreadcrumbsCleaned: boolean;
   errors: Array<{ resource: string; reason: string }>;
@@ -171,13 +177,105 @@ export async function uploadWidgetBreadcrumb(
 }
 
 // =============================================================================
-// Task C4.3 — Cleanup at prune (stub until C4.3 ships)
+// Task C4.3 — Cleanup at prune
 // =============================================================================
 
-export async function cleanupCanvasBreadcrumbsForSnapshot(_input: {
+/** Resolve the snapshot directory for cleanup. The pruner iterates project-local
+ *  snapshots, but the publish workflow today writes meta sidecars to whichever
+ *  directory `snapshotDir(id)` returned (legacy global). Try both layouts so we
+ *  find the meta files wherever they live. */
+function resolveSnapshotDirForCleanup(snapshotId: string, courseDir: string): string | undefined {
+  try {
+    const projectLocal = snapshotDirFor(snapshotId, courseDir);
+    if (existsSync(projectLocal)) return projectLocal;
+  } catch { /* fall through */ }
+  try {
+    const legacy = snapshotDir(snapshotId);
+    if (existsSync(legacy)) return legacy;
+  } catch { /* fall through */ }
+  return undefined;
+}
+
+export async function cleanupCanvasBreadcrumbsForSnapshot(input: {
   snapshotId: string;
   courseId: number;
   courseDir: string;
 }): Promise<BreadcrumbCleanupResult> {
-  return { canvasBreadcrumbsCleaned: false, errors: [] };
+  const errors: Array<{ resource: string; reason: string }> = [];
+  let any = false;
+
+  let cfg;
+  try { cfg = loadInstitutionConfig(); }
+  catch {
+    return {
+      canvasBreadcrumbsCleaned: false,
+      errors: [{ resource: 'canvas-config', reason: 'MISSING_API_TOKEN' }],
+    };
+  }
+
+  const host = new URL(cfg.canvasUrl).host;
+  const authHeader = { Authorization: `Bearer ${cfg.apiToken}` };
+  const baseUrl = `https://${host}/api/v1`;
+
+  const dir = resolveSnapshotDirForCleanup(input.snapshotId, input.courseDir);
+  if (!dir) {
+    // No meta sidecars to clean up — treat as a no-op.
+    return { canvasBreadcrumbsCleaned: false, errors: [] };
+  }
+
+  const pagesMeta = readPagesMeta(dir);
+  const widgetsMeta = readWidgetsMeta(dir);
+
+  // Delete archived pages
+  for (const [, entry] of Object.entries(pagesMeta.pages)) {
+    if (!entry.canvasBreadcrumb) continue;
+    any = true;
+    const slug = entry.canvasBreadcrumb.archivedPageSlug;
+    try {
+      const res = await fetch(`${baseUrl}/courses/${input.courseId}/pages/${slug}`, {
+        method: 'DELETE',
+        headers: authHeader,
+      });
+      if (!res.ok && res.status !== 404) {
+        errors.push({ resource: `page:${slug}`, reason: `${res.status}` });
+      }
+    } catch (e) {
+      errors.push({ resource: `page:${slug}`, reason: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  // Delete archived widget files + remember their containing date folders
+  const dateFolderIds = new Set<number>();
+  for (const [, entry] of Object.entries(widgetsMeta.widgets)) {
+    if (!entry.canvasBreadcrumb) continue;
+    any = true;
+    dateFolderIds.add(entry.canvasBreadcrumb.folderId);
+    const fileId = entry.canvasBreadcrumb.breadcrumbFileId;
+    try {
+      const res = await fetch(`${baseUrl}/files/${fileId}`, {
+        method: 'DELETE',
+        headers: authHeader,
+      });
+      if (!res.ok && res.status !== 404) {
+        errors.push({ resource: `file:${fileId}`, reason: `${res.status}` });
+      }
+    } catch (e) {
+      errors.push({ resource: `file:${fileId}`, reason: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  // Best-effort: delete empty date folders
+  for (const folderId of dateFolderIds) {
+    try {
+      const list = await fetch(`${baseUrl}/folders/${folderId}/files`, { headers: authHeader });
+      const files = await list.json() as unknown;
+      if (Array.isArray(files) && files.length === 0) {
+        await fetch(`${baseUrl}/folders/${folderId}?force=true`, { method: 'DELETE', headers: authHeader });
+      }
+    } catch {
+      // best-effort — silent
+    }
+  }
+
+  return { canvasBreadcrumbsCleaned: any && errors.length === 0, errors };
 }

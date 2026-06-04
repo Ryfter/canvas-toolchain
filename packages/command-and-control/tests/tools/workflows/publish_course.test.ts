@@ -72,7 +72,9 @@ describe('publishCourse', () => {
     seedSnapshot('snap-1', [PAGE_ENTRY('a.html', 'A'), PAGE_ENTRY('b.html', 'B')]);
     vi.mocked(publishToCanvas).mockResolvedValue({ url: 'https://x', action: 'updated', pageTitle: 'A', tip: '' });
 
-    const r = await publishCourse({ snapshotId: 'snap-1', approvals: { 'a.html': 'approve', 'b.html': 'approve' } });
+    // canvasBreadcrumbs:false suppresses the breadcrumb POST, which would otherwise
+    // try to hit real Canvas (no fetch stub in this test file).
+    const r = await publishCourse({ snapshotId: 'snap-1', approvals: { 'a.html': 'approve', 'b.html': 'approve' }, canvasBreadcrumbs: false });
 
     expect(r.published).toHaveLength(2);
     expect(r.failed).toBeUndefined();
@@ -85,7 +87,7 @@ describe('publishCourse', () => {
       .mockResolvedValueOnce({ url: 'https://x', action: 'updated', pageTitle: 'A', tip: '' })
       .mockResolvedValueOnce({ error: 'rate limited', code: 'CANVAS_RATE_LIMITED' });
 
-    const r = await publishCourse({ snapshotId: 'snap-2', approvals: { 'a.html': 'approve', 'b.html': 'approve' } });
+    const r = await publishCourse({ snapshotId: 'snap-2', approvals: { 'a.html': 'approve', 'b.html': 'approve' }, canvasBreadcrumbs: false });
 
     expect(r.published).toHaveLength(1);
     expect(r.failed?.filename).toBe('b.html');
@@ -108,7 +110,7 @@ describe('publishCourse', () => {
     });
     vi.mocked(publishToCanvas).mockResolvedValueOnce({ url: 'https://x/b', action: 'updated', pageTitle: 'B', tip: '' });
 
-    const r = await publishCourse({ snapshotId: 'snap-4', approvals: { 'a.html': 'approve', 'b.html': 'approve' }, resume: true });
+    const r = await publishCourse({ snapshotId: 'snap-4', approvals: { 'a.html': 'approve', 'b.html': 'approve' }, resume: true, canvasBreadcrumbs: false });
 
     expect(publishToCanvas).toHaveBeenCalledTimes(1);
     expect(r.published.find(p => p.filename === 'b.html')).toBeDefined();
