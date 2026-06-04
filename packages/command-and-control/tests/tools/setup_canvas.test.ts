@@ -25,6 +25,7 @@ afterEach(() => {
 });
 
 import { setupCanvas, loadCanvasConfig } from '../../src/tools/setup_canvas.js';
+import type { CanvasSetupConfig } from '../../src/tools/setup_canvas.js';
 
 const TEST_INPUT = {
   host: 'bsu.instructure.com',
@@ -117,6 +118,29 @@ describe('setupCanvas', () => {
 
     const saved = JSON.parse(readFileSync(join(tmpHome, 'canvas-config.json'), 'utf-8'));
     expect(saved.host).toBe('bsu.instructure.com');
+  });
+});
+
+describe('CanvasSetupConfig', () => {
+  it('snapshotsLocation is optional', () => {
+    const cfg: CanvasSetupConfig = {
+      host: 'example.com',
+      token: 'x',
+      configuredAt: '2026-06-04T00:00:00.000Z',
+      lastValidatedAt: '2026-06-04T00:00:00.000Z',
+    };
+    expect(cfg.snapshotsLocation).toBeUndefined();
+  });
+
+  it('accepts snapshotsLocation when set', () => {
+    const cfg: CanvasSetupConfig = {
+      host: 'example.com',
+      token: 'x',
+      configuredAt: '2026-06-04T00:00:00.000Z',
+      lastValidatedAt: '2026-06-04T00:00:00.000Z',
+      snapshotsLocation: 'project',
+    };
+    expect(cfg.snapshotsLocation).toBe('project');
   });
 });
 

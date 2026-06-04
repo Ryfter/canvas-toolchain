@@ -7,6 +7,11 @@ export interface CanvasSetupConfig {
   token: string;
   configuredAt: string;
   lastValidatedAt: string;
+  /** Where new snapshots get written. 'project' = <courseDir>/.canvas-toolchain/publish-snapshots/
+   *  (git-trackable, faculty-portable). 'global' = ~/.command-and-control/publish-snapshots/
+   *  (legacy, machine-bound). Default: 'project'. Existing snapshots in either location
+   *  remain readable via the snapshot_location fallback resolver. */
+  snapshotsLocation?: 'project' | 'global';
 }
 
 export interface SetupCanvasInput {
