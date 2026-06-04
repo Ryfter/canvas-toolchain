@@ -68,7 +68,7 @@ function buildWidgetStatuses(html: string, courseDir: string): WidgetPreviewStat
     let status: WidgetPreviewStatus['status'];
     if (!existsSync(files.htmlPath)) status = 'missing-html';
     else if (!existsSync(files.specPath)) status = 'missing-spec';
-    else status = 'ready';
+    else status = 'new';
     return { id: ref.id, slug: ref.slug, htmlPath: files.htmlPath, specPath: files.specPath, status };
   });
 }
@@ -148,7 +148,7 @@ export async function previewCoursePublish(
     // Surface any missing widget files as warnings so faculty can see them in the
     // preview review pass. Not a block — publish handles per-widget failure soft.
     for (const w of widgets) {
-      if (w.status !== 'ready') {
+      if (w.status === 'missing-html' || w.status === 'missing-spec') {
         warnings.push({
           kind: 'validation',
           severity: 'warn',

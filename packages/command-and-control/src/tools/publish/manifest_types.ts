@@ -34,10 +34,14 @@ export interface WidgetPreviewStatus {
   htmlPath: string;
   /** Local spec.json path used to derive iframe dimensions + title. */
   specPath: string;
-  /** `ready` = both HTML and spec exist on disk; publish will attempt upload.
-   *  `missing-html` / `missing-spec` = file not found; publish will record a
-   *  per-widget failure and leave the iframe pointing at the local path. */
-  status: 'ready' | 'missing-html' | 'missing-spec';
+  /** V&R Plan B enum:
+   *  - 'new'           — page is new OR no prior widget iframe found referencing this id.
+   *  - 'unchanged'     — prior content hash matches new content hash; nothing to publish.
+   *  - 'changed'       — prior content hash differs from new; will publish + rewrite iframe src.
+   *  - 'missing-html'  — local widget HTML file absent (publish will record failed widget).
+   *  - 'missing-spec'  — local widget spec.json absent.
+   *  The first three values replace #88 Plan B's single 'ready' value. */
+  status: 'new' | 'unchanged' | 'changed' | 'missing-html' | 'missing-spec';
 }
 
 export interface PageEntry {
@@ -181,4 +185,49 @@ export interface PublishStateMetaHistoryEntry {
   /** Unset for the currently-live entry. */
   becameStaleAt?: string;
   becameLiveVia: 'publish' | 'rollback' | 'roll-forward';
+}
+
+/** Per-snapshot widget tracking. Lives at <snapshot>/widgets-meta.json. Records
+ *  enough metadata that rollback can find prior content, re-upload it, and
+ *  rewrite the host page's iframe src.
+ *
+ *  Key format: `<slug>__<id>` (double underscore so single-hyphen slugs and ids
+ *  don't collide — both are common in catalog kind names like 'data-types'). */
+export interface WidgetsMeta {
+  widgets: Record<string, WidgetMetaEntry>;
+}
+
+export interface WidgetMetaEntry {
+  /** Canvas Files file_id of the widget HTML that was live at preview time.
+   *  Null when the widget reference didn't exist in the prior Canvas page HTML. */
+  priorCanvasFileId: number | null;
+  /** SHA-256 of the prior widget HTML content. Null when no prior file. */
+  priorContentHash: string | null;
+  /** SHA-256 of the local widget HTML the publish is about to upload. */
+  newContentHash: string;
+  /** Set after publish_course succeeds — Canvas Files file_id assigned at upload.
+   *  Distinct from priorCanvasFileId because Phase 0 finding: overwrite changes
+   *  the id. Rollback uses this to know which file the publish created. */
+  publishedCanvasFileId?: number;
+  /** Canvas breadcrumb metadata — reserved for the V&R breadcrumb plan; unused here. */
+  canvasBreadcrumb?: { folderId: number; filePath: string; breadcrumbFileId: number };
+}
+
+/** Per-snapshot page tracking. Lives at <snapshot>/pages-meta.json. Drift
+ *  detection (a later V&R plan) compares priorContentHash against a fresh
+ *  fetch at rollback time to surface "page changed in Canvas since preview". */
+export interface PagesMeta {
+  pages: Record<string, PageMetaEntry>;
+}
+
+export interface PageMetaEntry {
+  /** Canvas page slug that was live at preview time. Null when the page is new. */
+  priorCanvasPageSlug: string | null;
+  /** SHA-256 of the prior page HTML at preview time. Null when no prior. */
+  priorContentHash: string | null;
+  /** SHA-256 of the new page HTML the publish is about to push. */
+  newContentHash: string;
+  publishedAt?: string;
+  /** Reserved for breadcrumb plan. */
+  canvasBreadcrumb?: { archivedPageSlug: string; archivedPageId: string };
 }

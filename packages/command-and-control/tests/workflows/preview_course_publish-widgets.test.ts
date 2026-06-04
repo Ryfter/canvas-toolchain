@@ -105,7 +105,7 @@ Submit via Canvas.
 }
 
 describe('previewCoursePublish widget surfacing', () => {
-  it('lists every widget reference under the page entry with ready status', async () => {
+  it('lists every widget reference under the page entry with new status', async () => {
     stubCanvasConfig();
     vi.stubGlobal('fetch', mockCanvasApi());
     const { courseDir } = setupCourse({
@@ -123,7 +123,7 @@ describe('previewCoursePublish widget surfacing', () => {
     expect(pageEntry.widgets).toHaveLength(1);
     expect(pageEntry.widgets[0].id).toBe('foo');
     expect(pageEntry.widgets[0].slug).toBe('overview');
-    expect(pageEntry.widgets[0].status).toBe('ready');
+    expect(pageEntry.widgets[0].status).toBe('new');
     expect(pageEntry.widgets[0].htmlPath).toContain('foo.html');
     expect(pageEntry.widgets[0].specPath).toContain('foo.spec.json');
   });
@@ -187,7 +187,7 @@ describe('previewCoursePublish widget surfacing', () => {
 
     const pageEntry = result.manifest!.entries.find(e => e.type === 'page') as any;
     expect(pageEntry.widgets).toHaveLength(2);
-    expect(pageEntry.widgets.find((w: any) => w.id === 'first').status).toBe('ready');
+    expect(pageEntry.widgets.find((w: any) => w.id === 'first').status).toBe('new');
     expect(pageEntry.widgets.find((w: any) => w.id === 'second').status).toBe('missing-html');
   });
 });
