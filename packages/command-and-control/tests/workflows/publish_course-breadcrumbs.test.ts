@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { publishCourse } from '../../src/tools/workflows/publish_course.js';
@@ -7,6 +7,7 @@ import {
   createSnapshotDir, writeManifest, writePriorHtml, writeNewHtml, writeState,
 } from '../../src/tools/publish/snapshot_store.js';
 import { readPagesMeta } from '../../src/tools/publish/pages_meta.js';
+import { readWidgetsMeta, writeWidgetsMeta } from '../../src/tools/publish/widgets_meta.js';
 import type { PreviewManifest } from '../../src/tools/publish/manifest_types.js';
 
 let ccHome: string;
@@ -222,5 +223,168 @@ describe('publishCourse — page breadcrumbs (V&R C4.1)', () => {
     expect(result.phase).toBe('published');
     const meta = readPagesMeta(dir);
     expect(meta.pages['overview.html']?.canvasBreadcrumb).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// Widget breadcrumb tests (V&R C4.2)
+// =============================================================================
+
+function seedWidgetPageManifest(dir: string, snapshotId: string): void {
+  // Page with one widget iframe; collisionAction 'create' so no page breadcrumb fires.
+  const manifest: PreviewManifest = {
+    snapshotId, courseId: 48895, courseDir,
+    generatedAt: '2026-06-04T12:00:00.000Z',
+    git: { isRepo: false },
+    entries: [{
+      type: 'page', filename: 'assignment.html', pageType: 'assignment',
+      intendedTitle: 'Assignment 1', collisionAction: 'create',
+      diff: { priorWords: null, newWords: 20, delta: 20, sectionsChanged: 0, calloutsAdded: 0, calloutsRemoved: 0, imagesChanged: 0, hasFullDiff: false },
+      warnings: [],
+    }],
+    summary: { total: 1, pages: 1, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
+  };
+  writeManifest(dir, manifest);
+  writePriorHtml(dir, 'assignment.html', '<p>old</p>');
+  writeNewHtml(dir, 'assignment.html', '<iframe src="assignment/widgets/sort.html"></iframe>');
+  writeState(dir, { phase: 'preview', published: [], lastUpdatedAt: '2026-06-04T12:00:00.000Z' });
+
+  // Course-dir widget files (HTML + spec)
+  mkdirSync(join(courseDir, 'assignment', 'widgets'), { recursive: true });
+  writeFileSync(join(courseDir, 'assignment', 'widgets', 'sort.html'), '<p>new widget</p>');
+  writeFileSync(join(courseDir, 'assignment', 'widgets', 'sort.spec.json'), JSON.stringify({
+    id: 'sort', name: 'Sort', kind: 'sortable-ordering', purpose: 'p',
+    contentSchema: {}, initialContent: {},
+    dimensions: { minHeight: 200, maxHeight: 400 },
+    accessibility: { keyboardEquivalent: 'k', screenReaderSummary: 's', minTouchTarget: 44 },
+  }));
+
+  // Seed widgets-meta (Plan B preview-time record).
+  writeWidgetsMeta(dir, {
+    widgets: {
+      'assignment__sort': {
+        priorCanvasFileId: 7000, priorContentHash: 'h-prior', newContentHash: 'h-new',
+      },
+    },
+  });
+}
+
+function buildWidgetCanvasMock() {
+  const calls: { url: string; method: string; body?: string }[] = [];
+  let createdFolderCount = 0;
+
+  const fn = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+    const u = String(url);
+    const method = init?.method ?? 'GET';
+    calls.push({ url: u, method, body: typeof init?.body === 'string' ? init.body : undefined });
+
+    // List pages (used by publishToCanvas for collision lookup)
+    if (/\/api\/v1\/courses\/\d+\/pages(\?|$)/.test(u) && method === 'GET') {
+      return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    // Folder root
+    if (/\/folders\/root$/.test(u) && method === 'GET') {
+      return new Response(JSON.stringify({ id: 100 }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    // List child folders — always empty so the breadcrumb code creates new folders
+    if (/\/folders\/\d+\/folders$/.test(u) && method === 'GET') {
+      return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    // POST /folders — create folder
+    if (/\/api\/v1\/courses\/\d+\/folders$/.test(u) && method === 'POST') {
+      createdFolderCount++;
+      return new Response(JSON.stringify({ id: 200 + createdFolderCount }), {
+        status: 200, headers: { 'content-type': 'application/json' },
+      });
+    }
+    // File init (POST /courses/<id>/files) — returns upload URL
+    if (/\/api\/v1\/courses\/\d+\/files$/.test(u) && method === 'POST') {
+      return new Response(JSON.stringify({
+        upload_url: 'https://upload.example/x',
+        upload_params: { k: 'v' },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    // Upload step
+    if (u.startsWith('https://upload.example/x')) {
+      return new Response(JSON.stringify({ id: 9999 }), {
+        status: 200, headers: { 'content-type': 'application/json' },
+      });
+    }
+    // Normal page publish
+    return new Response(JSON.stringify({
+      page_id: 1, url: 'assignment', title: 'Assignment 1',
+      html_url: 'https://canvas.example/courses/48895/pages/assignment',
+      body: '', published: true, updated_at: '',
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  });
+
+  return { fn, calls };
+}
+
+describe('publishCourse — widget breadcrumbs (V&R C4.2)', () => {
+  it('uploads widget prior content to /canvas-toolchain-archive folder', async () => {
+    const snapshotId = 'snap-wbc-1';
+    const dir = createSnapshotDir(snapshotId);
+    seedWidgetPageManifest(dir, snapshotId);
+
+    // Plan B preview captured the prior widget bytes here:
+    writeFileSync(join(dir, 'prior', 'widgets', 'assignment__sort.html'), '<p>PRIOR WIDGET BYTES</p>', 'utf-8');
+
+    const mock = buildWidgetCanvasMock();
+    vi.stubGlobal('fetch', mock.fn);
+
+    const publishWidgetFn = vi.fn().mockResolvedValue({
+      canvasFileId: 1234,
+      embedSrc: 'https://canvas.example/courses/48895/files/1234/preview',
+      embedHtml: '<iframe src="https://canvas.example/courses/48895/files/1234/preview"></iframe>',
+    });
+
+    const result = await publishCourse(
+      { snapshotId, approvals: { 'assignment.html': 'approve' }, gitCommit: false },
+      { publishWidget: publishWidgetFn as any },
+    );
+
+    expect(result.phase).toBe('published');
+
+    // Folder discovery touched /folders/root.
+    expect(mock.calls.some(c => /\/folders\/root$/.test(c.url))).toBe(true);
+    // At least one POST to /files (the breadcrumb file-init step).
+    const filesInit = mock.calls.filter(c => /\/api\/v1\/courses\/\d+\/files$/.test(c.url) && c.method === 'POST');
+    expect(filesInit.length).toBeGreaterThanOrEqual(1);
+
+    // The widget meta got a canvasBreadcrumb entry pointing at file id 9999.
+    const meta = readWidgetsMeta(dir);
+    const bc = meta.widgets['assignment__sort']?.canvasBreadcrumb;
+    expect(bc).toBeDefined();
+    expect(bc?.breadcrumbFileId).toBe(9999);
+    expect(bc?.filePath).toBe('/canvas-toolchain-archive/2026-06-04/assignment__sort.html');
+    expect(typeof bc?.folderId).toBe('number');
+  });
+
+  it('silently skips widget breadcrumb when prior/widgets/<key>.html does not exist', async () => {
+    const snapshotId = 'snap-wbc-2';
+    const dir = createSnapshotDir(snapshotId);
+    seedWidgetPageManifest(dir, snapshotId);
+    // No prior/widgets/assignment__sort.html written -> no breadcrumb attempt.
+
+    const mock = buildWidgetCanvasMock();
+    vi.stubGlobal('fetch', mock.fn);
+
+    const publishWidgetFn = vi.fn().mockResolvedValue({
+      canvasFileId: 1234,
+      embedSrc: 'https://canvas.example/courses/48895/files/1234/preview',
+      embedHtml: '<iframe></iframe>',
+    });
+
+    const result = await publishCourse(
+      { snapshotId, approvals: { 'assignment.html': 'approve' }, gitCommit: false },
+      { publishWidget: publishWidgetFn as any },
+    );
+
+    expect(result.phase).toBe('published');
+    // No breadcrumb-side folder lookup attempted (no /folders/root call).
+    expect(mock.calls.some(c => /\/folders\/root$/.test(c.url))).toBe(false);
+    const meta = readWidgetsMeta(dir);
+    expect(meta.widgets['assignment__sort']?.canvasBreadcrumb).toBeUndefined();
   });
 });

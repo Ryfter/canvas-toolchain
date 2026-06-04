@@ -11,7 +11,7 @@ import {
 import { snapshotsRootFor } from '../publish/snapshot_store.js';
 import { updateCurrentlyLive } from '../publish/state_meta.js';
 import { pruneSnapshots, type PruneSnapshotsResult } from '../publish/pruning.js';
-import { cleanupCanvasBreadcrumbsForSnapshot, createPageBreadcrumb } from '../publish/breadcrumbs.js';
+import { cleanupCanvasBreadcrumbsForSnapshot, createPageBreadcrumb, uploadWidgetBreadcrumb } from '../publish/breadcrumbs.js';
 import { loadCanvasConfig } from '../setup_canvas.js';
 import { updatePageMetaEntry } from '../publish/pages_meta.js';
 import { validateApprovals } from '../publish/approvals.js';
@@ -83,6 +83,8 @@ async function processPageWidgets(
   canvasConfig: { host: string; token: string },
   publishWidgetFn: typeof publishWidgetReal,
   snapshotDir: string,
+  breadcrumbsEnabled: boolean,
+  generatedAt: string,
 ): Promise<{ rewrittenHtml: string; widgets: WidgetPublishResult[] }> {
   const refs = discoverWidgetRefs(pageHtml);
   if (refs.length === 0) return { rewrittenHtml: pageHtml, widgets: [] };
@@ -98,6 +100,33 @@ async function processPageWidgets(
         continue;
       }
       const spec = loadWidgetSpec(files.specPath);
+
+      // V&R Plan C — Task C4.2: archive prior widget bytes before publish overwrites them.
+      // Source is the prior-content capture Plan B wrote at preview time. If that file
+      // doesn't exist (no prior content to archive), silently skip — non-fatal.
+      if (breadcrumbsEnabled) {
+        const priorWidgetPath = join(snapshotDir, 'prior', 'widgets', `${ref.slug}__${ref.id}.html`);
+        if (existsSync(priorWidgetPath)) {
+          try {
+            const priorContent = readFileSync(priorWidgetPath, 'utf-8');
+            const breadcrumb = await uploadWidgetBreadcrumb({
+              courseId,
+              canvasHost: canvasConfig.host,
+              apiToken: canvasConfig.token,
+              date: generatedAt.slice(0, 10),
+              slug: ref.slug,
+              widgetId: ref.id,
+              priorContentHtml: priorContent,
+            });
+            updateWidgetMetaEntry(snapshotDir, widgetMetaKey(ref.slug, ref.id), {
+              canvasBreadcrumb: breadcrumb,
+            });
+          } catch (e) {
+            console.warn(`widget breadcrumb failed for ${ref.slug}__${ref.id}: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+      }
+
       const result = await publishWidgetFn({
         htmlPath: files.htmlPath,
         courseId,
@@ -271,6 +300,8 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
           { host: canvasHost, token: cfg.apiToken },
           publishWidgetFn,
           dir,
+          breadcrumbsEnabled,
+          manifest.generatedAt,
         );
         const out = await publishToCanvas(
           { courseId: manifest.courseId, html: rewrittenHtml, pageTitle: entry.intendedTitle,
