@@ -387,4 +387,48 @@ describe('publishCourse — widget breadcrumbs (V&R C4.2)', () => {
     const meta = readWidgetsMeta(dir);
     expect(meta.widgets['assignment__sort']?.canvasBreadcrumb).toBeUndefined();
   });
+
+  it('respects canvasBreadcrumbs: "disabled" in setup config when input override is absent (V&R C6.1)', async () => {
+    // Rewrite canvas-config.json with disabled breadcrumbs; omit the input field
+    // so the setup-config default is what gates behavior.
+    writeFileSync(join(ccHome, 'canvas-config.json'), JSON.stringify({
+      host: 'canvas.example', token: 'tk',
+      configuredAt: '2026-06-04T00:00:00.000Z',
+      canvasBreadcrumbs: 'disabled',
+    }), 'utf-8');
+
+    const snapshotId = 'snap-bc-config-disabled';
+    const dir = createSnapshotDir(snapshotId);
+    seedPageManifest(dir, snapshotId, { withCanvasMatch: true });
+
+    let archivePostCount = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      const u = String(url);
+      const method = init?.method ?? 'GET';
+      if (isArchivedPagePost(u, init)) {
+        archivePostCount++;
+        return new Response(JSON.stringify({ url: 'x', page_id: 1 }), { status: 200 });
+      }
+      if (u.includes('/pages') && method === 'GET') {
+        return new Response(JSON.stringify([{
+          page_id: 1, url: 'course-overview', title: 'Course Overview',
+          html_url: 'https://canvas.example/courses/48895/pages/course-overview',
+          body: '', published: true, updated_at: '',
+        }]), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      return new Response(JSON.stringify({
+        page_id: 1, url: 'course-overview', title: 'Course Overview',
+        html_url: '', body: '', published: true, updated_at: '',
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }));
+
+    const result = await publishCourse({
+      snapshotId, approvals: { 'overview.html': 'approve' }, gitCommit: false,
+    });
+
+    expect(result.phase).toBe('published');
+    expect(archivePostCount).toBe(0);
+    const meta = readPagesMeta(dir);
+    expect(meta.pages['overview.html']?.canvasBreadcrumb).toBeUndefined();
+  });
 });

@@ -320,6 +320,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           resume:     { type: 'boolean', description: 'Continue a prior partial publish from its failure point.' },
           gitCommit:  { type: 'boolean', description: 'Commit + tag in courseDir. Defaults to true when courseDir is a git repo.' },
           pushTag:    { type: 'boolean', description: 'If a git remote is configured, push the success tag.' },
+          canvasBreadcrumbs: { type: 'boolean', description: 'Override the course default for this publish only. When omitted, uses setup_canvas\'s canvasBreadcrumbs setting (default enabled). Breadcrumbs create [ARCHIVED] page copies and /canvas-toolchain-archive/ widget file copies in Canvas, cleaned up at prune time.' },
         },
       },
     },
