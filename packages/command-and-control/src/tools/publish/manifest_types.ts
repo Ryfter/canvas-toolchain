@@ -112,6 +112,8 @@ export interface PreviewManifest {
     ferpaCount: number;
     collisionsCount: number;
   };
+  /** NEW (V&R Plan C): backup recommendation surfaced at preview time. */
+  backup?: BackupStatus;
 }
 
 export interface WidgetPublishResult {
@@ -230,4 +232,28 @@ export interface PageMetaEntry {
   publishedAt?: string;
   /** Reserved for breadcrumb plan. */
   canvasBreadcrumb?: { archivedPageSlug: string; archivedPageId: string };
+}
+
+export type BackupStatusCode =
+  | 'git-pushed'
+  | 'git-committed'
+  | 'git-no-remote'
+  | 'synced-folder'
+  | 'none';
+
+export type SyncedFolderType =
+  | 'OneDrive'
+  | 'iCloud'
+  | 'Dropbox'
+  | 'GoogleDrive'
+  | 'NetworkShare'
+  | 'ExternalMount';
+
+export interface BackupStatus {
+  status: BackupStatusCode;
+  message: string;
+  detected: {
+    gitRemote?: string;
+    syncedFolderType?: SyncedFolderType;
+  };
 }
