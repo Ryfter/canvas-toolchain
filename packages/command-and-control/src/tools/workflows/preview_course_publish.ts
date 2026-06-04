@@ -9,12 +9,16 @@ import { buildDiffSummary, computeUnifiedDiff } from '../publish/build_diff_summ
 import { scanWarnings } from '../publish/scan_warnings.js';
 import { detectGitState } from '../publish/git_state.js';
 import {
-  createSnapshotDir, newSnapshotId, writeManifest, writePriorHtml, writeNewHtml,
+  createSnapshotDirFor, newSnapshotId, writeManifest, writePriorHtml, writeNewHtml,
   writeFullDiff, writeState, findStaleSnapshot,
 } from '../publish/snapshot_store.js';
-import { discoverWidgetRefs, resolveWidgetFiles } from '../publish/widget_discovery.js';
-import { existsSync } from 'node:fs';
-import type { PreviewManifest, ManifestEntry, WidgetPreviewStatus } from '../publish/manifest_types.js';
+import { discoverWidgetRefs, resolveWidgetFiles, discoverPriorWidgetRefs } from '../publish/widget_discovery.js';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { sha256 } from '../publish/hash.js';
+import { updateWidgetMetaEntry, widgetMetaKey } from '../publish/widgets_meta.js';
+import { updatePageMetaEntry } from '../publish/pages_meta.js';
+import type { PreviewManifest, ManifestEntry, WidgetPreviewStatus, Warning } from '../publish/manifest_types.js';
 
 const MATCH_THRESHOLD = 0.8;
 
@@ -58,19 +62,84 @@ function intendedTitleFor(filename: string): string {
     .replace(/\b([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
-/** Find every widget iframe reference in `html` and report each one's on-disk
- *  readiness so faculty can see at preview time what will publish later. Status
- *  surfaces missing files as warnings without blocking the manifest. */
-function buildWidgetStatuses(html: string, courseDir: string): WidgetPreviewStatus[] {
-  const refs = discoverWidgetRefs(html);
-  return refs.map(ref => {
+/** Per-page widget capture + status determination (V&R Plan B). For each widget
+ *  reference in the locally-rendered HTML (paired positionally with iframes in
+ *  the prior Canvas page HTML), fetch the prior widget content from Canvas Files,
+ *  hash both prior + new, set status, save to snapshot dirs, record to widgets-meta.
+ *
+ *  Pairing: local widget at index N → prior iframe at index N. Excess prior iframes
+ *  are ignored; excess local widgets get 'new' status. Mismatch in counts can
+ *  happen when faculty adds/removes widgets between publishes.
+ *
+ *  WIDGET_FETCH_FAILED on prior content fetch falls back to 'new' with a warning;
+ *  preview is not blocked. */
+async function captureWidgetContent(
+  newPageHtml: string,
+  priorPageHtml: string,
+  courseDir: string,
+  snapshotDir: string,
+  api: CanvasApiClient,
+  warnings: Warning[],
+): Promise<WidgetPreviewStatus[]> {
+  const localRefs = discoverWidgetRefs(newPageHtml);
+  const priorRefs = discoverPriorWidgetRefs(priorPageHtml);
+  const out: WidgetPreviewStatus[] = [];
+
+  for (let i = 0; i < localRefs.length; i++) {
+    const ref = localRefs[i]!;
     const files = resolveWidgetFiles(courseDir, ref);
-    let status: WidgetPreviewStatus['status'];
-    if (!existsSync(files.htmlPath)) status = 'missing-html';
-    else if (!existsSync(files.specPath)) status = 'missing-spec';
-    else status = 'new';
-    return { id: ref.id, slug: ref.slug, htmlPath: files.htmlPath, specPath: files.specPath, status };
-  });
+    const key = widgetMetaKey(ref.slug, ref.id);
+
+    if (!existsSync(files.htmlPath)) {
+      out.push({ id: ref.id, slug: ref.slug, htmlPath: files.htmlPath, specPath: files.specPath, status: 'missing-html' });
+      continue;
+    }
+    if (!existsSync(files.specPath)) {
+      out.push({ id: ref.id, slug: ref.slug, htmlPath: files.htmlPath, specPath: files.specPath, status: 'missing-spec' });
+      continue;
+    }
+
+    const localHtml = readFileSync(files.htmlPath, 'utf-8');
+    const newContentHash = sha256(localHtml);
+    writeFileSync(join(snapshotDir, 'new', 'widgets', `${key}.html`), localHtml, 'utf-8');
+
+    const priorRef = priorRefs[i];
+    let priorContentHash: string | null = null;
+    let priorCanvasFileId: number | null = null;
+    let status: WidgetPreviewStatus['status'] = 'new';
+
+    if (priorRef) {
+      try {
+        const priorHtml = await api.getFileContent(priorRef.canvasFileId);
+        priorContentHash = sha256(priorHtml);
+        priorCanvasFileId = priorRef.canvasFileId;
+        writeFileSync(join(snapshotDir, 'prior', 'widgets', `${key}.html`), priorHtml, 'utf-8');
+        writeFileSync(
+          join(snapshotDir, 'diffs', 'widgets', `${key}.diff`),
+          computeUnifiedDiff(priorHtml, localHtml),
+          'utf-8',
+        );
+        status = priorContentHash === newContentHash ? 'unchanged' : 'changed';
+      } catch (e) {
+        warnings.push({
+          kind: 'validation',
+          severity: 'warn',
+          message: `WIDGET_FETCH_FAILED for "${ref.id}" (slug "${ref.slug}", prior file_id ${priorRef.canvasFileId}): ${e instanceof Error ? e.message : String(e)}. Treating as new widget; rollback will not restore prior content for this widget.`,
+        });
+        status = 'new';
+      }
+    }
+
+    updateWidgetMetaEntry(snapshotDir, key, {
+      priorCanvasFileId,
+      priorContentHash,
+      newContentHash,
+    });
+
+    out.push({ id: ref.id, slug: ref.slug, htmlPath: files.htmlPath, specPath: files.specPath, status });
+  }
+
+  return out;
 }
 
 export async function previewCoursePublish(
@@ -111,7 +180,7 @@ export async function previewCoursePublish(
   ]);
 
   const snapshotId = newSnapshotId();
-  const dir = createSnapshotDir(snapshotId);
+  const dir = createSnapshotDirFor(snapshotId, input.courseDir);
   const entries: ManifestEntry[] = [];
   const fullDiffSet = new Set(input.fullDiffFor ?? []);
 
@@ -144,9 +213,15 @@ export async function previewCoursePublish(
         message: `Could not fetch current Canvas body for rollback baseline: ${priorFetchError}. Re-run preview_course_publish when Canvas is reachable.`,
       });
     }
-    const widgets = buildWidgetStatuses(p.html, input.courseDir);
-    // Surface any missing widget files as warnings so faculty can see them in the
-    // preview review pass. Not a block — publish handles per-widget failure soft.
+    const widgets = await captureWidgetContent(p.html, priorHtml ?? '', input.courseDir, dir, api, warnings);
+    // V&R drift detector foundation — record per-page hashes.
+    updatePageMetaEntry(dir, p.filename, {
+      priorCanvasPageSlug: match ? match.p.url : null,
+      priorContentHash: priorHtml === null ? null : sha256(priorHtml),
+      newContentHash: sha256(p.html),
+    });
+    // Surface any missing widget files as warnings (captureWidgetContent does NOT push
+    // these — only WIDGET_FETCH_FAILED). Not a block; publish handles per-widget failure soft.
     for (const w of widgets) {
       if (w.status === 'missing-html' || w.status === 'missing-spec') {
         warnings.push({
