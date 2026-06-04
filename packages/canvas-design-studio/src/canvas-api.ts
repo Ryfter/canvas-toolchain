@@ -144,6 +144,35 @@ export class CanvasApiClient {
     return page.body ?? '';
   }
 
+  /** Fetch a Canvas Files file's contents as a UTF-8 string. Two-step flow:
+   *  GET /api/v1/files/<fileId> returns a metadata payload that includes a
+   *  short-lived signed `url`; we then GET that url for the actual bytes.
+   *
+   *  Used by V&R preview to capture prior widget content for rollback, and by
+   *  rollback to materialize that content for re-upload. Widget bodies are
+   *  always HTML in practice; non-text files would still decode but downstream
+   *  hashing/diffing isn't meaningful for them. */
+  async getFileContent(fileId: number): Promise<string> {
+    const meta = await this.request<{ url?: string }>('GET', `files/${fileId}`);
+    if (!meta.url) {
+      throw new CanvasApiError(500, 'CANVAS_FILE_NO_URL', `Canvas file ${fileId} metadata had no download URL.`);
+    }
+    let res: Response;
+    try {
+      // Note: do NOT send the Bearer token to the signed download URL — it's a
+      // pre-signed S3-style URL that uses its own verifier query param.
+      res = await fetch(meta.url);
+    } catch (err) {
+      throw new CanvasApiError(0, 'CANVAS_NETWORK_ERROR', `Could not download Canvas file ${fileId}.`, err);
+    }
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new CanvasApiError(res.status, 'CANVAS_HTTP_ERROR',
+        `Canvas file ${fileId} download returned HTTP ${res.status}: ${body.slice(0, 200)}`);
+    }
+    return await res.text();
+  }
+
   private async paginatedGet<T>(path: string, params?: Record<string, QueryValue>): Promise<T[]> {
     let nextUrl: string | undefined = joinApiUrl(this.config.canvasUrl, path, params);
     const all: T[] = [];
