@@ -8,6 +8,8 @@ import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
 import {
   readManifest, readState, writeState, snapshotDir,
 } from '../publish/snapshot_store.js';
+import { snapshotsRootFor } from '../publish/snapshot_store.js';
+import { updateCurrentlyLive } from '../publish/state_meta.js';
 import { validateApprovals } from '../publish/approvals.js';
 import { detectGitState, gitCommitPrePublish, gitTagSuccess, gitPushTag } from '../publish/git_state.js';
 import {
@@ -261,6 +263,10 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
   if (input.pushTag && gitTag && git.remote) {
     pushResult = gitPushTag(manifest.courseDir, gitTag);
   }
+
+  // V&R Pattern B: update the pointer file. This snapshot is now currently-live.
+  const snapshotsRoot = snapshotsRootFor(manifest.courseDir);
+  updateCurrentlyLive(snapshotsRoot, manifest.courseId, input.snapshotId, 'publish', new Date().toISOString());
 
   writeState(dir, { phase: 'published', published, lastUpdatedAt: new Date().toISOString() });
   return { snapshotId: input.snapshotId, phase: 'published', published, gitTag, pushResult };
