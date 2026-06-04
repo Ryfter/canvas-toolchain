@@ -55,6 +55,10 @@ import {
   listPublishSnapshots,
   type ListPublishSnapshotsInput,
 } from './tools/workflows/list_publish_snapshots.js';
+import {
+  prunePublishSnapshots,
+  type PrunePublishSnapshotsInput,
+} from './tools/workflows/prune_publish_snapshots.js';
 import { snapshotCourse } from './tools/workflows/snapshot_course.js';
 import type { SnapshotInput } from './tools/snapshot/types.js';
 import { draftStudentRubric } from './tools/workflows/draft_student_rubric.js';
@@ -341,6 +345,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'prune_publish_snapshots',
+      description: 'Apply retention policy to a course\'s publish snapshots. Removes snapshots older than the configured retention window AND beyond the configured retention count (defaults: keep 3 most-recent, keep anything ≤ 30 days old). Never removes the currently-live snapshot. When dryRun is true, lists what would be pruned without taking action. Auto-pruning also runs after every successful publish_course.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId', 'courseDir'],
+        properties: {
+          courseId: { type: 'number', description: 'Canvas course numeric ID.' },
+          courseDir: { type: 'string', description: 'Canvas Design Studio course folder (used to locate the project-local snapshots dir).' },
+          dryRun: { type: 'boolean', description: 'When true, shows what would be pruned without deleting. Default false.' },
+        },
+      },
+    },
+    {
       name: 'snapshot_course',
       description: 'Write or update a course reference markdown doc capturing course identifiers, assignment groups, modules, and an append-only Update Log. Re-running against the same outputPath regenerates the auto-managed sections (delimited by AUTO:start/AUTO:end HTML comment markers) and preserves all hand-edited prose around them.',
       inputSchema: {
@@ -574,6 +591,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'list_publish_snapshots':
         result = await listPublishSnapshots(args as unknown as ListPublishSnapshotsInput);
+        break;
+      case 'prune_publish_snapshots':
+        result = await prunePublishSnapshots(args as unknown as PrunePublishSnapshotsInput);
         break;
       case 'snapshot_course':
         result = await snapshotCourse(args as unknown as SnapshotInput);
