@@ -63,6 +63,10 @@ export function createSnapshotDir(snapshotId: string): string {
   mkdirSync(join(dir, 'prior'), { recursive: true });
   mkdirSync(join(dir, 'new'), { recursive: true });
   mkdirSync(join(dir, 'diffs'), { recursive: true });
+  // V&R Plan B: widget content lifecycle sub-dirs.
+  mkdirSync(join(dir, 'prior', 'widgets'), { recursive: true });
+  mkdirSync(join(dir, 'new', 'widgets'), { recursive: true });
+  mkdirSync(join(dir, 'diffs', 'widgets'), { recursive: true });
   return dir;
 }
 
@@ -74,6 +78,10 @@ export function createSnapshotDirFor(snapshotId: string, courseDir: string): str
   mkdirSync(join(dir, 'prior'), { recursive: true });
   mkdirSync(join(dir, 'new'), { recursive: true });
   mkdirSync(join(dir, 'diffs'), { recursive: true });
+  // V&R Plan B: widget content lifecycle sub-dirs.
+  mkdirSync(join(dir, 'prior', 'widgets'), { recursive: true });
+  mkdirSync(join(dir, 'new', 'widgets'), { recursive: true });
+  mkdirSync(join(dir, 'diffs', 'widgets'), { recursive: true });
   return dir;
 }
 
