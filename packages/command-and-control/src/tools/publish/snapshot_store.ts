@@ -2,25 +2,82 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { getCcHomePath } from '../../kb/config.js';
+import { loadCanvasConfig } from '../setup_canvas.js';
+import {
+  resolveSnapshotsRoot, resolveSnapshotDir, type SnapshotsLocation,
+} from './snapshot_location.js';
 import type { PreviewManifest, PublishState, StaleSnapshotPointer } from './manifest_types.js';
 
-function snapshotsRoot(): string {
+/** Legacy global root — the path used before V&R Plan A. Lookups for old
+ *  snapshots still resolve through this via the snapshot_location fallback. */
+function legacyGlobalRoot(): string {
   const root = join(getCcHomePath(), 'publish-snapshots');
   if (!existsSync(root)) mkdirSync(root, { recursive: true });
   return root;
+}
+
+function effectiveLocation(): SnapshotsLocation {
+  try {
+    const cfg = loadCanvasConfig();
+    return cfg.snapshotsLocation ?? 'project';
+  } catch {
+    return 'project';
+  }
+}
+
+/** Snapshots root for a specific course. Uses the configured location (default
+ *  project-local) with legacy global fallback for lookups. */
+export function snapshotsRootFor(courseDir: string): string {
+  return resolveSnapshotsRoot({
+    courseDir,
+    location: effectiveLocation(),
+    legacyGlobalRoot: legacyGlobalRoot(),
+  });
+}
+
+/** Resolve a specific snapshot directory. Checks project-local first; falls
+ *  back to legacy global when location='project' and the snapshot isn't found
+ *  in the project location. */
+export function snapshotDirFor(snapshotId: string, courseDir: string): string {
+  return resolveSnapshotDir({
+    snapshotId,
+    courseDir,
+    location: effectiveLocation(),
+    legacyGlobalRoot: legacyGlobalRoot(),
+  });
+}
+
+// === LEGACY (no-courseDir) wrappers — kept unchanged for backward compat ===
+
+function snapshotsRootLegacy(): string {
+  return legacyGlobalRoot();
 }
 
 export function newSnapshotId(): string {
   return randomUUID();
 }
 
+/** @deprecated — use createSnapshotDirFor(snapshotId, courseDir). */
 export function createSnapshotDir(snapshotId: string): string {
-  const dir = join(snapshotsRoot(), snapshotId);
+  const dir = join(snapshotsRootLegacy(), snapshotId);
   mkdirSync(join(dir, 'prior'), { recursive: true });
   mkdirSync(join(dir, 'new'), { recursive: true });
   mkdirSync(join(dir, 'diffs'), { recursive: true });
   return dir;
 }
+
+/** New courseDir-aware snapshot creation. Uses snapshotsRootFor() to land at
+ *  <courseDir>/.canvas-toolchain/publish-snapshots/ (default) or the legacy
+ *  global path (when setup_canvas has snapshotsLocation='global'). */
+export function createSnapshotDirFor(snapshotId: string, courseDir: string): string {
+  const dir = join(snapshotsRootFor(courseDir), snapshotId);
+  mkdirSync(join(dir, 'prior'), { recursive: true });
+  mkdirSync(join(dir, 'new'), { recursive: true });
+  mkdirSync(join(dir, 'diffs'), { recursive: true });
+  return dir;
+}
+
+// === Existing helpers below — unchanged signatures (still work with legacy global) ===
 
 export function writeManifest(dir: string, manifest: PreviewManifest): void {
   writeFileSync(join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
@@ -62,12 +119,16 @@ export function readState(dir: string): PublishState {
   return JSON.parse(readFileSync(join(dir, 'state.json'), 'utf-8')) as PublishState;
 }
 
+/** @deprecated — use snapshotDirFor(snapshotId, courseDir). */
 export function snapshotDir(snapshotId: string): string {
-  return join(snapshotsRoot(), snapshotId);
+  return join(snapshotsRootLegacy(), snapshotId);
 }
 
 export function findStaleSnapshot(courseId: number): StaleSnapshotPointer | undefined {
-  const root = snapshotsRoot();
+  // Existing implementation — searches the legacy global path. Still correct
+  // for partial-publish recovery from before this refactor. Project-local
+  // partial-snapshot discovery is a future enhancement.
+  const root = legacyGlobalRoot();
   if (!existsSync(root)) return undefined;
   const candidates: { snapshotId: string; state: PublishState; manifest: PreviewManifest }[] = [];
   for (const id of readdirSync(root)) {
@@ -83,7 +144,7 @@ export function findStaleSnapshot(courseId: number): StaleSnapshotPointer | unde
   }
   if (candidates.length === 0) return undefined;
   candidates.sort((a, b) => a.state.lastUpdatedAt < b.state.lastUpdatedAt ? 1 : -1);
-  const latest = candidates[0];
+  const latest = candidates[0]!;
   const failed = latest.state.failed;
   if (!failed) return undefined;
   return {
