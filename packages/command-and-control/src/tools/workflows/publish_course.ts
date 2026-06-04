@@ -12,6 +12,7 @@ import { snapshotsRootFor } from '../publish/snapshot_store.js';
 import { updateCurrentlyLive } from '../publish/state_meta.js';
 import { validateApprovals } from '../publish/approvals.js';
 import { detectGitState, gitCommitPrePublish, gitTagSuccess, gitPushTag } from '../publish/git_state.js';
+import { detectBackupState } from '../publish/backup_detection.js';
 import {
   discoverWidgetRefs,
   substituteWidgetIframeSrc,
@@ -20,7 +21,7 @@ import {
 } from '../publish/widget_discovery.js';
 import { updateWidgetMetaEntry, widgetMetaKey } from '../publish/widgets_meta.js';
 import type {
-  PreviewManifest, PublishState, PublishedEntry, FailedEntry, WidgetPublishResult,
+  PreviewManifest, PublishState, PublishedEntry, FailedEntry, WidgetPublishResult, BackupStatus,
 } from '../publish/manifest_types.js';
 import type { ApprovalMap } from '../publish/approvals.js';
 
@@ -49,6 +50,8 @@ export interface PublishCourseResult {
   error?: string;
   message?: string;
   fix?: string[];
+  /** NEW (V&R Plan C): backup recommendation at publish time. */
+  backup?: BackupStatus;
 }
 
 function readNewHtml(dir: string, filename: string): string {
@@ -123,6 +126,7 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
 
   const manifest = readManifest(dir);
   const state = readState(dir);
+  const backup = detectBackupState(manifest.courseDir);
 
   const validation = validateApprovals(manifest, input.approvals);
   if (!validation.ok) {
@@ -277,5 +281,5 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
   updateCurrentlyLive(snapshotsRoot, manifest.courseId, input.snapshotId, 'publish', new Date().toISOString());
 
   writeState(dir, { phase: 'published', published, lastUpdatedAt: new Date().toISOString() });
-  return { snapshotId: input.snapshotId, phase: 'published', published, gitTag, pushResult };
+  return { snapshotId: input.snapshotId, phase: 'published', published, gitTag, pushResult, backup };
 }
