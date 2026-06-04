@@ -18,6 +18,7 @@ import {
   resolveWidgetFiles,
   loadWidgetSpec,
 } from '../publish/widget_discovery.js';
+import { updateWidgetMetaEntry, widgetMetaKey } from '../publish/widgets_meta.js';
 import type {
   PreviewManifest, PublishState, PublishedEntry, FailedEntry, WidgetPublishResult,
 } from '../publish/manifest_types.js';
@@ -68,6 +69,7 @@ async function processPageWidgets(
   courseDir: string,
   canvasConfig: { host: string; token: string },
   publishWidgetFn: typeof publishWidgetReal,
+  snapshotDir: string,
 ): Promise<{ rewrittenHtml: string; widgets: WidgetPublishResult[] }> {
   const refs = discoverWidgetRefs(pageHtml);
   if (refs.length === 0) return { rewrittenHtml: pageHtml, widgets: [] };
@@ -88,6 +90,11 @@ async function processPageWidgets(
         courseId,
         canvasConfig,
         widgetSpec: spec,
+      });
+      // V&R Plan B: record the file_id for rollback. Distinct from priorCanvasFileId
+      // because overwrite changes the id (Phase 0 finding 2026-06-03).
+      updateWidgetMetaEntry(snapshotDir, widgetMetaKey(ref.slug, ref.id), {
+        publishedCanvasFileId: result.canvasFileId,
       });
       html = substituteWidgetIframeSrc(html, ref, result.embedSrc);
       widgets.push({ id: ref.id, status: 'published', canvasFileId: result.canvasFileId });
@@ -218,6 +225,7 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
           manifest.courseDir,
           { host: canvasHost, token: cfg.apiToken },
           publishWidgetFn,
+          dir,
         );
         const out = await publishToCanvas(
           { courseId: manifest.courseId, html: rewrittenHtml, pageTitle: entry.intendedTitle,
