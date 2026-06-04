@@ -3,9 +3,13 @@ import { join } from 'node:path';
 import { restorePage } from 'canvas-design-mcp/dist/tools/restore-page.js';
 import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
 import { CanvasApiClient } from 'canvas-design-mcp/dist/canvas-api.js';
+import { publishWidget as publishWidgetReal } from 'canvas-design-mcp/dist/tools/publish-widget.js';
 import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
 import { readManifest, readState, snapshotDir, readPriorHtml, writeState, snapshotsRootFor, snapshotDirFor } from '../publish/snapshot_store.js';
 import { readPublishStateMeta, updateCurrentlyLive } from '../publish/state_meta.js';
+import { readWidgetsMeta } from '../publish/widgets_meta.js';
+import { loadWidgetSpec, resolveWidgetFiles } from '../publish/widget_discovery.js';
+import { rewriteIframeFileId } from '../publish/widget_iframe_rewrite.js';
 import type { PublishedEntry, PublishState } from '../publish/manifest_types.js';
 
 export interface RollbackCoursePublishInput {
@@ -20,10 +24,16 @@ export interface RollbackCoursePublishInput {
 export interface WidgetRollbackResult {
   /** Widget id (matches PublishedEntry.widgets[].id). */
   id: string;
-  /** `deleted` = file removed from Canvas Files; `skipped` = nothing to clean
-   *  up (the widget had `status: 'failed'` during publish so no file was created);
-   *  `failed` = Canvas Files DELETE call errored. */
-  status: 'deleted' | 'skipped' | 'failed';
+  /** V&R Plan B values:
+   *  - 'restored'   — prior content re-uploaded to Canvas Files (new file_id per
+   *                   Phase 0); host page iframe src rewritten in lockstep.
+   *  - 'deleted'    — no prior content existed (widget was 'new' at preview);
+   *                   the publish-time file was deleted from Canvas Files.
+   *  - 'skipped'    — widget had status:'failed' during publish; nothing to undo.
+   *  - 'failed'     — Canvas API call errored during restore or delete. */
+  status: 'restored' | 'deleted' | 'skipped' | 'failed';
+  /** For 'restored': the new file_id after re-upload. For 'deleted': the file_id
+   *  just removed from Canvas. */
   canvasFileId?: number;
   error?: string;
 }
@@ -53,9 +63,12 @@ async function deleteCanvasFile(host: string, token: string, fileId: number): Pr
   }
 }
 
-/** Optional DI hook so tests can stub the Canvas DELETE without round-tripping. */
+/** Optional DI hooks so tests can stub Canvas writes without round-tripping. */
 export interface RollbackHooks {
   deleteCanvasFile?: typeof deleteCanvasFile;
+  /** Override the publish_widget function (canvas-design-mcp). Tests inject a mock
+   *  to avoid round-tripping through real Canvas Files when restoring prior content. */
+  publishWidget?: typeof publishWidgetReal;
 }
 
 export async function rollbackCoursePublish(
@@ -94,6 +107,11 @@ export async function rollbackCoursePublish(
   const restoreFailed: { filename: string; reason: string }[] = [];
   const widgetsCleaned: WidgetRollbackResult[] = [];
 
+  // V&R Plan B: widget content restore reads the snapshot's widgets-meta to know
+  // which widgets had prior content captured at preview time.
+  const widgetsMeta = readWidgetsMeta(dir);
+  const publishWidgetFn = hooks.publishWidget ?? publishWidgetReal;
+
   for (let i = state.published.length - 1; i >= 0; i -= 1) {
     const entry = state.published[i];
     const priorHtml = readPriorHtml(dir, entry.filename);
@@ -116,29 +134,101 @@ export async function rollbackCoursePublish(
       }
       restored.push(entry);
 
-      // After page/assignment restore: clean up widget files this publish created.
-      // The restored page HTML points at the pre-publish iframe src (the local
-      // path or whatever the prior file_id was), so the new widget files we
-      // uploaded during publish are no longer referenced — delete them so they
-      // don't sit orphaned in Canvas Files.
-      //
-      // Per Phase 0 finding (file_id changes on every overwrite), we can't restore
-      // the PRIOR widget content via re-upload from the snapshot — we'd need to
-      // have captured it at preview time (deferred to v1.x). Today's rollback is
-      // delete-only: it removes our pollution but does not re-create what was
-      // there before.
+      // V&R Plan B widget restore (closes the rollback-content-restore v1.x gap).
+      // For each published widget: if prior content was captured at preview time,
+      // re-upload it via publishWidget (gets a new file_id per Phase 0) and rewrite
+      // the host page's iframe src in lockstep. Otherwise fall back to the
+      // pre-V&R delete-only behavior (no prior content to restore).
+      const pageSlugForRestore = entry.canvasPageSlug
+        ?? (entry.canvasUrl ?? entry.filename).split('/').pop()!;
+      let pageHtmlForRewrite: string | undefined;
+      let pageHtmlChanged = false;
+
       for (const w of (entry.widgets ?? [])) {
         if (w.status !== 'published' || typeof w.canvasFileId !== 'number') {
           widgetsCleaned.push({ id: w.id, status: 'skipped' });
           continue;
         }
+
+        // Find the widgets-meta entry by id (key format is `<slug>__<id>`).
+        const metaKey = Object.keys(widgetsMeta.widgets).find(k => k.endsWith(`__${w.id}`));
+        const meta = metaKey ? widgetsMeta.widgets[metaKey]! : undefined;
+        const slug = metaKey ? metaKey.slice(0, metaKey.length - `__${w.id}`.length) : undefined;
+        const priorWidgetPath = (metaKey && slug)
+          ? join(dir, 'prior', 'widgets', `${metaKey}.html`)
+          : undefined;
+
+        const canRestore = !!(
+          meta
+          && meta.priorCanvasFileId !== null
+          && priorWidgetPath
+          && existsSync(priorWidgetPath)
+          && slug
+        );
+
+        if (canRestore) {
+          try {
+            // Re-upload prior content. publishWidget needs a spec (read from the
+            // courseDir copy — same spec that was used at publish time).
+            const files = resolveWidgetFiles(manifest.courseDir, { slug: slug!, id: w.id, fullMatch: '' });
+            const spec = loadWidgetSpec(files.specPath);
+
+            const restoredWidget = await publishWidgetFn({
+              htmlPath: priorWidgetPath!,
+              courseId: manifest.courseId,
+              canvasConfig: { host: canvasHost, token: cfg.apiToken },
+              widgetSpec: spec,
+            });
+
+            // Lazily fetch + rewrite the page HTML.
+            // restorePage above wrote the snapshot's prior page HTML to Canvas;
+            // that HTML's iframe srcs point at the ORIGINAL priorCanvasFileId
+            // (which may not exist anymore on Canvas — the publish overwrote it
+            // per Phase 0). We re-uploaded the prior content and got a fresh
+            // file_id back. Swap iframe srcs from priorCanvasFileId →
+            // restoredWidget.canvasFileId so the restored page points at the
+            // newly-uploaded copy of the prior content.
+            if (entry.type === 'page' && meta!.priorCanvasFileId !== null) {
+              if (pageHtmlForRewrite === undefined) {
+                pageHtmlForRewrite = await api.getPageBody(manifest.courseId, pageSlugForRestore);
+              }
+              const rewritten = rewriteIframeFileId(pageHtmlForRewrite, meta!.priorCanvasFileId, restoredWidget.canvasFileId);
+              if (rewritten !== pageHtmlForRewrite) {
+                pageHtmlForRewrite = rewritten;
+                pageHtmlChanged = true;
+              }
+            }
+
+            widgetsCleaned.push({ id: w.id, status: 'restored', canvasFileId: restoredWidget.canvasFileId });
+          } catch (e) {
+            widgetsCleaned.push({
+              id: w.id, status: 'failed', canvasFileId: w.canvasFileId,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        } else {
+          // Pre-V&R delete-only fallback for widgets with no prior content.
+          try {
+            await deleteFileFn(canvasHost, cfg.apiToken, w.canvasFileId);
+            widgetsCleaned.push({ id: w.id, status: 'deleted', canvasFileId: w.canvasFileId });
+          } catch (e) {
+            widgetsCleaned.push({
+              id: w.id, status: 'failed', canvasFileId: w.canvasFileId,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        }
+      }
+
+      // After all widgets settled, push the rewritten page HTML back to Canvas
+      // (only when any iframe src actually changed).
+      if (pageHtmlChanged && entry.type === 'page' && pageHtmlForRewrite !== undefined) {
         try {
-          await deleteFileFn(canvasHost, cfg.apiToken, w.canvasFileId);
-          widgetsCleaned.push({ id: w.id, status: 'deleted', canvasFileId: w.canvasFileId });
+          await api.updatePage(manifest.courseId, pageSlugForRestore, pageHtmlForRewrite);
         } catch (e) {
-          widgetsCleaned.push({
-            id: w.id, status: 'failed', canvasFileId: w.canvasFileId,
-            error: e instanceof Error ? e.message : String(e),
+          restoreFailed.push({
+            filename: entry.filename,
+            reason: `widget restore succeeded but page HTML rewrite failed: ${e instanceof Error ? e.message : String(e)}`,
           });
         }
       }
