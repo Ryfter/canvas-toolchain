@@ -61,7 +61,11 @@ describe('rollbackCoursePublish widget cleanup', () => {
   it('deletes every successfully-published widget from Canvas Files', async () => {
     stubCanvasConfig();
     // Mock the Canvas page rollback (PUT to /pages/<slug>) to succeed
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+    // Use mockImplementation so each fetch call returns a fresh Response (Response
+    // bodies are single-read; drift detection in rollback_course_publish.ts adds an
+    // extra GET before restorePage's PUT, so a shared Response would deadlock).
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () =>
+      new Response('{}', { status: 200 })));
 
     const snapshotId = setupSnapshot([{
       filename: 'overview.html', type: 'page', canvasUrl: 'x',
@@ -85,7 +89,11 @@ describe('rollbackCoursePublish widget cleanup', () => {
 
   it('skips widgets that failed to publish (no file_id to delete)', async () => {
     stubCanvasConfig();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+    // Use mockImplementation so each fetch call returns a fresh Response (Response
+    // bodies are single-read; drift detection in rollback_course_publish.ts adds an
+    // extra GET before restorePage's PUT, so a shared Response would deadlock).
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () =>
+      new Response('{}', { status: 200 })));
 
     const snapshotId = setupSnapshot([{
       filename: 'overview.html', type: 'page', canvasUrl: 'x',
@@ -107,7 +115,11 @@ describe('rollbackCoursePublish widget cleanup', () => {
 
   it('records widget delete failures without aborting the rollback', async () => {
     stubCanvasConfig();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+    // Use mockImplementation so each fetch call returns a fresh Response (Response
+    // bodies are single-read; drift detection in rollback_course_publish.ts adds an
+    // extra GET before restorePage's PUT, so a shared Response would deadlock).
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () =>
+      new Response('{}', { status: 200 })));
 
     const snapshotId = setupSnapshot([{
       filename: 'overview.html', type: 'page', canvasUrl: 'x',
@@ -133,7 +145,11 @@ describe('rollbackCoursePublish widget cleanup', () => {
 
   it('omits widgetsCleaned entries for pages with no widgets', async () => {
     stubCanvasConfig();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+    // Use mockImplementation so each fetch call returns a fresh Response (Response
+    // bodies are single-read; drift detection in rollback_course_publish.ts adds an
+    // extra GET before restorePage's PUT, so a shared Response would deadlock).
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () =>
+      new Response('{}', { status: 200 })));
 
     const snapshotId = setupSnapshot([{
       filename: 'overview.html', type: 'page', canvasUrl: 'x',

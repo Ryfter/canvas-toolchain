@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { restorePage } from 'canvas-design-mcp/dist/tools/restore-page.js';
 import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
@@ -8,6 +8,8 @@ import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
 import { readManifest, readState, snapshotDir, readPriorHtml, writeState, snapshotsRootFor, snapshotDirFor } from '../publish/snapshot_store.js';
 import { readPublishStateMeta, updateCurrentlyLive } from '../publish/state_meta.js';
 import { readWidgetsMeta } from '../publish/widgets_meta.js';
+import { readPagesMeta } from '../publish/pages_meta.js';
+import { hashContent, detectPageDrift } from '../publish/drift_detection.js';
 import { loadWidgetSpec, resolveWidgetFiles } from '../publish/widget_discovery.js';
 import { rewriteIframeFileId } from '../publish/widget_iframe_rewrite.js';
 import type { PublishedEntry, PublishState } from '../publish/manifest_types.js';
@@ -38,12 +40,28 @@ export interface WidgetRollbackResult {
   error?: string;
 }
 
+/** V&R Plan C C5.2: surfaced drift between the page body currently on Canvas
+ *  and the snapshot's recorded publish-time hash. `action` is currently always
+ *  'restored' — the rollback proceeds regardless ('kept' is reserved for a
+ *  future force/skip flag). */
+export interface DriftEntry {
+  item: string;
+  expectedHash: string;
+  actualHash: string;
+  action: 'restored' | 'kept';
+}
+
 export interface RollbackCoursePublishResult {
   snapshotId: string;
   restored: PublishedEntry[];
   restoreFailed: { filename: string; reason: string }[];
   widgetsCleaned: WidgetRollbackResult[];
   phase: PublishState['phase'];
+  /** V&R Plan C C5.2: per-page drift entries, surfaced when the Canvas body
+   *  hash at rollback time differs from the snapshot's recorded newContentHash
+   *  (or the hash of <snapshot>/new/<filename>.html when meta is absent).
+   *  Drift never blocks the restore — best-effort surfacing only. */
+  drift?: DriftEntry[];
   error?: string;
   fix?: string[];
 }
@@ -106,10 +124,15 @@ export async function rollbackCoursePublish(
   const restored: PublishedEntry[] = [];
   const restoreFailed: { filename: string; reason: string }[] = [];
   const widgetsCleaned: WidgetRollbackResult[] = [];
+  // V&R Plan C C5.2: drift surfacing — populated inside the page-restore loop.
+  const drift: DriftEntry[] = [];
 
   // V&R Plan B: widget content restore reads the snapshot's widgets-meta to know
   // which widgets had prior content captured at preview time.
   const widgetsMeta = readWidgetsMeta(dir);
+  // V&R Plan C C5.2: pages-meta holds the recorded publish-time newContentHash
+  // we compare the live Canvas body against before restoring.
+  const pagesMeta = readPagesMeta(dir);
   const publishWidgetFn = hooks.publishWidget ?? publishWidgetReal;
 
   for (let i = state.published.length - 1; i >= 0; i -= 1) {
@@ -118,6 +141,46 @@ export async function rollbackCoursePublish(
     const isCreated = entry.action === 'created' && entry.type === 'page';
     try {
       if (entry.type === 'page') {
+        // V&R Plan C C5.2: drift check — fetch the current Canvas body BEFORE
+        // restorePage overwrites it, hash it, and compare against the snapshot's
+        // recorded newContentHash (or fall back to hashing the snapshot's
+        // <new>/<filename>.html bytes). Best-effort: any fetch/IO error is
+        // swallowed so the restore proceeds regardless.
+        const slug = entry.canvasPageSlug
+          ?? (entry.canvasUrl ?? entry.filename).split('/').pop()!;
+        let currentHtml: string | null = null;
+        try {
+          const res = await fetch(
+            `${cfg.canvasUrl}/api/v1/courses/${manifest.courseId}/pages/${slug}`,
+            { headers: { Authorization: `Bearer ${cfg.apiToken}` } },
+          );
+          if (res.ok) {
+            const data = await res.json() as { body?: string };
+            currentHtml = data.body ?? '';
+          }
+        } catch { /* best-effort */ }
+
+        if (currentHtml !== null) {
+          const recorded = pagesMeta.pages[entry.filename];
+          let expectedHash: string | null = recorded?.newContentHash ?? null;
+          if (!expectedHash) {
+            try {
+              expectedHash = hashContent(
+                readFileSync(join(dir, 'new', entry.filename), 'utf-8'),
+              );
+            } catch { expectedHash = null; }
+          }
+          const driftResult = detectPageDrift({ currentCanvasHtml: currentHtml, expectedHash });
+          if (driftResult.drifted) {
+            drift.push({
+              item: entry.filename,
+              expectedHash: driftResult.expectedHash!,
+              actualHash: driftResult.actualHash,
+              action: 'restored',
+            });
+          }
+        }
+
         await restorePage(
           manifest.courseId,
           entry.canvasPageSlug ?? (entry.canvasUrl ?? entry.filename).split('/').pop()!,
@@ -269,5 +332,12 @@ export async function rollbackCoursePublish(
   }
 
   writeState(dir, { phase: 'rolled-back', published: state.published, lastUpdatedAt: new Date().toISOString() });
-  return { snapshotId: input.snapshotId, restored, restoreFailed, widgetsCleaned, phase: 'rolled-back' };
+  return {
+    snapshotId: input.snapshotId,
+    restored,
+    restoreFailed,
+    widgetsCleaned,
+    phase: 'rolled-back',
+    ...(drift.length > 0 ? { drift } : {}),
+  };
 }
