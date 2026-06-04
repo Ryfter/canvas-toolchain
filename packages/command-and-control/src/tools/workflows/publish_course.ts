@@ -11,7 +11,9 @@ import {
 import { snapshotsRootFor } from '../publish/snapshot_store.js';
 import { updateCurrentlyLive } from '../publish/state_meta.js';
 import { pruneSnapshots, type PruneSnapshotsResult } from '../publish/pruning.js';
-import { cleanupCanvasBreadcrumbsForSnapshot } from '../publish/breadcrumbs.js';
+import { cleanupCanvasBreadcrumbsForSnapshot, createPageBreadcrumb } from '../publish/breadcrumbs.js';
+import { loadCanvasConfig } from '../setup_canvas.js';
+import { updatePageMetaEntry } from '../publish/pages_meta.js';
 import { validateApprovals } from '../publish/approvals.js';
 import { detectGitState, gitCommitPrePublish, gitTagSuccess, gitPushTag } from '../publish/git_state.js';
 import { detectBackupState } from '../publish/backup_detection.js';
@@ -33,6 +35,9 @@ export interface PublishCourseInput {
   resume?: boolean;
   gitCommit?: boolean;
   pushTag?: boolean;
+  /** V&R Plan C — per-run override for Canvas breadcrumbs. When unset, falls back
+   *  to setup_canvas.canvasBreadcrumbs (default enabled). */
+  canvasBreadcrumbs?: boolean;
 }
 
 /** Optional dependency-injection hooks for tests. Production callers pass nothing. */
@@ -189,6 +194,13 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
     apiToken: cfg.apiToken,
   });
 
+  // V&R Plan C: per-run override beats setup_canvas default (which defaults to enabled).
+  const breadcrumbsEnabled = (() => {
+    if (typeof input.canvasBreadcrumbs === 'boolean') return input.canvasBreadcrumbs;
+    try { return loadCanvasConfig().canvasBreadcrumbs !== 'disabled'; }
+    catch { return true; }
+  })();
+
   const gitCommit = input.gitCommit !== false;
   const git = detectGitState(manifest.courseDir);
   let gitTag: string | undefined;
@@ -224,6 +236,30 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
     const newHtmlRaw = readNewHtml(dir, entry.filename);
     try {
       if (entry.type === 'page') {
+        // V&R Plan C — Task C4.1: archive prior page body before publish overwrites it.
+        // Only fires when a Canvas page already exists at the matched slug (collisionAction='update').
+        // Failure here MUST NOT abort publish — log + continue.
+        if (breadcrumbsEnabled && entry.canvasMatch) {
+          try {
+            const priorHtml = readFileSync(join(dir, 'prior', entry.filename), 'utf-8');
+            const date = manifest.generatedAt.slice(0, 10);
+            const isoTimestamp = `${manifest.generatedAt.slice(0, 10)} ${manifest.generatedAt.slice(11, 16)} UTC`;
+            const breadcrumb = await createPageBreadcrumb({
+              courseId: manifest.courseId,
+              canvasUrl: cfg.canvasUrl,
+              apiToken: cfg.apiToken,
+              originalTitle: entry.intendedTitle,
+              originalSlug: entry.canvasMatch.pageId,
+              priorBodyHtml: priorHtml,
+              date,
+              isoTimestamp,
+            });
+            updatePageMetaEntry(dir, entry.filename, { canvasBreadcrumb: breadcrumb });
+          } catch (e) {
+            console.warn(`page breadcrumb failed for ${entry.filename}: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+
         // Process any widget iframe references before publishing the page HTML.
         // The host is derived from canvasUrl (which includes scheme + maybe port);
         // publish_widget's CanvasConfig wants the bare host.
