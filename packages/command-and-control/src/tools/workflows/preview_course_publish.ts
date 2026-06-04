@@ -8,6 +8,7 @@ import { routePages } from '../publish/route_pages.js';
 import { buildDiffSummary, computeUnifiedDiff } from '../publish/build_diff_summary.js';
 import { scanWarnings } from '../publish/scan_warnings.js';
 import { detectGitState } from '../publish/git_state.js';
+import { detectBackupState } from '../publish/backup_detection.js';
 import {
   createSnapshotDir, newSnapshotId, writeManifest, writePriorHtml, writeNewHtml,
   writeFullDiff, writeState, findStaleSnapshot,
@@ -308,6 +309,7 @@ export async function previewCoursePublish(
     staleSnapshot: findStaleSnapshot(input.courseId),
     entries,
     summary,
+    backup: detectBackupState(input.courseDir),
   };
 
   writeManifest(dir, manifest);
