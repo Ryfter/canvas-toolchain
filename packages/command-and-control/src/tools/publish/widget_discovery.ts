@@ -77,6 +77,29 @@ export function resolveWidgetFiles(courseDir: string, ref: WidgetRef): WidgetFil
   };
 }
 
+export interface PriorWidgetRef {
+  /** Canvas Files file_id extracted from the iframe src. */
+  canvasFileId: number;
+  /** Full iframe tag — used so callers can do precise replacements without
+   *  ambiguity when multiple iframes share attributes. */
+  fullMatch: string;
+}
+
+/** Match iframes that point at a Canvas Files preview URL. Handles both
+ *  absolute (`https://canvas.example/courses/N/files/M/preview`) and the
+ *  course-relative form Canvas often returns (`/courses/N/files/M/preview`).
+ *  Used at preview time to scan the PRIOR Canvas page HTML so we can pull
+ *  down each prior widget's content for snapshot capture. */
+const PRIOR_WIDGET_IFRAME_RE = /<iframe\b[^>]*\bsrc="(?:https?:\/\/[^"\/]+)?\/courses\/\d+\/files\/(\d+)\/preview(?:[^"]*)?"[^>]*>[\s\S]*?<\/iframe>/gi;
+
+export function discoverPriorWidgetRefs(html: string): PriorWidgetRef[] {
+  const out: PriorWidgetRef[] = [];
+  for (const m of html.matchAll(PRIOR_WIDGET_IFRAME_RE)) {
+    out.push({ canvasFileId: Number(m[1]), fullMatch: m[0]! });
+  }
+  return out;
+}
+
 /** Load an InteractiveSpec from a spec.json path. Throws if missing or malformed. */
 export function loadWidgetSpec(specPath: string): InteractiveSpec {
   if (!existsSync(specPath)) {
