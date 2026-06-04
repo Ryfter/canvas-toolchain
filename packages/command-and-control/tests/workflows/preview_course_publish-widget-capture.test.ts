@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { previewCoursePublish } from '../../src/tools/workflows/preview_course_publish.js';
-import { snapshotsRootFor } from '../../src/tools/publish/snapshot_store.js';
+import { snapshotDir as snapshotDirLegacy } from '../../src/tools/publish/snapshot_store.js';
 import { readWidgetsMeta } from '../../src/tools/publish/widgets_meta.js';
 import { sha256 } from '../../src/tools/publish/hash.js';
 
@@ -134,8 +134,9 @@ describe('previewCoursePublish widget content capture', () => {
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('unchanged');
 
-    const snapshotsRoot = snapshotsRootFor(cd);
-    const snapshotDir = join(snapshotsRoot, result.snapshotId!);
+    // preview now uses legacy createSnapshotDir (matches publish/rollback lookup);
+    // snapshotDirLegacy returns the legacy global path for the given id.
+    const snapshotDir = snapshotDirLegacy(result.snapshotId!);
     const meta = readWidgetsMeta(snapshotDir);
     const entry = meta.widgets['overview__sort-the-phases'];
     expect(entry).toBeDefined();

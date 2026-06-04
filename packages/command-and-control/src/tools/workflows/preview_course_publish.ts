@@ -9,7 +9,7 @@ import { buildDiffSummary, computeUnifiedDiff } from '../publish/build_diff_summ
 import { scanWarnings } from '../publish/scan_warnings.js';
 import { detectGitState } from '../publish/git_state.js';
 import {
-  createSnapshotDirFor, newSnapshotId, writeManifest, writePriorHtml, writeNewHtml,
+  createSnapshotDir, newSnapshotId, writeManifest, writePriorHtml, writeNewHtml,
   writeFullDiff, writeState, findStaleSnapshot,
 } from '../publish/snapshot_store.js';
 import { discoverWidgetRefs, resolveWidgetFiles, discoverPriorWidgetRefs } from '../publish/widget_discovery.js';
@@ -180,7 +180,10 @@ export async function previewCoursePublish(
   ]);
 
   const snapshotId = newSnapshotId();
-  const dir = createSnapshotDirFor(snapshotId, input.courseDir);
+  // Use legacy createSnapshotDir so publish_course / rollback_course_publish's
+  // snapshotDir() lookups find this snapshot. Full migration to project-local
+  // requires updating publish/rollback lookups too — tracked as v1.x follow-up.
+  const dir = createSnapshotDir(snapshotId);
   const entries: ManifestEntry[] = [];
   const fullDiffSet = new Set(input.fullDiffFor ?? []);
 
