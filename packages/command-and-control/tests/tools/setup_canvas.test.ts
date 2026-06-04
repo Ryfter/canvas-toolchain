@@ -161,3 +161,33 @@ describe('loadCanvasConfig', () => {
     expect(config.token).toBe('canvas-test-token');
   });
 });
+
+describe('CanvasSetupConfig V&R Plan C fields', () => {
+  it('accepts retention fields and breadcrumb settings', () => {
+    const cfg: CanvasSetupConfig = {
+      host: 'x', token: 'y',
+      configuredAt: '2026-06-04T00:00:00.000Z',
+      lastValidatedAt: '2026-06-04T00:00:00.000Z',
+      snapshotRetentionCount: 5,
+      snapshotRetentionDays: 60,
+      canvasBreadcrumbs: 'enabled',
+      backupOverride: 'auto',
+    };
+    expect(cfg.snapshotRetentionCount).toBe(5);
+    expect(cfg.snapshotRetentionDays).toBe(60);
+    expect(cfg.canvasBreadcrumbs).toBe('enabled');
+    expect(cfg.backupOverride).toBe('auto');
+  });
+
+  it('all V&R Plan C fields are optional', () => {
+    const cfg: CanvasSetupConfig = {
+      host: 'x', token: 'y',
+      configuredAt: '2026-06-04T00:00:00.000Z',
+      lastValidatedAt: '2026-06-04T00:00:00.000Z',
+    };
+    expect(cfg.snapshotRetentionCount).toBeUndefined();
+    expect(cfg.snapshotRetentionDays).toBeUndefined();
+    expect(cfg.canvasBreadcrumbs).toBeUndefined();
+    expect(cfg.backupOverride).toBeUndefined();
+  });
+});

@@ -12,6 +12,14 @@ export interface CanvasSetupConfig {
    *  (legacy, machine-bound). Default: 'project'. Existing snapshots in either location
    *  remain readable via the snapshot_location fallback resolver. */
   snapshotsLocation?: 'project' | 'global';
+  /** V&R Plan C: number of most-recent snapshots to always keep regardless of age. Default 3. */
+  snapshotRetentionCount?: number;
+  /** V&R Plan C: number of days to keep snapshots regardless of count. Default 30. */
+  snapshotRetentionDays?: number;
+  /** V&R Plan C: course-level breadcrumb default. 'enabled' creates archived Canvas pages + files on publish. Default 'enabled'. */
+  canvasBreadcrumbs?: 'enabled' | 'disabled';
+  /** V&R Plan C: override automatic backup detection. 'auto' uses detected state. Default 'auto'. */
+  backupOverride?: 'verified' | 'none' | 'auto';
 }
 
 export interface SetupCanvasInput {
