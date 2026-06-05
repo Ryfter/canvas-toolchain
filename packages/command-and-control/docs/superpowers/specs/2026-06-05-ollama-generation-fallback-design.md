@@ -216,8 +216,6 @@ global generation model.
 
 ### Tier: 24 GB (RTX 4090, RTX 3090)
 ### Tier: 16 GB (RTX 4080, base M-series Mac)
-### Tier: 12 GB
-### Tier: 8 GB
 ### Tier: 6 GB
 
 ---
@@ -471,5 +469,7 @@ Shippable when all of the following hold:
    - `npm test` across all packages — no regressions.
 
 8. **Documentation:**
-   - `docs/recommended-models.md` exists in the repo with at minimum: one entry per VRAM tier (6/8/12/16/24/32 GB) in the General-Purpose section, plus the Whisper sub-section (used by future #60 work).
+   - `docs/recommended-models.md` exists in the repo with four General-Purpose VRAM tier sections (32 / 24 / 16 / 6 GB) and the Task-Specialized section including a Whisper sub-section (used by future #60 work).
+   - **Populated tiers at ship:** 6 GB, 24 GB, and 32 GB each have at least one tested model entry. (Kevin can test these tiers locally.)
+   - **Empty-but-present tier:** 16 GB exists as a section header with an `<!-- Open a PR with your tested model -->` placeholder. Mainstream-faculty hardware; populated as users contribute or as Kevin tests on a 16 GB box later. Does not block v1 ship.
    - `packages/command-and-control/CLAUDE.md` updated with the new tools and the provider-switching workflow.
