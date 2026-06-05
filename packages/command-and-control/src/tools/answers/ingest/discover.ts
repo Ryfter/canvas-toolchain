@@ -61,5 +61,12 @@ export function discoverSources(courseDir: string, transcriptSources: string[]):
   const canonicalPath = defaultCanonicalFaqPath(courseDir);
   const canonical = existsSync(canonicalPath) ? canonicalPath : null;
 
-  return { transcripts, cdsMarkdown, slidePdfs, canonical };
+  // The canonical FAQ lives under courseDir, so the markdown walker grabs it too.
+  // Strip it from cdsMarkdown so the orchestrator routes it through the canonical
+  // chunker (and tags chunks with source='canonical') instead of source='cds'.
+  const cdsMarkdownFiltered = canonical
+    ? cdsMarkdown.filter(f => f !== canonical)
+    : cdsMarkdown;
+
+  return { transcripts, cdsMarkdown: cdsMarkdownFiltered, slidePdfs, canonical };
 }
