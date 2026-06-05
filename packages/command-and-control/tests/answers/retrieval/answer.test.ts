@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { extractCitedIndexes, buildUserPrompt } from '../../../src/tools/answers/retrieval/prompt.js';
 import { generateAnswer } from '../../../src/tools/answers/retrieval/answer.js';
 import type { LlmClient, LlmResponse } from '@canvas-toolchain/shared-llm';
@@ -39,5 +42,23 @@ describe('generateAnswer', () => {
     expect(r.citations).toHaveLength(1);
     expect(r.citations[0]!.index).toBe(1);
     expect(r.citations[0]!.deepLink).toBe('https://x');
+  });
+
+  it('uses resolveActiveLlmClient when no LlmClient hook is supplied', async () => {
+    const ccHome = mkdtempSync(join(tmpdir(), 'cc-home-answer-'));
+    const originalHome = process.env.CC_HOME;
+    process.env.CC_HOME = ccHome;
+    try {
+      writeFileSync(join(ccHome, 'anthropic-config.json'), JSON.stringify({ apiKey: 'sk-test', model: 'claude' }));
+      writeFileSync(join(ccHome, 'llm-provider.json'), JSON.stringify({ provider: 'anthropic' }));
+
+      const { resolveActiveLlmClient } = await import('../../../src/llm/resolve.js');
+      const client = resolveActiveLlmClient();
+      expect(client).toBeDefined();
+    } finally {
+      rmSync(ccHome, { recursive: true, force: true });
+      if (originalHome === undefined) delete process.env.CC_HOME;
+      else process.env.CC_HOME = originalHome;
+    }
   });
 });

@@ -1,7 +1,7 @@
 // packages/command-and-control/src/tools/answers/retrieval/answer.ts
 
-import { AnthropicLlmClient, type LlmClient } from '@canvas-toolchain/shared-llm';
-import { loadAnthropicConfig } from '../../setup_anthropic.js';
+import type { LlmClient } from '@canvas-toolchain/shared-llm';
+import { resolveActiveLlmClient } from '../../../llm/resolve.js';
 import { SYSTEM_PROMPT, buildUserPrompt, extractCitedIndexes } from './prompt.js';
 import type { Chunk } from '../types.js';
 
@@ -29,7 +29,7 @@ export async function generateAnswer(
   chunks: Chunk[],
   hooks: AnswerHooks = {},
 ): Promise<AnswerResult> {
-  const llm = hooks.llm ?? new AnthropicLlmClient(loadAnthropicConfig());
+  const llm = hooks.llm ?? resolveActiveLlmClient();
   const userPrompt = buildUserPrompt(question, chunks);
   const response = await llm.complete(SYSTEM_PROMPT, userPrompt, { maxTokens: 1024 });
   const indexes = extractCitedIndexes(response.text);
