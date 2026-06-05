@@ -1,3 +1,5 @@
+import { LlmProviderError } from './errors.js';
+
 export interface AnthropicConfig {
   apiKey: string;
   model: string;
@@ -54,7 +56,29 @@ export class AnthropicLlmClient implements LlmClient {
 
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
-      throw new Error(`Anthropic API ${response.status}: ${detail.slice(0, 200)}`);
+      const truncated = detail.slice(0, 200);
+      if (response.status === 401) {
+        throw new LlmProviderError(
+          'ANTHROPIC_INVALID_KEY',
+          `Anthropic API 401: ${truncated}`,
+          'anthropic',
+          ['Re-run setup_anthropic with a valid key'],
+        );
+      }
+      if (response.status === 429) {
+        throw new LlmProviderError(
+          'ANTHROPIC_RATE_LIMITED',
+          `Anthropic API 429: ${truncated}`,
+          'anthropic',
+          ['Wait and retry, or switch to Ollama with set_active_llm_provider'],
+        );
+      }
+      throw new LlmProviderError(
+        'LLM_REQUEST_FAILED',
+        `Anthropic API ${response.status}: ${truncated}`,
+        'anthropic',
+        ['Check network and provider status'],
+      );
     }
 
     const payload = (await response.json()) as AnthropicResponse;

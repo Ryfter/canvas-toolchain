@@ -34,7 +34,8 @@ describe('AnthropicLlmClient', () => {
     (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(new Response('rate limited', { status: 429 }));
     const client = new AnthropicLlmClient(cfg);
 
-    await expect(client.complete('sys', 'usr')).rejects.toThrow(/Anthropic API 429.*rate limited/);
+    await expect(client.complete('sys', 'usr'))
+      .rejects.toMatchObject({ code: 'ANTHROPIC_RATE_LIMITED' });
   });
 
   it('honors opts.model and opts.maxTokens overrides', async () => {
@@ -61,5 +62,44 @@ describe('AnthropicLlmClient', () => {
     const result = await client.complete('sys', 'usr');
 
     expect(result.text).toBe('foo bar');
+  });
+
+  it('throws LlmProviderError with ANTHROPIC_INVALID_KEY on 401', async () => {
+    (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(new Response('bad key', { status: 401 }));
+    const client = new AnthropicLlmClient(cfg);
+    const { LlmProviderError } = await import('../src/errors.js');
+
+    await expect(client.complete('sys', 'usr'))
+      .rejects.toMatchObject({
+        constructor: LlmProviderError,
+        code: 'ANTHROPIC_INVALID_KEY',
+        provider: 'anthropic',
+      });
+  });
+
+  it('throws LlmProviderError with ANTHROPIC_RATE_LIMITED on 429', async () => {
+    (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(new Response('rate limited', { status: 429 }));
+    const client = new AnthropicLlmClient(cfg);
+    const { LlmProviderError } = await import('../src/errors.js');
+
+    await expect(client.complete('sys', 'usr'))
+      .rejects.toMatchObject({
+        constructor: LlmProviderError,
+        code: 'ANTHROPIC_RATE_LIMITED',
+        provider: 'anthropic',
+      });
+  });
+
+  it('throws LlmProviderError with LLM_REQUEST_FAILED on 500', async () => {
+    (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(new Response('server err', { status: 500 }));
+    const client = new AnthropicLlmClient(cfg);
+    const { LlmProviderError } = await import('../src/errors.js');
+
+    await expect(client.complete('sys', 'usr'))
+      .rejects.toMatchObject({
+        constructor: LlmProviderError,
+        code: 'LLM_REQUEST_FAILED',
+        provider: 'anthropic',
+      });
   });
 });
