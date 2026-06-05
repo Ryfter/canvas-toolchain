@@ -1,3 +1,4 @@
+/** @deprecated Use @canvas-toolchain/shared-llm instead. */
 import type { LlmClient, LlmOpts } from './client.js';
 
 export class OllamaAdapter implements LlmClient {
