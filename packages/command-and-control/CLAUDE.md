@@ -44,6 +44,9 @@ Implemented:
 - Layout adapter foundation lives in `src/layout/layout_adapter.ts`; `PasteAdapter` points direct calls to the `paste_layout` MCP workflow.
 - `StitchAdapter` is a no-API stub that logs the limitation and delegates to `PasteAdapter`.
 - `updateCourseMaterials()` now returns the shared comprehensive report shape from `@canvas-toolchain/shared-types`.
+- `setup_ollama` MCP tool — atomic 0o600 write to `~/.command-and-control/ollama-config.json`. Discovery mode (no `model`) returns the recommended-models markdown; commit mode validates the model is pulled and writes the config.
+- `set_active_llm_provider` MCP tool — atomic 0o600 write to `~/.command-and-control/llm-provider.json`. Switches generation between Anthropic and Ollama; refuses to set a provider whose config is absent.
+- `@canvas-toolchain/shared-llm` gains `OllamaLlmClient`, `resolveLlmClient`, `LlmProviderError`, and `fetchRecommendedModels`. All three generation call sites (brainstorm, rubric, answers) route through the C&C `resolveActiveLlmClient` shim.
 
 Still pending:
 
@@ -55,6 +58,25 @@ Shipping in v0.9.1 (Plan 1 — `installer/docs/plans/2026-05-26-cc-credential-to
 - `setup_anthropic` MCP tool — atomic 0o600 write to `~/.command-and-control/anthropic-config.json`, validates against `api.anthropic.com/v1/messages`.
 - `setup_canvas` MCP tool — same pattern, validates against `/api/v1/users/self`.
 - Update-availability nudge — server checks GitHub Releases on startup (24h cache, 5s timeout) and appends a one-line "Update available" notice to every successful tool response when the bundled version is older than the latest release.
+
+## Provider Switching Workflow
+
+Generation-time LLM provider (brainstorm, rubric, answers bot) is selectable. Two providers supported in v1: Anthropic (cloud) and Ollama (local).
+
+```text
+Anthropic-only setup:
+  setup_anthropic → set_active_llm_provider({ provider: 'anthropic' })
+
+Ollama-only setup:
+  setup_ollama (no model) → returns recommended-models.md verbatim
+  setup_ollama({ model: '<chosen>' })  → validates + writes ollama-config.json
+  set_active_llm_provider({ provider: 'ollama' })
+
+Switching later (both configs present):
+  set_active_llm_provider({ provider: 'anthropic' | 'ollama' })
+```
+
+Provider failures (Ollama down, Anthropic key revoked, etc.) surface as structured `{ error, message, fix }` results — no silent cross-provider fallback. See `packages/command-and-control/docs/superpowers/specs/2026-06-05-ollama-generation-fallback-design.md` for the full error code catalog.
 
 ## Native Installer Design (spec written, plans drafted)
 
