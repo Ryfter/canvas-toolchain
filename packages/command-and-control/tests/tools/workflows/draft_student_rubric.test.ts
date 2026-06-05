@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, existsSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -178,5 +178,23 @@ describe('draftStudentRubric', () => {
       { llm },
     );
     expect(result.usage).toEqual({ inputTokens: 100, outputTokens: 200 });
+  });
+
+  it('uses resolveActiveLlmClient when no LlmClient hook is supplied', async () => {
+    const ccHome = mkdtempSync(join(tmpdir(), 'cc-home-rubric-'));
+    const originalHome = process.env.CC_HOME;
+    process.env.CC_HOME = ccHome;
+    try {
+      writeFileSync(join(ccHome, 'anthropic-config.json'), JSON.stringify({ apiKey: 'sk-test', model: 'claude' }));
+      writeFileSync(join(ccHome, 'llm-provider.json'), JSON.stringify({ provider: 'anthropic' }));
+
+      const { resolveActiveLlmClient } = await import('../../../src/llm/resolve.js');
+      const client = resolveActiveLlmClient();
+      expect(client).toBeDefined();
+    } finally {
+      rmSync(ccHome, { recursive: true, force: true });
+      if (originalHome === undefined) delete process.env.CC_HOME;
+      else process.env.CC_HOME = originalHome;
+    }
   });
 });

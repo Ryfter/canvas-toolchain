@@ -1,18 +1,24 @@
 // Compat shim — real implementation lives in @canvas-toolchain/shared-llm.
-// Existing imports of `LlmClient`, `LlmResponse`, `AnthropicLlmClient` continue to work
-// but new construction now requires passing AnthropicConfig.
+// Existing imports of `LlmClient`, `LlmResponse`, `AnthropicLlmClient`, `AnthropicConfig`
+// continue to work. New construction routes through resolveActiveLlmClient so the
+// rubric flow honors the active provider (anthropic or ollama).
 export type { LlmClient, LlmResponse, AnthropicConfig } from '@canvas-toolchain/shared-llm';
 export { AnthropicLlmClient as SharedAnthropicLlmClient } from '@canvas-toolchain/shared-llm';
 
-import { AnthropicLlmClient as SharedClient } from '@canvas-toolchain/shared-llm';
-import { loadAnthropicConfig } from '../setup_anthropic.js';
+import type { LlmClient } from '@canvas-toolchain/shared-llm';
+import { resolveActiveLlmClient } from '../../llm/resolve.js';
 
-/** Backward-compat wrapper that auto-loads config from setup_anthropic, so existing
- *  callers (and tests) don't need to be updated immediately. New code should use
- *  SharedAnthropicLlmClient directly with explicit config. */
-export class AnthropicLlmClient extends SharedClient {
+/** Backward-compat wrapper that resolves the active provider on construction. */
+export class AnthropicLlmClient implements LlmClient {
+  private readonly inner: LlmClient;
   constructor() {
-    const cfg = loadAnthropicConfig();
-    super({ apiKey: cfg.apiKey, model: cfg.model });
+    this.inner = resolveActiveLlmClient();
+  }
+  async complete(
+    systemPrompt: string,
+    userPrompt: string,
+    opts?: { model?: string; maxTokens?: number },
+  ) {
+    return this.inner.complete(systemPrompt, userPrompt, opts);
   }
 }
