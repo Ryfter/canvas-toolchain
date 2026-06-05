@@ -59,6 +59,10 @@ import {
   prunePublishSnapshots,
   type PrunePublishSnapshotsInput,
 } from './tools/workflows/prune_publish_snapshots.js';
+import { setupLectureAnswers, type SetupLectureAnswersInput } from './tools/workflows/setup_lecture_answers.js';
+import { indexCourseForAnswers, type IndexCourseForAnswersInput } from './tools/workflows/index_course_for_answers.js';
+import { askCourse, type AskCourseInput } from './tools/workflows/ask_course.js';
+import { reembedCourseIndex, type ReembedCourseIndexInput } from './tools/workflows/reembed_course_index.js';
 import { snapshotCourse } from './tools/workflows/snapshot_course.js';
 import type { SnapshotInput } from './tools/snapshot/types.js';
 import { draftStudentRubric } from './tools/workflows/draft_student_rubric.js';
@@ -359,6 +363,64 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'setup_lecture_answers',
+      description: 'First-run configuration for the lecture answers bot. Auto-detects Ollama on localhost:11434. When Ollama is absent, returns guidance to either install Ollama or re-call with provider="transformers-js" (bundled, in-process) or provider="voyage" (cloud, requires voyageApiKey). The bot is opt-in — until this tool succeeds, ask_course and index_course_for_answers report NO_CONFIG.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          provider: { enum: ['ollama', 'transformers-js', 'voyage'] as const, description: 'Explicit provider choice. When omitted, auto-detects Ollama.' },
+          voyageApiKey: { type: 'string', description: 'Required when provider is "voyage".' },
+          ollamaBaseUrl: { type: 'string', description: 'Override the default Ollama base URL (http://localhost:11434).' },
+          model: { type: 'string', description: 'Override the default embedding model name for the chosen provider.' },
+        },
+      },
+    },
+    {
+      name: 'index_course_for_answers',
+      description: 'Build or incrementally update a per-course hybrid (FTS5 + vec) index over enriched lecture transcripts, CDS markdown, slide PDFs (under <courseDir>/slides/), and the canonical FAQ (<courseDir>/answers/canonical.md). Auto-incremental on subsequent calls based on file mtimes. Pass rebuild=true to wipe and re-embed everything (provider switch, suspected corruption).',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId', 'courseDir'],
+        properties: {
+          courseId: { type: 'number' },
+          courseDir: { type: 'string' },
+          rebuild: { type: 'boolean', description: 'Wipe and re-embed everything. Default false.' },
+          transcriptSources: { type: 'array', items: { type: 'string' }, description: 'Override the default transcript source directory list.' },
+        },
+      },
+    },
+    {
+      name: 'ask_course',
+      description: 'Faculty-facing Q&A against the per-course hybrid index. Auto-incrementally re-indexes any changed source files before retrieving. Returns the LLM-generated answer plus citations (with deep-link URLs for transcript chunks where the source platform provided a deepLinkTemplate). Degrades to keyword-only retrieval when the embedding provider is unavailable.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId', 'courseDir', 'question'],
+        properties: {
+          courseId: { type: 'number' },
+          courseDir: { type: 'string' },
+          question: { type: 'string' },
+          k: { type: 'number', description: 'Top-K chunks to retrieve. Default 8.' },
+          transcriptSources: { type: 'array', items: { type: 'string' } },
+        },
+      },
+    },
+    {
+      name: 'reembed_course_index',
+      description: 'Switch embedding providers and rebuild the per-course index in one call. Convenience wrapper over setup_lecture_answers + index_course_for_answers --rebuild. Use when migrating from Ollama to Voyage (or vice versa), since vector dimensions are not interchangeable.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId', 'courseDir'],
+        properties: {
+          courseId: { type: 'number' },
+          courseDir: { type: 'string' },
+          provider: { enum: ['ollama', 'transformers-js', 'voyage'] as const },
+          voyageApiKey: { type: 'string' },
+          ollamaBaseUrl: { type: 'string' },
+          transcriptSources: { type: 'array', items: { type: 'string' } },
+        },
+      },
+    },
+    {
       name: 'snapshot_course',
       description: 'Write or update a course reference markdown doc capturing course identifiers, assignment groups, modules, and an append-only Update Log. Re-running against the same outputPath regenerates the auto-managed sections (delimited by AUTO:start/AUTO:end HTML comment markers) and preserves all hand-edited prose around them.',
       inputSchema: {
@@ -596,6 +658,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'prune_publish_snapshots':
         result = await prunePublishSnapshots(args as unknown as PrunePublishSnapshotsInput);
+        break;
+      case 'setup_lecture_answers':
+        result = await setupLectureAnswers(args as unknown as SetupLectureAnswersInput);
+        break;
+      case 'index_course_for_answers':
+        result = await indexCourseForAnswers(args as unknown as IndexCourseForAnswersInput);
+        break;
+      case 'ask_course':
+        result = await askCourse(args as unknown as AskCourseInput);
+        break;
+      case 'reembed_course_index':
+        result = await reembedCourseIndex(args as unknown as ReembedCourseIndexInput);
         break;
       case 'snapshot_course':
         result = await snapshotCourse(args as unknown as SnapshotInput);
