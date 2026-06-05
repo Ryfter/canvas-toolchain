@@ -15,13 +15,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.0",
-    "@canvas-toolchain/shared-types": "*",
     "@canvas-toolchain/shared-llm": "*",
+    "@canvas-toolchain/shared-types": "*",
+    "@llamaindex/liteparse": "^2.0.5",
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "better-sqlite3": "^12.10.0",
     "canvas-design-mcp": "*",
-    "curriculum-intelligence-mcp": "*"
+    "curriculum-intelligence-mcp": "*",
+    "sqlite-vec": "^0.1.9"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
