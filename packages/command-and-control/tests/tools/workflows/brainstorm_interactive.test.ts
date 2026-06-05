@@ -140,3 +140,80 @@ describe('brainstormInteractive', () => {
     expect(r.usage).toEqual({ inputTokens: 80, outputTokens: 320 });
   });
 });
+
+describe('brainstormInteractive — kb-bridge auto-load (#32)', () => {
+  function makeFakeKb(opts: { philosophy?: string | null; personas?: string | null } = {}) {
+    return {
+      philosophyKb: () => opts.philosophy ?? null,
+      studentPersonas: () => opts.personas ?? null,
+      courseTrajectory: () => null,
+      courseTopicMap: () => null,
+      courseDesignFolder: () => null,
+    };
+  }
+
+  it('auto-loads philosophy and personas from kb-bridge when courseId is provided', async () => {
+    const llm = makeFakeLlm({ concepts: [validConcept()] });
+    const kb = makeFakeKb({
+      philosophy: 'PROF_PHILOSOPHY: exploration beats lecture.',
+      personas: 'PERSONAS: undergrad non-majors, need scaffolding.',
+    });
+    await brainstormInteractive(
+      { topic: 'T', learningGoal: 'G', courseId: '48895' },
+      { llm, kb },
+    );
+    expect(llm.calls).toHaveLength(1);
+    expect(llm.calls[0].user).toContain('PROF_PHILOSOPHY: exploration beats lecture.');
+    expect(llm.calls[0].user).toContain('PERSONAS: undergrad non-majors, need scaffolding.');
+  });
+
+  it('does NOT load kb when courseId is absent', async () => {
+    const llm = makeFakeLlm({ concepts: [validConcept()] });
+    const kb = makeFakeKb({ philosophy: 'SHOULD_NOT_APPEAR', personas: 'NOR_THIS' });
+    await brainstormInteractive(
+      { topic: 'T', learningGoal: 'G' },
+      { llm, kb },
+    );
+    expect(llm.calls[0].user).not.toContain('SHOULD_NOT_APPEAR');
+    expect(llm.calls[0].user).not.toContain('NOR_THIS');
+  });
+
+  it('honors explicit includePhilosophy:false even when courseId is provided', async () => {
+    const llm = makeFakeLlm({ concepts: [validConcept()] });
+    const kb = makeFakeKb({ philosophy: 'SHOULD_NOT_APPEAR', personas: 'PERSONAS_OK' });
+    await brainstormInteractive(
+      { topic: 'T', learningGoal: 'G', courseId: '48895', includePhilosophy: false },
+      { llm, kb },
+    );
+    expect(llm.calls[0].user).not.toContain('SHOULD_NOT_APPEAR');
+    expect(llm.calls[0].user).toContain('PERSONAS_OK');
+  });
+
+  it('caller-provided philosophyKb text wins over kb-bridge auto-load', async () => {
+    const llm = makeFakeLlm({ concepts: [validConcept()] });
+    const kb = makeFakeKb({ philosophy: 'PHIL_FROM_DISK', personas: 'PERSONAS_FROM_DISK' });
+    await brainstormInteractive(
+      {
+        topic: 'T', learningGoal: 'G', courseId: '48895',
+        philosophyKb: 'CALLER_PROVIDED', includePhilosophy: true,
+      },
+      { llm, kb },
+    );
+    expect(llm.calls[0].user).toContain('CALLER_PROVIDED');
+    expect(llm.calls[0].user).not.toContain('PHIL_FROM_DISK');
+    // Personas still come from disk since caller didn't override them.
+    expect(llm.calls[0].user).toContain('PERSONAS_FROM_DISK');
+  });
+
+  it('notes when courseId is provided but kb returns null for both files', async () => {
+    const llm = makeFakeLlm({ concepts: [validConcept()] });
+    const kb = makeFakeKb({ philosophy: null, personas: null });
+    await brainstormInteractive(
+      { topic: 'T', learningGoal: 'G', courseId: '48895', includePhilosophy: true, includePersonas: true },
+      { llm, kb },
+    );
+    // includePhilosophy: true + no text -> prompt records the gap.
+    expect(llm.calls[0].user).toMatch(/philosophy was requested but not provided/i);
+    expect(llm.calls[0].user).toMatch(/personas were requested but not provided/i);
+  });
+});

@@ -4,10 +4,41 @@ import type {
 import { SYSTEM_PROMPT, buildUserPrompt } from '../brainstorm/prompts.js';
 import { AnthropicLlmClient, type LlmClient } from '@canvas-toolchain/shared-llm';
 import { loadAnthropicConfig } from '../setup_anthropic.js';
+import { loadKb, type BridgedKb } from '../../lib/kb-bridge.js';
 
 export interface BrainstormInteractiveHooks {
   /** Injectable LLM client for testing. */
   llm?: LlmClient;
+  /** Injectable kb bridge for testing. Production callers pass nothing
+   *  and the workflow uses the real disk-backed bridge when input.courseId
+   *  is set. */
+  kb?: BridgedKb;
+}
+
+/** When input.courseId is set, fill missing philosophy + persona context from
+ *  the kb-bridge. Caller-provided text wins; explicit `includePhilosophy:false`
+ *  / `includePersonas:false` suppresses auto-load. No-op when courseId absent. */
+function enrichInputFromKb(
+  input: BrainstormInteractiveInput,
+  kb: BridgedKb | null,
+): BrainstormInteractiveInput {
+  if (!input.courseId || kb === null) return input;
+
+  const wantPhilosophy = input.includePhilosophy !== false;
+  const wantPersonas = input.includePersonas !== false;
+
+  const philosophyKb = input.philosophyKb
+    ?? (wantPhilosophy ? (kb.philosophyKb() ?? undefined) : undefined);
+  const studentPersonas = input.studentPersonas
+    ?? (wantPersonas ? (kb.studentPersonas() ?? undefined) : undefined);
+
+  return {
+    ...input,
+    includePhilosophy: input.includePhilosophy ?? (philosophyKb !== undefined),
+    includePersonas: input.includePersonas ?? (studentPersonas !== undefined),
+    philosophyKb,
+    studentPersonas,
+  };
 }
 
 function stripCodeFence(raw: string): string {
@@ -109,8 +140,10 @@ export async function brainstormInteractive(
   input: BrainstormInteractiveInput,
   hooks: BrainstormInteractiveHooks = {},
 ): Promise<BrainstormInteractiveResult> {
+  const kb = input.courseId ? (hooks.kb ?? loadKb()) : null;
+  const effective = enrichInputFromKb(input, kb);
   const llm = hooks.llm ?? new AnthropicLlmClient(loadAnthropicConfig());
-  const response = await llm.complete(SYSTEM_PROMPT, buildUserPrompt(input), { maxTokens: 4096 });
+  const response = await llm.complete(SYSTEM_PROMPT, buildUserPrompt(effective), { maxTokens: 4096 });
   const concepts = parseConcepts(response.text);
   return {
     topic: input.topic,

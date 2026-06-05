@@ -52,11 +52,18 @@ export interface BrainstormInteractiveInput {
   learningGoal: string;
   /** Optional audience tags (e.g. ["undergraduate", "first-time-AI-user"]). */
   audienceTags?: string[];
+  /** When provided, philosophy KB and student personas are auto-loaded from
+   *  the kb-bridge (philosophy-kb.md, student-personas.md under CDS home) and
+   *  prefixed to the prompt context. Callers may still pass philosophyKb /
+   *  studentPersonas / includePhilosophy / includePersonas to override. */
+  courseId?: string;
   /** When true, the professor's philosophy KB is prefixed to the prompt context.
-   *  Caller is responsible for providing the actual text via `philosophyKb`. */
+   *  Caller is responsible for providing the actual text via `philosophyKb`,
+   *  OR for passing `courseId` so the kb-bridge can auto-load it. */
   includePhilosophy?: boolean;
   /** When true, student-persona context is prefixed to the prompt.
-   *  Caller is responsible for providing the actual text via `studentPersonas`. */
+   *  Caller is responsible for providing the actual text via `studentPersonas`,
+   *  OR for passing `courseId` so the kb-bridge can auto-load it. */
   includePersonas?: boolean;
   /** Optional: philosophy KB text. If absent and includePhilosophy is true,
    *  the prompt notes that philosophy was requested but not available. */
