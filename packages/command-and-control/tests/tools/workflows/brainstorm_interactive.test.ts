@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { brainstormInteractive } from '../../../src/tools/workflows/brainstorm_interactive.js';
 import type { LlmClient, LlmResponse } from '../../../src/tools/brainstorm/llm_client.js';
 import type { WidgetConcept } from '../../../src/tools/brainstorm/types.js';
@@ -138,6 +141,24 @@ describe('brainstormInteractive', () => {
     const llm = makeFakeLlm({ concepts: [validConcept()] });
     const r = await brainstormInteractive({ topic: 'X', learningGoal: 'Y' }, { llm });
     expect(r.usage).toEqual({ inputTokens: 80, outputTokens: 320 });
+  });
+
+  it('uses resolveActiveLlmClient when no LlmClient hook is supplied', async () => {
+    const ccHome = mkdtempSync(join(tmpdir(), 'cc-home-brainstorm-'));
+    const originalHome = process.env.CC_HOME;
+    process.env.CC_HOME = ccHome;
+    try {
+      writeFileSync(join(ccHome, 'anthropic-config.json'), JSON.stringify({ apiKey: 'sk-test', model: 'claude' }));
+      writeFileSync(join(ccHome, 'llm-provider.json'), JSON.stringify({ provider: 'anthropic' }));
+
+      const { resolveActiveLlmClient } = await import('../../../src/llm/resolve.js');
+      const client = resolveActiveLlmClient();
+      expect(client).toBeDefined();
+    } finally {
+      rmSync(ccHome, { recursive: true, force: true });
+      if (originalHome === undefined) delete process.env.CC_HOME;
+      else process.env.CC_HOME = originalHome;
+    }
   });
 });
 
