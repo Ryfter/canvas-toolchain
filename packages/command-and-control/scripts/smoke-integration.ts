@@ -1,4 +1,6 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setupCourse } from 'curriculum-intelligence-mcp/dist/tools/setup_course.js';
@@ -7,12 +9,88 @@ import { generateCourse } from 'canvas-design-mcp/dist/tools/generate-course.js'
 import { analyzeCourse } from '../src/tools/workflows/analyze_course.js';
 import { ingestCourse } from '../src/tools/answers/ingest/orchestrator.js';
 import { askCourse } from '../src/tools/workflows/ask_course.js';
+import { setupOllama } from '../src/tools/setup_ollama.js';
+import { setActiveLlmProvider } from '../src/tools/set_active_llm_provider.js';
+import { generateAnswer } from '../src/tools/answers/retrieval/answer.js';
 import type { EmbeddingProvider } from '../src/tools/answers/provider/types.js';
 import type { LlmResponse } from '@canvas-toolchain/shared-llm';
+import type { Chunk } from '../src/tools/answers/types.js';
 
 class SmokeProvider implements EmbeddingProvider {
   readonly info = { kind: 'ollama' as const, model: 'smoke', dimension: 4 };
   async embed(texts: string[]) { return texts.map(() => new Float32Array([1, 0, 0, 0])); }
+}
+
+async function smokeAnswersOllama(): Promise<void> {
+  console.log('› Smoke: answers bot via Ollama (stub server) …');
+
+  const server: Server = await new Promise((resolve, reject) => {
+    const s = createServer((req, res) => {
+      if (req.url === '/api/tags') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ models: [{ name: 'qwen2.5:14b' }] }));
+        return;
+      }
+      if (req.url === '/api/generate' && req.method === 'POST') {
+        let body = '';
+        req.on('data', (chunk) => (body += chunk));
+        req.on('end', () => {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({
+            response: 'Stub Ollama answer citing source [1].',
+            done: true,
+            prompt_eval_count: 5,
+            eval_count: 8,
+          }));
+        });
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+    s.listen(0, '127.0.0.1', () => resolve(s));
+    s.on('error', reject);
+  });
+
+  const address = server.address();
+  if (typeof address === 'string' || address === null) {
+    throw new Error('Could not bind smoke stub server');
+  }
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+
+  try {
+    // Seed configs through the real tools so we exercise the real write path.
+    const ollamaSetup = await setupOllama({ baseUrl, model: 'qwen2.5:14b' });
+    if (ollamaSetup.mode !== 'commit') {
+      throw new Error(`setup_ollama returned unexpected mode in smoke: ${JSON.stringify(ollamaSetup)}`);
+    }
+    if (!ollamaSetup.ok) {
+      throw new Error(`setup_ollama failed in smoke: ${JSON.stringify(ollamaSetup)}`);
+    }
+
+    const switchResult = await setActiveLlmProvider({ provider: 'ollama' });
+    if (!switchResult.ok) {
+      throw new Error(`set_active_llm_provider failed: ${JSON.stringify(switchResult)}`);
+    }
+
+    const sampleChunks: Chunk[] = [
+      {
+        content: 'VLOOKUP is supplied in week 1 as the primary spreadsheet function.',
+        source: 'cds',
+        sourcePath: 'week-01/overview.md',
+        sourceRef: 'week-01/overview.md#goals',
+        deepLink: null,
+      },
+    ];
+
+    const result = await generateAnswer('What is supplied?', sampleChunks);
+    if (!result.answer.includes('Stub Ollama answer')) {
+      throw new Error(`Unexpected smoke answer: ${result.answer}`);
+    }
+    console.log('  ✓ Answers bot returned canned Ollama response');
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 }
 
 const COURSE_ID = 'ITM370';
@@ -97,6 +175,10 @@ try {
   console.log(
     `lecture answers: answer cites=${askResult.citations.length} mode=${askResult.retrievalMode}`,
   );
+
+  // ── Step: Answers bot via Ollama path (stub server)
+  // Validates that the resolver routes through OllamaLlmClient end-to-end.
+  await smokeAnswersOllama();
 
   console.log('Integration smoke passed.');
 } finally {
