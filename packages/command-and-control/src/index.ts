@@ -19,6 +19,8 @@ import { installResourcesFromLockfile } from './registry/lockfile_install.js';
 import { pasteLayout, saveLayoutAsTemplate } from './tools/layout_adapter.js';
 import { setupPanopto } from './tools/setup_panopto.js';
 import { setupAnthropic } from './tools/setup_anthropic.js';
+import { setupOllama } from './tools/setup_ollama.js';
+import { setActiveLlmProvider } from './tools/set_active_llm_provider.js';
 import { setupCanvas } from './tools/setup_canvas.js';
 import { checkForUpdates, getUpdateNotice } from './update/check.js';
 import {
@@ -125,6 +127,28 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           host: { type: 'string', description: 'Canvas hostname, e.g. "bsu.instructure.com". Leading https:// is stripped automatically.' },
           token: { type: 'string', description: 'Canvas API access token from Canvas → Account → Settings → New Access Token. Stored locally and never echoed back.' },
           test: { type: 'boolean', description: 'Validate the token with /api/v1/users/self before saving (default: true).' },
+        },
+      },
+    },
+    {
+      name: 'setup_ollama',
+      description: 'Configure Ollama as the local generation LLM. Discovery mode (no model) returns the recommended-models markdown. Commit mode (with model) validates the model is pulled and writes ollama-config.json.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          baseUrl: { type: 'string', description: 'Ollama base URL. Default http://localhost:11434.' },
+          model: { type: 'string', description: 'Ollama model ID. Omit for discovery mode.' },
+        },
+      },
+    },
+    {
+      name: 'set_active_llm_provider',
+      description: 'Set the active generation LLM provider. Must be anthropic or ollama. Refuses to set a provider whose config file is absent.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['provider'],
+        properties: {
+          provider: { type: 'string', enum: ['anthropic', 'ollama'], description: 'anthropic or ollama' },
         },
       },
     },
@@ -591,6 +615,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'setup_canvas':
         result = await setupCanvas(args as unknown as Parameters<typeof setupCanvas>[0]);
+        break;
+      case 'setup_ollama':
+        result = await setupOllama(args as unknown as Parameters<typeof setupOllama>[0]);
+        break;
+      case 'set_active_llm_provider':
+        result = await setActiveLlmProvider(args as unknown as Parameters<typeof setActiveLlmProvider>[0]);
         break;
       case 'get_cc_status':
         result = await getCcStatus();
