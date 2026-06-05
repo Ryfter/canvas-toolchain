@@ -94,3 +94,12 @@ export class AnthropicLlmClient implements LlmClient {
     };
   }
 }
+
+export { OllamaLlmClient } from './ollama.js';
+export type { OllamaConfig } from './ollama.js';
+export { resolveLlmClient } from './resolve.js';
+export type { ResolveInput } from './resolve.js';
+export { LlmProviderError } from './errors.js';
+export type { LlmProvider } from './errors.js';
+export { fetchRecommendedModels } from './recommendations.js';
+export type { FetchRecommendedModelsInput } from './recommendations.js';
