@@ -1,6 +1,6 @@
 // packages/command-and-control/src/tools/answers/config.ts
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { lectureAnswersConfigPath } from './paths.js';
 import type { LectureAnswersConfig } from './types.js';
@@ -17,7 +17,5 @@ export function saveLectureAnswersConfig(cfg: LectureAnswersConfig): void {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, JSON.stringify(cfg, null, 2), { encoding: 'utf-8', mode: 0o600 });
-  // atomic rename
-  const { renameSync } = require('node:fs') as typeof import('node:fs');
   renameSync(tmp, path);
 }
