@@ -20,6 +20,8 @@ import { pasteLayout, saveLayoutAsTemplate } from './tools/layout_adapter.js';
 import { setupPanopto } from './tools/setup_panopto.js';
 import { setupAnthropic } from './tools/setup_anthropic.js';
 import { setupOllama } from './tools/setup_ollama.js';
+import { showCanvasCapabilities } from './tools/showcase/show_canvas_capabilities.js';
+import { previewCanvasPattern } from './tools/showcase/preview_canvas_pattern.js';
 import { setActiveLlmProvider } from './tools/set_active_llm_provider.js';
 import { setupCanvas } from './tools/setup_canvas.js';
 import { checkForUpdates, getUpdateNotice } from './update/check.js';
@@ -139,6 +141,39 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           baseUrl: { type: 'string', description: 'Ollama base URL. Default http://localhost:11434.' },
           model: { type: 'string', description: 'Ollama model ID. Omit for discovery mode.' },
         },
+      },
+    },
+    {
+      name: 'show_canvas_capabilities',
+      description:
+        "Returns the catalog of Canvas-safe design patterns. Optionally filter by category " +
+        "(layout, information, interactive, pedagogical, branded) or supportStatus " +
+        "(supported, partial, aspirational). Use this to discover what patterns exist; " +
+        "then call preview_canvas_pattern to see any specific pattern rendered.",
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          category: { type: 'string', description: 'Filter to one category id.' },
+          supportStatus: {
+            type: 'string',
+            enum: ['supported', 'partial', 'aspirational'],
+            description: 'Filter by supportStatus.',
+          },
+        },
+      },
+    },
+    {
+      name: 'preview_canvas_pattern',
+      description:
+        "Renders a specific Canvas capability pattern to a standalone HTML file " +
+        "that can be opened in any browser. Use this after show_canvas_capabilities " +
+        "to actually see a pattern in action.",
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          patternId: { type: 'string', description: 'Pattern ID from show_canvas_capabilities.' },
+        },
+        required: ['patternId'],
       },
     },
     {
@@ -618,6 +653,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'setup_ollama':
         result = await setupOllama(args as unknown as Parameters<typeof setupOllama>[0]);
+        break;
+      case 'show_canvas_capabilities':
+        result = await showCanvasCapabilities(args as unknown as Parameters<typeof showCanvasCapabilities>[0]);
+        break;
+      case 'preview_canvas_pattern':
+        result = await previewCanvasPattern(args as unknown as Parameters<typeof previewCanvasPattern>[0]);
         break;
       case 'set_active_llm_provider':
         result = await setActiveLlmProvider(args as unknown as Parameters<typeof setActiveLlmProvider>[0]);
