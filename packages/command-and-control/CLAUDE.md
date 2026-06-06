@@ -47,6 +47,8 @@ Implemented:
 - `setup_ollama` MCP tool — atomic 0o600 write to `~/.command-and-control/ollama-config.json`. Discovery mode (no `model`) returns the recommended-models markdown; commit mode validates the model is pulled and writes the config.
 - `set_active_llm_provider` MCP tool — atomic 0o600 write to `~/.command-and-control/llm-provider.json`. Switches generation between Anthropic and Ollama; refuses to set a provider whose config is absent.
 - `@canvas-toolchain/shared-llm` gains `OllamaLlmClient`, `resolveLlmClient`, `LlmProviderError`, and `fetchRecommendedModels`. All three generation call sites (brainstorm, rubric, answers) route through the C&C `resolveActiveLlmClient` shim.
+- `show_canvas_capabilities` MCP tool — returns the canvas-capabilities.yaml catalog as readable markdown, grouped into ✅ Currently Supported and 🛠 Aspirational sections. Optional `category` and `supportStatus` filters.
+- `preview_canvas_pattern` MCP tool — renders a specific pattern to a standalone HTML preview at `~/.command-and-control/showcase-previews/<patternId>.html`. Returns an `openInstruction` like `Open file://… in your browser`.
 
 Still pending:
 
@@ -77,6 +79,23 @@ Switching later (both configs present):
 ```
 
 Provider failures (Ollama down, Anthropic key revoked, etc.) surface as structured `{ error, message, fix }` results — no silent cross-provider fallback. See `packages/command-and-control/docs/superpowers/specs/2026-06-05-ollama-generation-fallback-design.md` for the full error code catalog.
+
+## Canvas Capability Showcase
+
+Two MCP tools surface the Canvas-safe design pattern catalog so professors can discover what's possible without reading the KB:
+
+```text
+Browse:  show_canvas_capabilities
+Filter:  show_canvas_capabilities({ category: 'information' })
+         show_canvas_capabilities({ supportStatus: 'aspirational' })
+Render:  preview_canvas_pattern({ patternId: 'comparison-card' })
+          → writes ~/.command-and-control/showcase-previews/<id>.html
+          → return value includes an "Open file://…" instruction
+```
+
+The catalog lives at `packages/canvas-design-studio/data/canvas-capabilities.yaml`. Adding a new pattern is a content PR — no TypeScript change. Each pattern has a `supportStatus` of `supported`, `partial`, or `aspirational`; aspirational entries represent Canvas-safe possibilities CDS does not yet generate, and serve as a roadmap signal for future work.
+
+See `packages/command-and-control/docs/superpowers/specs/2026-06-05-canvas-capability-showcase-design.md` for the full data model and tool contracts.
 
 ## Native Installer Design (spec written, plans drafted)
 
