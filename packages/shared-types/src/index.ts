@@ -140,3 +140,18 @@ export interface UpdateCourseMaterialsResult {
   };
   status: 'complete' | 'pending-selections';
 }
+
+// ── Content priority tiers (#66) ─────────────────────────────────────────────
+
+export type Tier = 1 | 2 | 3;
+
+export interface SectionTier {
+  heading: string;
+  tier: Tier;
+  summary: string;
+}
+
+export interface PageTiers {
+  locked?: boolean;
+  sections: SectionTier[];
+}
