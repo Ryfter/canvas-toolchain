@@ -58,6 +58,8 @@ This spec adds a tier label per page section and a TL;DR card built from the hig
 - *Standalone `assign_content_tiers` MCP tool*: extra cognitive load; professor has to remember a new step.
 - *Lazy from `generate_page`*: surprising LLM costs at render time.
 
+**Implementation note (added post-brainstorm during plan recon):** Today's `analyze_course` operates on a Canvas-Backup archive (`archivePath`), not on the CDS markdown course folder. To fold tier assignment in without breaking existing callers, `analyze_course` gains an OPTIONAL `courseDir` input. When `courseDir` is supplied, the tier-assignment phase runs after the existing trajectory analysis. When `courseDir` is omitted, behavior is unchanged. C&C's wrapper passes both when invoking — the professor still sees "one tool."
+
 ---
 
 ## Architecture
@@ -202,23 +204,27 @@ Return strict JSON: { "sections": [{ "heading": "...", "tier": N, "summary": "..
 
 ## CI — `analyze_course.ts` modification
 
-A new phase runs after existing semantic analysis, before the function returns:
+`AnalyzeCourseInput` gains an OPTIONAL `courseDir?: string` field. When supplied, a new phase runs after existing trajectory analysis, before the function returns:
 
 ```
-existing semantic analysis
+existing trajectory analysis (Canvas archive → topic-map / per-assignment)
   ↓
-NEW: for each page in courseDir:
-       if page.front_matter.tiers.locked === true: continue
-       parse body into { heading, body } sections by H2/H3
-       call assignTiers({ pageTitle, sections, llm: resolvedLlmClient })
-       merge result.tiers into front matter
-       atomic-write the page (preserving body unchanged)
-       accumulate warnings
+NEW (only if input.courseDir is provided):
+  for each .md file under courseDir/ (excluding course-config.md):
+    parse YAML front matter + body
+    if front_matter.tiers && front_matter.tiers.locked === true: continue
+    split body into { heading, body } sections by H2 / H3
+    call assignTiers({ pageTitle, sections, llm: resolvedLlmClient })
+    merge result.tiers into front matter (preserve other fields)
+    atomic-write the page (preserving body unchanged)
+    accumulate warnings
   ↓
-return existing-result-shape extended with .tierAssignments[] and .tierWarnings[]
+return AnalyzeCourseReport extended with optional .tierAssignments[] and .tierWarnings[]
 ```
 
 `resolvedLlmClient` comes from #89's `resolveActiveLlmClient` — so this phase honors the user's active provider (Anthropic or Ollama).
+
+**Backward compatibility:** existing callers that pass no `courseDir` see exactly the prior behavior. The new fields on `AnalyzeCourseReport` are both optional.
 
 ---
 
