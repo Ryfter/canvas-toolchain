@@ -1,0 +1,157 @@
+version: 1
+updated: "2026-06-05"
+
+categories:
+  - id: layout
+    name: Layout
+    description: How content is arranged on the page
+  - id: information
+    name: Information
+    description: How facts, comparisons, and definitions are presented
+  - id: interactive
+    name: Interactive (no-JS)
+    description: Patterns that feel interactive within Canvas's no-script constraint
+  - id: pedagogical
+    name: Pedagogical
+    description: Patterns specific to learning design
+  - id: branded
+    name: Branded
+    description: Patterns that pull from the active theme
+
+patterns:
+  - id: comparison-card
+    name: Comparison Card
+    category: information
+    supportStatus: supported
+    description: >
+      Side-by-side comparison of two concepts, products, or approaches.
+    whenToUse: >
+      "X vs Y" content. Pros/cons. Before/after.
+    notes: >
+      Uses inline CSS only. Table-based layout for Canvas safety.
+    exampleHtml: |
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#0033A0; color:white;">
+            <th style="padding:12px; text-align:left;">Excel</th>
+            <th style="padding:12px; text-align:left;">Tableau</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:12px; border:1px solid #ccc;">Spreadsheet-first; best for one-time calculations and datasets under 1M rows.</td>
+            <td style="padding:12px; border:1px solid #ccc;">Visualization-first; best for live dashboards over millions of rows from many sources.</td>
+          </tr>
+        </tbody>
+      </table>
+
+  - id: accordion-details
+    name: Accordion (collapsible sections)
+    category: interactive
+    supportStatus: supported
+    description: Click-to-expand sections using native HTML details/summary.
+    whenToUse: FAQ content; long answers tucked behind short questions.
+    notes: Native HTML — no JavaScript needed.
+    exampleHtml: |
+      <details style="margin-bottom:1em; padding:0.5em; border:1px solid #ccc; border-radius:4px;">
+        <summary style="cursor:pointer; padding:0.5em;"><strong>How is final grading calculated?</strong></summary>
+        <div style="padding:0.5em;">
+          <p>Weighted average across four categories: Assignments (40%), Quizzes (20%), Project (30%), Participation (10%).</p>
+        </div>
+      </details>
+
+  - id: callout-box
+    name: Callout Box
+    category: information
+    supportStatus: supported
+    description: Highlighted advice, warning, or "did you know" sidebar.
+    whenToUse: Procedural reminders, deadlines, or context the student must not miss.
+    notes: Uses BSU info-blue palette from the design tokens.
+    exampleHtml: |
+      <div style="background:#E6F1FB; border-left:4px solid #185FA5; padding:1em; margin:1em 0; border-radius:0 4px 4px 0;">
+        <strong style="color:#185FA5;">Note:</strong> Submissions close at 11:59 PM Mountain Time the night before class.
+      </div>
+
+  - id: learning-objectives-list
+    name: Learning Objectives List
+    category: pedagogical
+    supportStatus: supported
+    description: A boxed "by the end of this week you will be able to..." list.
+    whenToUse: Top of every week or module page; orients the student.
+    notes: Uses neutral background; pairs with the brand primary heading color.
+    exampleHtml: |
+      <div style="background:#F4F3EF; padding:1em 1.5em; border-radius:8px; margin:1em 0;">
+        <h3 style="margin-top:0; color:#0033A0;">By the end of this week, you will be able to:</h3>
+        <ul>
+          <li>Connect Tableau to a live data source.</li>
+          <li>Build a basic bar chart and table visualization.</li>
+          <li>Apply filters to refine the view to a specific time range.</li>
+        </ul>
+      </div>
+
+  - id: vocab-table
+    name: Vocabulary Table
+    category: information
+    supportStatus: supported
+    description: Term + definition table for a domain glossary.
+    whenToUse: Introducing a set of related new terms in a single section.
+    notes: Uses Canvas's built-in ic-Table class — no admin styling needed.
+    exampleHtml: |
+      <table class="ic-Table" style="width:100%;">
+        <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Dimension</strong></td><td>A categorical field used to slice data (e.g., Region, Product).</td></tr>
+          <tr><td><strong>Measure</strong></td><td>A numeric field that gets aggregated (e.g., Sales, Profit).</td></tr>
+          <tr><td><strong>Calculated field</strong></td><td>A new field derived from existing ones via a formula.</td></tr>
+        </tbody>
+      </table>
+
+  - id: tabbed-layout-target
+    name: Tabbed Layout (:target hack)
+    category: interactive
+    supportStatus: aspirational
+    description: Clickable tabs that swap content panels via CSS :target.
+    whenToUse: 3–5 parallel sections (Week 1 / Week 2 / Week 3 overview).
+    notes: >
+      Canvas's no-JS constraint means true tabs require CSS :target hacks
+      which may collide with the page's natural anchor navigation.
+      CDS does not currently produce this pattern; explore at your own risk.
+    exampleHtml: |
+      <div style="border:1px dashed #888; padding:1em; background:#FAEEDA;">
+        <p><em>Aspirational pattern. CDS does not currently generate it.</em></p>
+        <p>Intended UX: a row of "tab" buttons that visually highlight the active panel via the URL hash. Implementation would use anchor IDs + sibling-selector CSS rules.</p>
+      </div>
+
+  - id: jump-link-nav
+    name: Jump-Link Nav Bar
+    category: layout
+    supportStatus: aspirational
+    description: A top-of-page in-page anchor navigation bar.
+    whenToUse: Long pages (3+ major sections) where students benefit from a TOC.
+    notes: >
+      CDS does not currently emit this pattern by default. Trivial to
+      add as a content PR — just generate matching id attributes on
+      target headings.
+    exampleHtml: |
+      <nav style="background:#F4F3EF; padding:0.5em 1em; border-radius:4px; margin-bottom:1em;">
+        <a href="#section-1" style="margin-right:1em; color:#0033A0;">Overview</a>
+        <a href="#section-2" style="margin-right:1em; color:#0033A0;">Concepts</a>
+        <a href="#section-3" style="margin-right:1em; color:#0033A0;">Practice</a>
+      </nav>
+      <h2 id="section-1">Overview</h2>
+      <p>Sample content for the first section…</p>
+
+  - id: rubric-help-callout
+    name: Rubric Help Callout
+    category: pedagogical
+    supportStatus: aspirational
+    description: A per-criterion student-language explainer attached to a rubric row.
+    whenToUse: Anywhere an official Canvas rubric is shown to students.
+    notes: >
+      Ties into the rubric system (#67) — student-facing rubric language
+      that pairs with the existing Canvas rubric.
+    exampleHtml: |
+      <div style="background:#FAEEDA; border-left:4px solid #854F0B; padding:1em; margin:1em 0; border-radius:0 4px 4px 0;">
+        <h4 style="margin-top:0; color:#854F0B;">📋 What this rubric criterion means (in plain English)</h4>
+        <p><strong>"Demonstrates analytical rigor"</strong> means: <em>You used evidence from at least two sources, explained <strong>why</strong> the evidence matters (not just that it exists), and acknowledged at least one limitation of your analysis.</em></p>
+      </div>
