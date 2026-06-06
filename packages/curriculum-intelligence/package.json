@@ -20,6 +20,8 @@
   ],
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
+    "@canvas-toolchain/shared-llm": "*",
+    "@canvas-toolchain/shared-types": "*",
     "@modelcontextprotocol/sdk": "^1.10.0",
     "fast-xml-parser": "^5.8.0",
     "gray-matter": "^4.0.3",
