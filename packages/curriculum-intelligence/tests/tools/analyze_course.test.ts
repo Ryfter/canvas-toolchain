@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, test } from 'vitest';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -133,3 +133,101 @@ test('concept extraction failures degrade silently', async () => {
   expect(result.perConcept).toBeUndefined();
   expect(result.perAssignment.length).toBeGreaterThan(0);
 });
+
+describe('tier-assignment phase (courseDir provided)', () => {
+  it('iterates pages in courseDir and writes tiers block to each', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const courseDir = mkdtempSync(join(tmpdir(), 'ac-tier-'));
+    try {
+      mkdirSync(join(courseDir, 'week-05'), { recursive: true });
+      writeFileSync(join(courseDir, 'week-05', 'assignment.md'),
+        '---\ntitle: W5\n---\n\n## Due Date\n\nOct 17\n\n## Rubric\n\nQuality stuff.\n');
+      writeFileSync(join(courseDir, 'course-config.md'), '---\ntitle: ITM 370\n---\n');
+
+      const fakeLlm = {
+        async complete(_sys: string, _user: string) {
+          return {
+            text: JSON.stringify({
+              sections: [
+                { heading: 'Due Date', tier: 1, summary: 'Oct 17' },
+                { heading: 'Rubric', tier: 3, summary: 'Quality' },
+              ],
+            }),
+            usage: { inputTokens: 1, outputTokens: 1 },
+          };
+        },
+      };
+
+      const result = await runAnalyzeCourseWithTierPhase({
+        courseDir,
+        llm: fakeLlm,
+      });
+
+      const updated = readFileSync(join(courseDir, 'week-05', 'assignment.md'), 'utf-8');
+      expect(updated).toContain('tiers:');
+      expect(updated).toContain('Due Date');
+      expect(updated).toContain('Oct 17');
+      expect(result.tierAssignments).toBeDefined();
+      expect(result.tierAssignments!.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      rmSync(courseDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips pages with tiers.locked: true', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const courseDir = mkdtempSync(join(tmpdir(), 'ac-locked-'));
+    try {
+      mkdirSync(join(courseDir, 'week-05'), { recursive: true });
+      writeFileSync(join(courseDir, 'week-05', 'locked.md'),
+        '---\ntitle: T\ntiers:\n  locked: true\n  sections:\n    - heading: Manual\n      tier: 1\n      summary: do not touch\n---\n\n## Due Date\n\nOct 17\n');
+
+      const fakeLlm = {
+        async complete(_sys: string, _user: string) {
+          return { text: JSON.stringify({ sections: [{ heading: 'Due Date', tier: 1, summary: 'NEW' }] }), usage: { inputTokens: 1, outputTokens: 1 } };
+        },
+      };
+
+      await runAnalyzeCourseWithTierPhase({ courseDir, llm: fakeLlm });
+
+      const updated = readFileSync(join(courseDir, 'week-05', 'locked.md'), 'utf-8');
+      expect(updated).toContain('do not touch');
+      expect(updated).not.toContain('NEW');
+    } finally {
+      rmSync(courseDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips course-config.md', async () => {
+    const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const courseDir = mkdtempSync(join(tmpdir(), 'ac-cfg-'));
+    try {
+      writeFileSync(join(courseDir, 'course-config.md'),
+        '---\ntitle: ITM 370\n---\n\n## Heading\n\nbody\n');
+
+      const fakeLlm = {
+        async complete(_sys: string, _user: string) {
+          return { text: JSON.stringify({ sections: [{ heading: 'Heading', tier: 1, summary: 'SHOULD NOT APPEAR' }] }), usage: { inputTokens: 1, outputTokens: 1 } };
+        },
+      };
+
+      await runAnalyzeCourseWithTierPhase({ courseDir, llm: fakeLlm });
+
+      const updated = readFileSync(join(courseDir, 'course-config.md'), 'utf-8');
+      expect(updated).not.toContain('tiers:');
+    } finally {
+      rmSync(courseDir, { recursive: true, force: true });
+    }
+  });
+});
+
+async function runAnalyzeCourseWithTierPhase(input: { courseDir: string; llm: any }): Promise<{ tierAssignments?: Array<{ relPath: string; tiers: any }>; tierWarnings?: string[] }> {
+  const { runTierPhase } = await import('../../src/tools/analyze_course.js');
+  return await runTierPhase({ courseDir: input.courseDir, llm: input.llm });
+}

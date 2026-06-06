@@ -1,5 +1,8 @@
+import { readdirSync, statSync } from 'node:fs';
+import { join, relative, extname, basename } from 'node:path';
 import type { CourseId, SemesterId, TrajectoryEntry, TrajectoryDiff, PerTopicTrajectory, Verdict } from '../types.js';
 import type { LlmClient } from '../llm/client.js';
+import type { PageTiers } from '@canvas-toolchain/shared-types';
 import { ingestCanvasArchive } from './ingest_canvas_archive.js';
 import { diffSemesters, type DiffSemestersResult } from './diff_semesters.js';
 import { scoreTopicCurrency } from './score_topic_currency.js';
@@ -15,6 +18,8 @@ import {
   getHistoryPath,
 } from '../kb/trajectory.js';
 import { extractCourseConcepts } from './extract_course_concepts.js';
+import { assignTiers } from '../analyze/assign_tiers.js';
+import { readPageFrontMatter, writePageTiers, splitSections } from '../analyze/page_front_matter.js';
 
 export interface AnalyzeCourseInput {
   courseId: CourseId;
@@ -22,6 +27,8 @@ export interface AnalyzeCourseInput {
   archivePath: string;
   extractConcepts?: boolean;
   llmClient?: LlmClient;
+  /** CDS course folder — when provided, the tier-assignment phase runs over its pages. */
+  courseDir?: string;
 }
 
 export interface AnalyzeCourseReport {
@@ -31,6 +38,10 @@ export interface AnalyzeCourseReport {
   perAssignment: PerTopicTrajectory[];
   perConcept?: PerTopicTrajectory[];
   trajectoryEntry: TrajectoryEntry;
+  /** Present when input.courseDir was supplied. */
+  tierAssignments?: Array<{ relPath: string; tiers: PageTiers }>;
+  /** Present when input.courseDir was supplied. */
+  tierWarnings?: string[];
 }
 
 export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeCourseReport> {
@@ -182,7 +193,7 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
   // 10. Persist entry
   appendEntry(entry);
 
-  return {
+  const baseReport: AnalyzeCourseReport = {
     courseId,
     semesterId,
     historyPath: getHistoryPath(courseId),
@@ -190,6 +201,17 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
     ...(perConcept ? { perConcept } : {}),
     trajectoryEntry: entry,
   };
+
+  if (input.courseDir && input.llmClient) {
+    const tierPhase = await runTierPhase({ courseDir: input.courseDir, llm: input.llmClient });
+    return {
+      ...baseReport,
+      tierAssignments: tierPhase.tierAssignments,
+      tierWarnings: tierPhase.tierWarnings,
+    };
+  }
+
+  return baseReport;
 }
 
 function pickMostUncertainVerdict(assignments: PerTopicTrajectory[]): Verdict {
@@ -233,4 +255,74 @@ function diffResultToTrajectoryDiff(result: DiffSemestersResult): TrajectoryDiff
     pages: result.pages,
     resources: result.resources,
   };
+}
+
+function walkMarkdown(root: string, out: string[]): void {
+  for (const entry of readdirSync(root)) {
+    const full = join(root, entry);
+    let st;
+    try { st = statSync(full); } catch { continue; }
+    if (st.isDirectory()) {
+      if (entry === 'node_modules' || entry === 'dist' || entry === '.git') continue;
+      walkMarkdown(full, out);
+    } else if (extname(entry) === '.md' && basename(entry) !== 'course-config.md') {
+      out.push(full);
+    }
+  }
+}
+
+export interface RunTierPhaseInput {
+  courseDir: string;
+  llm: LlmClient;
+}
+
+export async function runTierPhase(input: RunTierPhaseInput): Promise<{
+  tierAssignments: Array<{ relPath: string; tiers: PageTiers }>;
+  tierWarnings: string[];
+}> {
+  const { courseDir, llm } = input;
+  const pages: string[] = [];
+  walkMarkdown(courseDir, pages);
+
+  const tierAssignments: Array<{ relPath: string; tiers: PageTiers }> = [];
+  const tierWarnings: string[] = [];
+
+  for (const filePath of pages) {
+    const relPath = relative(courseDir, filePath);
+    let fm, body;
+    try {
+      ({ fm, body } = readPageFrontMatter(filePath));
+    } catch (err) {
+      tierWarnings.push(`PAGE_FM_PARSE_FAILED: ${relPath}: ${err instanceof Error ? err.message : String(err)}`);
+      continue;
+    }
+
+    const existing = (fm as any).tiers as PageTiers | undefined;
+    if (existing && existing.locked === true) continue;
+
+    const pageTitle = typeof (fm as any).title === 'string' ? (fm as any).title : relPath;
+    const sections = splitSections(body);
+    if (sections.length === 0) continue;
+
+    let result;
+    try {
+      result = await assignTiers({ pageTitle, sections, llm });
+    } catch (err) {
+      tierWarnings.push(`${relPath}: ${err instanceof Error ? err.message : String(err)}`);
+      continue;
+    }
+
+    if (result.warnings.length > 0) {
+      for (const w of result.warnings) tierWarnings.push(`${relPath}: ${w}`);
+    }
+
+    try {
+      writePageTiers(filePath, result.tiers);
+      tierAssignments.push({ relPath, tiers: result.tiers });
+    } catch (err) {
+      tierWarnings.push(`PAGE_BODY_WRITE_FAILED: ${relPath}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  return { tierAssignments, tierWarnings };
 }
