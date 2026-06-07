@@ -2,6 +2,22 @@
 
 This document captures the repo review performed from Codex on 2026-06-07. It is intended as a durable handoff for future Codex, Claude Code, or human review sessions.
 
+## Resolution Status (updated 2026-06-07, Claude Opus 4.8)
+
+All five "Needs A Second Look" items have been addressed. The original analysis below is preserved as the record; this block tracks the fixes.
+
+| Item | Status | Commit |
+| --- | --- | --- |
+| 1. Updater shortcut points at a never-installed binary | ✅ Fixed — updater is now `//go:embed`-ed into the installer and written to the install dir (with `.exe` on Windows) before the shortcut is created; CI builds the updater first and copies it into the payload. Unit tested. | `cac2bf3` |
+| 2. macOS updater can't launch the `.pkg` | ✅ Fixed — `launchInstallerCmd` uses `open` on darwin, direct-exec elsewhere; first test for `cmd/updater`. | `796a4d7` |
+| 3. Manual test plan still lists Intel Mac T3 | ✅ Fixed — T3 removed, note added pointing at the release template. | `bb8ef94` |
+| 4. Top-level status docs lag implementation | ✅ Partially — `AGENTS.md` Status/Milestones/Active-specs refreshed (v1.x closed, v2.0 active). `README.md` expansion still open (see below). | `bb8ef94` |
+| 5. Workflow checkboxes are mostly UX metadata | ✅ Fixed — workflows-screen hint text now states only Panopto changes setup; others are informational. | `bb8ef94` |
+
+**Still open after this pass:** the `README.md` expansion from item 4 (it remains a minimal two-line file; AGENTS.md is the real entry point). Everything else from this review is resolved.
+
+
+
 ## Scope
 
 Reviewed the current `main` branch of `D:\Dev\canvas-toolchain` at:
@@ -228,4 +244,6 @@ git grep -n "Intel\|macOS\|macos-arm64\|windows-x64" -- installer/docs/manual-te
 
 ## Bottom Line
 
-The repo is healthy from an automated test/build standpoint. The professor-facing TypeScript workflow and C&C fixture integration are working. The installer implementation is present and compiles, but the updater install/release path needs a focused review before treating the native installer as fully shippable.
+The repo is healthy from an automated test/build standpoint. The professor-facing TypeScript workflow and C&C fixture integration are working. The installer implementation is present and compiles.
+
+**Update 2026-06-07:** the updater install/release path concerns (items 1 and 2 — the ones that gated "fully shippable") have been fixed and unit-tested; see the Resolution Status block at the top. The Go logic is verified locally, but the cross-compile, embed-copy, and `.pkg` packaging steps only fully exercise on the release runners — so the next installer tag is the real end-to-end confirmation.
