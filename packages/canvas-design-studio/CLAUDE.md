@@ -111,6 +111,27 @@ framework is at the source.
 
 ---
 
+## Course Learning Outcomes (CLOs, #91)
+
+Each course can declare a CLO catalog in `course-config.md` front matter:
+
+```yaml
+clos:
+  - id: '1'
+    name: Analyzing
+    statement: Students will be able to analyze business data.
+    tag: core             # optional: 'core' | 'supporting'
+  - id: '2'
+    name: Communicating
+    statement: Students will be able to communicate insights.
+```
+
+Each assignment or rubric page references catalog IDs via `clos: ['1', '2']` in its own front matter. At render time, `generate_page` joins the IDs against the catalog and surfaces a "Supports CLOs:" line at the bottom of the existing TL;DR card from #66.
+
+CLOs render only on **assignment** and **rubric** page types — not on other page types. Unknown IDs degrade silently (line shows resolved CLOs only; nothing renders if zero resolve).
+
+---
+
 ## Canvas Built-In CSS Classes (Use These for Layouts)
 
 These classes come from Canvas's own stylesheet — no admin access needed:
