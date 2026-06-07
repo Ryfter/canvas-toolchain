@@ -6,6 +6,10 @@ import type { GeneratePageInput, GeneratePageResult, PageType } from '../course-
 import { PAGE_TYPES } from '../course-types.js';
 import { extractTiersFromFile } from './extract_tiers.js';
 import { renderTldrCard } from '../templates/tldr_card.js';
+import { extractAiasFromFile } from './extract_aias.js';
+import { renderAiasCallout } from '../templates/aias_callout.js';
+import { readAiasDefaults } from '../course/aias_config.js';
+import { resolveEffectiveAias } from '../course/aias_resolver.js';
 
 function detectPageType(filename: string): PageType {
   const name = basename(filename, '.md');
@@ -48,9 +52,19 @@ export function generatePage(input: GeneratePageInput): GeneratePageResult {
   const tiers = extractTiersFromFile(absPath);
   const tldrHtml = tiers ? renderTldrCard({ tiers }) : '';
   const withTldr = tldrHtml + renderedHtml;
+
+  const isAiasEligible = pageType === 'assignment' || pageType === 'rubric';
+  let aiasHtml = '';
+  if (isAiasEligible) {
+    const pageOverride = extractAiasFromFile(absPath);
+    const courseDefaults = readAiasDefaults(configPath);
+    const effective = resolveEffectiveAias(pageOverride, courseDefaults);
+    if (effective) aiasHtml = renderAiasCallout({ aias: effective });
+  }
+  const withCallouts = aiasHtml + withTldr;
   // pageType doubles as the page slug — widget iframes load from <pageType>/widgets/<id>.html
   // relative to the generated page's output directory.
-  const html = substituteWidgetPlaceholders(withTldr, pageType);
+  const html = substituteWidgetPlaceholders(withCallouts, pageType);
 
   const weekNumber = content.frontMatter.week ?? 0;
   const filename = `${pageType}.html`;

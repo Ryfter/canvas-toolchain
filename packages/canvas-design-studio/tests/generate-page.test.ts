@@ -222,3 +222,73 @@ describe('generatePage — TL;DR card (#66)', () => {
     }
   });
 });
+
+describe('generatePage — AIAS callout (#92)', () => {
+  function setupCourse(tmpDir: string, courseConfigContent: string): string {
+    const courseDir = mkdtempSync(join(tmpdir(), tmpDir));
+    writeFileSync(join(courseDir, 'course-config.md'), courseConfigContent);
+    mkdirSync(join(courseDir, 'week-05'), { recursive: true });
+    return courseDir;
+  }
+
+  it('renders the AIAS callout on assignment pages when a level resolves', () => {
+    const courseDir = setupCourse('aias-assn-',
+      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\ndefaultAiasLevel: 3\n---\n');
+    try {
+      const mdPath = join(courseDir, 'week-05', 'assignment.md');
+      writeFileSync(mdPath, '---\ntitle: W5\nweek: 5\n---\n\n## Due Date\n\nOct 17.\n');
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).toContain('AI Use Policy');
+      expect(result.html).toContain('Level 3');
+      expect(result.html).toContain('AI Collaboration');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+
+  it('renders the AIAS callout on rubric pages too', () => {
+    const courseDir = setupCourse('aias-rubric-',
+      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\ndefaultAiasLevel: 2\n---\n');
+    try {
+      const mdPath = join(courseDir, 'week-05', 'rubric.md');
+      writeFileSync(mdPath, '---\ntitle: Rubric\nweek: 5\n---\n\n## Criteria\n\nA, B, C.\n');
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).toContain('AI Use Policy');
+      expect(result.html).toContain('Level 2');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+
+  it('does NOT render the callout on non-assignment/non-rubric pages', () => {
+    const courseDir = setupCourse('aias-other-',
+      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\ndefaultAiasLevel: 3\n---\n');
+    try {
+      const mdPath = join(courseDir, 'week-05', 'resources.md');
+      writeFileSync(mdPath, '---\ntitle: Resources\nweek: 5\n---\n\n## Links\n\nA, B.\n');
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).not.toContain('AI Use Policy');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+
+  it('per-page aiasLevel override wins over course default', () => {
+    const courseDir = setupCourse('aias-override-',
+      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\ndefaultAiasLevel: 3\n---\n');
+    try {
+      const mdPath = join(courseDir, 'week-05', 'assignment.md');
+      writeFileSync(mdPath, '---\ntitle: Exam\nweek: 5\naiasLevel: 1\naiasNote: Closed book.\n---\n\n## Q\n\nA?\n');
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).toContain('Level 1');
+      expect(result.html).toContain('No AI');
+      expect(result.html).toContain('Closed book.');
+      expect(result.html).not.toContain('Level 3');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+
+  it('renders no callout when neither course default nor page override is set', () => {
+    const courseDir = setupCourse('aias-none-',
+      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\n---\n');
+    try {
+      const mdPath = join(courseDir, 'week-05', 'assignment.md');
+      writeFileSync(mdPath, '---\ntitle: W5\nweek: 5\n---\n\n## Q\n\nA.\n');
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).not.toContain('AI Use Policy');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+});
