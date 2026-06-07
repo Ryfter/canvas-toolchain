@@ -27,7 +27,7 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 		ui.NewStatusRow("Install optional Python 3"),
 		ui.NewStatusRow("Wire Claude Desktop"),
 		ui.NewStatusRow("Wire Claude Code CLI"),
-		ui.NewStatusRow("Drop Updater shortcut"),
+		ui.NewStatusRow("Install updater + shortcut"),
 		ui.NewStatusRow("Write version marker"),
 		ui.NewStatusRow("Validate credentials"),
 	}
@@ -144,7 +144,6 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 	ccServerJS := st.InstallDir + "/packages/command-and-control/dist/index.js"
 	cdConfig := tasks.ClaudeDesktopConfigPath()
 	ccConfig := tasks.ClaudeCodeConfigPath()
-	updaterBin := st.InstallDir + "/canvas-toolchain-updater"
 
 	return []tasks.Step{
 		{Name: "Extract source", Run: func(ctx context.Context) error {
@@ -205,7 +204,11 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			return nil
 		}},
 		{Name: "Updater shortcut", Warn: true, Run: func(ctx context.Context) error {
-			return tasks.CreateUpdaterShortcuts(updaterBin, st.InstallDir)
+			updaterPath, err := tasks.InstallUpdater(st.InstallDir, payload.UpdaterBin)
+			if err != nil {
+				return err
+			}
+			return tasks.CreateUpdaterShortcuts(updaterPath, st.InstallDir)
 		}},
 		{Name: "Version marker", Run: func(ctx context.Context) error {
 			return tasks.WriteVersionMarker(st.InstallDir, st.Version)

@@ -28,7 +28,8 @@ Build a release-style binary locally with a small dummy payload:
    - `%USERPROFILE%\canvas-toolchain\` exists with the unpacked monorepo.
    - `%USERPROFILE%\canvas-toolchain\.canvas-toolchain-version` contains the version.
    - `%APPDATA%\Claude\claude_desktop_config.json` has a `canvas-toolchain` mcpServers entry.
-   - Desktop has "Canvas Toolchain Updater" shortcut.
+   - `%USERPROFILE%\canvas-toolchain\canvas-toolchain-updater.exe` exists (the embedded updater, written during install).
+   - Desktop has "Canvas Toolchain Updater" shortcut, and its target resolves to that `.exe`.
 
 ### T2 — Fresh Mac install (Apple Silicon)
 

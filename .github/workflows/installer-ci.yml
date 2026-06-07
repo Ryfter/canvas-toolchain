@@ -38,6 +38,7 @@ jobs:
         run: |
           touch payload/installer-payload.tar.gz
           touch payload/node-runtime.tar.gz
+          touch payload/updater-bin
 
       - name: go vet
         working-directory: installer
