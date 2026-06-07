@@ -11,10 +11,10 @@ All five "Needs A Second Look" items have been addressed. The original analysis 
 | 1. Updater shortcut points at a never-installed binary | ✅ Fixed — updater is now `//go:embed`-ed into the installer and written to the install dir (with `.exe` on Windows) before the shortcut is created; CI builds the updater first and copies it into the payload. Unit tested. | `cac2bf3` |
 | 2. macOS updater can't launch the `.pkg` | ✅ Fixed — `launchInstallerCmd` uses `open` on darwin, direct-exec elsewhere; first test for `cmd/updater`. | `796a4d7` |
 | 3. Manual test plan still lists Intel Mac T3 | ✅ Fixed — T3 removed, note added pointing at the release template. | `bb8ef94` |
-| 4. Top-level status docs lag implementation | ✅ Partially — `AGENTS.md` Status/Milestones/Active-specs refreshed (v1.x closed, v2.0 active). `README.md` expansion still open (see below). | `bb8ef94` |
+| 4. Top-level status docs lag implementation | ✅ Fixed — `AGENTS.md` Status/Milestones/Active-specs refreshed (v1.x closed, v2.0 active); `README.md` expanded to orient humans + agents (overview, package map, verification, pointers to AGENTS.md). | `bb8ef94` + README commit |
 | 5. Workflow checkboxes are mostly UX metadata | ✅ Fixed — workflows-screen hint text now states only Panopto changes setup; others are informational. | `bb8ef94` |
 
-**Still open after this pass:** the `README.md` expansion from item 4 (it remains a minimal two-line file; AGENTS.md is the real entry point). Everything else from this review is resolved.
+**All five review items are resolved.** The only end-to-end confirmation still owed is a real installer tag, which exercises the cross-compile / embed-copy / `.pkg` packaging steps that can't run on a dev box (see items 1-2).
 
 
 
