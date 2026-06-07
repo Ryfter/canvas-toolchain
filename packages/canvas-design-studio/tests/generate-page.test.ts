@@ -292,3 +292,70 @@ describe('generatePage — AIAS callout (#92)', () => {
     } finally { rmSync(courseDir, { recursive: true, force: true }); }
   });
 });
+
+describe('generatePage — CLO mapping (#91)', () => {
+  function setupCourse(tmpDir: string, courseConfigContent: string): string {
+    const courseDir = mkdtempSync(join(tmpdir(), tmpDir));
+    writeFileSync(join(courseDir, 'course-config.md'), courseConfigContent);
+    mkdirSync(join(courseDir, 'week-05'), { recursive: true });
+    return courseDir;
+  }
+
+  const CATALOG_FM = `---
+title: Test Course
+short_name: TC
+semester: F26
+domain_color: "#0033A0"
+clos:
+  - id: '1'
+    name: Analyzing
+    statement: Students analyze.
+  - id: '2'
+    name: Communicating
+    statement: Students communicate.
+---
+`;
+
+  it('renders the Supports CLOs line on an assignment page with clos: front matter', () => {
+    const courseDir = setupCourse('clo-assn-', CATALOG_FM);
+    try {
+      const mdPath = join(courseDir, 'week-05', 'assignment.md');
+      writeFileSync(mdPath, `---\ntitle: W5\nweek: 5\nclos: ['1', '2']\n---\n\n## Body\n\nbody\n`);
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).toContain('Supports CLOs');
+      expect(result.html).toContain('CLO 1');
+      expect(result.html).toContain('Analyzing');
+      expect(result.html).toContain('CLO 2');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+
+  it('renders on a rubric page too', () => {
+    const courseDir = setupCourse('clo-rubric-', CATALOG_FM);
+    try {
+      const mdPath = join(courseDir, 'week-05', 'rubric.md');
+      writeFileSync(mdPath, `---\ntitle: R\nweek: 5\nclos: ['1']\n---\n\n## Criteria\n\nx\n`);
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).toContain('Supports CLOs');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+
+  it('does NOT render CLO line on a non-eligible page type even when clos: is set', () => {
+    const courseDir = setupCourse('clo-res-', CATALOG_FM);
+    try {
+      const mdPath = join(courseDir, 'week-05', 'resources.md');
+      writeFileSync(mdPath, `---\ntitle: Res\nweek: 5\nclos: ['1']\n---\n\n## Links\n\nx\n`);
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).not.toContain('Supports CLOs');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+
+  it('all-unknown IDs produce no CLO line (graceful degradation)', () => {
+    const courseDir = setupCourse('clo-unk-', CATALOG_FM);
+    try {
+      const mdPath = join(courseDir, 'week-05', 'assignment.md');
+      writeFileSync(mdPath, `---\ntitle: A\nweek: 5\nclos: ['99', '100']\n---\n\n## B\n\nx\n`);
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.html).not.toContain('Supports CLOs');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+});

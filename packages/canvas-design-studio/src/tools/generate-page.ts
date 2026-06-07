@@ -10,6 +10,9 @@ import { extractAiasFromFile } from './extract_aias.js';
 import { renderAiasCallout } from '../templates/aias_callout.js';
 import { readAiasDefaults } from '../course/aias_config.js';
 import { resolveEffectiveAias } from '../course/aias_resolver.js';
+import { extractClosFromFile } from './extract_clos.js';
+import { readClosCatalog } from '../course/clos_catalog.js';
+import type { Clo, PageClos } from '@canvas-toolchain/shared-types';
 
 function detectPageType(filename: string): PageType {
   const name = basename(filename, '.md');
@@ -50,7 +53,25 @@ export function generatePage(input: GeneratePageInput): GeneratePageResult {
 
   const renderedHtml = renderPage(content, config, { templateId, themeId, promptSetId });
   const tiers = extractTiersFromFile(absPath);
-  const tldrHtml = tiers ? renderTldrCard({ tiers }) : '';
+
+  // CLO resolution — only on assignment + rubric pages
+  const isCloEligible = pageType === 'assignment' || pageType === 'rubric';
+  let pageClos: PageClos | undefined;
+  if (isCloEligible) {
+    const catalog = readClosCatalog(configPath);
+    const pageIds = extractClosFromFile(absPath);
+    if (pageIds.length > 0 && catalog.clos.length > 0) {
+      const resolved = pageIds
+        .map((id) => catalog.clos.find((c) => c.id === id))
+        .filter((c): c is Clo => c !== undefined);
+      const unknownIds = pageIds.filter((id) => !catalog.clos.some((c) => c.id === id));
+      if (resolved.length > 0) {
+        pageClos = { resolved, unknownIds };
+      }
+    }
+  }
+
+  const tldrHtml = (tiers || pageClos) ? renderTldrCard({ tiers, clos: pageClos }) : '';
   const withTldr = tldrHtml + renderedHtml;
 
   const isAiasEligible = pageType === 'assignment' || pageType === 'rubric';
