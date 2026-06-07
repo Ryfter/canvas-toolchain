@@ -50,6 +50,8 @@ Implemented:
 - `show_canvas_capabilities` MCP tool — returns the canvas-capabilities.yaml catalog as readable markdown, grouped into ✅ Currently Supported and 🛠 Aspirational sections. Optional `category` and `supportStatus` filters.
 - `preview_canvas_pattern` MCP tool — renders a specific pattern to a standalone HTML preview at `~/.command-and-control/showcase-previews/<patternId>.html`. Returns an `openInstruction` like `Open file://… in your browser`.
 - `set_course_aias_default` MCP tool — sets `defaultAiasLevel` (+ optional `defaultAiasNote`) in a CDS course's `course-config.md`. Per-page overrides via page front matter. CDS's `generate_page` renders an inline callout on assignment + rubric pages when an effective level resolves. AIAS framework: Leon Furze, CC BY-NC-SA 4.0.
+- `set_courses_root` MCP tool — sets `coursesRoot` in `~/.command-and-control/config.json`. Validates path exists + is a directory before writing.
+- `open_dashboard` MCP tool — starts a local `node:http` server on `127.0.0.1:<auto-port>`, returns the URL. Server renders a single read-only "course health" page from any folders under `coursesRoot` containing `course-config.md`. CLI equivalent: `canvas-toolchain-dashboard`.
 
 Still pending:
 
@@ -97,6 +99,20 @@ Render:  preview_canvas_pattern({ patternId: 'comparison-card' })
 The catalog lives at `packages/canvas-design-studio/data/canvas-capabilities.yaml`. Adding a new pattern is a content PR — no TypeScript change. Each pattern has a `supportStatus` of `supported`, `partial`, or `aspirational`; aspirational entries represent Canvas-safe possibilities CDS does not yet generate, and serve as a roadmap signal for future work.
 
 See `packages/command-and-control/docs/superpowers/specs/2026-06-05-canvas-capability-showcase-design.md` for the full data model and tool contracts.
+
+## Local Dashboard (#68)
+
+A localhost-only HTTP server that surfaces read-only course health metrics.
+
+```text
+Setup:        set_courses_root({ coursesRoot: 'D:\\Dev\\courses' })
+Launch (MCP): open_dashboard({}) → returns http://127.0.0.1:<port>/
+Launch (CLI): canvas-toolchain-dashboard
+```
+
+The dashboard discovers courses by walking `coursesRoot` for folders containing `course-config.md`. For each, it shows: course name, semester, page count, last-publish timestamp, transcript coverage (week folders with `.enriched.md` / total week folders), and a green/yellow/red health indicator.
+
+Plain `node:http` + server-rendered HTML; no client JS, no external assets. Binds to `127.0.0.1` only — no auth (relies on the localhost trust boundary). Write actions, run history, semester stats, and vocab/config edit forms are deferred to v2 follow-ups.
 
 ## Native Installer Design (spec written, plans drafted)
 
