@@ -14,7 +14,7 @@ import (
 
 func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne.CanvasObject {
 	title := widget.NewLabelWithStyle("Choose your workflows", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	hint := widget.NewLabel("All canvas-toolchain code is installed regardless of selection. Your choices affect which API credentials are requested next and which features the summary highlights.")
+	hint := widget.NewLabel("All canvas-toolchain code is installed regardless of selection. Selecting Panopto adds API credential fields on the next screen; the other selections are informational.")
 	hint.Wrapping = fyne.TextWrapWord
 
 	canvasCheck := widget.NewCheck("Canvas course management — generate, review, publish pages", func(b bool) { st.WorkflowCanvas = b })

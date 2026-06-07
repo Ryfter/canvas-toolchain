@@ -20,7 +20,7 @@ Canvas Backup archive
 
 **Single professor-facing entrypoint:** the Command & Control MCP server. Professors talk to it from any MCP-capable AI client (Claude Desktop, ChatGPT, Gemini). Each underlying app stays independently usable.
 
-**Status:** v0.9 core workflow is complete. The native installer is the gating item for v1.0.
+**Status:** v0.9 core workflow, v1.0 native installer, v1.1 and v1.2 features are all shipped. The v1.x enhancement backlog is now empty — every named v1.x issue has either shipped or been migrated to v2.0. Active direction is the v2.0 milestone (plug-in architecture, institutional tool-discovery, usage feedback, Rhetorix integration). The installer compiles and passes automated checks, but the updater install/release path needs a focused review before the next installer cut — see the health-check pointer below.
 
 **Latest Codex health check:** see [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md). Automated TypeScript, Go, and C&C smoke checks passed on 2026-06-07; the main second-look item is the installer updater install/release path.
 
@@ -141,9 +141,11 @@ Every issue carries a status:
 
 Milestones group work into releases:
 
-- `v0.9 — Core Workflow` — feature-complete coordinator (all workflow tools)
-- `v1.0 — Native Installer` — Go+Fyne installer (gating release item)
-- `Future / Backlog` — post-v1.0 ideas
+- `v0.9 — Core Workflow` — **closed.** Feature-complete coordinator (all workflow tools).
+- `v1.0 — Native Installer` — **closed.** Go+Fyne installer shipped 2026-05-26.
+- `v1.x — Enhancements` — **closed.** All named v1.x issues shipped or migrated. Last ship: #91 CLO mapping on 2026-06-07.
+- `v2.0 — Platform direction` — **active.** Plug-in architecture (#78), institutional tool-discovery (#76), usage feedback via GitHub (#77), Rhetorix integration (#75).
+- `Future / Backlog` — catchall for anything not yet milestoned.
 
 The GitHub Project "Canvas Toolchain Roadmap" pulls all of this together with board and roadmap views.
 
@@ -187,12 +189,25 @@ For changes inside a single package, the package-local `npm test` + `npm run bui
 
 ## Active specs and plans
 
-The v1.0 native installer is the current gating item. Read these before picking up any installer work:
+The v1.x enhancement backlog is closed. Today's outstanding work falls into two buckets:
 
-- [`installer/docs/specs/2026-05-26-installer-design.md`](installer/docs/specs/2026-05-26-installer-design.md) — full installer design spec (locked 2026-05-26)
-- [`installer/docs/plans/2026-05-26-cc-credential-tools-and-update-nudge.md`](installer/docs/plans/2026-05-26-cc-credential-tools-and-update-nudge.md) — **Plan 1** (do first): C&C `setup_anthropic`, `setup_canvas`, and the update-availability MCP nudge. Ships as v0.9.1.
-- [`installer/docs/plans/2026-05-26-installer-go-fyne.md`](installer/docs/plans/2026-05-26-installer-go-fyne.md) — **Plan 2**: the Go + Fyne installer itself. Depends on Plan 1's contracts. Hand to Codex via `codex:codex-rescue`.
-- [`installer/docs/plans/2026-05-26-installer-ci-release-workflow.md`](installer/docs/plans/2026-05-26-installer-ci-release-workflow.md) — **Plan 3**: GitHub Actions release workflow. Depends on Plan 2's `installer/` directory existing.
+**Installer release-readiness review** (before the next installer tag):
+
+- [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md) — Codex's automated review. Lists the open items: updater binary install path, macOS `.pkg` launch behavior, manual test plan drift, workflow checkbox copy.
+
+**v2.0 platform direction** (deserves design conversation, not autonomous pickup):
+
+- **#78** plug-in module architecture — the load-bearing 2.0 decision.
+- **#76** post-install institutional tool-discovery (Canvas LTI scan).
+- **#77** usage feedback via GitHub (institution profiles).
+- **#75** Rhetorix Lab integration.
+
+**Historical v1.0 installer plans** (for context — these all shipped 2026-05-26 / 2026-05-30):
+
+- [`installer/docs/specs/2026-05-26-installer-design.md`](installer/docs/specs/2026-05-26-installer-design.md) — installer design spec.
+- [`installer/docs/plans/2026-05-26-cc-credential-tools-and-update-nudge.md`](installer/docs/plans/2026-05-26-cc-credential-tools-and-update-nudge.md) — Plan 1 (C&C credential tools + update nudge), shipped as v0.9.1.
+- [`installer/docs/plans/2026-05-26-installer-go-fyne.md`](installer/docs/plans/2026-05-26-installer-go-fyne.md) — Plan 2 (Go + Fyne installer), shipped as v1.0.
+- [`installer/docs/plans/2026-05-26-installer-ci-release-workflow.md`](installer/docs/plans/2026-05-26-installer-ci-release-workflow.md) — Plan 3 (release workflow), shipped alongside v1.0.
 
 GitHub Project view: [Canvas Toolchain Roadmap](https://github.com/users/Ryfter/projects/4).
 

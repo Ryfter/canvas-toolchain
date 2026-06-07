@@ -34,9 +34,7 @@ Build a release-style binary locally with a small dummy payload:
 
 Same as T1 but with `.pkg` on macOS 12+ Apple Silicon. Verify Gatekeeper bypass path.
 
-### T3 — Fresh Mac install (Intel)
-
-Same as T2 with the Intel `.pkg`.
+(Intel Mac is intentionally out of scope. The release matrix only builds `macos-arm64`; see `.github/RELEASE_TEMPLATE/installer-release.md`.)
 
 ### T4 — Update from v0.9.0 to v0.9.1
 
