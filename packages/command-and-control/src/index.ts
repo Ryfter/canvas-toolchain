@@ -24,6 +24,8 @@ import { showCanvasCapabilities } from './tools/showcase/show_canvas_capabilitie
 import { previewCanvasPattern } from './tools/showcase/preview_canvas_pattern.js';
 import { setActiveLlmProvider } from './tools/set_active_llm_provider.js';
 import { setCourseAiasDefault } from './tools/set_course_aias_default.js';
+import { setCoursesRoot } from './tools/set_courses_root.js';
+import { openDashboard } from './tools/open_dashboard.js';
 import { setupCanvas } from './tools/setup_canvas.js';
 import { checkForUpdates, getUpdateNotice } from './update/check.js';
 import {
@@ -202,6 +204,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           note: { type: 'string', description: 'Optional override of canonical AIAS text.' },
         },
         required: ['courseDir', 'level'],
+      },
+    },
+    {
+      name: 'set_courses_root',
+      description:
+        "Set the root directory for course discovery used by the local dashboard. " +
+        "The dashboard scans this directory recursively for folders containing course-config.md.",
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          coursesRoot: { type: 'string', description: 'Absolute path to the courses root directory.' },
+        },
+        required: ['coursesRoot'],
+      },
+    },
+    {
+      name: 'open_dashboard',
+      description:
+        "Start the local Canvas Toolchain dashboard (read-only course health view). " +
+        "Returns a localhost URL the professor can open in a browser. Requires set_courses_root first.",
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          port: { type: 'number', description: 'Optional fixed port. Default: auto-assigned.' },
+        },
       },
     },
     {
@@ -682,6 +709,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'set_course_aias_default': {
         result = await setCourseAiasDefault(args as unknown as Parameters<typeof setCourseAiasDefault>[0]);
+        break;
+      }
+      case 'set_courses_root': {
+        result = await setCoursesRoot(args as unknown as Parameters<typeof setCoursesRoot>[0]);
+        break;
+      }
+      case 'open_dashboard': {
+        result = await openDashboard(args as unknown as Parameters<typeof openDashboard>[0]);
         break;
       }
       case 'get_cc_status':
