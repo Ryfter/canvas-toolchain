@@ -127,7 +127,20 @@ func downloadAndRun(ctx context.Context, r *update.Release) error {
 	if err := download(ctx, downloadURL, tmp); err != nil {
 		return err
 	}
-	return exec.Command(tmp).Start()
+	return launchInstallerCmd(runtime.GOOS, tmp).Start()
+}
+
+// launchInstallerCmd builds the command that launches a downloaded installer
+// asset on the given OS. Windows ships a self-contained .exe that runs directly.
+// macOS ships a .pkg, which is not an executable — it must be handed to `open`
+// so the system package-installer UI launches it; exec-ing it directly fails.
+func launchInstallerCmd(goos, assetPath string) *exec.Cmd {
+	switch goos {
+	case "darwin":
+		return exec.Command("open", assetPath)
+	default:
+		return exec.Command(assetPath)
+	}
 }
 
 func assetForCurrentOS() string {
