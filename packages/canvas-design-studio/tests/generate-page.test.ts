@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'node:path';
-import { mkdtempSync, mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { generatePage } from '../src/tools/generate-page.js';
 
@@ -166,5 +166,59 @@ Formulas syntactically correct.
     expect(existsSync(result.savedTo)).toBe(true);
     const mdSavedTo = join(outDir, 'week-01', 'overview.md');
     expect(existsSync(mdSavedTo)).toBe(false);
+  });
+});
+
+describe('generatePage — TL;DR card (#66)', () => {
+  it('prepends the TL;DR card when the page has tier-1 sections in front matter', () => {
+    const courseDir = mkdtempSync(join(tmpdir(), 'gp-tldr-'));
+    try {
+      writeFileSync(join(courseDir, 'course-config.md'),
+        '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\n---\n');
+      mkdirSync(join(courseDir, 'week-05'), { recursive: true });
+      const mdPath = join(courseDir, 'week-05', 'assignment.md');
+      writeFileSync(mdPath, '---\ntitle: W5 Assignment\nweek: 5\ntiers:\n  sections:\n    - heading: Due Date\n      tier: 1\n      summary: Oct 17 at 11:59 PM\n---\n\n## Due Date\n\nOct 17.\n');
+
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+
+      expect(result.html).toContain('Quick Reference');
+      expect(result.html).toContain('Due Date');
+    } finally {
+      rmSync(courseDir, { recursive: true, force: true });
+    }
+  });
+
+  it('renders unchanged (no card) when page has no tiers block', () => {
+    const courseDir = mkdtempSync(join(tmpdir(), 'gp-notldr-'));
+    try {
+      writeFileSync(join(courseDir, 'course-config.md'),
+        '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\n---\n');
+      mkdirSync(join(courseDir, 'week-05'), { recursive: true });
+      const mdPath = join(courseDir, 'week-05', 'assignment.md');
+      writeFileSync(mdPath, '---\ntitle: W5 Assignment\nweek: 5\n---\n\n## Due Date\n\nOct 17.\n');
+
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+
+      expect(result.html).not.toContain('Quick Reference');
+    } finally {
+      rmSync(courseDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not add the card when tiers exist but contain no tier-1 entries', () => {
+    const courseDir = mkdtempSync(join(tmpdir(), 'gp-onlyt2-'));
+    try {
+      writeFileSync(join(courseDir, 'course-config.md'),
+        '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\n---\n');
+      mkdirSync(join(courseDir, 'week-05'), { recursive: true });
+      const mdPath = join(courseDir, 'week-05', 'assignment.md');
+      writeFileSync(mdPath, '---\ntitle: W5\nweek: 5\ntiers:\n  sections:\n    - heading: Rubric\n      tier: 3\n      summary: see below\n---\n\n## Rubric\n\nbody\n');
+
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+
+      expect(result.html).not.toContain('Quick Reference');
+    } finally {
+      rmSync(courseDir, { recursive: true, force: true });
+    }
   });
 });

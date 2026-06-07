@@ -4,6 +4,8 @@ import { parseCourseConfig, COURSE_CONFIG_FILENAME } from './course-config.js';
 import { parsePageContent, renderPage, substituteWidgetPlaceholders } from './course-templates.js';
 import type { GeneratePageInput, GeneratePageResult, PageType } from '../course-types.js';
 import { PAGE_TYPES } from '../course-types.js';
+import { extractTiersFromFile } from './extract_tiers.js';
+import { renderTldrCard } from '../templates/tldr_card.js';
 
 function detectPageType(filename: string): PageType {
   const name = basename(filename, '.md');
@@ -43,9 +45,12 @@ export function generatePage(input: GeneratePageInput): GeneratePageResult {
   const content = parsePageContent(absPath, pageType);
 
   const renderedHtml = renderPage(content, config, { templateId, themeId, promptSetId });
+  const tiers = extractTiersFromFile(absPath);
+  const tldrHtml = tiers ? renderTldrCard({ tiers }) : '';
+  const withTldr = tldrHtml + renderedHtml;
   // pageType doubles as the page slug — widget iframes load from <pageType>/widgets/<id>.html
   // relative to the generated page's output directory.
-  const html = substituteWidgetPlaceholders(renderedHtml, pageType);
+  const html = substituteWidgetPlaceholders(withTldr, pageType);
 
   const weekNumber = content.frontMatter.week ?? 0;
   const filename = `${pageType}.html`;
