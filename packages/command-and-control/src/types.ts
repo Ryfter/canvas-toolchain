@@ -17,6 +17,8 @@ export interface CcConfig {
     anthropic: AnthropicProviderConfig;
     ollama?: OllamaProviderConfig;
   };
+  /** Root directory for course discovery used by the local dashboard (#68). Optional. */
+  coursesRoot?: string;
   /** Path to the canvas-backup executable. Set via setup_cc so professors don't need env vars. */
   downloader?: {
     executablePath?: string;
