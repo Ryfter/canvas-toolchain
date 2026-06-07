@@ -23,6 +23,7 @@ import { setupOllama } from './tools/setup_ollama.js';
 import { showCanvasCapabilities } from './tools/showcase/show_canvas_capabilities.js';
 import { previewCanvasPattern } from './tools/showcase/preview_canvas_pattern.js';
 import { setActiveLlmProvider } from './tools/set_active_llm_provider.js';
+import { setCourseAiasDefault } from './tools/set_course_aias_default.js';
 import { setupCanvas } from './tools/setup_canvas.js';
 import { checkForUpdates, getUpdateNotice } from './update/check.js';
 import {
@@ -185,6 +186,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           provider: { type: 'string', enum: ['anthropic', 'ollama'], description: 'anthropic or ollama' },
         },
+      },
+    },
+    {
+      name: 'set_course_aias_default',
+      description:
+        "Set the course-wide AI Assessment Scale default for a CDS course folder. " +
+        "Writes defaultAiasLevel (and optional defaultAiasNote) into course-config.md. " +
+        "Per-page aiasLevel overrides this default at render time.",
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          courseDir: { type: 'string', description: 'Path to the CDS course folder.' },
+          level: { type: 'number', enum: [1, 2, 3, 4, 5], description: 'AIAS level 1-5.' },
+          note: { type: 'string', description: 'Optional override of canonical AIAS text.' },
+        },
+        required: ['courseDir', 'level'],
       },
     },
     {
@@ -663,6 +680,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       case 'set_active_llm_provider':
         result = await setActiveLlmProvider(args as unknown as Parameters<typeof setActiveLlmProvider>[0]);
         break;
+      case 'set_course_aias_default': {
+        result = await setCourseAiasDefault(args as unknown as Parameters<typeof setCourseAiasDefault>[0]);
+        break;
+      }
       case 'get_cc_status':
         result = await getCcStatus();
         break;
