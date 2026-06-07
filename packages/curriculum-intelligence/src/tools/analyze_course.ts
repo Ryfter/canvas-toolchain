@@ -29,6 +29,8 @@ export interface AnalyzeCourseInput {
   llmClient?: LlmClient;
   /** CDS course folder — when provided, the tier-assignment phase runs over its pages. */
   courseDir?: string;
+  /** Shared-llm-shape client used by the tier-assignment phase (#66). Required when courseDir is set. */
+  tierLlm?: import('@canvas-toolchain/shared-llm').LlmClient;
 }
 
 export interface AnalyzeCourseReport {
@@ -202,8 +204,8 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
     trajectoryEntry: entry,
   };
 
-  if (input.courseDir && input.llmClient) {
-    const tierPhase = await runTierPhase({ courseDir: input.courseDir, llm: input.llmClient });
+  if (input.courseDir && input.tierLlm) {
+    const tierPhase = await runTierPhase({ courseDir: input.courseDir, llm: input.tierLlm });
     return {
       ...baseReport,
       tierAssignments: tierPhase.tierAssignments,
@@ -273,7 +275,7 @@ function walkMarkdown(root: string, out: string[]): void {
 
 export interface RunTierPhaseInput {
   courseDir: string;
-  llm: LlmClient;
+  llm: import('@canvas-toolchain/shared-llm').LlmClient;
 }
 
 export async function runTierPhase(input: RunTierPhaseInput): Promise<{
