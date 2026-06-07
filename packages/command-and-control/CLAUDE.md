@@ -49,6 +49,7 @@ Implemented:
 - `@canvas-toolchain/shared-llm` gains `OllamaLlmClient`, `resolveLlmClient`, `LlmProviderError`, and `fetchRecommendedModels`. All three generation call sites (brainstorm, rubric, answers) route through the C&C `resolveActiveLlmClient` shim.
 - `show_canvas_capabilities` MCP tool — returns the canvas-capabilities.yaml catalog as readable markdown, grouped into ✅ Currently Supported and 🛠 Aspirational sections. Optional `category` and `supportStatus` filters.
 - `preview_canvas_pattern` MCP tool — renders a specific pattern to a standalone HTML preview at `~/.command-and-control/showcase-previews/<patternId>.html`. Returns an `openInstruction` like `Open file://… in your browser`.
+- `set_course_aias_default` MCP tool — sets `defaultAiasLevel` (+ optional `defaultAiasNote`) in a CDS course's `course-config.md`. Per-page overrides via page front matter. CDS's `generate_page` renders an inline callout on assignment + rubric pages when an effective level resolves. AIAS framework: Leon Furze, CC BY-NC-SA 4.0.
 
 Still pending:
 

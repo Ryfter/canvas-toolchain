@@ -90,6 +90,27 @@ edit from being overwritten on the next analyze run.
 
 ---
 
+## AI Assessment Scale (AIAS, #92)
+
+`generate_page` checks each input markdown file for AIAS metadata. When the
+page is an assignment or rubric type AND an effective level resolves (page
+override > course default), a single inline callout is prepended ABOVE the
+TL;DR card.
+
+- **Course default:** `defaultAiasLevel` (+ optional `defaultAiasNote`) in
+  `course-config.md` front matter. Set via the `set_course_aias_default` MCP
+  tool.
+- **Per-page override:** `aiasLevel` (+ optional `aiasNote`) in page front
+  matter.
+- **Canonical text fallback:** when no `aiasNote` is supplied at either
+  layer, the canonical text for the level applies.
+
+**Attribution:** AIAS by Leon Furze (https://aiassessmentscale.com/),
+licensed CC BY-NC-SA 4.0. Canonical text is summarized for display; full
+framework is at the source.
+
+---
+
 ## Canvas Built-In CSS Classes (Use These for Layouts)
 
 These classes come from Canvas's own stylesheet — no admin access needed:
