@@ -65,4 +65,51 @@ describe('renderTldrCard', () => {
     expect(html).toContain('#0033A0');
     expect(html).toContain('#E6ECF9');
   });
+
+  it('renders the Supports CLOs line when clos.resolved is non-empty', () => {
+    const html = renderTldrCard({
+      clos: {
+        resolved: [
+          { id: '1', name: 'Analyzing', statement: 's1' },
+          { id: '3', name: 'Communicating', statement: 's3' },
+        ],
+        unknownIds: [],
+      },
+    });
+    expect(html).toContain('Supports CLOs');
+    expect(html).toContain('CLO 1');
+    expect(html).toContain('Analyzing');
+    expect(html).toContain('CLO 3');
+    expect(html).toContain('Communicating');
+  });
+
+  it('omits the line when clos is absent', () => {
+    const html = renderTldrCard({
+      tiers: { sections: [{ heading: 'D', tier: 1, summary: 's' }] },
+    });
+    expect(html).not.toContain('Supports CLOs');
+  });
+
+  it('HTML-escapes CLO id and name', () => {
+    const html = renderTldrCard({
+      clos: { resolved: [{ id: '<x>', name: 'Name <em>', statement: 's' }], unknownIds: [] },
+    });
+    expect(html).toContain('&lt;x&gt;');
+    expect(html).toContain('Name &lt;em&gt;');
+  });
+
+  it('renders the card with ONLY the CLOs line when tier-1 sections absent', () => {
+    const html = renderTldrCard({
+      clos: { resolved: [{ id: '1', name: 'Analyzing', statement: 's' }], unknownIds: [] },
+    });
+    expect(html).toContain('Quick Reference');
+    expect(html).toContain('Supports CLOs');
+  });
+
+  it('returns empty string when neither tier-1 sections nor CLOs', () => {
+    const html = renderTldrCard({
+      tiers: { sections: [{ heading: 'X', tier: 3, summary: 'rubric details' }] },
+    });
+    expect(html).toBe('');
+  });
 });
