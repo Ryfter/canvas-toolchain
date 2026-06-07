@@ -73,6 +73,23 @@ These are non-negotiable constraints sourced from the Canvas RCE sanitizer. Viol
 
 ---
 
+## TL;DR Card (Content Priority Tiers, #66)
+
+`generate_page` checks each input markdown file's front matter for a `tiers:`
+block. When present AND it contains tier-1 sections, a "Quick Reference" card
+is prepended to the rendered page body. Card uses inline CSS only and the BSU
+primary blue palette.
+
+Pages without a `tiers` block (or with only tier-2/3 entries) render exactly
+as before — zero regression risk.
+
+Tier data is populated by CI's `analyze_course` (with `courseDir` supplied) —
+see `packages/curriculum-intelligence/CLAUDE.md`. Professors can edit any
+field of the `tiers:` block manually; set `tiers.locked: true` to keep the
+edit from being overwritten on the next analyze run.
+
+---
+
 ## Canvas Built-In CSS Classes (Use These for Layouts)
 
 These classes come from Canvas's own stylesheet — no admin access needed:
