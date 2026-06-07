@@ -55,9 +55,9 @@ describe('setupCc', () => {
 
   it('partial update does not overwrite unrelated fields', () => {
     setupCc({ mode: 'advanced' });
-    setupCc({ anthropicModel: 'claude-opus-4-7' });
+    setupCc({ anthropicModel: 'claude-opus-4-8' });
     const config = loadConfig();
     expect(config.mode).toBe('advanced');
-    expect(config.providers.anthropic.model).toBe('claude-opus-4-7');
+    expect(config.providers.anthropic.model).toBe('claude-opus-4-8');
   });
 });

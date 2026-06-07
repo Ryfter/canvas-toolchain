@@ -175,7 +175,7 @@ interface LlmClient {
 }
 ```
 
-`AnthropicAdapter` is the default implementation (uses `claude-opus-4-7` via `@anthropic-ai/sdk`). `OllamaAdapter` is also available for local models — set `OLLAMA_BASE_URL` and `OLLAMA_MODEL` env vars to use it. The MCP server (`src/index.ts`) picks the adapter automatically via `getLlmClient()`.
+`AnthropicAdapter` is the default implementation (uses `claude-opus-4-8` via `@anthropic-ai/sdk`). `OllamaAdapter` is also available for local models — set `OLLAMA_BASE_URL` and `OLLAMA_MODEL` env vars to use it. The MCP server (`src/index.ts`) picks the adapter automatically via `getLlmClient()`.
 
 **For tests:** every tool that makes LLM calls accepts an optional `llmClient?: LlmClient` parameter. Pass a mock to avoid real API calls. Example:
 

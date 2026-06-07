@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { LlmClient, LlmOpts } from './client.js';
 
-const DEFAULT_MODEL = 'claude-opus-4-7';
+const DEFAULT_MODEL = 'claude-opus-4-8';
 const DEFAULT_MAX_TOKENS = 4096;
 
 export class AnthropicAdapter implements LlmClient {

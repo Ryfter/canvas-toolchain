@@ -46,7 +46,7 @@ Different tools have different strengths. Use the right one for the job — and 
 
 **What it is.** The interactive CLI you are reading this in. Best for: conversational planning, file edits, running tests, coordinating multi-step tasks, dispatching subagents.
 
-**Models.** Sonnet 4.6 (default — integration tasks, multi-file edits), Opus 4.7 (architecture, judgment, hard reviews), Haiku 4.5 (cheap mechanical tasks).
+**Models.** Sonnet 4.6 (default — integration tasks, multi-file edits), Opus 4.8 (architecture, judgment, hard reviews), Haiku 4.5 (cheap mechanical tasks).
 
 **Key skills (invoke via the `Skill` tool):**
 

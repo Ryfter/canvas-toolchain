@@ -96,10 +96,10 @@ describe('setupAnthropic', () => {
       json: async () => ({ content: [{ type: 'text', text: '.' }] }),
     } as Response);
 
-    await setupAnthropic({ ...TEST_INPUT, model: 'claude-opus-4-7' });
+    await setupAnthropic({ ...TEST_INPUT, model: 'claude-opus-4-8' });
 
     const saved = JSON.parse(readFileSync(join(tmpHome, 'anthropic-config.json'), 'utf-8'));
-    expect(saved.model).toBe('claude-opus-4-7');
+    expect(saved.model).toBe('claude-opus-4-8');
   });
 
   it('defaults to claude-haiku-4-5-20251001 when model omitted', async () => {
