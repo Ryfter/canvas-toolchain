@@ -31,11 +31,6 @@ All tools implemented and tested.
 src/
   index.ts                  ← MCP server entry; all tool registrations
   types.ts                  ← TaskCategory, CcConfig, Mode, ProviderName
-  llm/
-    client.ts               ← LlmClient + LlmOpts interface
-    ollama_adapter.ts       ← OllamaAdapter (HTTP to local Ollama server)
-  routing/
-    model_router.ts         ← ModelRouter: task-category → adapter dispatch
   kb/
     config.ts               ← load/save ~/.command-and-control/config.json
   registry/
@@ -207,22 +202,6 @@ All errors surface as structured result objects — the workflow never throws. P
 | `MANIFEST_CORRUPT` | `_sessions.json` is not valid JSON | Re-run `bulk_fetch_panopto_transcripts` |
 | `PANOPTO_NOT_CONFIGURED` | `panopto-config.json` missing/invalid | Run `setup_panopto` |
 | `VOCAB_CORRUPT` | `panopto-vocab.json` is not valid JSON | Delete it and re-run `setup_panopto_vocab` |
-
----
-
-## Model routing
-
-`ModelRouter` reads `~/.command-and-control/config.json` and dispatches LLM calls:
-
-| taskCategory | Default adapter | Notes |
-|-------------|----------------|-------|
-| `none` | No LLM call | Data-only tools |
-| `fast` | Ollama (if configured + reachable) → Anthropic fallback | Light inference |
-| `judgment` | Anthropic | Deep reasoning |
-
-Ollama is an optional add-on. Anthropic is the default for all categories. To enable Ollama for `fast` tasks:
-1. Set `ollamaBaseUrl` and `ollamaModel` via `setup_cc`
-2. Set `routingFast: 'ollama'` via `setup_cc`
 
 ---
 

@@ -1,4 +1,3 @@
-import { OllamaAdapter } from '../llm/ollama_adapter.js';
 import { loadConfig } from '../kb/config.js';
 import type { CcConfig, Mode, ProviderName } from '../types.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
@@ -18,6 +17,18 @@ export interface GetCcStatusResult {
   lastRun: CcConfig['lastRun'];
 }
 
+async function pingOllama(baseUrl: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(`${baseUrl}/api/tags`, { signal: controller.signal });
+    clearTimeout(tid);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function isPackageInstalled(pkg: string): Promise<boolean> {
   try {
     await import(pkg);
@@ -32,13 +43,9 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
 
   let ollamaStatus: { baseUrl: string; model: string; reachable: boolean } | undefined;
   if (config.providers.ollama) {
-    const adapter = new OllamaAdapter(
-      config.providers.ollama.baseUrl,
-      config.providers.ollama.model,
-    );
     ollamaStatus = {
       ...config.providers.ollama,
-      reachable: await adapter.isReachable(),
+      reachable: await pingOllama(config.providers.ollama.baseUrl),
     };
   }
 
