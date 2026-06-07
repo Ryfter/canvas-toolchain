@@ -22,6 +22,8 @@ Canvas Backup archive
 
 **Status:** v0.9 core workflow is complete. The native installer is the gating item for v1.0.
 
+**Latest Codex health check:** see [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md). Automated TypeScript, Go, and C&C smoke checks passed on 2026-06-07; the main second-look item is the installer updater install/release path.
+
 ---
 
 ## What lives where
