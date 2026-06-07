@@ -19,4 +19,13 @@ describe('shared types runtime exports', () => {
     expect(sample.sections).toHaveLength(2);
     expect(sample.sections[0].tier).toBe(1);
   });
+
+  it('exports AiasLevel and PageAias types (#92)', () => {
+    const sample: import('../src/index.js').PageAias = {
+      level: 3,
+      note: 'AI Collaboration — draft with AI; you must edit and cite.',
+    };
+    expect(sample.level).toBe(3);
+    expect(typeof sample.note).toBe('string');
+  });
 });

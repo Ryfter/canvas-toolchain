@@ -155,3 +155,12 @@ export interface PageTiers {
   locked?: boolean;
   sections: SectionTier[];
 }
+
+// ── AI Assurance Level (#92) ────────────────────────────────────────────────
+
+export type AiasLevel = 1 | 2 | 3 | 4 | 5;
+
+export interface PageAias {
+  level: AiasLevel;
+  note: string;
+}
