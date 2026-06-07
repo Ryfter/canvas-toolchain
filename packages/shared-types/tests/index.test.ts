@@ -28,4 +28,18 @@ describe('shared types runtime exports', () => {
     expect(sample.level).toBe(3);
     expect(typeof sample.note).toBe('string');
   });
+
+  it('exports Clo + CourseClos + PageClos types (#91)', () => {
+    const c: import('../src/index.js').Clo = {
+      id: '1',
+      name: 'Analyzing',
+      statement: 'Students will be able to analyze business data.',
+      tag: 'core',
+    };
+    const cc: import('../src/index.js').CourseClos = { clos: [c] };
+    const pc: import('../src/index.js').PageClos = { resolved: [c], unknownIds: [] };
+    expect(c.id).toBe('1');
+    expect(cc.clos).toHaveLength(1);
+    expect(pc.resolved).toHaveLength(1);
+  });
 });

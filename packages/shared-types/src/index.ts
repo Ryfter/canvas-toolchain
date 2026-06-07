@@ -164,3 +164,25 @@ export interface PageAias {
   level: AiasLevel;
   note: string;
 }
+
+// ── Course Learning Outcomes (#91) ──────────────────────────────────────────
+
+export type CloTag = 'core' | 'supporting';
+
+export interface Clo {
+  id: string;
+  name: string;
+  statement: string;
+  tag?: CloTag;
+}
+
+export interface CourseClos {
+  clos: Clo[];
+}
+
+export interface PageClos {
+  /** Resolved CLO records for the page (joined from catalog by id). */
+  resolved: Clo[];
+  /** IDs the page referenced that weren't found in the catalog. */
+  unknownIds: string[];
+}
