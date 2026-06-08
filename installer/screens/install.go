@@ -24,6 +24,7 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 		ui.NewStatusRow("Install npm dependencies"),
 		ui.NewStatusRow("Build TypeScript packages"),
 		ui.NewStatusRow("Write per-feature config files"),
+		ui.NewStatusRow("Write module manifest"),
 		ui.NewStatusRow("Install optional Python 3"),
 		ui.NewStatusRow("Wire Claude Desktop"),
 		ui.NewStatusRow("Wire Claude Code CLI"),
@@ -175,6 +176,9 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 				return err
 			}
 			return tasks.WritePanoptoConfig(st.PanoptoDomain, st.PanoptoClientID, st.PanoptoSecret)
+		}},
+		{Name: "Write module manifest", Warn: true, Run: func(ctx context.Context) error {
+			return tasks.WriteModulesManifest(tasks.CcHomePath(), st.WorkflowPanopto)
 		}},
 		{Name: "Python (optional)", Skip: func() bool { return !st.OptInPython }, Warn: true, Run: func(ctx context.Context) error {
 			err := tasks.InstallPython(ctx)
