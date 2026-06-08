@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getPanoptoToken } from 'canvas-design-mcp/dist/tools/panopto.js';
-import { getCcHomePath } from '../kb/config.js';
+import { getPanoptoToken } from './client.js';
+import { getCcHomePath } from '../cc-home.js';
 
 export interface PanoptoSetupConfig {
   domain: string;

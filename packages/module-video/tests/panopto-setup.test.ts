@@ -24,7 +24,7 @@ afterEach(() => {
   rmSync(tmpHome, { recursive: true, force: true });
 });
 
-import { setupPanopto, loadPanoptoConfig } from '../../src/tools/setup_panopto.js';
+import { setupPanopto, loadPanoptoConfig } from '../src/panopto/setup.js';
 
 const TEST_INPUT = {
   domain: 'bsu.hosted.panopto.com',
