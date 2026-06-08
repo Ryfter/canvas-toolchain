@@ -1,0 +1,21 @@
+{
+  "name": "@canvas-toolchain/module-contract",
+  "version": "1.0.0",
+  "description": "Shared interfaces for canvas-toolchain plug-in modules",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": { "node": ">=18" }
+}
