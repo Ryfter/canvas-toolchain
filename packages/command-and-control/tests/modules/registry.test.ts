@@ -28,4 +28,17 @@ describe('loadModules', () => {
     const { tools } = await loadModules();
     expect(tools.find((t) => t.name === 'video_embed')).toBeUndefined();
   });
+
+  it('skips a module whose loader throws (fail-soft) and still loads good ones', async () => {
+    writeFileSync(join(dir, 'modules.json'), JSON.stringify({ modules: { video: { enabled: true }, broken: { enabled: true } } }));
+    const known = {
+      video: async () => (await import('@canvas-toolchain/module-video')).default,
+      broken: async () => { throw new Error('boom'); },
+    };
+    const { tools, handlers } = await loadModules(known as any);
+    // good module still loaded:
+    expect(handlers.has('video_embed')).toBe(true);
+    // broken module skipped, no throw:
+    expect(tools.find((t) => t.name === undefined)).toBeUndefined();
+  });
 });
