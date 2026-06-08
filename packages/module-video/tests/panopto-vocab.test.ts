@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadPanoptoVocab, setupPanoptoVocab } from '../../src/tools/setup_panopto_vocab.js';
+import { loadPanoptoVocab, setupPanoptoVocab } from '../src/panopto/vocab.js';
 
 let tmpHome: string;
 

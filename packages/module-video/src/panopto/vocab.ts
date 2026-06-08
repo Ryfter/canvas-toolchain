@@ -6,7 +6,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getCcHomePath } from '../kb/config.js';
+import { getCcHomePath } from '../cc-home.js';
 
 export interface PanoptoVocab {
   fillerWords: string[];
