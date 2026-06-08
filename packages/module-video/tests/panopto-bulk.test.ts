@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { listPanoptoFolders, listSessionsInFolder, bulkDownloadPanoptoCaptions } from '../src/tools/panopto.js';
+import { listPanoptoFolders, listSessionsInFolder, bulkDownloadPanoptoCaptions } from '../src/panopto/client.js';
 import type { PanoptoConfig } from '../src/types.js';
 import * as fs from 'node:fs';
 

@@ -14,7 +14,7 @@ import {
   embedPanoptoVideo,
   fetchPanoptoCaptions,
   bulkDownloadPanoptoCaptions,
-} from '../src/tools/panopto.js';
+} from '../src/panopto/client.js';
 import type { PanoptoConfig } from '../src/types.js';
 
 const DOMAIN = 'bsu.hosted.panopto.com';
