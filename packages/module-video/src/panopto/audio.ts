@@ -1,8 +1,8 @@
 import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PanoptoConfig } from '../types.js';
-import { getPanoptoToken, buildViewerUrl } from './panopto.js';
-import type { SessionManifestEntry } from './panopto-enrich.js';
+import { getPanoptoToken, buildViewerUrl } from './client.js';
+import type { SessionManifestEntry } from './enrich.js';
 
 // VERIFY against a live Panopto before relying on auto-fetch (spec Open Question #1).
 const DOWNLOAD_URL = (domain: string, sessionId: string) =>

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fetchSessionAudio } from '../src/tools/panopto-audio.js';
+import { fetchSessionAudio } from '../src/panopto/audio.js';
 import type { PanoptoConfig } from '../src/types.js';
 
 const CONFIG: PanoptoConfig = {
