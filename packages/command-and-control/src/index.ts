@@ -76,6 +76,7 @@ import { draftStudentRubric } from './tools/workflows/draft_student_rubric.js';
 import type { DraftStudentRubricInput } from './tools/rubric/types.js';
 import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
+import { loadModules } from './modules/registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -83,6 +84,10 @@ const server = new Server(
   { name: 'command-and-control', version: '1.0.0' },
   { capabilities: { tools: {} } }
 );
+
+// Load enabled modules (e.g. video) before registering handlers so their tool
+// schemas and handlers are available to ListTools/CallTool.
+const loadedModules = await loadModules();
 
 // Fire-and-forget background check — never blocks startup.
 void checkForUpdates();
@@ -676,11 +681,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: t.description,
       inputSchema: t.inputSchema as Record<string, unknown>,
     })),
+    // ── Module tools (e.g. video) ───────────────────────────────────────────
+    ...loadedModules.tools,
   ],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   const { name, arguments: args } = request.params;
+
+  // Module-provided tools take precedence; their handlers return a full CallToolResult.
+  const moduleHandler = loadedModules.handlers.get(name);
+  if (moduleHandler) {
+    return await moduleHandler(args);
+  }
 
   try {
     let result: unknown;
