@@ -11,7 +11,7 @@ import {
   enrichVttFile,
   type EnrichVttOptions,
   type SessionManifestEntry,
-} from '../src/tools/panopto-enrich.js';
+} from '../src/panopto/enrich.js';
 
 const MOCK_SESSION: SessionManifestEntry = {
   sessionId: 'a1b2c3d4-0000-0000-0000-000000000001',
