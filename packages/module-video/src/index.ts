@@ -22,3 +22,6 @@ export {
 } from './panopto/client.js';
 export { enrichVttFile, BUILTIN_FILLER_WORDS, type SessionsManifest } from './panopto/enrich.js';
 export { fetchSessionAudio } from './panopto/audio.js';
+// Config loaders that C&C workflows read (panopto domain + vocab corrections/filler).
+export { loadPanoptoConfig, type PanoptoSetupConfig } from './panopto/setup.js';
+export { loadPanoptoVocab, type PanoptoVocab } from './panopto/vocab.js';

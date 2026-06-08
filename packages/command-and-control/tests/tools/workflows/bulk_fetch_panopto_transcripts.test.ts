@@ -1,17 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../../src/tools/setup_panopto.js', () => ({
+vi.mock('@canvas-toolchain/module-video', () => ({
   loadPanoptoConfig: vi.fn(),
-}));
-vi.mock('canvas-design-mcp/dist/tools/panopto.js', () => ({
   bulkDownloadPanoptoCaptions: vi.fn(),
 }));
 vi.mock('curriculum-intelligence-mcp/dist/tools/ingest_transcripts.js', () => ({
   ingestTranscripts: vi.fn(),
 }));
 
-import { loadPanoptoConfig } from '../../../src/tools/setup_panopto.js';
-import { bulkDownloadPanoptoCaptions } from 'canvas-design-mcp/dist/tools/panopto.js';
+import { loadPanoptoConfig, bulkDownloadPanoptoCaptions } from '@canvas-toolchain/module-video';
 import { ingestTranscripts } from 'curriculum-intelligence-mcp/dist/tools/ingest_transcripts.js';
 import { bulkFetchPanoptoTranscripts } from '../../../src/tools/workflows/bulk_fetch_panopto_transcripts.js';
 

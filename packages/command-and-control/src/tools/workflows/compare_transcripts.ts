@@ -7,9 +7,7 @@ import {
   type SuggestedCorrection,
 } from 'curriculum-intelligence-mcp/dist/transcription/compare.js';
 import { parseVtt } from 'curriculum-intelligence-mcp/dist/parsers/transcript_vtt.js';
-import { fetchSessionAudio } from 'canvas-design-mcp/dist/tools/panopto-audio.js';
-import { loadPanoptoConfig } from '../setup_panopto.js';
-import { loadPanoptoVocab } from '../setup_panopto_vocab.js';
+import { fetchSessionAudio, loadPanoptoConfig, loadPanoptoVocab } from '@canvas-toolchain/module-video';
 import { loadTranscriptConfig } from '../setup_transcript_source.js';
 
 interface SessionEntry {

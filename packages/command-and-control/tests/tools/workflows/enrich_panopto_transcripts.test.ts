@@ -3,13 +3,9 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-vi.mock('../../../src/tools/setup_panopto.js', () => ({
+vi.mock('@canvas-toolchain/module-video', () => ({
   loadPanoptoConfig: vi.fn(),
-}));
-vi.mock('../../../src/tools/setup_panopto_vocab.js', () => ({
   loadPanoptoVocab: vi.fn(),
-}));
-vi.mock('canvas-design-mcp/dist/tools/panopto-enrich.js', () => ({
   enrichVttFile: vi.fn(),
   BUILTIN_FILLER_WORDS: ['uh', 'um'],
 }));
@@ -17,10 +13,8 @@ vi.mock('../../../src/tools/setup_transcript_source.js', () => ({
   loadTranscriptConfig: vi.fn(),
 }));
 
-import { loadPanoptoConfig } from '../../../src/tools/setup_panopto.js';
-import { loadPanoptoVocab } from '../../../src/tools/setup_panopto_vocab.js';
+import { loadPanoptoConfig, loadPanoptoVocab, enrichVttFile } from '@canvas-toolchain/module-video';
 import { loadTranscriptConfig } from '../../../src/tools/setup_transcript_source.js';
-import { enrichVttFile } from 'canvas-design-mcp/dist/tools/panopto-enrich.js';
 import { enrichPanoptoTranscripts } from '../../../src/tools/workflows/enrich_panopto_transcripts.js';
 
 const MOCK_CONFIG = {

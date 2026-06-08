@@ -17,7 +17,6 @@ import { listInstalledResources, uninstallResource } from './registry/local_regi
 import { searchRegistry } from './registry/search_registry.js';
 import { installResourcesFromLockfile } from './registry/lockfile_install.js';
 import { pasteLayout, saveLayoutAsTemplate } from './tools/layout_adapter.js';
-import { setupPanopto } from './tools/setup_panopto.js';
 import { setupAnthropic } from './tools/setup_anthropic.js';
 import { setupOllama } from './tools/setup_ollama.js';
 import { showCanvasCapabilities } from './tools/showcase/show_canvas_capabilities.js';
@@ -33,7 +32,6 @@ import {
   type BulkFetchPanoptoTranscriptsInput,
   type ProgressCallback,
 } from './tools/workflows/bulk_fetch_panopto_transcripts.js';
-import { setupPanoptoVocab } from './tools/setup_panopto_vocab.js';
 import {
   enrichPanoptoTranscripts,
   type EnrichPanoptoTranscriptsInput,
@@ -311,21 +309,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     // ── Panopto transcripts ─────────────────────────────────────────────────
     {
-      name: 'setup_panopto',
-      description: 'Configure Panopto integration: set domain, clientId, and clientSecret. Validates credentials before saving. Run this once per institution setup.',
-      inputSchema: {
-        type: 'object' as const,
-        required: ['domain', 'clientId', 'clientSecret'],
-        properties: {
-          domain: { type: 'string', description: 'Panopto hostname, e.g. "bsu.hosted.panopto.com".' },
-          clientId: { type: 'string', description: 'OAuth2 client ID from the Panopto admin panel.' },
-          clientSecret: { type: 'string', description: 'OAuth2 client secret. Stored locally, never echoed back.' },
-          iframeWhitelisted: { type: 'boolean', description: 'Whether your Canvas instance allows Panopto iframes. Null = unknown.', nullable: true },
-          test: { type: 'boolean', description: 'Validate credentials before saving (default: true). Set false for scripted setup.' },
-        },
-      },
-    },
-    {
       name: 'bulk_fetch_panopto_transcripts',
       description: 'Download all Panopto transcripts for a folder as VTT files. Optionally auto-ingests into Curriculum Intelligence. Requires setup_panopto to be run first.',
       inputSchema: {
@@ -337,24 +320,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           courseId: { type: 'string', description: 'If provided with semesterId, auto-ingests into Curriculum Intelligence.' },
           semesterId: { type: 'string', description: 'If provided with courseId, auto-ingests into Curriculum Intelligence.' },
           copy: { type: 'boolean', description: 'Copy VTT files into the CI semester folder during ingest (default: false).' },
-        },
-      },
-    },
-    {
-      name: 'setup_panopto_vocab',
-      description: 'Manage professor vocabulary corrections and filler words for transcript enrichment. Add or remove vocab entries used by enrich_panopto_transcripts.',
-      inputSchema: {
-        type: 'object' as const,
-        required: ['action'],
-        properties: {
-          action: {
-            type: 'string',
-            enum: ['add-correction', 'add-filler', 'remove-correction', 'list'],
-            description: 'list: show current vocab. add-correction: add a find/replace pair. add-filler: add a word to the filler list. remove-correction: remove a correction by its from value.',
-          },
-          from: { type: 'string', description: 'Required for add-correction and remove-correction. The source word/phrase to find.' },
-          to: { type: 'string', description: 'Required for add-correction. The replacement word/phrase.' },
-          word: { type: 'string', description: 'Required for add-filler. The filler word to add.' },
         },
       },
     },
@@ -744,9 +709,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       case 'update_course_materials':
         result = await updateCourseMaterials(args as unknown as Parameters<typeof updateCourseMaterials>[0]);
         break;
-      case 'setup_panopto':
-        result = await setupPanopto(args as unknown as Parameters<typeof setupPanopto>[0]);
-        break;
       case 'bulk_fetch_panopto_transcripts': {
         const progressToken = extra._meta?.progressToken;
         let progressCount = 0;
@@ -772,9 +734,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         );
         break;
       }
-      case 'setup_panopto_vocab':
-        result = setupPanoptoVocab(args as unknown as Parameters<typeof setupPanoptoVocab>[0]);
-        break;
       case 'enrich_panopto_transcripts':
         result = await enrichPanoptoTranscripts(args as unknown as EnrichPanoptoTranscriptsInput);
         break;

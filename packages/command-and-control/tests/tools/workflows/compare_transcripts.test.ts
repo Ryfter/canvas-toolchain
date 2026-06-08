@@ -12,11 +12,10 @@ const fakeEngine = {
 vi.mock('curriculum-intelligence-mcp/dist/transcription/faster_whisper_engine.js', () => ({
   getTranscriptionEngine: () => fakeEngine,
 }));
-vi.mock('canvas-design-mcp/dist/tools/panopto-audio.js', () => ({
+vi.mock('@canvas-toolchain/module-video', () => ({
   fetchSessionAudio: vi.fn().mockResolvedValue({ ok: true, path: '/tmp/a.mp4', source: 'manual' }),
-}));
-vi.mock('../../../src/tools/setup_panopto.js', () => ({
   loadPanoptoConfig: () => ({ domain: 'bsu.hosted.panopto.com', clientId: 'c', clientSecret: 's' }),
+  loadPanoptoVocab: () => ({ fillerWords: [], corrections: [] }),
 }));
 
 import { compareTranscriptsWorkflow } from '../../../src/tools/workflows/compare_transcripts.js';

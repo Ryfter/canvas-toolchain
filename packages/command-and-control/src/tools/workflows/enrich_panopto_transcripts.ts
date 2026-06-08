@@ -12,10 +12,10 @@ import { join } from 'node:path';
 import {
   enrichVttFile,
   BUILTIN_FILLER_WORDS,
+  loadPanoptoConfig,
+  loadPanoptoVocab,
   type SessionsManifest,
-} from 'canvas-design-mcp/dist/tools/panopto-enrich.js';
-import { loadPanoptoConfig } from '../setup_panopto.js';
-import { loadPanoptoVocab } from '../setup_panopto_vocab.js';
+} from '@canvas-toolchain/module-video';
 import { loadTranscriptConfig } from '../setup_transcript_source.js';
 
 export interface EnrichPanoptoTranscriptsInput {
