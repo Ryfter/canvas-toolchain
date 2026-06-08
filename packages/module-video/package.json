@@ -1,0 +1,23 @@
+{
+  "name": "@canvas-toolchain/module-video",
+  "version": "1.0.0",
+  "description": "Lecture Video module for canvas-toolchain (Panopto provider)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@canvas-toolchain/module-contract": "*",
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "curriculum-intelligence-mcp": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": { "node": ">=18" }
+}
