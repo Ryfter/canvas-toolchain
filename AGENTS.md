@@ -20,7 +20,7 @@ Canvas Backup archive
 
 **Single professor-facing entrypoint:** the Command & Control MCP server. Professors talk to it from any MCP-capable AI client (Claude Desktop, ChatGPT, Gemini). Each underlying app stays independently usable.
 
-**Status:** v0.9 core workflow, v1.0 native installer, v1.1 and v1.2 features are all shipped. The v1.x enhancement backlog is now empty — every named v1.x issue has either shipped or been migrated to v2.0. Active direction is the v2.0 milestone (plug-in architecture, institutional tool-discovery, usage feedback, Rhetorix integration). The installer compiles and passes automated checks, but the updater install/release path needs a focused review before the next installer cut — see the health-check pointer below.
+**Status:** v0.9 core workflow, v1.0 native installer, v1.1 and v1.2 features are all shipped. The v1.x enhancement backlog is now empty. Active direction is the v2.0 milestone. **The plug-in module architecture (#78) has shipped its first cut (2026-06-08):** capabilities are now opt-in *modules* enabled via `~/.command-and-control/modules.json` (config-time, no reinstall), with the first module — **Lecture Video** (`packages/module-video`, Panopto behind a `VideoProvider` adapter) — extracted out of canvas-design-studio and command-and-control. Remaining v2.0: institutional tool-discovery (#76), usage feedback (#77), Rhetorix integration (#75, the next module). The installer compiles and passes automated checks, but the updater install/release path needs a focused review before the next installer cut — see the health-check pointer below.
 
 **Latest Codex health check:** see [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md). Automated TypeScript, Go, and C&C smoke checks passed on 2026-06-07; the main second-look item is the installer updater install/release path.
 
@@ -30,9 +30,11 @@ Canvas Backup archive
 
 | Package | What it owns | Read first |
 | --- | --- | --- |
-| `packages/command-and-control/` | Single MCP entrypoint, workflow orchestration, registry, brand/layout adapters | `CLAUDE.md`, `AGENTS.md` |
-| `packages/canvas-design-studio/` | Canvas-safe HTML generation, design review, transcript enrichment | `CLAUDE.md`, `AGENTS.md` |
+| `packages/command-and-control/` | Single MCP entrypoint, workflow orchestration, registry, brand/layout adapters, **module registry/manifest loader** (`src/modules/`) | `CLAUDE.md`, `AGENTS.md` |
+| `packages/canvas-design-studio/` | Canvas-safe HTML generation, design review (Panopto extracted to `module-video`) | `CLAUDE.md`, `AGENTS.md` |
 | `packages/curriculum-intelligence/` | Course analysis, semester comparison, topic currency, planning | `CLAUDE.md`, `AGENTS.md` |
+| `packages/module-contract/` | Plug-in module interfaces (`CanvasToolchainModule`, `ModuleTool`, `ModuleManifest`) shared by C&C + module packages | `src/index.ts` |
+| `packages/module-video/` | **First plug-in module:** Lecture Video — embed + transcripts. `VideoProvider` adapter layer; `PanoptoProvider` is provider #1 (Zoom/Teams/Meet/YouTube are future providers) | `src/index.ts`, `src/provider.ts` |
 | `packages/shared-types/` | TypeScript contracts shared across packages | `src/index.ts` |
 | `D:\Dev\Canvas-Download` (sibling) | Python Canvas backup downloader; reached via CLI bridge | repo README |
 
@@ -195,12 +197,12 @@ The v1.x enhancement backlog is closed. Today's outstanding work falls into two 
 
 - [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md) — Codex's automated review. Lists the open items: updater binary install path, macOS `.pkg` launch behavior, manual test plan drift, workflow checkbox copy.
 
-**v2.0 platform direction** (deserves design conversation, not autonomous pickup):
+**v2.0 platform direction:**
 
-- **#78** plug-in module architecture — the load-bearing 2.0 decision.
-- **#76** post-install institutional tool-discovery (Canvas LTI scan).
-- **#77** usage feedback via GitHub (institution profiles).
-- **#75** Rhetorix Lab integration.
+- **#78** plug-in module architecture — **SHIPPED first cut 2026-06-08.** Spec: [`packages/command-and-control/docs/superpowers/specs/2026-06-07-module-architecture-design.md`](packages/command-and-control/docs/superpowers/specs/2026-06-07-module-architecture-design.md); plan: [`.../plans/2026-06-07-module-architecture.md`](packages/command-and-control/docs/superpowers/plans/2026-06-07-module-architecture.md). Modules are config-time-enabled via `~/.command-and-control/modules.json`; module registry lives in C&C `src/modules/`; first module is `packages/module-video`. **Known follow-up:** no in-product `enable_module` tool yet — a user who disables Video must hand-edit `modules.json` (advanced-adopter-acceptable; tracked as a fast-follow). When a 2nd video provider lands, wire handlers through `module-video/src/resolve.ts` and drop the `*_panopto_*` aliases.
+- **#76** post-install institutional tool-discovery (Canvas LTI scan) — reads each module's `handles[]` to suggest modules to enable.
+- **#77** usage feedback via GitHub (institution profiles) — payload = which modules/providers are enabled.
+- **#75** Rhetorix Lab integration — the **next module**, drops into the proven `CanvasToolchainModule` contract.
 
 **Historical v1.0 installer plans** (for context — these all shipped 2026-05-26 / 2026-05-30):
 

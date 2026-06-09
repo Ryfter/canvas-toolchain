@@ -1,3 +1,8 @@
+// NOT YET WIRED. The MCP tool handlers in tools.ts call the Panopto client
+// functions directly (with loadPanoptoConfig()) to preserve byte-for-byte the
+// current tool output. This provider-resolution seam exists for the future:
+// it activates when a second VideoProvider (Zoom/Teams/Meet/YouTube) lands and
+// the handlers route through resolveActiveVideoProvider() instead. See #78 plan.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { VideoProvider } from './provider.js';
