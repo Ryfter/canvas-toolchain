@@ -22,6 +22,8 @@ import { setupOllama } from './tools/setup_ollama.js';
 import { showCanvasCapabilities } from './tools/showcase/show_canvas_capabilities.js';
 import { previewCanvasPattern } from './tools/showcase/preview_canvas_pattern.js';
 import { setActiveLlmProvider } from './tools/set_active_llm_provider.js';
+import { setModuleEnabled } from './tools/set_module_enabled.js';
+import { listModules } from './tools/list_modules.js';
 import { setCourseAiasDefault } from './tools/set_course_aias_default.js';
 import { setCoursesRoot } from './tools/set_courses_root.js';
 import { openDashboard } from './tools/open_dashboard.js';
@@ -192,6 +194,27 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           provider: { type: 'string', enum: ['anthropic', 'ollama'], description: 'anthropic or ollama' },
         },
       },
+    },
+    {
+      name: 'set_module_enabled',
+      description:
+        'Enable or disable a plug-in module (e.g. video) by writing modules.json. ' +
+        'Always available so a disabled module can be re-enabled. Takes effect after the MCP client reconnects/restarts.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['module', 'enabled'],
+        properties: {
+          module: { type: 'string', description: "Module id, e.g. 'video'. Use list_modules to see valid ids." },
+          enabled: { type: 'boolean', description: 'true to enable, false to disable.' },
+          activeProvider: { type: 'string', description: "Optional provider id for the module, e.g. 'panopto'." },
+        },
+      },
+    },
+    {
+      name: 'list_modules',
+      description:
+        'List all known plug-in modules with their id, name, enabled state, active provider, and the provider/tool types they handle.',
+      inputSchema: { type: 'object' as const, properties: {} },
     },
     {
       name: 'set_course_aias_default',
@@ -684,6 +707,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'set_active_llm_provider':
         result = await setActiveLlmProvider(args as unknown as Parameters<typeof setActiveLlmProvider>[0]);
+        break;
+      case 'set_module_enabled':
+        result = await setModuleEnabled(args as unknown as Parameters<typeof setModuleEnabled>[0]);
+        break;
+      case 'list_modules':
+        result = await listModules();
         break;
       case 'set_course_aias_default': {
         result = await setCourseAiasDefault(args as unknown as Parameters<typeof setCourseAiasDefault>[0]);
