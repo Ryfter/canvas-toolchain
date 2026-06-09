@@ -52,6 +52,8 @@ Implemented:
 - `set_course_aias_default` MCP tool — sets `defaultAiasLevel` (+ optional `defaultAiasNote`) in a CDS course's `course-config.md`. Per-page overrides via page front matter. CDS's `generate_page` renders an inline callout on assignment + rubric pages when an effective level resolves. AIAS framework: Leon Furze, CC BY-NC-SA 4.0.
 - `set_courses_root` MCP tool — sets `coursesRoot` in `~/.command-and-control/config.json`. Validates path exists + is a directory before writing.
 - `open_dashboard` MCP tool — starts a local `node:http` server on `127.0.0.1:<auto-port>`, returns the URL. Server renders a single read-only "course health" page from any folders under `coursesRoot` containing `course-config.md`. CLI equivalent: `canvas-toolchain-dashboard`.
+- `set_module_enabled` MCP tool — atomic 0o600 write to `~/.command-and-control/modules.json`. Enables/disables a plug-in module post-install — the in-product path that #78's config-time installer checkbox lacked. Always-on (never module-gated) so a disabled module can be re-enabled. Validates the id against the known-module registry; merges the one entry, preserving siblings. Takes effect on the next MCP client reconnect/restart (modules load at startup; no hot-reload).
+- `list_modules` MCP tool — read-only; reports each known module's `id`/`name`/`enabled`/`activeProvider`/`handles[]`, loading each fail-soft (a broken module is listed with `loadError`, never throws). Pairs with `set_module_enabled` and feeds #76 discovery.
 
 Still pending:
 
