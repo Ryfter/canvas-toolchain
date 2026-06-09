@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@canvas-toolchain/module-contract": "*",
+    "yaml": "^2.9.0",
     "@canvas-toolchain/module-video": "*",
     "@canvas-toolchain/shared-llm": "*",
     "@canvas-toolchain/shared-types": "*",

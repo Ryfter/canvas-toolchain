@@ -1,0 +1,49 @@
+# Known ed-tech tools for post-install discovery (#76).
+# Adding a tool is a content PR — no code change.
+# identifiers: lowercased names/domains as they appear in Canvas external_tools.
+# module: the module handles[] id this tool maps to, or null (no module yet).
+tools:
+  - id: panopto
+    name: Panopto
+    identifiers: [panopto, hosted.panopto.com]
+    module: video
+  - id: zoom
+    name: Zoom
+    identifiers: [zoom, zoom.us]
+    module: null
+  - id: teams
+    name: Microsoft Teams
+    identifiers: [teams, microsoft teams, teams.microsoft.com]
+    module: null
+  - id: google-meet
+    name: Google Meet
+    identifiers: [meet, google meet, meet.google.com]
+    module: null
+  - id: youtube
+    name: YouTube
+    identifiers: [youtube, youtube.com]
+    module: null
+  - id: echo360
+    name: Echo360
+    identifiers: [echo360, echo 360, echo360.org]
+    module: null
+  - id: kaltura
+    name: Kaltura
+    identifiers: [kaltura, kaltura.com]
+    module: null
+  - id: iclicker
+    name: iClicker
+    identifiers: [iclicker, i>clicker, iclicker.com]
+    module: null
+  - id: google-forms
+    name: Google Forms
+    identifiers: [google forms, forms.google.com, docs.google.com/forms]
+    module: null
+  - id: turnitin
+    name: Turnitin
+    identifiers: [turnitin, turnitin.com, turnitinuk.com]
+    module: null
+  - id: gradescope
+    name: Gradescope
+    identifiers: [gradescope, gradescope.com]
+    module: null
