@@ -24,6 +24,8 @@ import { previewCanvasPattern } from './tools/showcase/preview_canvas_pattern.js
 import { setActiveLlmProvider } from './tools/set_active_llm_provider.js';
 import { setModuleEnabled } from './tools/set_module_enabled.js';
 import { listModules } from './tools/list_modules.js';
+import { discoverTools } from './tools/discover_tools.js';
+import { saveInstitutionProfile } from './tools/save_institution_profile.js';
 import { setCourseAiasDefault } from './tools/set_course_aias_default.js';
 import { setCoursesRoot } from './tools/set_courses_root.js';
 import { openDashboard } from './tools/open_dashboard.js';
@@ -215,6 +217,57 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description:
         'List all known plug-in modules with their id, name, enabled state, active provider, and the provider/tool types they handle.',
       inputSchema: { type: 'object' as const, properties: {} },
+    },
+    {
+      name: 'discover_tools',
+      description:
+        'Discover what tools the institution/professor uses: scans the Canvas instance (account → per-course → self-report cascade), matches findings against available modules, and returns detected tools, module-enable suggestions, unmatched tools, and a catalog pick-list. Read-only.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          scope: { type: 'string', enum: ['account', 'course', 'self'], description: 'Optional: force a scan tier.' },
+        },
+      },
+    },
+    {
+      name: 'save_institution_profile',
+      description:
+        'Write/merge the institution profile (the master tool library) and optional per-class tool deltas. Accretive — new tools are added, existing preserved. The profile is the payload for usage feedback (#77).',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['tools'],
+        properties: {
+          tools: {
+            type: 'array',
+            description: 'Tools to record. Each: { id, name, source:"detected"|"self-reported", scope?, module? }.',
+            items: {
+              type: 'object' as const,
+              required: ['id', 'name', 'source'],
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                source: { type: 'string', enum: ['detected', 'self-reported'] },
+                scope: { type: 'string', enum: ['global', 'class'] },
+                module: { type: 'string' },
+              },
+            },
+          },
+          identifiers: { type: 'object' as const, description: 'e.g. { canvas: "bsu.instructure.com" }.' },
+          perClass: {
+            type: 'array',
+            description: 'Per-class deltas written into each course-config.md.',
+            items: {
+              type: 'object' as const,
+              required: ['courseDir'],
+              properties: {
+                courseDir: { type: 'string' },
+                uses: { type: 'array', items: { type: 'string' } },
+                skips: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          },
+        },
+      },
     },
     {
       name: 'set_course_aias_default',
@@ -713,6 +766,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'list_modules':
         result = await listModules();
+        break;
+      case 'discover_tools':
+        result = await discoverTools(args as unknown as Parameters<typeof discoverTools>[0]);
+        break;
+      case 'save_institution_profile':
+        result = await saveInstitutionProfile(args as unknown as Parameters<typeof saveInstitutionProfile>[0]);
         break;
       case 'set_course_aias_default': {
         result = await setCourseAiasDefault(args as unknown as Parameters<typeof setCourseAiasDefault>[0]);
