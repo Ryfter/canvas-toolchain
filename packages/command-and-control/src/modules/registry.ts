@@ -3,9 +3,16 @@ import { isCanvasToolchainModule, type CanvasToolchainModule } from '@canvas-too
 import { loadModuleManifest } from './manifest.js';
 
 /** Static registry of known modules. Future runtime-loading swaps this map for dynamic import. */
-const KNOWN_MODULES: Record<string, () => Promise<CanvasToolchainModule>> = {
+export const KNOWN_MODULES: Record<string, () => Promise<CanvasToolchainModule>> = {
   video: async () => (await import('@canvas-toolchain/module-video')).default,
 };
+
+/** Ids of all known modules (whether enabled or not). */
+export function knownModuleIds(
+  known: Record<string, () => Promise<CanvasToolchainModule>> = KNOWN_MODULES,
+): string[] {
+  return Object.keys(known);
+}
 
 export interface LoadedModules {
   tools: Tool[];

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadModules } from '../../src/modules/registry.js';
+import { loadModules, knownModuleIds, KNOWN_MODULES } from '../../src/modules/registry.js';
 
 let dir: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'cc-reg-')); process.env.CC_HOME = dir; });
@@ -40,5 +40,17 @@ describe('loadModules', () => {
     expect(handlers.has('video_embed')).toBe(true);
     // broken module skipped, no throw:
     expect(tools.find((t) => t.name === undefined)).toBeUndefined();
+  });
+});
+
+describe('knownModuleIds', () => {
+  it('returns the ids of the known-module map', () => {
+    expect(knownModuleIds()).toEqual(Object.keys(KNOWN_MODULES));
+  });
+  it('includes video', () => {
+    expect(knownModuleIds()).toContain('video');
+  });
+  it('honors an injected known map', () => {
+    expect(knownModuleIds({ foo: async () => ({} as never) })).toEqual(['foo']);
   });
 });
