@@ -146,7 +146,7 @@ Milestones group work into releases:
 - `v0.9 — Core Workflow` — **closed.** Feature-complete coordinator (all workflow tools).
 - `v1.0 — Native Installer` — **closed.** Go+Fyne installer shipped 2026-05-26.
 - `v1.x — Enhancements` — **closed.** All named v1.x issues shipped or migrated. Last ship: #91 CLO mapping on 2026-06-07.
-- `v2.0 — Platform direction` — **active.** Plug-in architecture (#78, shipped) + its post-install toggle `set_module_enabled`/`list_modules` (#94, shipped); institutional tool-discovery (#76), usage feedback via GitHub (#77), Rhetorix integration (#75).
+- `v2.0 — Platform direction` — **active.** Plug-in architecture (#78, shipped) + its post-install toggle `set_module_enabled`/`list_modules` (#94, shipped); institutional tool-discovery (#76, shipped — `discover_tools`/`save_institution_profile`, `data/known-tools.yaml` catalog, accretive `institution-profile.md`); usage feedback via GitHub (#77, **now unblocked** — its payload, the institution profile, exists); Rhetorix integration (#75, externally blocked on the Rhetorix author).
 - `Future / Backlog` — catchall for anything not yet milestoned.
 
 The GitHub Project "Canvas Toolchain Roadmap" pulls all of this together with board and roadmap views.
