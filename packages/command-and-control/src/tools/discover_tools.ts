@@ -4,9 +4,8 @@ import { loadCatalog } from '../discovery/catalog.js';
 import { scanCanvasTools, type InstitutionConfigLike } from '../discovery/canvas_scan.js';
 import { matchDetected, type ModuleStateLike } from '../discovery/match.js';
 
-export interface DiscoverToolsInput {
-  scope?: 'account' | 'course' | 'self';
-}
+// No inputs today (the scan auto-cascades). Kept as a named type for the tool signature.
+export type DiscoverToolsInput = Record<string, never>;
 
 export interface DiscoverToolsDeps {
   loadConfig: () => InstitutionConfigLike;

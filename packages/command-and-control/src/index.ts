@@ -222,12 +222,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: 'discover_tools',
       description:
         'Discover what tools the institution/professor uses: scans the Canvas instance (account → per-course → self-report cascade), matches findings against available modules, and returns detected tools, module-enable suggestions, unmatched tools, and a catalog pick-list. Read-only.',
-      inputSchema: {
-        type: 'object' as const,
-        properties: {
-          scope: { type: 'string', enum: ['account', 'course', 'self'], description: 'Optional: force a scan tier.' },
-        },
-      },
+      inputSchema: { type: 'object' as const, properties: {} },
     },
     {
       name: 'save_institution_profile',

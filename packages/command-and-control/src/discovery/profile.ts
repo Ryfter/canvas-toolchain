@@ -88,20 +88,40 @@ export function saveProfile(p: InstitutionProfile, path: string = getProfilePath
   return path;
 }
 
-/** Append/replace a `tools:` delta in a course's course-config.md. Throws COURSE_NOT_FOUND if the dir is absent. */
+/** Front-matter splitter — same shape used by CDS's course-config writers. */
+const FM_PATTERN = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
+
+/**
+ * Set the `tools:` delta INSIDE a course's course-config.md front matter (so the dashboard,
+ * gray-matter consumers, and #77 can read it back). Re-serializes the front matter, preserves
+ * the body, atomic write. Throws COURSE_NOT_FOUND if the dir is absent. Mirrors writeAiasDefaults.
+ */
 export function writeClassDelta(courseDir: string, delta: { uses?: string[]; skips?: string[] }): void {
   if (!existsSync(courseDir) || !statSync(courseDir).isDirectory()) {
     throw new Error(`COURSE_NOT_FOUND: ${courseDir}`);
   }
   const cfgPath = join(courseDir, 'course-config.md');
-  const prior = existsSync(cfgPath) ? readFileSync(cfgPath, 'utf-8') : '# Course\n';
-  const block = ['tools:', `  uses: [${(delta.uses ?? []).join(', ')}]`, `  skips: [${(delta.skips ?? []).join(', ')}]`].join(
-    '\n',
-  );
-  // Replace an existing tools: block (our simple 3-line shape) or append.
-  const stripped = prior.replace(/\n?tools:\n(?:[ \t]+\w+:.*\n?)*/g, '\n').trimEnd();
-  const next = `${stripped}\n\n${block}\n`;
+  const prior = existsSync(cfgPath) ? readFileSync(cfgPath, 'utf-8') : '---\n---\n';
+
+  let fm: Record<string, unknown> = {};
+  let body = '';
+  const m = prior.match(FM_PATTERN);
+  if (m) {
+    const parsed = parseYaml(m[1]);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) fm = parsed as Record<string, unknown>;
+    body = m[2];
+  } else {
+    body = prior; // no front matter yet → keep the whole file as body and prepend one
+  }
+
+  const toolsDelta: Record<string, string[]> = {};
+  if (delta.uses && delta.uses.length) toolsDelta.uses = delta.uses;
+  if (delta.skips && delta.skips.length) toolsDelta.skips = delta.skips;
+  fm.tools = toolsDelta; // fresh object each run → clean replace, no orphaned fragments
+
+  const fmYaml = stringifyYaml(fm).trimEnd();
+  const output = `---\n${fmYaml}\n---\n${body.startsWith('\n') ? body : `\n${body}`}`;
   const tmp = `${cfgPath}.tmp`;
-  writeFileSync(tmp, next, { encoding: 'utf-8' });
+  writeFileSync(tmp, output, { encoding: 'utf-8' });
   renameSync(tmp, cfgPath);
 }

@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
 import { join } from 'node:path';
+import { parse } from 'yaml';
 import {
   loadProfile,
   mergeTools,
@@ -61,16 +62,55 @@ describe('profile round-trip + merge', () => {
 });
 
 describe('writeClassDelta', () => {
-  it('writes a tools: delta into an existing course-config.md without clobbering other content', () => {
+  // The front-matter parser every consumer (dashboard, gray-matter, #77) uses.
+  const FM = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
+
+  it('writes the tools delta INSIDE the front matter, preserving other fm keys and the body', () => {
     const courseDir = join(ccHomeDir, 'ITM370');
     mkdirSync(courseDir, { recursive: true });
-    writeFileSync(join(courseDir, 'course-config.md'), '# Course\n\nsemester: Fall 2026\n');
+    writeFileSync(
+      join(courseDir, 'course-config.md'),
+      '---\ncourse_number: ITM 370\nsemester: Fall 2026\n---\n# Body heading\n\nProse.\n',
+    );
     writeClassDelta(courseDir, { uses: ['gradescope'], skips: ['google-forms'] });
+
     const txt = readFileSync(join(courseDir, 'course-config.md'), 'utf-8');
-    expect(txt).toContain('semester: Fall 2026');
-    expect(txt).toMatch(/tools:/);
-    expect(txt).toContain('gradescope');
-    expect(txt).toContain('google-forms');
+    const m = txt.match(FM)!;
+    expect(m).toBeTruthy();
+    const fm = parse(m[1]) as Record<string, unknown>;
+    // delta is readable from the front matter — not stranded after it
+    expect(fm.tools).toEqual({ uses: ['gradescope'], skips: ['google-forms'] });
+    // sibling fm keys and the body survive
+    expect(fm.semester).toBe('Fall 2026');
+    expect(fm.course_number).toBe('ITM 370');
+    expect(m[2]).toContain('# Body heading');
+    expect(m[2]).toContain('Prose.');
+  });
+
+  it('replaces a prior delta cleanly on a second run (no orphaned fragments)', () => {
+    const courseDir = join(ccHomeDir, 'ITM310');
+    mkdirSync(courseDir, { recursive: true });
+    writeFileSync(join(courseDir, 'course-config.md'), '---\nsemester: Fall 2026\n---\nbody\n');
+    writeClassDelta(courseDir, { uses: ['gradescope'] });
+    writeClassDelta(courseDir, { uses: ['turnitin'], skips: ['google-forms'] });
+
+    const txt = readFileSync(join(courseDir, 'course-config.md'), 'utf-8');
+    const fm = parse(txt.match(FM)![1]) as Record<string, unknown>;
+    expect(fm.tools).toEqual({ uses: ['turnitin'], skips: ['google-forms'] });
+    expect(txt).not.toContain('gradescope'); // prior delta fully gone, not duplicated
+    // exactly one tools: key
+    expect((txt.match(/^tools:/gm) ?? []).length).toBe(1);
+  });
+
+  it('prepends front matter when the file has none', () => {
+    const courseDir = join(ccHomeDir, 'BusApp105');
+    mkdirSync(courseDir, { recursive: true });
+    writeFileSync(join(courseDir, 'course-config.md'), '# Just a heading\n');
+    writeClassDelta(courseDir, { uses: ['iclicker'] });
+    const txt = readFileSync(join(courseDir, 'course-config.md'), 'utf-8');
+    const m = txt.match(FM)!;
+    expect((parse(m[1]) as Record<string, unknown>).tools).toEqual({ uses: ['iclicker'] });
+    expect(m[2]).toContain('# Just a heading');
   });
 
   it('throws COURSE_NOT_FOUND for a missing course dir', () => {

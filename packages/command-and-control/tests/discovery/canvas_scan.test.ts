@@ -7,7 +7,25 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
 
+function pagedResponse(body: unknown, nextUrl?: string): Response {
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (nextUrl) headers.link = `<${nextUrl}>; rel="next"`;
+  return new Response(JSON.stringify(body), { status: 200, headers });
+}
+
 describe('scanCanvasTools', () => {
+  it('follows Link-header pagination instead of truncating at one page', async () => {
+    const page2 = 'https://x.instructure.com/api/v1/accounts/self/external_tools?page=2';
+    const fetchFn = async (url: string) => {
+      if (url.includes('page=2')) return jsonResponse([{ name: 'Gradescope' }]);
+      if (url.includes('/accounts/self/external_tools')) return pagedResponse([{ name: 'Panopto' }], page2);
+      throw new Error(`unexpected url ${url}`);
+    };
+    const res = await scanCanvasTools(cfg, fetchFn as unknown as typeof fetch);
+    expect(res.tier).toBe('account');
+    expect(res.tools.map((t) => t.rawName).sort()).toEqual(['Gradescope', 'Panopto']);
+  });
+
   it('returns account tier when account external_tools succeeds', async () => {
     const fetchFn = async (url: string) => {
       if (url.includes('/accounts/self/external_tools')) return jsonResponse([{ name: 'BSU Panopto' }, { name: 'Zoom' }]);

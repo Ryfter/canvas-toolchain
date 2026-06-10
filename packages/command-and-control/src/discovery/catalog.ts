@@ -34,8 +34,10 @@ export function loadCatalog(path: string = catalogPath()): Catalog {
   return { all, byId };
 }
 
-/** Case-insensitive substring match of a raw Canvas tool name/domain against catalog identifiers. */
+/** Case-insensitive match: does the raw Canvas tool name/domain contain a catalog identifier?
+ *  One-directional only — a raw name shorter than an identifier is not a match (avoids
+ *  e.g. a tool literally named "meet" matching "meet.google.com"). */
 export function matchIdentifier(catalog: Catalog, raw: string): CatalogEntry | undefined {
   const needle = raw.toLowerCase();
-  return catalog.all.find((t) => t.identifiers.some((idf) => needle.includes(idf) || idf.includes(needle)));
+  return catalog.all.find((t) => t.identifiers.some((idf) => needle.includes(idf)));
 }
