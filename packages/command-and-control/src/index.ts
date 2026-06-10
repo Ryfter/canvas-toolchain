@@ -26,6 +26,7 @@ import { setModuleEnabled } from './tools/set_module_enabled.js';
 import { listModules } from './tools/list_modules.js';
 import { discoverTools } from './tools/discover_tools.js';
 import { saveInstitutionProfile } from './tools/save_institution_profile.js';
+import { submitUsageFeedback } from './tools/submit_usage_feedback.js';
 import { setCourseAiasDefault } from './tools/set_course_aias_default.js';
 import { setCoursesRoot } from './tools/set_courses_root.js';
 import { openDashboard } from './tools/open_dashboard.js';
@@ -261,6 +262,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
               },
             },
           },
+        },
+      },
+    },
+    {
+      name: 'submit_usage_feedback',
+      description:
+        'Submit an anonymized inventory of your institution\'s tools as a GitHub issue, so the author can prioritize integrations. Opt-in. Two-call gate: call once to review the exact payload, then call again with confirm:true to submit via gh. named:true includes full identifiers (default is anonymized).',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          named: { type: 'boolean', description: 'Include full institution identifiers (default false = anonymized).' },
+          confirm: { type: 'boolean', description: 'false/omitted = review only; true = submit the GitHub issue.' },
         },
       },
     },
@@ -767,6 +780,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'save_institution_profile':
         result = await saveInstitutionProfile(args as unknown as Parameters<typeof saveInstitutionProfile>[0]);
+        break;
+      case 'submit_usage_feedback':
+        result = await submitUsageFeedback(args as unknown as Parameters<typeof submitUsageFeedback>[0]);
         break;
       case 'set_course_aias_default': {
         result = await setCourseAiasDefault(args as unknown as Parameters<typeof setCourseAiasDefault>[0]);
