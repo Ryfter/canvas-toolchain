@@ -1,4 +1,5 @@
 import type { InstitutionProfile, ProfileTool } from '../discovery/profile.js';
+import { stringify as stringifyYaml } from 'yaml';
 
 /** Coarse, non-identifying identifier keys kept in anonymized mode. Default-deny: anything
  *  not in this set is dropped. Compared lower-cased. */
@@ -40,4 +41,58 @@ export function buildSubmissionPayload(
   }));
 
   return { named, identifiers, tools };
+}
+
+/** Pick the institution name for a named-mode title, if one of these keys is present. */
+const NAME_KEYS = ['institution', 'name', 'institutionname'];
+
+export function renderIssueTitle(payload: SubmissionPayload): string {
+  const n = payload.tools.length;
+  if (payload.named) {
+    const hit = Object.entries(payload.identifiers).find(([k]) => NAME_KEYS.includes(k.toLowerCase()));
+    return `usage-feedback: ${hit ? hit[1] : 'named'} — ${n} tools`;
+  }
+  return `usage-feedback: anonymous — ${n} tools`;
+}
+
+export function renderIssueBody(payload: SubmissionPayload): string {
+  const idEntries = Object.entries(payload.identifiers);
+  const idTable = idEntries.length
+    ? ['| Key | Value |', '|---|---|', ...idEntries.map(([k, v]) => `| ${k} | ${v} |`)].join('\n')
+    : payload.named
+      ? '_None recorded._'
+      : 'None (anonymized).';
+
+  const toolTable = payload.tools.length
+    ? [
+        '| Tool | Module | Scope | Source |',
+        '|---|---|---|---|',
+        ...payload.tools.map((t) => `| ${t.name} | ${t.module} | ${t.scope} | ${t.source} |`),
+      ].join('\n')
+    : '_No tools recorded._';
+
+  const yamlBlock = stringifyYaml({
+    named: payload.named,
+    identifiers: payload.identifiers,
+    tools: payload.tools,
+  }).trimEnd();
+
+  return [
+    '<!-- canvas-toolchain usage-feedback v1 -->',
+    `**Mode:** ${payload.named ? 'named' : 'anonymized'}`,
+    '',
+    '## Identifiers',
+    idTable,
+    '',
+    '## Tools',
+    toolTable,
+    '',
+    '<details><summary>Machine-readable</summary>',
+    '',
+    '```yaml',
+    yamlBlock,
+    '```',
+    '</details>',
+    '',
+  ].join('\n');
 }
