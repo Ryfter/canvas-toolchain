@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { submitUsageFeedback } from '../../src/tools/submit_usage_feedback.js';
+import { submitUsageFeedback, makeGhRunner } from '../../src/tools/submit_usage_feedback.js';
 import type { InstitutionProfile } from '../../src/discovery/profile.js';
 
 const profile: InstitutionProfile = {
@@ -69,5 +69,15 @@ describe('submitUsageFeedback', () => {
     const r = await submitUsageFeedback({ named: true }, { load: () => profile, gh });
     if (r.ok && r.stage === 'review') expect(r.body).toContain('bsu.instructure.com');
     else throw new Error('expected review stage');
+  });
+});
+
+describe('makeGhRunner (default runner)', () => {
+  it('exposes available() + createIssue() and available() resolves to a boolean', async () => {
+    const runner = makeGhRunner('Ryfter/canvas-toolchain');
+    expect(typeof runner.available).toBe('function');
+    expect(typeof runner.createIssue).toBe('function');
+    const avail = await runner.available();
+    expect(typeof avail).toBe('boolean'); // true or false depending on the box; must not throw
   });
 });

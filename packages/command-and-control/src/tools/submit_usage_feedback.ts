@@ -1,3 +1,8 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { writeFile, unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { loadProfile, type InstitutionProfile } from '../discovery/profile.js';
 import { buildSubmissionPayload, renderIssueBody, renderIssueTitle } from '../feedback/submission.js';
 
@@ -25,17 +30,46 @@ export type SubmitUsageFeedbackResult =
 
 const FEEDBACK_LABEL = 'usage-feedback';
 
-// Real gh runner is wired in a later task. Until then this stub is never reached (all tests inject gh).
-const notWired: GhRunner = {
-  available: async () => false,
-  createIssue: async () => {
-    throw new Error('gh runner not wired');
-  },
-};
+const execFileAsync = promisify(execFile);
+
+/** GitHub repo the feedback issues are filed against. */
+export const FEEDBACK_REPO = 'Ryfter/canvas-toolchain';
+
+/** Build the real gh-backed runner for a given repo slug. */
+export function makeGhRunner(repo: string): GhRunner {
+  return {
+    async available(): Promise<boolean> {
+      try {
+        await execFileAsync('gh', ['auth', 'status']);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async createIssue({ title, body, label }): Promise<string> {
+      const file = join(tmpdir(), `ctk-usage-feedback-${process.pid}-${Date.now()}.md`);
+      await writeFile(file, body, { encoding: 'utf-8', mode: 0o600 });
+      try {
+        const { stdout } = await execFileAsync('gh', [
+          'issue', 'create',
+          '--repo', repo,
+          '--title', title,
+          '--label', label,
+          '--body-file', file,
+        ]);
+        const url = stdout.trim().split('\n').filter(Boolean).pop() ?? '';
+        if (!/^https?:\/\//.test(url)) throw new Error(`Unexpected gh output: ${stdout.trim()}`);
+        return url;
+      } finally {
+        await unlink(file).catch(() => {});
+      }
+    },
+  };
+}
 
 const defaultDeps: SubmitDeps = {
   load: () => loadProfile(),
-  gh: notWired,
+  gh: makeGhRunner(FEEDBACK_REPO),
 };
 
 export async function submitUsageFeedback(
