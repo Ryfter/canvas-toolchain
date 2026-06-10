@@ -76,3 +76,34 @@ describe('renderIssueTitle', () => {
     expect(renderIssueTitle(noName)).toBe('usage-feedback: named — 2 tools');
   });
 });
+
+describe('renderIssueTitle — named priority (review I-1)', () => {
+  it('prefers institution over a stray name key regardless of insertion order', () => {
+    const p = buildSubmissionPayload(
+      { identifiers: { name: 'Kevin sandbox', institution: 'Boise State' }, tools: [] },
+      { named: true },
+    );
+    expect(renderIssueTitle(p)).toBe('usage-feedback: Boise State — 0 tools');
+  });
+
+  it('falls back to name when no institution key is present', () => {
+    const p = buildSubmissionPayload({ identifiers: { name: 'Solo College' }, tools: [] }, { named: true });
+    expect(renderIssueTitle(p)).toBe('usage-feedback: Solo College — 0 tools');
+  });
+});
+
+describe('renderIssueBody — table cell escaping (review I-2)', () => {
+  it('escapes pipes and newlines in tool names so the table is not corrupted', () => {
+    const p = buildSubmissionPayload({
+      identifiers: {},
+      tools: [{ id: 'x', name: 'Weird | Tool\nName', scope: 'global', module: 'none', source: 'self-reported' }],
+    });
+    const body = renderIssueBody(p);
+    // the tool row must remain a single physical line with the pipe escaped
+    const row = body.split('\n').find((l) => l.includes('Weird'))!;
+    expect(row).toContain('Weird \\| Tool Name');
+    expect(row.startsWith('| ')).toBe(true);
+    // exactly 5 unescaped pipes = 4 columns in this row
+    expect((row.match(/(?<!\\)\|/g) || []).length).toBe(5);
+  });
+});

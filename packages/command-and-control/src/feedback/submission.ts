@@ -43,22 +43,27 @@ export function buildSubmissionPayload(
   return { named, identifiers, tools };
 }
 
-/** Pick the institution name for a named-mode title, if one of these keys is present. */
-const NAME_KEYS = ['institution', 'name', 'institutionname'];
+/** Identifier keys that can name the institution in a named-mode title, in priority order. */
+const NAME_KEYS = ['institution', 'institutionname', 'name'];
 
 export function renderIssueTitle(payload: SubmissionPayload): string {
   const n = payload.tools.length;
   if (payload.named) {
-    const hit = Object.entries(payload.identifiers).find(([k]) => NAME_KEYS.includes(k.toLowerCase()));
-    return `usage-feedback: ${hit ? hit[1] : 'named'} — ${n} tools`;
+    for (const want of NAME_KEYS) {
+      const hit = Object.entries(payload.identifiers).find(([k]) => k.toLowerCase() === want);
+      if (hit) return `usage-feedback: ${hit[1]} — ${n} tools`;
+    }
+    return `usage-feedback: named — ${n} tools`;
   }
   return `usage-feedback: anonymous — ${n} tools`;
 }
 
 export function renderIssueBody(payload: SubmissionPayload): string {
+  const cell = (s: string) => String(s).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+
   const idEntries = Object.entries(payload.identifiers);
   const idTable = idEntries.length
-    ? ['| Key | Value |', '|---|---|', ...idEntries.map(([k, v]) => `| ${k} | ${v} |`)].join('\n')
+    ? ['| Key | Value |', '|---|---|', ...idEntries.map(([k, v]) => `| ${cell(k)} | ${cell(v)} |`)].join('\n')
     : payload.named
       ? '_None recorded._'
       : 'None (anonymized).';
@@ -67,7 +72,7 @@ export function renderIssueBody(payload: SubmissionPayload): string {
     ? [
         '| Tool | Module | Scope | Source |',
         '|---|---|---|---|',
-        ...payload.tools.map((t) => `| ${t.name} | ${t.module} | ${t.scope} | ${t.source} |`),
+        ...payload.tools.map((t) => `| ${cell(t.name)} | ${cell(t.module)} | ${cell(t.scope)} | ${cell(t.source)} |`),
       ].join('\n')
     : '_No tools recorded._';
 
