@@ -146,7 +146,7 @@ Milestones group work into releases:
 - `v0.9 — Core Workflow` — **closed.** Feature-complete coordinator (all workflow tools).
 - `v1.0 — Native Installer` — **closed.** Go+Fyne installer shipped 2026-05-26.
 - `v1.x — Enhancements` — **closed.** All named v1.x issues shipped or migrated. Last ship: #91 CLO mapping on 2026-06-07.
-- `v2.0 — Platform direction` — **active.** Plug-in architecture (#78, shipped) + its post-install toggle `set_module_enabled`/`list_modules` (#94, shipped); institutional tool-discovery (#76, shipped — `discover_tools`/`save_institution_profile`, `data/known-tools.yaml` catalog, accretive `institution-profile.md`); usage feedback via GitHub (#77, **now unblocked** — its payload, the institution profile, exists); Rhetorix integration (#75, externally blocked on the Rhetorix author).
+- `v2.0 — Platform direction` — **active.** Plug-in architecture (#78, shipped) + its post-install toggle `set_module_enabled`/`list_modules` (#94, shipped); institutional tool-discovery (#76, shipped — `discover_tools`/`save_institution_profile`, `data/known-tools.yaml` catalog, accretive `institution-profile.md`); usage feedback via GitHub (#77, **shipped** — `submit_usage_feedback`, opt-in anonymized GitHub issue, two-call confirm gate, default-deny `SAFE_IDENTIFIER_KEYS`/`SAFE_TOOL_KEYS`); Rhetorix integration (#75, externally blocked on the Rhetorix author).
 - `Future / Backlog` — catchall for anything not yet milestoned.
 
 The GitHub Project "Canvas Toolchain Roadmap" pulls all of this together with board and roadmap views.
@@ -201,7 +201,7 @@ The v1.x enhancement backlog is closed. Today's outstanding work falls into two 
 
 - **#78** plug-in module architecture — **SHIPPED first cut 2026-06-08.** Spec: [`packages/command-and-control/docs/superpowers/specs/2026-06-07-module-architecture-design.md`](packages/command-and-control/docs/superpowers/specs/2026-06-07-module-architecture-design.md); plan: [`.../plans/2026-06-07-module-architecture.md`](packages/command-and-control/docs/superpowers/plans/2026-06-07-module-architecture.md). Modules are config-time-enabled via `~/.command-and-control/modules.json`; module registry lives in C&C `src/modules/`; first module is `packages/module-video`. **Known follow-up:** no in-product `enable_module` tool yet — a user who disables Video must hand-edit `modules.json` (advanced-adopter-acceptable; tracked as a fast-follow). When a 2nd video provider lands, wire handlers through `module-video/src/resolve.ts` and drop the `*_panopto_*` aliases.
 - **#76** post-install institutional tool-discovery (Canvas LTI scan) — reads each module's `handles[]` to suggest modules to enable.
-- **#77** usage feedback via GitHub (institution profiles) — payload = which modules/providers are enabled.
+- **#77** usage feedback via GitHub — **SHIPPED.** `submit_usage_feedback` MCP tool: opt-in, turns the institution profile into an anonymized `usage-feedback` GitHub issue on `Ryfter/canvas-toolchain`. Two-call confirm gate (preview then `confirm:true`); default-deny identifier allowlist (`SAFE_IDENTIFIER_KEYS`: `lms`, `institutionType`, `sizeBucket`, `region`); tools field-guarded to `SAFE_TOOL_KEYS`; `named:true` opts into full identifiers; no browser fallback — missing/unauthed `gh` → `GH_UNAVAILABLE`. Never transmits tokens or student data.
 - **#75** Rhetorix Lab integration — the **next module**, drops into the proven `CanvasToolchainModule` contract.
 
 **Historical v1.0 installer plans** (for context — these all shipped 2026-05-26 / 2026-05-30):
