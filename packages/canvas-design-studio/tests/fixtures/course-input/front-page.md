@@ -15,4 +15,4 @@ Welcome to ITM 370. This course explores how AI tools augment professional work.
 Sixteen weeks of hands-on projects, weekly assignments, and peer discussions.
 
 ## Instructor
-Dr. Rank — dr.rank@university.edu — Office hours: Tuesdays 2-4pm
+Dr. Smith — dr.smith@university.edu — Office hours: Tuesdays 2-4pm

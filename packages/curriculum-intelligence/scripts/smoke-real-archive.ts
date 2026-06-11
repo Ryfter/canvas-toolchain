@@ -44,7 +44,7 @@ const ARCHIVES = [
   },
   {
     semesterId: 'Spring2026',
-    path: 'D:/CanvasArchive/2026/Spring/Sp26 - ITM 370 - AI Augmented Projects (Rank)',
+    path: 'D:/CanvasArchive/2026/Spring/Sp26 - ITM 370 - AI Augmented Projects (Smith)',
   },
 ];
 

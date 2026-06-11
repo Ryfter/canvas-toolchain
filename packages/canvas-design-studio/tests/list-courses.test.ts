@@ -22,7 +22,7 @@ function course(id: number, name: string, extras: Partial<CanvasCourse> = {}): C
     name,
     term: { name: 'Spring 2026' },
     total_students: 28,
-    teachers: [{ display_name: 'Dr. Rank' }],
+    teachers: [{ display_name: 'Dr. Smith' }],
     ...extras,
   };
 }

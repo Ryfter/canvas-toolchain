@@ -10,7 +10,7 @@ function makeConfig(overrides: Partial<CourseConfig> = {}): CourseConfig {
     institution: 'Example University',
     courseName: 'AI Augmented Projects',
     courseNumber: 'ITM 370',
-    professor: 'Dr. Rank',
+    professor: 'Dr. Smith',
     semester: 'Fall 2026',
     weeks: 4,
     pageTypes: ['overview'],

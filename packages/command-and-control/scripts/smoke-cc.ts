@@ -19,7 +19,7 @@ import { setupCourse } from 'curriculum-intelligence-mcp/dist/tools/setup_course
 const SOURCE_SEM = 'Spring2026';
 const TARGET_SEM = 'Fall2026';
 const COURSE_ID = 'ITM370';
-const ARCHIVE_PATH = 'D:/CanvasArchive/2026/Spring/Sp26 - ITM 370 - AI Augmented Projects (Rank)';
+const ARCHIVE_PATH = 'D:/CanvasArchive/2026/Spring/Sp26 - ITM 370 - AI Augmented Projects (Smith)';
 
 const tmpHome = mkdtempSync(join(tmpdir(), 'cc-smoke-'));
 process.env.CC_HOME = tmpHome;

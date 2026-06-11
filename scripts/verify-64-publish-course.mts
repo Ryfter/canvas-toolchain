@@ -73,7 +73,7 @@ function ensureSandboxCourse(): void {
       'institution: Example University',
       'course_name: BusApp 105 — Sandbox Test',
       'course_number: BUSAPP 105',
-      'professor: Dr. Rank',
+      'professor: Dr. Smith',
       'semester: Summer 2026',
       'weeks: 1',
       '',

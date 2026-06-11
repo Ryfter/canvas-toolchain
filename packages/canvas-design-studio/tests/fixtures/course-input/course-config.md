@@ -2,7 +2,7 @@
 institution: Example University
 course_name: AI Augmented Projects
 course_number: ITM 370
-professor: Dr. Rank
+professor: Dr. Smith
 semester: Fall 2026
 weeks: 2
 

@@ -19,7 +19,7 @@ const input = {
   courseName: 'AI Augmented Projects',
   courseNumber: 'ITM 370',
   assignmentNumber: '16.06',
-  professorName: 'Dr. Rank',
+  professorName: 'Dr. Smith',
   semester: 'Fall 2026',
 };
 

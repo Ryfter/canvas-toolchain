@@ -58,7 +58,7 @@ describe('gotchas', () => {
       id: 4,
       name: 'ITM 310',
       total_students: 28,
-      teachers: [{ display_name: 'Dr. Rank' }],
+      teachers: [{ display_name: 'Dr. Smith' }],
     };
 
     expect(courseCoordinatorGotcha(course)).toBeUndefined();

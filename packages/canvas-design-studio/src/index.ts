@@ -105,7 +105,7 @@ async function main() {
             courseName: { type: 'string', description: 'e.g. AI Augmented Projects' },
             courseNumber: { type: 'string', description: 'e.g. ITM 370' },
             assignmentNumber: { type: 'string', description: 'e.g. 16.06' },
-            professorName: { type: 'string', description: 'e.g. Dr. Rank' },
+            professorName: { type: 'string', description: 'e.g. Dr. Smith' },
             semester: { type: 'string', description: 'e.g. Fall 2026' },
             styleNotes: { type: 'string', description: 'Optional layout or tone preferences. e.g. "two-column, energetic tone, include a resources sidebar"' },
           },

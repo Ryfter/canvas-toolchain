@@ -229,7 +229,7 @@ Create `tests/fixtures/course-config/basic/course-config.md`:
 institution: Example University
 course_name: AI Augmented Projects
 course_number: ITM 370
-professor: Dr. Rank
+professor: Dr. Smith
 semester: Fall 2026
 weeks: 4
 
@@ -314,7 +314,7 @@ describe('parseCourseConfig', () => {
     expect(config.institution).toBe('Example University');
     expect(config.courseName).toBe('AI Augmented Projects');
     expect(config.courseNumber).toBe('ITM 370');
-    expect(config.professor).toBe('Dr. Rank');
+    expect(config.professor).toBe('Dr. Smith');
     expect(config.semester).toBe('Fall 2026');
   });
 
@@ -1008,7 +1008,7 @@ function makeConfig(overrides: Partial<CourseConfig> = {}): CourseConfig {
     institution: 'Example University',
     courseName: 'AI Augmented Projects',
     courseNumber: 'ITM 370',
-    professor: 'Dr. Rank',
+    professor: 'Dr. Smith',
     semester: 'Fall 2026',
     weeks: 4,
     pageTypes: ['overview'],
@@ -1647,7 +1647,7 @@ These fixtures are used by generate-page, generate-week, and generate-course tes
 institution: Example University
 course_name: AI Augmented Projects
 course_number: ITM 370
-professor: Dr. Rank
+professor: Dr. Smith
 semester: Fall 2026
 weeks: 2
 
@@ -1698,7 +1698,7 @@ Welcome to ITM 370. This course explores how AI tools augment professional work.
 Sixteen weeks of hands-on projects, weekly assignments, and peer discussions.
 
 ## Instructor
-Dr. Rank — dr.rank@university.edu — Office hours: Tuesdays 2-4pm
+Dr. Smith — dr.smith@university.edu — Office hours: Tuesdays 2-4pm
 ```
 
 - [ ] **Step 3: Create `tests/fixtures/course-input/week-01/overview.md`**
@@ -2343,7 +2343,7 @@ function makeAnswers(overrides: Partial<CourseWizardAnswers> = {}): CourseWizard
     institution: 'Example University',
     courseName: 'AI Augmented Projects',
     courseNumber: 'ITM 370',
-    professor: 'Dr. Rank',
+    professor: 'Dr. Smith',
     semester: 'Fall 2026',
     weeks: 4,
     pageTypes: ['overview', 'assignment'],

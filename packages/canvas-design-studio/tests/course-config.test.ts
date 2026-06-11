@@ -10,7 +10,7 @@ describe('parseCourseConfig', () => {
     expect(config.institution).toBe('Example University');
     expect(config.courseName).toBe('AI Augmented Projects');
     expect(config.courseNumber).toBe('ITM 370');
-    expect(config.professor).toBe('Dr. Rank');
+    expect(config.professor).toBe('Dr. Smith');
     expect(config.semester).toBe('Fall 2026');
   });
 

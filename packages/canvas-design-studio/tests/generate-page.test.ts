@@ -101,7 +101,7 @@ describe('generatePage — rubric page type (#67)', () => {
 institution: Example University
 course_name: BusApp 105
 course_number: BUSAPP 105
-professor: Dr. Rank
+professor: Dr. Smith
 semester: Summer 2026
 weeks: 5
 page_types:

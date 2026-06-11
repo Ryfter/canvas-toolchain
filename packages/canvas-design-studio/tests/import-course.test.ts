@@ -263,7 +263,7 @@ describe('importCourse — preserveOriginalHtml mode (#80)', () => {
       institution: 'Example University',
       courseName: 'AI Augmented Projects',
       courseNumber: 'ITM 370',
-      professor: 'Dr. Rank',
+      professor: 'Dr. Smith',
       semester: 'Fall 2026',
       weeks: 2,
       pageTypes: ['overview'],

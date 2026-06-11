@@ -10,7 +10,7 @@ function makeAnswers(overrides: Partial<CourseWizardAnswers> = {}): CourseWizard
     institution: 'Example University',
     courseName: 'AI Augmented Projects',
     courseNumber: 'ITM 370',
-    professor: 'Dr. Rank',
+    professor: 'Dr. Smith',
     semester: 'Fall 2026',
     weeks: 4,
     pageTypes: ['overview', 'assignment'],

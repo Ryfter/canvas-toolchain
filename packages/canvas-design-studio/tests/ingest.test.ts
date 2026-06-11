@@ -26,7 +26,7 @@ describe('parseCourseConfig', () => {
   it('parses all six required fields', () => {
     const content = [
       'Institution: Example University',
-      'Professor: Dr. Rank',
+      'Professor: Dr. Smith',
       'Course Number: ITM 370',
       'Course Name: AI Augmented Projects',
       'Assignment Number: 16.06',
@@ -34,7 +34,7 @@ describe('parseCourseConfig', () => {
     ].join('\n');
     const result = parseCourseConfig(content);
     expect(result.institution).toBe('Example University');
-    expect(result.professor).toBe('Dr. Rank');
+    expect(result.professor).toBe('Dr. Smith');
     expect(result.courseNumber).toBe('ITM 370');
     expect(result.courseName).toBe('AI Augmented Projects');
     expect(result.assignmentNumber).toBe('16.06');
@@ -49,9 +49,9 @@ describe('parseCourseConfig', () => {
   });
 
   it('ignores comment lines starting with #', () => {
-    const content = '# This is a comment\nProfessor: Dr. Rank';
+    const content = '# This is a comment\nProfessor: Dr. Smith';
     const result = parseCourseConfig(content);
-    expect(result.professor).toBe('Dr. Rank');
+    expect(result.professor).toBe('Dr. Smith');
     expect(Object.keys(result)).toHaveLength(1);
   });
 
@@ -65,7 +65,7 @@ describe('parseCourseConfig', () => {
 describe('validateCourseInfo', () => {
   const valid: CourseInfo = {
     institution: 'University',
-    professor: 'Dr. Rank',
+    professor: 'Dr. Smith',
     courseNumber: 'ITM 370',
     courseName: 'AI Projects',
     assignmentNumber: '16.06',
@@ -121,7 +121,7 @@ describe('findFileWithInheritance', () => {
 describe('findCourseConfig', () => {
   it('finds config in target folder when present', () => {
     const result = findCourseConfig(join(FIXTURES, 'simple-brief-only'));
-    expect(result.merged.professor).toBe('Dr. Rank');
+    expect(result.merged.professor).toBe('Dr. Smith');
     expect(result.merged.assignmentNumber).toBe('16.06');
   });
 
@@ -129,7 +129,7 @@ describe('findCourseConfig', () => {
     // week-01 has course-config.md with only Assignment Number
     // advanced-group/course-config.md has everything except Assignment Number
     const result = findCourseConfig(join(FIXTURES, 'advanced-group/ai-challenge/week-01'));
-    expect(result.merged.professor).toBe('Dr. Rank');          // from shared
+    expect(result.merged.professor).toBe('Dr. Smith');          // from shared
     expect(result.merged.assignmentNumber).toBe('12.01');      // from per-assignment override
     expect(result.merged.courseName).toBe('AI Augmented Projects'); // from shared
   });
@@ -150,7 +150,7 @@ describe('ingestAssignmentFolder', () => {
     );
     expect(result.html).toContain('HERO_IMAGE_URL');
     expect(result.html).toContain('ITM 370');
-    expect(result.courseInfo.professor).toBe('Dr. Rank');
+    expect(result.courseInfo.professor).toBe('Dr. Smith');
     expect(result.courseInfo.assignmentNumber).toBe('16.06');
     expect(result.sources.brief).toContain('Ignite Talk');
     expect(result.sources.rubric).toBeUndefined();
@@ -170,7 +170,7 @@ describe('ingestAssignmentFolder', () => {
     expect(result.sources.sourceMap.rubric).toContain('ai-challenge');
     expect(result.sources.sourceMap.rubric).not.toContain('week-01');
     expect(result.courseInfo.assignmentNumber).toBe('12.01');   // from per-assignment override
-    expect(result.courseInfo.professor).toBe('Dr. Rank');       // from shared config
+    expect(result.courseInfo.professor).toBe('Dr. Smith');       // from shared config
   });
 
   it('simple-full — returns rubric and shell from same folder', () => {

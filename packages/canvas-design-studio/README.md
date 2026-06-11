@@ -164,7 +164,7 @@ Config saves to `~/.canvas-design-mcp/institution.json` — survives `npx` reins
 
 Ask your AI assistant:
 
-> "Generate a Canvas assignment page for ITM 370, Assignment 16.06 — AI Augmented Projects, Fall 2026, Dr. Rank. Brief: Students record a 5-minute video demo of their passion project and upload to YouTube."
+> "Generate a Canvas assignment page for ITM 370, Assignment 16.06 — AI Augmented Projects, Fall 2026, Dr. Smith. Brief: Students record a 5-minute video demo of their passion project and upload to YouTube."
 
 The tool returns:
 

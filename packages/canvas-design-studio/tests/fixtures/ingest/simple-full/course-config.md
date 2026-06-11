@@ -1,5 +1,5 @@
 Institution: Example University
-Professor: Dr. Rank
+Professor: Dr. Smith
 Course Number: ITM 370
 Course Name: AI Augmented Projects
 Assignment Number: 16.07
