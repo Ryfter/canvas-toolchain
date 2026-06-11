@@ -27,7 +27,7 @@ afterEach(() => {
 import { setupPanopto, loadPanoptoConfig } from '../src/panopto/setup.js';
 
 const TEST_INPUT = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   clientId: 'test-client-id',
   clientSecret: 'test-client-secret',
 };
@@ -42,10 +42,10 @@ describe('setupPanopto', () => {
     const result = await setupPanopto(TEST_INPUT);
 
     expect(result.configured).toBe(true);
-    expect(result.domain).toBe('bsu.hosted.panopto.com');
+    expect(result.domain).toBe('example.hosted.panopto.com');
     expect(result.validatedAt).toBeDefined();
     const saved = JSON.parse(readFileSync(join(tmpHome, 'panopto-config.json'), 'utf-8'));
-    expect(saved.domain).toBe('bsu.hosted.panopto.com');
+    expect(saved.domain).toBe('example.hosted.panopto.com');
     expect(saved.clientId).toBe('test-client-id');
     expect(saved.lastValidatedAt).toBeDefined();
   });
@@ -96,7 +96,7 @@ describe('loadPanoptoConfig', () => {
     await setupPanopto(TEST_INPUT);
 
     const config = loadPanoptoConfig();
-    expect(config.domain).toBe('bsu.hosted.panopto.com');
+    expect(config.domain).toBe('example.hosted.panopto.com');
     expect(config.clientId).toBe('test-client-id');
     expect(config.clientSecret).toBe('test-client-secret');
   });

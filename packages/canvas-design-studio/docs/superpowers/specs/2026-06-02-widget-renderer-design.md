@@ -2,7 +2,7 @@
 
 **Tracking issue:** [#88](https://github.com/Ryfter/canvas-toolchain/issues/88)
 **Status:** Design approved 2026-06-02
-**Author:** Claude + Kevin (brainstormed 2026-06-02)
+**Author:** Claude + the professor (brainstormed 2026-06-02)
 **Depends on:** [#45 brainstorm_interactive](https://github.com/Ryfter/canvas-toolchain/issues/45) (shipped v1.2.0)
 
 ## Goal
@@ -257,7 +257,7 @@ Drag each data type to the correct category:
 
 ### Update story
 
-**REVISED 2026-06-03 after Phase 0 verification against BSU sandbox (course 48895).** Canvas Files' `on_duplicate=overwrite` is "delete old + create new file under the same display name" — the `file_id` changes on every overwrite (verified empirically: first upload → 24133390, re-upload → 24133391; the old file is gone). The original design assumed in-place updates with stable `file_id`; that assumption is wrong on Canvas's actual file system.
+**REVISED 2026-06-03 after Phase 0 verification against University sandbox (course 48895).** Canvas Files' `on_duplicate=overwrite` is "delete old + create new file under the same display name" — the `file_id` changes on every overwrite (verified empirically: first upload → 24133390, re-upload → 24133391; the old file is gone). The original design assumed in-place updates with stable `file_id`; that assumption is wrong on Canvas's actual file system.
 
 **Corrected flow:** Faculty edits a spec → re-runs `render_widget` → re-runs `publish_widget`, which uploads the new HTML and returns the NEW `file_id`. The host page's iframe `src` must be rewritten to point at the new `file_id`. This means `publish_course` extension treats every widget update as a page change (the iframe URL diff is part of the page diff).
 
@@ -374,11 +374,11 @@ Total: ~10-15 tests per renderer × 6 renderers ≈ ~60-90 widget tests added to
 - The PREVIEW_MANIFEST shows widget diffs alongside page diffs (new widget / changed widget / deleted widget / unchanged).
 - Snapshot bundle (same per-publish bundle pattern `publish_course` already writes to `~/.command-and-control/publish-snapshots/`) captures all widget HTML files alongside page HTML so `rollback_course_publish` restores both.
 
-## Verification items (RESOLVED 2026-06-03, against BSU sandbox course 48895)
+## Verification items (RESOLVED 2026-06-03, against University sandbox course 48895)
 
 These were the three architectural assumptions verified before Plan A's renderer code landed. Results captured in commit `3ce94a2` and the scripts at `scripts/verify-88-*.mts`:
 
-1. ✅ **Canvas Files `/preview` URL serves HTML with iframe-friendly headers.** No `X-Frame-Options: DENY`. CSP `frame-ancestors 'self' boisestatecanvas.instructure.com ...`. Same-origin iframe embedding works as designed.
+1. ✅ **Canvas Files `/preview` URL serves HTML with iframe-friendly headers.** No `X-Frame-Options: DENY`. CSP `frame-ancestors 'self' example.instructure.com ...`. Same-origin iframe embedding works as designed.
 2. ❌ **Canvas Files API `on_duplicate=overwrite` is "delete + recreate", NOT in-place update.** `file_id` changes on every overwrite. Architecture is still valid but the **Update story** above has been REVISED — see that section.
 3. ✅ **Canvas RCE preserves iframe `sandbox` attributes when pages are saved.** Exact preservation: written `sandbox="allow-scripts allow-same-origin allow-forms"`, read back identically. Canvas auto-adds harmless `data-api-endpoint`/`data-api-returntype` data attributes and expands relative `src` to absolute URL.
 

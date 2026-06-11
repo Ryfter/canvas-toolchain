@@ -7,7 +7,7 @@ const fixturesDir = join(import.meta.dirname, 'fixtures/course-config');
 describe('parseCourseConfig', () => {
   it('reads required string fields', () => {
     const config = parseCourseConfig(join(fixturesDir, 'basic/course-config.md'));
-    expect(config.institution).toBe('Boise State University');
+    expect(config.institution).toBe('Example University');
     expect(config.courseName).toBe('AI Augmented Projects');
     expect(config.courseNumber).toBe('ITM 370');
     expect(config.professor).toBe('Dr. Rank');

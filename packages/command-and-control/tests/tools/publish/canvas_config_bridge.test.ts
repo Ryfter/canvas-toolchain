@@ -10,11 +10,11 @@ import { loadInstitutionConfig } from '../../../src/tools/publish/canvas_config_
 describe('loadInstitutionConfig', () => {
   it('translates CanvasSetupConfig to InstitutionConfig', () => {
     vi.mocked(loadCanvasConfig).mockReturnValue({
-      host: 'bsu.instructure.com', token: 'abc',
+      host: 'example.instructure.com', token: 'abc',
       configuredAt: '2026-05-26T00:00:00Z', lastValidatedAt: '2026-05-26T00:00:00Z',
     });
     const cfg = loadInstitutionConfig();
-    expect(cfg).toEqual({ canvasUrl: 'https://bsu.instructure.com', apiToken: 'abc' });
+    expect(cfg).toEqual({ canvasUrl: 'https://example.instructure.com', apiToken: 'abc' });
   });
 
   it('throws CANVAS_NOT_CONFIGURED when underlying load throws', () => {

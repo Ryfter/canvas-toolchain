@@ -28,7 +28,7 @@ import { setupCanvas, loadCanvasConfig } from '../../src/tools/setup_canvas.js';
 import type { CanvasSetupConfig } from '../../src/tools/setup_canvas.js';
 
 const TEST_INPUT = {
-  host: 'bsu.instructure.com',
+  host: 'example.instructure.com',
   token: 'canvas-test-token',
 };
 
@@ -42,10 +42,10 @@ describe('setupCanvas', () => {
     const result = await setupCanvas(TEST_INPUT);
 
     expect(result.configured).toBe(true);
-    expect(result.host).toBe('bsu.instructure.com');
+    expect(result.host).toBe('example.instructure.com');
     expect(result.validatedAt).toBeDefined();
     const saved = JSON.parse(readFileSync(join(tmpHome, 'canvas-config.json'), 'utf-8'));
-    expect(saved.host).toBe('bsu.instructure.com');
+    expect(saved.host).toBe('example.instructure.com');
     expect(saved.token).toBe('canvas-test-token');
   });
 
@@ -103,7 +103,7 @@ describe('setupCanvas', () => {
     await setupCanvas(TEST_INPUT);
 
     const [url, init] = vi.mocked(fetch).mock.calls[0];
-    expect(url).toBe('https://bsu.instructure.com/api/v1/users/self');
+    expect(url).toBe('https://example.instructure.com/api/v1/users/self');
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers['authorization']).toBe('Bearer canvas-test-token');
   });
@@ -114,10 +114,10 @@ describe('setupCanvas', () => {
       json: async () => ({ id: 1 }),
     } as Response);
 
-    await setupCanvas({ host: 'https://bsu.instructure.com/', token: 'tok' });
+    await setupCanvas({ host: 'https://example.instructure.com/', token: 'tok' });
 
     const saved = JSON.parse(readFileSync(join(tmpHome, 'canvas-config.json'), 'utf-8'));
-    expect(saved.host).toBe('bsu.instructure.com');
+    expect(saved.host).toBe('example.instructure.com');
   });
 });
 
@@ -157,7 +157,7 @@ describe('loadCanvasConfig', () => {
     await setupCanvas(TEST_INPUT);
 
     const config = loadCanvasConfig();
-    expect(config.host).toBe('bsu.instructure.com');
+    expect(config.host).toBe('example.instructure.com');
     expect(config.token).toBe('canvas-test-token');
   });
 });

@@ -119,12 +119,12 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
   }
 
   const institution = await input({
-    message: 'Institution name (your college or university, e.g. Boise State University):',
-    default: defaults?.institution ?? 'Boise State University',
+    message: 'Institution name (your college or university, e.g. Example University):',
+    default: defaults?.institution ?? 'Example University',
   });
 
   const brandUrl = await input({
-    message: 'Brand standards URL (optional — e.g. https://www.boisestate.edu/brand/ — your AI can fetch this to suggest your colors):',
+    message: 'Brand standards URL (optional — e.g. https://www.example.edu/brand/ — your AI can fetch this to suggest your colors):',
     default: defaults?.brandUrl ?? '',
     validate: (v: string) => !v || v.startsWith('https://') || 'Brand URL must start with https://',
   });
@@ -166,11 +166,11 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
   }
 
   const canvasUrl = await input({
-    message: 'Canvas base URL (log into Canvas, copy the domain, e.g. https://boisestate.instructure.com — no trailing slash):',
-    default: defaults?.canvasUrl ?? 'https://boisestate.instructure.com',
+    message: 'Canvas base URL (log into Canvas, copy the domain, e.g. https://example.instructure.com — no trailing slash):',
+    default: defaults?.canvasUrl ?? 'https://example.instructure.com',
     validate: (v: string) => {
       if (!v.startsWith('https://')) return 'URL must start with https://';
-      if (v.endsWith('/')) return 'Remove the trailing slash (e.g. https://boisestate.instructure.com)';
+      if (v.endsWith('/')) return 'Remove the trailing slash (e.g. https://example.instructure.com)';
       return true;
     },
   });
@@ -224,7 +224,7 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
 
   // Optional Panopto section — always skippable
   const panoptoDomain = await input({
-    message: 'Panopto domain (e.g. bsu.hosted.panopto.com, or leave blank to skip):',
+    message: 'Panopto domain (e.g. example.hosted.panopto.com, or leave blank to skip):',
     default: defaults?.panoptoDomain ?? '',
   });
 

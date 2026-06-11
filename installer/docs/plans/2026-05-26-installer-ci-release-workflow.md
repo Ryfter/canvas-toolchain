@@ -686,7 +686,7 @@ Expected: no syntax errors. The `gh workflow view` output may include "workflow 
 
 - [ ] **Step 2: Push a test tag to exercise the release workflow**
 
-This is destructive (creates a real GitHub Release). Only run when Kevin is ready to ship v1.0.0 (or use a `v0.0.0-test` tag and delete the release afterward).
+This is destructive (creates a real GitHub Release). Only run when the professor is ready to ship v1.0.0 (or use a `v0.0.0-test` tag and delete the release afterward).
 
 ```bash
 # Tag a test release
@@ -731,7 +731,7 @@ Placeholder scan: No "TBD"s. All YAML steps are complete and runnable. The pack-
 
 Type consistency: Matrix `target.*` keys are consistent across all steps that reference them. Output names (`canvas-toolchain-installer-windows-x64.exe`, `canvas-toolchain-installer-macos-arm64.pkg`, etc.) match what the updater stub in Plan 2 Task 17 expects via `assetForCurrentOS()`.
 
-Scope: 11 tasks, ~25 sub-steps. Smaller than Plan 2. One CI dry-run (Task 11 Step 2) is the only step with real-world destructive consequence — Kevin should approve before that tag push.
+Scope: 11 tasks, ~25 sub-steps. Smaller than Plan 2. One CI dry-run (Task 11 Step 2) is the only step with real-world destructive consequence — the professor should approve before that tag push.
 
 Open implementation items:
 - The Fyne docs note that CGO is required for native builds. The cross-compile for Windows from Linux uses mingw-w64; verify it builds Fyne cleanly. Fallback: use a `windows-latest` runner for the Windows build with native CGO instead of cross-compiling. The matrix would change accordingly.

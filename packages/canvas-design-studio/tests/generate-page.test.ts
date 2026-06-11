@@ -98,7 +98,7 @@ describe('generatePage — rubric page type (#67)', () => {
   it('emits a .md alongside the .html for rubric pages (the LLM-paste deliverable)', () => {
     const courseDir = mkdtempSync(join(tmpdir(), 'rb-'));
     writeFileSync(join(courseDir, 'course-config.md'), `---
-institution: Boise State University
+institution: Example University
 course_name: BusApp 105
 course_number: BUSAPP 105
 professor: Dr. Rank

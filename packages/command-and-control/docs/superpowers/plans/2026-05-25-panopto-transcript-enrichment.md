@@ -233,7 +233,7 @@ const MOCK_SESSION: SessionManifestEntry = {
 const BASE_OPTS: EnrichVttOptions = {
   fillerWords: [...BUILTIN_FILLER_WORDS],
   corrections: [],
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
 };
 
 beforeEach(() => {
@@ -845,7 +845,7 @@ import { enrichVttFile } from 'canvas-design-mcp/dist/tools/panopto-enrich.js';
 import { enrichPanoptoTranscripts } from '../../../src/tools/workflows/enrich_panopto_transcripts.js';
 
 const MOCK_CONFIG = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   clientId: 'id',
   clientSecret: 'secret',
   iframeWhitelisted: true,
@@ -856,7 +856,7 @@ const MOCK_CONFIG = {
 const MOCK_VOCAB = { fillerWords: [], corrections: [] };
 
 const MANIFEST = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   generatedAt: '2026-06-01T00:00:00Z',
   sessions: [
     {

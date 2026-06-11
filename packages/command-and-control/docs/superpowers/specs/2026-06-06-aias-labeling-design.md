@@ -18,7 +18,7 @@ Professors lack a standard way to tell students "what AI use is permitted on thi
 
 ## Motivation
 
-- Kevin's own words: *"Something I DO want added, the AI Assessment scale."*
+- The professor's own words: *"Something I DO want added, the AI Assessment scale."*
 - Course-wide policy without per-assignment friction: most assignments fit one baseline; only outliers need overrides.
 - Visible at the point of action: students see the AI policy on the assignment page they're working from, and again on the rubric page when they re-check expectations.
 - Open-licensed, well-documented framework with broad pedagogical adoption — using Furze's vocabulary means students who've seen it elsewhere recognize it instantly.
@@ -229,7 +229,7 @@ HTML string (Canvas-safe inline CSS only).
 
 `{LEVEL}` is the integer; `{NAME_ESC}` is the canonical name (e.g., "AI Collaboration"); `{NOTE_ESC}` is the resolved note text. Both name and note are HTML-escaped.
 
-Uses the BSU warning-tan palette (`#FAEEDA` / `#854F0B`) — visually distinct from the TL;DR card's primary-blue palette, so when both render they don't visually compete.
+Uses the University warning-tan palette (`#FAEEDA` / `#854F0B`) — visually distinct from the TL;DR card's primary-blue palette, so when both render they don't visually compete.
 
 ---
 

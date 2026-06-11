@@ -65,13 +65,13 @@ import type { WizardDefaults } from '../src/utils/worksheet.js';
 const FILLED_WORKSHEET = `
 ## Brand Standards (Fill this first — it can save you the color lookup)
 
-Your answer: https://www.boisestate.edu/brand/
-Example:     https://www.boisestate.edu/brand/
+Your answer: https://www.example.edu/brand/
+Example:     https://www.example.edu/brand/
 
 ## Institution Name
 
-Your answer: Boise State University
-Example:     Boise State University
+Your answer: Example University
+Example:     Example University
 
 ## Primary Brand Color
 
@@ -85,8 +85,8 @@ Example:                   #D64309
 
 ## Canvas Base URL
 
-Your answer: https://boisestate.instructure.com
-Example:     https://boisestate.instructure.com
+Your answer: https://example.instructure.com
+Example:     https://example.instructure.com
 
 ## Canvas API Token (Optional)
 
@@ -95,7 +95,7 @@ Your answer: mysecrettoken12345678901234567890
 
 ## Professor Email (Optional)
 
-Your answer: kevin@boisestate.edu
+Your answer: professor@example.edu
 Example:     you@university.edu
 
 ## Favorite Canvas Course IDs (Optional)
@@ -105,8 +105,8 @@ Example:                       12345, 67890
 
 ## Panopto Domain (Optional)
 
-Your answer: bsu.hosted.panopto.com
-Example:     bsu.hosted.panopto.com
+Your answer: example.hosted.panopto.com
+Example:     example.hosted.panopto.com
 
 ## Panopto API Client ID and Secret (Optional)
 
@@ -136,11 +136,11 @@ Your answer: ___________________________________
 
 describe('parseWorksheet', () => {
   it('extracts institution from a filled worksheet', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).institution).toBe('Boise State University');
+    expect(parseWorksheet(FILLED_WORKSHEET).institution).toBe('Example University');
   });
 
   it('extracts brandUrl from the brand standards section', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).brandUrl).toBe('https://www.boisestate.edu/brand/');
+    expect(parseWorksheet(FILLED_WORKSHEET).brandUrl).toBe('https://www.example.edu/brand/');
   });
 
   it('extracts primaryColor', () => {
@@ -152,7 +152,7 @@ describe('parseWorksheet', () => {
   });
 
   it('extracts canvasUrl', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).canvasUrl).toBe('https://boisestate.instructure.com');
+    expect(parseWorksheet(FILLED_WORKSHEET).canvasUrl).toBe('https://example.instructure.com');
   });
 
   it('extracts apiToken', () => {
@@ -160,7 +160,7 @@ describe('parseWorksheet', () => {
   });
 
   it('extracts professorEmail', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).professorEmail).toBe('kevin@boisestate.edu');
+    expect(parseWorksheet(FILLED_WORKSHEET).professorEmail).toBe('professor@example.edu');
   });
 
   it('extracts favoriteCourses as raw comma string', () => {
@@ -168,7 +168,7 @@ describe('parseWorksheet', () => {
   });
 
   it('extracts panoptoDomain', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).panoptoDomain).toBe('bsu.hosted.panopto.com');
+    expect(parseWorksheet(FILLED_WORKSHEET).panoptoDomain).toBe('example.hosted.panopto.com');
   });
 
   it('extracts panoptoClientId and panoptoClientSecret', () => {
@@ -191,13 +191,13 @@ describe('parseWorksheet', () => {
   });
 
   it('excludes blank ___ values from result', () => {
-    const ws = '## Institution Name\n\nYour answer: ___________________________________\nExample: Boise State\n';
+    const ws = '## Institution Name\n\nYour answer: ___________________________________\nExample: Example University\n';
     expect(parseWorksheet(ws).institution).toBeUndefined();
   });
 
   it('trims whitespace from extracted values', () => {
-    const ws = '## Institution Name\n\nYour answer:   Boise State University   \n';
-    expect(parseWorksheet(ws).institution).toBe('Boise State University');
+    const ws = '## Institution Name\n\nYour answer:   Example University   \n';
+    expect(parseWorksheet(ws).institution).toBe('Example University');
   });
 
   it('returns empty object for empty input', () => {
@@ -470,7 +470,7 @@ Then add at the end of the file:
 ```typescript
 describe('formatWorksheetSummary', () => {
   it('includes the "Values from your setup worksheet" header', () => {
-    const result = formatWorksheetSummary({ institution: 'Boise State University' });
+    const result = formatWorksheetSummary({ institution: 'Example University' });
     expect(result).toContain('Values from your setup worksheet');
   });
 
@@ -481,7 +481,7 @@ describe('formatWorksheetSummary', () => {
   });
 
   it('omits fields that are not present in defaults', () => {
-    const result = formatWorksheetSummary({ institution: 'BSU' });
+    const result = formatWorksheetSummary({ institution: 'University' });
     expect(result).not.toContain('Brand URL');
     expect(result).not.toContain('Canvas URL');
     expect(result).not.toContain('Panopto');
@@ -489,17 +489,17 @@ describe('formatWorksheetSummary', () => {
 
   it('shows all provided fields', () => {
     const result = formatWorksheetSummary({
-      institution: 'Boise State University',
+      institution: 'Example University',
       primaryColor: '#0033A0',
-      canvasUrl: 'https://boisestate.instructure.com',
+      canvasUrl: 'https://example.instructure.com',
     });
-    expect(result).toContain('Boise State University');
+    expect(result).toContain('Example University');
     expect(result).toContain('#0033A0');
-    expect(result).toContain('boisestate.instructure.com');
+    expect(result).toContain('example.instructure.com');
   });
 
   it('includes the "Press Enter to accept" instruction', () => {
-    const result = formatWorksheetSummary({ institution: 'BSU' });
+    const result = formatWorksheetSummary({ institution: 'University' });
     expect(result).toContain('Press Enter to accept each value');
   });
 });
@@ -582,8 +582,8 @@ Replace the `institution` prompt:
 
 ```typescript
   const institution = await input({
-    message: 'Institution name (your college or university, e.g. Boise State University):',
-    default: defaults?.institution ?? 'Boise State University',
+    message: 'Institution name (your college or university, e.g. Example University):',
+    default: defaults?.institution ?? 'Example University',
   });
 ```
 
@@ -591,7 +591,7 @@ Replace the `brandUrl` prompt:
 
 ```typescript
   const brandUrl = await input({
-    message: 'Brand standards URL (optional — e.g. https://www.boisestate.edu/brand/ — your AI can fetch this to suggest your colors):',
+    message: 'Brand standards URL (optional — e.g. https://www.example.edu/brand/ — your AI can fetch this to suggest your colors):',
     default: defaults?.brandUrl ?? '',
     validate: (v: string) => !v || v.startsWith('https://') || 'Brand URL must start with https://',
   });
@@ -621,11 +621,11 @@ Replace the `canvasUrl` prompt:
 
 ```typescript
   const canvasUrl = await input({
-    message: 'Canvas base URL (log into Canvas, copy the domain, e.g. https://boisestate.instructure.com — no trailing slash):',
-    default: defaults?.canvasUrl ?? 'https://boisestate.instructure.com',
+    message: 'Canvas base URL (log into Canvas, copy the domain, e.g. https://example.instructure.com — no trailing slash):',
+    default: defaults?.canvasUrl ?? 'https://example.instructure.com',
     validate: (v: string) => {
       if (!v.startsWith('https://')) return 'URL must start with https://';
-      if (v.endsWith('/')) return 'Remove the trailing slash (e.g. https://boisestate.instructure.com)';
+      if (v.endsWith('/')) return 'Remove the trailing slash (e.g. https://example.instructure.com)';
       return true;
     },
   });
@@ -678,7 +678,7 @@ Replace the `panoptoDomain` prompt:
 
 ```typescript
   const panoptoDomain = await input({
-    message: 'Panopto domain (e.g. bsu.hosted.panopto.com, or leave blank to skip):',
+    message: 'Panopto domain (e.g. example.hosted.panopto.com, or leave blank to skip):',
     default: defaults?.panoptoDomain ?? '',
   });
 ```

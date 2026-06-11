@@ -63,7 +63,7 @@ Env override: `CC_HOME` (same as `config.json`)
 
 ```ts
 interface PanoptoSetupConfig {
-  domain: string;                    // e.g. "bsu.hosted.panopto.com"
+  domain: string;                    // e.g. "example.hosted.panopto.com"
   clientId: string;
   clientSecret: string;
   iframeWhitelisted: boolean | null; // for embed use in CDS; null = unknown

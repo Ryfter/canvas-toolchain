@@ -12,20 +12,20 @@ import { ingestAssignmentFolder } from '../src/tools/ingest.js';
 const FIXTURES = resolve('tests/fixtures/ingest');
 
 const TEST_CONFIG: InstitutionConfig = {
-  institution: 'Boise State University',
+  institution: 'Example University',
   colors: {
     primary: '#0033A0',
     primaryDark: '#002277',
     primaryLight: '#E6ECF9',
     secondary: '#D64309',
   },
-  canvasUrl: 'https://bsu.instructure.com',
+  canvasUrl: 'https://example.instructure.com',
 };
 
 describe('parseCourseConfig', () => {
   it('parses all six required fields', () => {
     const content = [
-      'Institution: Boise State University',
+      'Institution: Example University',
       'Professor: Dr. Rank',
       'Course Number: ITM 370',
       'Course Name: AI Augmented Projects',
@@ -33,7 +33,7 @@ describe('parseCourseConfig', () => {
       'Semester: Fall 2026',
     ].join('\n');
     const result = parseCourseConfig(content);
-    expect(result.institution).toBe('Boise State University');
+    expect(result.institution).toBe('Example University');
     expect(result.professor).toBe('Dr. Rank');
     expect(result.courseNumber).toBe('ITM 370');
     expect(result.courseName).toBe('AI Augmented Projects');
@@ -64,7 +64,7 @@ describe('parseCourseConfig', () => {
 
 describe('validateCourseInfo', () => {
   const valid: CourseInfo = {
-    institution: 'BSU',
+    institution: 'University',
     professor: 'Dr. Rank',
     courseNumber: 'ITM 370',
     courseName: 'AI Projects',

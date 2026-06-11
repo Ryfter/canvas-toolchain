@@ -17,7 +17,7 @@ describe('renderPageDecoupled', () => {
     };
 
     const config = {
-      institution: 'BSU',
+      institution: 'University',
       courseName: 'Cloud Computing',
       courseNumber: 'CS 401',
       professor: 'Dr. Cloud',
@@ -66,7 +66,7 @@ describe('renderPageDecoupled', () => {
     };
 
     const config = {
-      institution: 'BSU',
+      institution: 'University',
       courseName: 'Cloud Computing',
       courseNumber: 'CS 401',
       professor: 'Dr. Cloud',

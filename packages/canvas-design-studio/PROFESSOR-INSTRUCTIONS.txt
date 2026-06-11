@@ -1,6 +1,6 @@
 ============================================================
   CANVAS DESIGN STUDIO — Professor Quick Start Guide
-  Boise State University
+  Example University
 ============================================================
 
 This tool generates polished, branded Canvas assignment pages
@@ -72,7 +72,7 @@ Then tell Claude:
 It will drop it into your page automatically.
 
 If you skip the image, the page still looks great —
-the banner will show as a solid BSU blue gradient.
+the banner will show as a solid University blue gradient.
 
 ------------------------------------------------------------
 STEP 4 — PASTE INTO CANVAS
@@ -116,7 +116,7 @@ TIPS
   "Add a grading rubric section."
   "Change the tone to be more casual."
 
-- To update your course colors (if BSU changes brand colors):
+- To update your course colors (if University changes brand colors):
   "Update the primary color to #XXXXXX in DESIGN.md and CLAUDE.md."
 
 - If something looks wrong in Canvas, tell Claude:
@@ -126,6 +126,6 @@ TIPS
 QUESTIONS?
 ------------------------------------------------------------
 
-Contact: kevinrank@boisestate.edu
+Contact: professor@example.edu
 
 ============================================================

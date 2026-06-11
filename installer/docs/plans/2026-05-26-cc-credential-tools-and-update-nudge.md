@@ -465,7 +465,7 @@ afterEach(() => {
 import { setupCanvas, loadCanvasConfig } from '../../src/tools/setup_canvas.js';
 
 const TEST_INPUT = {
-  host: 'bsu.instructure.com',
+  host: 'example.instructure.com',
   token: 'canvas-test-token',
 };
 
@@ -479,10 +479,10 @@ describe('setupCanvas', () => {
     const result = await setupCanvas(TEST_INPUT);
 
     expect(result.configured).toBe(true);
-    expect(result.host).toBe('bsu.instructure.com');
+    expect(result.host).toBe('example.instructure.com');
     expect(result.validatedAt).toBeDefined();
     const saved = JSON.parse(readFileSync(join(tmpHome, 'canvas-config.json'), 'utf-8'));
-    expect(saved.host).toBe('bsu.instructure.com');
+    expect(saved.host).toBe('example.instructure.com');
     expect(saved.token).toBe('canvas-test-token');
   });
 
@@ -540,7 +540,7 @@ describe('setupCanvas', () => {
     await setupCanvas(TEST_INPUT);
 
     const [url, init] = vi.mocked(fetch).mock.calls[0];
-    expect(url).toBe('https://bsu.instructure.com/api/v1/users/self');
+    expect(url).toBe('https://example.instructure.com/api/v1/users/self');
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers['authorization']).toBe('Bearer canvas-test-token');
   });
@@ -551,10 +551,10 @@ describe('setupCanvas', () => {
       json: async () => ({ id: 1 }),
     } as Response);
 
-    await setupCanvas({ host: 'https://bsu.instructure.com/', token: 'tok' });
+    await setupCanvas({ host: 'https://example.instructure.com/', token: 'tok' });
 
     const saved = JSON.parse(readFileSync(join(tmpHome, 'canvas-config.json'), 'utf-8'));
-    expect(saved.host).toBe('bsu.instructure.com');
+    expect(saved.host).toBe('example.instructure.com');
   });
 });
 
@@ -571,7 +571,7 @@ describe('loadCanvasConfig', () => {
     await setupCanvas(TEST_INPUT);
 
     const config = loadCanvasConfig();
-    expect(config.host).toBe('bsu.instructure.com');
+    expect(config.host).toBe('example.instructure.com');
     expect(config.token).toBe('canvas-test-token');
   });
 });
@@ -607,7 +607,7 @@ export interface CanvasSetupConfig {
 }
 
 export interface SetupCanvasInput {
-  /** Canvas hostname, e.g. "bsu.instructure.com". Leading scheme + trailing slash are stripped. */
+  /** Canvas hostname, e.g. "example.instructure.com". Leading scheme + trailing slash are stripped. */
   host: string;
   /** Canvas API access token (Canvas → Account → Settings → New Access Token). */
   token: string;
@@ -685,7 +685,7 @@ export async function setupCanvas(input: SetupCanvasInput): Promise<SetupCanvasR
         message: err instanceof Error ? err.message : String(err),
         fix: [
           'Verify the token at Canvas → Account → Settings → New Access Token',
-          'Confirm the host is your school\'s Canvas URL (e.g. "bsu.instructure.com")',
+          'Confirm the host is your school\'s Canvas URL (e.g. "example.instructure.com")',
           'Check network connectivity',
         ],
       };
@@ -757,7 +757,7 @@ Immediately after the `setup_anthropic` tool entry added in Task 3:
     type: 'object' as const,
     required: ['host', 'token'],
     properties: {
-      host: { type: 'string', description: 'Canvas hostname, e.g. "bsu.instructure.com". Leading https:// is stripped automatically.' },
+      host: { type: 'string', description: 'Canvas hostname, e.g. "example.instructure.com". Leading https:// is stripped automatically.' },
       token: { type: 'string', description: 'Canvas API access token from Canvas → Account → Settings → New Access Token. Stored locally and never echoed back.' },
       test: { type: 'boolean', description: 'Validate the token with /api/v1/users/self before saving (default: true).' },
     },
@@ -1266,7 +1266,7 @@ git -C D:/Dev/canvas-toolchain commit -m "feat(cc): append update-available noti
 **Files:**
 - None modified — verification only.
 
-**Note (Kevin's call 2026-05-26):** The C&C `package.json` version stays at 1.0.0. The originally-proposed bump down to 0.9.1 was rejected — package versions track the package's own API stability, not the bundled toolchain release tag (which is tracked in `<install-dir>/.canvas-toolchain-version` instead).
+**Note (the professor's call 2026-05-26):** The C&C `package.json` version stays at 1.0.0. The originally-proposed bump down to 0.9.1 was rejected — package versions track the package's own API stability, not the bundled toolchain release tag (which is tracked in `<install-dir>/.canvas-toolchain-version` instead).
 
 - [ ] **Step 1 (was Step 2): Run the full monorepo test + build**
 

@@ -14,7 +14,7 @@ vi.mock('curriculum-intelligence-mcp/dist/transcription/faster_whisper_engine.js
 }));
 vi.mock('@canvas-toolchain/module-video', () => ({
   fetchSessionAudio: vi.fn().mockResolvedValue({ ok: true, path: '/tmp/a.mp4', source: 'manual' }),
-  loadPanoptoConfig: () => ({ domain: 'bsu.hosted.panopto.com', clientId: 'c', clientSecret: 's' }),
+  loadPanoptoConfig: () => ({ domain: 'example.hosted.panopto.com', clientId: 'c', clientSecret: 's' }),
   loadPanoptoVocab: () => ({ fillerWords: [], corrections: [] }),
 }));
 
@@ -31,7 +31,7 @@ beforeEach(() => {
   writeFileSync(
     join(dir, '_sessions.json'),
     JSON.stringify({
-      domain: 'bsu.hosted.panopto.com',
+      domain: 'example.hosted.panopto.com',
       generatedAt: '2026-06-01T20:00:00Z',
       sessions: [
         {

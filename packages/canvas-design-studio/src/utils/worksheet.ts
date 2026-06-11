@@ -110,7 +110,7 @@ export function validateWorksheet(defaults: WizardDefaults): string[] {
   }
   if (defaults.canvasUrl !== undefined && !defaults.canvasUrl.startsWith('https://')) {
     errors.push(
-      `Canvas URL "${defaults.canvasUrl}" must start with https://. Example: https://boisestate.instructure.com`
+      `Canvas URL "${defaults.canvasUrl}" must start with https://. Example: https://example.instructure.com`
     );
   }
 

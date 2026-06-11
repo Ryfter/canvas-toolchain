@@ -1,4 +1,4 @@
-Institution: Boise State University
+Institution: Example University
 Professor: [Your Name]
 Course Number: ITM 370
 Course Name: AI Augmented Projects

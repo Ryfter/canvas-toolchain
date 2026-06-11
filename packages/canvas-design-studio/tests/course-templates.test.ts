@@ -7,7 +7,7 @@ import type { CourseConfig } from '../src/course-types.js';
 
 function makeConfig(overrides: Partial<CourseConfig> = {}): CourseConfig {
   return {
-    institution: 'Boise State University',
+    institution: 'Example University',
     courseName: 'AI Augmented Projects',
     courseNumber: 'ITM 370',
     professor: 'Dr. Rank',

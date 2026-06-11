@@ -3,14 +3,14 @@ import { CanvasApiClient, CanvasApiError } from '../src/canvas-api.js';
 import type { InstitutionConfig } from '../src/types.js';
 
 const config: InstitutionConfig = {
-  institution: 'Boise State University',
+  institution: 'Example University',
   colors: {
     primary: '#0033A0',
     primaryDark: '#002277',
     primaryLight: '#E6ECF9',
     secondary: '#D64309',
   },
-  canvasUrl: 'https://boisestate.instructure.com/',
+  canvasUrl: 'https://example.instructure.com/',
   apiToken: 'token-123',
 };
 
@@ -74,7 +74,7 @@ describe('CanvasApiClient', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockResponse(
         [{ id: 1, name: 'Page 1' }],
-        { link: '<https://boisestate.instructure.com/api/v1/courses?page=2>; rel="next"' }
+        { link: '<https://example.instructure.com/api/v1/courses?page=2>; rel="next"' }
       ))
       .mockResolvedValueOnce(mockResponse([{ id: 2, name: 'Page 2' }]));
 
@@ -93,14 +93,14 @@ describe('CanvasApiClient', () => {
     const url = decodeURIComponent(calledUrl());
 
     expect(pages[0].url).toBe('assignment');
-    expect(url).toBe('https://boisestate.instructure.com/api/v1/courses/42/pages?per_page=50');
+    expect(url).toBe('https://example.instructure.com/api/v1/courses/42/pages?per_page=50');
   });
 
   it('creates a Canvas page with published true by default', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(mockResponse({
       title: 'Assignment 16.06',
       url: 'assignment-16-06',
-      html_url: 'https://boisestate.instructure.com/courses/42/pages/assignment-16-06',
+      html_url: 'https://example.instructure.com/courses/42/pages/assignment-16-06',
     }));
 
     const client = new CanvasApiClient(config);
@@ -108,7 +108,7 @@ describe('CanvasApiClient', () => {
 
     expect(page.url).toBe('assignment-16-06');
     expect(fetch).toHaveBeenCalledWith(
-      'https://boisestate.instructure.com/api/v1/courses/42/pages',
+      'https://example.instructure.com/api/v1/courses/42/pages',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ wiki_page: { title: 'Assignment 16.06', body: '<h2>Hello</h2>', published: true } }),
@@ -120,7 +120,7 @@ describe('CanvasApiClient', () => {
     vi.mocked(fetch).mockResolvedValueOnce(mockResponse({
       title: 'Assignment 16.06',
       url: 'assignment-16-06',
-      html_url: 'https://boisestate.instructure.com/courses/42/pages/assignment-16-06',
+      html_url: 'https://example.instructure.com/courses/42/pages/assignment-16-06',
     }));
 
     const client = new CanvasApiClient(config);
@@ -128,7 +128,7 @@ describe('CanvasApiClient', () => {
 
     expect(page.url).toBe('assignment-16-06');
     expect(fetch).toHaveBeenCalledWith(
-      'https://boisestate.instructure.com/api/v1/courses/42/pages/assignment-16-06',
+      'https://example.instructure.com/api/v1/courses/42/pages/assignment-16-06',
       expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ wiki_page: { body: '<h2>Updated</h2>' } }),

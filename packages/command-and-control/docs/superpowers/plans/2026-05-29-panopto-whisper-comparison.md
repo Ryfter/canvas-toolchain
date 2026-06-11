@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **STATUS: DRAFT — awaiting Kevin's review of the spec AND this plan before execution. Do not execute until approved.**
+> **STATUS: DRAFT — awaiting the professor's review of the spec AND this plan before execution. Do not execute until approved.**
 
 **Goal:** Add an opt-in, off-by-default capability to transcribe Panopto lecture audio locally (faster-whisper, behind a swappable engine interface), compare it against Panopto's `.panopto.vtt`, and surface ranked disagreements the professor arbitrates into vocab corrections — plus a `transcriptSource` setting that lets enrichment use Whisper transcripts.
 
@@ -447,7 +447,7 @@ describe('compareTranscripts + renderComparisonMd', () => {
   const ctx = {
     knownTerms: ['COBE'],
     fillerWords: ['uh'],
-    domain: 'bsu.hosted.panopto.com',
+    domain: 'example.hosted.panopto.com',
     sessionId: 'sess-1',
     title: 'Week 03 — Tableau Intro',
   };
@@ -473,7 +473,7 @@ describe('compareTranscripts + renderComparisonMd', () => {
     expect(md).toContain('Divergence:');
     expect(md).toContain('| # | Panopto | Whisper |');
     expect(md).toContain('## Suggested corrections');
-    expect(md).toContain('bsu.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=sess-1&start=');
+    expect(md).toContain('example.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=sess-1&start=');
   });
 });
 ```
@@ -875,7 +875,7 @@ import { fetchSessionAudio } from '../src/tools/panopto-audio.js';
 import type { PanoptoConfig } from '../src/types.js';
 
 const CONFIG: PanoptoConfig = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   clientId: 'cid',
   clientSecret: 'secret',
 } as PanoptoConfig;
@@ -1241,7 +1241,7 @@ vi.mock('canvas-design-mcp/dist/tools/panopto-audio.js', () => ({
   fetchSessionAudio: vi.fn().mockResolvedValue({ ok: true, path: '/tmp/a.mp4', source: 'manual' }),
 }));
 vi.mock('../../../src/tools/setup_panopto.js', () => ({
-  loadPanoptoConfig: () => ({ domain: 'bsu.hosted.panopto.com', clientId: 'c', clientSecret: 's' }),
+  loadPanoptoConfig: () => ({ domain: 'example.hosted.panopto.com', clientId: 'c', clientSecret: 's' }),
 }));
 
 import { compareTranscriptsWorkflow } from '../../../src/tools/workflows/compare_transcripts.js';
@@ -1252,7 +1252,7 @@ beforeEach(() => {
   process.env.CC_HOME = dir;
   writeFileSync(join(dir, '2026-06-01_w3.panopto.vtt'), 'WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nwelcome to KOBE\n');
   writeFileSync(join(dir, '_sessions.json'), JSON.stringify({
-    domain: 'bsu.hosted.panopto.com',
+    domain: 'example.hosted.panopto.com',
     generatedAt: '2026-06-01T20:00:00Z',
     sessions: [{ sessionId: 's1', title: 'W3', startTime: '2026-06-01T14:00:00Z', duration: 3600, filename: '2026-06-01_w3.panopto.vtt' }],
   }));

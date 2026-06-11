@@ -47,7 +47,7 @@ The front matter is minimal: only fields that the template engine actually needs
 - A renderer that handles arbitrary section lists
 - No type-safe template code
 
-**What we did instead:** Fixed 13 page types covering the full range of Canvas content that BSU professors actually use (based on ITM 370 course structure and conversations with the professor). Each page type has a dedicated renderer with intentional layout choices. A `custom` type is the escape hatch for anything not covered.
+**What we did instead:** Fixed 13 page types covering the full range of Canvas content that University professors actually use (based on ITM 370 course structure and conversations with the professor). Each page type has a dedicated renderer with intentional layout choices. A `custom` type is the escape hatch for anything not covered.
 
 The `custom` type lets professors define their own section names via the wizard. The renderer for `custom` pages iterates over all sections and renders them as generic cards — no layout intelligence, but functional.
 
@@ -63,7 +63,7 @@ Every rendered template uses `config.colors.primary`, `config.colors.primaryDark
 - A course can override just the primary color (e.g., a department has a slightly different accent) without touching templates.
 - Adding a new institution takes seconds: change the colors in `institution.json`, regenerate.
 
-The color inheritance chain is: institution config (`~/.canvas-design-mcp/institution.json`) → course config (`course-config.md` `colors:` block, optional overrides) → template rendering. If a course config field is blank, the institution value is used. If the institution config doesn't exist (test environments), BSU defaults are used.
+The color inheritance chain is: institution config (`~/.canvas-design-mcp/institution.json`) → course config (`course-config.md` `colors:` block, optional overrides) → template rendering. If a course config field is blank, the institution value is used. If the institution config doesn't exist (test environments), University defaults are used.
 
 ---
 
@@ -85,7 +85,7 @@ Per-week hero override is available (set `hero_image:` in the page's front matte
 - The import logic can be iterated on without touching templates, scaffold generation, or generation tools.
 - Test fixtures for the canvas-backup format (a significant amount of JSON) don't bloat the SP10a test run.
 
-The canvas-backup archive format is documented at `github.com/Ryfter/canvas-backup`. The format is stable (it's Kevin's own project), but if it changes, only `import-course.ts` needs to be updated — no other files are affected.
+The canvas-backup archive format is documented at `github.com/Ryfter/canvas-backup`. The format is stable (it's the professor's own project), but if it changes, only `import-course.ts` needs to be updated — no other files are affected.
 
 ---
 

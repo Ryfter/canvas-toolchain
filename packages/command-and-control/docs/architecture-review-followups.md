@@ -5,7 +5,7 @@ This file records follow-up items accepted from the Gemini / Antigravity archite
 Reviewed inputs:
 
 - `D:\Dev\Command-and-Control-MCP\Gemini-Results.md`
-- `C:\Users\krank\.gemini\antigravity\brain\5b3b88c7-2bf2-45ee-b576-9fbff068c9cd\architectural_review.md`
+- `C:\Users\professor\.gemini\antigravity\brain\5b3b88c7-2bf2-45ee-b576-9fbff068c9cd\architectural_review.md`
 
 The two files largely overlap. The external architectural review is more actionable; it adds explicit downloader path registration and a planning sidecar recommendation.
 

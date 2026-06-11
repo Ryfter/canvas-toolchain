@@ -7,7 +7,7 @@ import type { CourseWizardAnswers } from '../src/tools/setup-course.js';
 
 function makeAnswers(overrides: Partial<CourseWizardAnswers> = {}): CourseWizardAnswers {
   return {
-    institution: 'Boise State University',
+    institution: 'Example University',
     courseName: 'AI Augmented Projects',
     courseNumber: 'ITM 370',
     professor: 'Dr. Rank',

@@ -51,13 +51,13 @@ func TestWriteAnthropicConfig_WritesWith0o600(t *testing.T) {
 func TestWriteCanvasConfig_RequiresBothFields(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("CC_HOME", tmp)
-	if err := WriteCanvasConfig("bsu.instructure.com", ""); err != nil {
+	if err := WriteCanvasConfig("example.instructure.com", ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(tmp, "canvas-config.json")); !os.IsNotExist(err) {
 		t.Error("expected no file when token is empty")
 	}
-	if err := WriteCanvasConfig("bsu.instructure.com", "tok"); err != nil {
+	if err := WriteCanvasConfig("example.instructure.com", "tok"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(tmp, "canvas-config.json")); err != nil {

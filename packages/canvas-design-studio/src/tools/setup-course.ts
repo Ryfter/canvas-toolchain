@@ -69,7 +69,7 @@ export async function runCourseWizard(rootDir?: string): Promise<string[]> {
 
   const institution = await input({
     message: 'Institution name:',
-    default: 'Boise State University',
+    default: 'Example University',
   });
 
   const courseName = await input({

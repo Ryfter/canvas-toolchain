@@ -85,7 +85,7 @@ Configs at ~/.command-and-control/  (atomic 0o600 writes)
   └─ llm-provider.json             [NEW — { provider: "anthropic" | "ollama" }]
 
 Documentation
-  └─ docs/recommended-models.md    [NEW — Kevin-maintained model recommendations]
+  └─ docs/recommended-models.md    [NEW — the professor-maintained model recommendations]
 ```
 
 **Key invariant:** every generation site calls the C&C resolver, not a provider constructor. Adding a third provider later is one new shared-llm adapter + one new C&C setup tool + one curated section in the markdown page; no feature code changes.
@@ -115,7 +115,7 @@ Documentation
 | `packages/command-and-control/tests/tools/setup_ollama.test.ts` | Unit tests. |
 | `packages/command-and-control/tests/tools/set_active_llm_provider.test.ts` | Unit tests. |
 | `packages/command-and-control/tests/llm/resolve.test.ts` | Unit tests. |
-| `docs/recommended-models.md` | The Kevin-maintained recommendations page (repo root `docs/`, not package-scoped). |
+| `docs/recommended-models.md` | The the professor-maintained recommendations page (repo root `docs/`, not package-scoped). |
 
 ### Modified files
 
@@ -470,6 +470,6 @@ Shippable when all of the following hold:
 
 8. **Documentation:**
    - `docs/recommended-models.md` exists in the repo with four General-Purpose VRAM tier sections (32 / 24 / 16 / 6 GB) and the Task-Specialized section including a Whisper sub-section (used by future #60 work).
-   - **Populated tiers at ship:** 6 GB, 24 GB, and 32 GB each have at least one tested model entry. (Kevin can test these tiers locally.)
-   - **Empty-but-present tier:** 16 GB exists as a section header with an `<!-- Open a PR with your tested model -->` placeholder. Mainstream-faculty hardware; populated as users contribute or as Kevin tests on a 16 GB box later. Does not block v1 ship.
+   - **Populated tiers at ship:** 6 GB, 24 GB, and 32 GB each have at least one tested model entry. (the professor can test these tiers locally.)
+   - **Empty-but-present tier:** 16 GB exists as a section header with an `<!-- Open a PR with your tested model -->` placeholder. Mainstream-faculty hardware; populated as users contribute or as the professor tests on a 16 GB box later. Does not block v1 ship.
    - `packages/command-and-control/CLAUDE.md` updated with the new tools and the provider-switching workflow.

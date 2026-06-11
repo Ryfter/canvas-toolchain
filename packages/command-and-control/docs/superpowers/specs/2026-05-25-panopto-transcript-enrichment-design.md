@@ -63,7 +63,7 @@ Written to `outputDir` by `bulkDownloadPanoptoCaptions` after all downloads comp
 
 ```json
 {
-  "domain": "bsu.hosted.panopto.com",
+  "domain": "example.hosted.panopto.com",
   "generatedAt": "2026-06-01T20:00:00Z",
   "sessions": [
     {
@@ -115,11 +115,11 @@ and basic visualization types...
 > I want you to remember: always connect to a live data source rather than
 > an extract when you are in development.
 
-[→ 5:00](https://bsu.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=a1b2c3d4-...&start=300)
+[→ 5:00](https://example.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=a1b2c3d4-...&start=300)
 
 Next, let's look at data sources. You can connect to Excel, CSV...
 
-[→ 10:00](https://bsu.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=a1b2c3d4-...&start=600)
+[→ 10:00](https://example.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=a1b2c3d4-...&start=600)
 ```
 
 - Deep link every 300 seconds (5 minutes), placed as a line break between prose blocks

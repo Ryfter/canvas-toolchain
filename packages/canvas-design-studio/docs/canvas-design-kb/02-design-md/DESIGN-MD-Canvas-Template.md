@@ -284,9 +284,9 @@ Colors: green (complete), blue (activity type), amber (quiz/assessment), red (du
 
 Replace the hex values in the YAML front matter. Update the prose in the `## Colors` section to reflect the new palette and its rationale.
 
-For Boise State:
-- Primary: `#0033A0` (BSU Blue)
-- Secondary: `#D64309` (BSU Orange)
+For Example University:
+- Primary: `#0033A0` (University Blue)
+- Secondary: `#D64309` (University Orange)
 
 For a neutral institutional theme:
 - Primary: `#1A3A5C` (deep navy)

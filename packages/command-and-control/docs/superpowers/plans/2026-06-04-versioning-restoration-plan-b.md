@@ -2284,7 +2284,7 @@ Expected: previous total (Plan A's ~318 plus new tests: getFileContent 3, hash 3
 Run: `npm run build`
 Expected: all 5 packages build clean.
 
-- [ ] **Step 4: Manual verification against BSU sandbox (with Kevin)**
+- [ ] **Step 4: Manual verification against University sandbox (with the professor)**
 
 - [ ] Pick a course folder with at least one widget page.
 - [ ] Run `preview_course_publish` and inspect the resulting `<courseDir>/.canvas-toolchain/publish-snapshots/<id>/widgets-meta.json` — confirm it has the widget keyed by `<slug>__<id>` with `priorCanvasFileId` and content hashes filled in.

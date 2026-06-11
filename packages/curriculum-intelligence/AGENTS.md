@@ -42,7 +42,7 @@ tests/
     canvas-archive-tiny/    ← Minimal Canvas export (2 assignments, 2 modules)
     canvas-archive-tiny-v2/ ← Second semester fixture (different module content)
     cds-course-tiny/        ← CDS course/ folder fixture
-    academic-calendar-bsu.html  ← HTML fixture for calendar parser
+    academic-calendar-example.html  ← HTML fixture for calendar parser
     transcripts-tiny/       ← VTT/SRT transcript fixtures
   tools/                    ← Tool integration tests
   parsers/                  ← Parser unit tests

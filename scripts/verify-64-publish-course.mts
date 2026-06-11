@@ -9,14 +9,14 @@
  *   tsx scripts/verify-64-publish-course.mts rollback <snapshotId>
  *
  * ENV
- *   COURSE_ID           Canvas course numeric ID. Default 48895 (Kevin's BusApp 105 sandbox).
+ *   COURSE_ID           Canvas course numeric ID. Default 48895 (the professor's BusApp 105 sandbox).
  *   COURSE_DIR          Path to a CDS course folder. Default ./.test-course-64 (auto-created).
  *   CANVAS_CONFIG_PATH  Override location of canvas-config.json. Default ~/.command-and-control/canvas-config.json.
  *
  * PREREQ
  *   Write Canvas credentials to ~/.command-and-control/canvas-config.json:
  *     {
- *       "host": "boisestatecanvas.instructure.com",
+ *       "host": "example.instructure.com",
  *       "token": "<paste your Canvas access token>",
  *       "configuredAt": "2026-05-30T00:00:00Z",
  *       "lastValidatedAt": "2026-05-30T00:00:00Z"
@@ -52,7 +52,7 @@ function ensureCanvasConfig(): void {
     [
       'Create the file with this shape (paste your Canvas access token):',
       '  {',
-      '    "host": "boisestatecanvas.instructure.com",',
+      '    "host": "example.instructure.com",',
       '    "token": "<paste here>",',
       '    "configuredAt": "2026-05-30T00:00:00Z",',
       '    "lastValidatedAt": "2026-05-30T00:00:00Z"',
@@ -70,7 +70,7 @@ function ensureSandboxCourse(): void {
     join(COURSE_DIR, 'course-config.md'),
     [
       '---',
-      'institution: Boise State University',
+      'institution: Example University',
       'course_name: BusApp 105 — Sandbox Test',
       'course_number: BUSAPP 105',
       'professor: Dr. Rank',
@@ -110,7 +110,7 @@ function ensureSandboxCourse(): void {
       '',
       '## What This Is',
       '',
-      'A one-page sandbox test of canvas-toolchain\'s publish_course workflow against a real BSU Canvas course.',
+      'A one-page sandbox test of canvas-toolchain\'s publish_course workflow against a real University Canvas course.',
       'If you are reading this in Canvas, preview → publish wrote successfully.',
       '',
       '## Next Step',
@@ -205,7 +205,7 @@ async function runPublish(snapshotId: string) {
   }
   if (r.error) bail(`publish error: ${r.error} — ${r.message ?? ''}`, r.fix);
   console.log('\n=== NEXT ===');
-  console.log(`Verify the page in Canvas: https://boisestatecanvas.instructure.com/courses/${COURSE_ID}`);
+  console.log(`Verify the page in Canvas: https://example.instructure.com/courses/${COURSE_ID}`);
   console.log(`Roll back with:`);
   console.log(`  tsx scripts/verify-64-publish-course.mts rollback ${snapshotId}`);
 }

@@ -110,7 +110,7 @@ Key mapping decisions:
   "sis_course_id": "ITM370-F26",
   "start_at": "2026-08-24T00:00:00Z",
   "end_at": "2026-12-15T00:00:00Z",
-  "time_zone": "America/Boise"
+  "time_zone": "America/Denver"
 }
 ```
 
@@ -859,7 +859,7 @@ export function importCourse(input: ImportCourseInput): ImportCourseResult {
     const courseCode = course.course_code ?? '';
     const [courseNum, ...nameParts] = courseCode.split(' ');
     const mockConfig: CourseConfig = {
-      institution: 'Boise State University',
+      institution: 'Example University',
       courseName: course.name,
       courseNumber: courseCode,
       professor: '[NEEDS REVIEW — add professor name]',

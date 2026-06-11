@@ -13,8 +13,8 @@
 - Dense pages read as overwhelming — breathing room is a design choice, not wasted space
 
 ## Color
-- Primary (#0033A0 for BSU): hero banners, active states, primary buttons, section labels
-- Secondary (#D64309 for BSU): accent arrows, pill badges, decorative borders only
+- Primary (#0033A0 for University): hero banners, active states, primary buttons, section labels
+- Secondary (#D64309 for University): accent arrows, pill badges, decorative borders only
 - Neutral (#F4F3EF): page background; white (#ffffff): card backgrounds
 - Semantic colors (info blue, success green, warning amber, danger red): status callouts only
 - Maximum 6–7 distinct colors per page — more creates visual noise

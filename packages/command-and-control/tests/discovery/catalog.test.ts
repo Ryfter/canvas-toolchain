@@ -18,7 +18,7 @@ describe('loadCatalog', () => {
 describe('matchIdentifier', () => {
   it('matches a Canvas tool name/domain to a catalog entry (case-insensitive, substring)', () => {
     const cat = loadCatalog();
-    expect(matchIdentifier(cat, 'BSU Hosted Panopto')?.id).toBe('panopto');
+    expect(matchIdentifier(cat, 'University Hosted Panopto')?.id).toBe('panopto');
     expect(matchIdentifier(cat, 'zoom.us')?.id).toBe('zoom');
   });
 

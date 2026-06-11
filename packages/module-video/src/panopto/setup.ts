@@ -74,7 +74,7 @@ export async function setupPanopto(input: SetupPanoptoInput): Promise<SetupPanop
         message: err instanceof Error ? err.message : String(err),
         fix: [
           'Verify your clientId and clientSecret in the Panopto admin panel',
-          'Confirm the domain is correct (e.g. "bsu.hosted.panopto.com")',
+          'Confirm the domain is correct (e.g. "example.hosted.panopto.com")',
           'Ensure the API client has the Creator role in Panopto',
         ],
       };

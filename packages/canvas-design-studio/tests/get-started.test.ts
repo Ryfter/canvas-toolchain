@@ -10,14 +10,14 @@ import { configExists, loadConfig } from '../src/config.js';
 import { getStarted } from '../src/tools/get-started.js';
 
 const baseConfig: InstitutionConfig = {
-  institution: 'Boise State University',
+  institution: 'Example University',
   colors: {
     primary: '#0033A0',
     primaryDark: '#002277',
     primaryLight: '#E6ECF9',
     secondary: '#D64309',
   },
-  canvasUrl: 'https://boisestate.instructure.com',
+  canvasUrl: 'https://example.instructure.com',
   apiToken: 'test-token-longerthantwenty',
 };
 
@@ -59,7 +59,7 @@ describe('getStarted', () => {
     vi.mocked(loadConfig).mockReturnValue(baseConfig);
     const result = getStarted();
     expect(result).toContain('fully configured');
-    expect(result).toContain('Boise State University');
+    expect(result).toContain('Example University');
   });
 
   it('full-config text shows publishing tools as active', () => {
@@ -73,7 +73,7 @@ describe('getStarted', () => {
     vi.mocked(configExists).mockReturnValue(true);
     vi.mocked(loadConfig).mockReturnValue({
       ...baseConfig,
-      panopto: { domain: 'bsu.hosted.panopto.com', iframeWhitelisted: true },
+      panopto: { domain: 'example.hosted.panopto.com', iframeWhitelisted: true },
     });
     expect(getStarted()).toContain('✓ Panopto');
   });

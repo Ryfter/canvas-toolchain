@@ -47,7 +47,7 @@ function lineForOffset(text: string, offset: number): number {
 
 export function scanFerpa(html: string, _professorEmail?: string): FerpaFinding | undefined {
   const patterns: Array<{ reason: string; pattern: RegExp }> = [
-    { reason: 'possible BSU student ID', pattern: /\bB\d{8}\b/i },
+    { reason: 'possible University student ID', pattern: /\bB\d{8}\b/i },
     { reason: 'possible 9-digit student ID', pattern: /\b\d{9}\b/ },
     {
       reason: 'possible grade disclosure',

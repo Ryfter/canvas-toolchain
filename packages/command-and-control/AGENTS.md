@@ -162,7 +162,7 @@ Shape (typed as `SessionsManifest` in `canvas-design-mcp/dist/tools/panopto-enri
 
 ```json
 {
-  "domain": "bsu.instructure.com",
+  "domain": "example.instructure.com",
   "generatedAt": "2026-05-01T12:00:00.000Z",
   "sessions": [
     {

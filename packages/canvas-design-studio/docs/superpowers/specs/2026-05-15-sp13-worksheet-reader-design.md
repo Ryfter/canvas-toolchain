@@ -142,15 +142,15 @@ When `defaults` is defined and has at least one field:
 │  Values from your setup worksheet:                       │
 └─────────────────────────────────────────────────────────┘
 
-  Institution:    Boise State University
-  Brand URL:      https://www.boisestate.edu/brand/
+  Institution:    Example University
+  Brand URL:      https://www.example.edu/brand/
   Primary color:  #0033A0
   Secondary:      #D64309
-  Canvas URL:     https://boisestate.instructure.com
+  Canvas URL:     https://example.instructure.com
   API token:      ✓ (provided)
-  Email:          you@boisestate.edu
+  Email:          you@example.edu
   Courses:        12345, 67890
-  Panopto:        bsu.hosted.panopto.com
+  Panopto:        example.hosted.panopto.com
 
   Press Enter to accept each value, or type to override.
 ```
@@ -164,7 +164,7 @@ Each `input()` call gains a conditional default:
 ```typescript
 const institution = await input({
   message: 'Institution name ...',
-  default: defaults?.institution ?? 'Boise State University',
+  default: defaults?.institution ?? 'Example University',
 });
 ```
 

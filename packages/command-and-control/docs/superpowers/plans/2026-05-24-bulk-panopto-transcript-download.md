@@ -77,7 +77,7 @@ describe('bulkDownloadPanoptoCaptions — filename format', () => {
     // 3. Captions list
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ([{ Language: 'en', FileUrl: 'https://bsu.hosted.panopto.com/captions/abc.vtt', IsDefault: true }]),
+      json: async () => ([{ Language: 'en', FileUrl: 'https://example.hosted.panopto.com/captions/abc.vtt', IsDefault: true }]),
     } as Response);
     // 4. VTT content
     mockFetch.mockResolvedValueOnce({
@@ -221,7 +221,7 @@ afterEach(() => {
 import { setupPanopto, loadPanoptoConfig } from '../../src/tools/setup_panopto.js';
 
 const TEST_INPUT = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   clientId: 'test-client-id',
   clientSecret: 'test-client-secret',
 };
@@ -236,10 +236,10 @@ describe('setupPanopto', () => {
     const result = await setupPanopto(TEST_INPUT);
 
     expect(result.configured).toBe(true);
-    expect(result.domain).toBe('bsu.hosted.panopto.com');
+    expect(result.domain).toBe('example.hosted.panopto.com');
     expect(result.validatedAt).toBeDefined();
     const saved = JSON.parse(readFileSync(join(tmpHome, 'panopto-config.json'), 'utf-8'));
-    expect(saved.domain).toBe('bsu.hosted.panopto.com');
+    expect(saved.domain).toBe('example.hosted.panopto.com');
     expect(saved.clientId).toBe('test-client-id');
     expect(saved.lastValidatedAt).toBeDefined();
   });
@@ -290,7 +290,7 @@ describe('loadPanoptoConfig', () => {
     await setupPanopto(TEST_INPUT);
 
     const config = loadPanoptoConfig();
-    expect(config.domain).toBe('bsu.hosted.panopto.com');
+    expect(config.domain).toBe('example.hosted.panopto.com');
     expect(config.clientId).toBe('test-client-id');
     expect(config.clientSecret).toBe('test-client-secret');
   });
@@ -383,7 +383,7 @@ export async function setupPanopto(input: SetupPanoptoInput): Promise<SetupPanop
         message: err instanceof Error ? err.message : String(err),
         fix: [
           'Verify your clientId and clientSecret in the Panopto admin panel',
-          'Confirm the domain is correct (e.g. "bsu.hosted.panopto.com")',
+          'Confirm the domain is correct (e.g. "example.hosted.panopto.com")',
           'Ensure the API client has the Creator role in Panopto',
         ],
       };
@@ -477,7 +477,7 @@ import { ingestTranscripts } from 'curriculum-intelligence-mcp/dist/tools/ingest
 import { bulkFetchPanoptoTranscripts } from '../../../src/tools/workflows/bulk_fetch_panopto_transcripts.js';
 
 const MOCK_CONFIG = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   clientId: 'id',
   clientSecret: 'secret',
   iframeWhitelisted: true,
@@ -803,7 +803,7 @@ Inside the `tools: [...]` array in `server.setRequestHandler(ListToolsRequestSch
         type: 'object' as const,
         required: ['domain', 'clientId', 'clientSecret'],
         properties: {
-          domain: { type: 'string', description: 'Panopto hostname, e.g. "bsu.hosted.panopto.com".' },
+          domain: { type: 'string', description: 'Panopto hostname, e.g. "example.hosted.panopto.com".' },
           clientId: { type: 'string', description: 'OAuth2 client ID from the Panopto admin panel.' },
           clientSecret: { type: 'string', description: 'OAuth2 client secret. Stored locally, never echoed back.' },
           iframeWhitelisted: {

@@ -45,7 +45,7 @@ installer/
 │   ├── github.go                                # GitHub Releases API lookup
 │   └── apply.go                                 # apply-update logic shared with main installer
 ├── ui/
-│   ├── theme.go                                 # BSU-ish palette, font setup
+│   ├── theme.go                                 # university-neutral palette, font setup
 │   ├── widgets.go                               # custom widgets (masked input, progress row)
 │   └── assets/
 │       ├── logo.png
@@ -182,7 +182,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 )
 
-// BSU-ish palette derived from packages/canvas-design-studio/CLAUDE.md design tokens.
+// university-neutral palette derived from packages/canvas-design-studio/CLAUDE.md design tokens.
 var (
 	ColorPrimary      = color.NRGBA{R: 0x00, G: 0x33, B: 0xA0, A: 0xFF}
 	ColorPrimaryDark  = color.NRGBA{R: 0x00, G: 0x22, B: 0x77, A: 0xFF}
@@ -497,7 +497,7 @@ func DefaultInstallDir() string {
 	return filepath.Join(home, "canvas-toolchain")
 }
 
-// NewState returns a State with sensible defaults: install path, Canvas defaults to BSU,
+// NewState returns a State with sensible defaults: install path, Canvas defaults to University,
 // Canvas workflow on by default, all others off.
 func NewState(version string) *State {
 	return &State{
@@ -505,7 +505,7 @@ func NewState(version string) *State {
 		InstallDir:     DefaultInstallDir(),
 		Mode:           ModeFresh,
 		WorkflowCanvas: true,
-		CanvasHost:     "bsu.instructure.com",
+		CanvasHost:     "example.instructure.com",
 	}
 }
 ```
@@ -533,8 +533,8 @@ func TestNewState_Defaults(t *testing.T) {
 	if s.WorkflowPanopto || s.WorkflowCI || s.WorkflowRegistry || s.OptInPython {
 		t.Error("expected non-default workflows to default to false")
 	}
-	if s.CanvasHost != "bsu.instructure.com" {
-		t.Errorf("expected CanvasHost default 'bsu.instructure.com', got %q", s.CanvasHost)
+	if s.CanvasHost != "example.instructure.com" {
+		t.Errorf("expected CanvasHost default 'example.instructure.com', got %q", s.CanvasHost)
 	}
 	if !strings.Contains(s.InstallDir, "canvas-toolchain") {
 		t.Errorf("expected InstallDir to contain 'canvas-toolchain', got %q", s.InstallDir)
@@ -1011,7 +1011,7 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 
 	if st.WorkflowPanopto {
 		panoptoDomain := widget.NewEntry()
-		panoptoDomain.SetPlaceHolder("bsu.hosted.panopto.com")
+		panoptoDomain.SetPlaceHolder("example.hosted.panopto.com")
 		panoptoDomain.SetText(st.PanoptoDomain)
 		panoptoDomain.OnChanged = func(s string) { st.PanoptoDomain = s }
 
@@ -1026,7 +1026,7 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 		fields = append(fields,
 			widget.NewSeparator(),
 			widget.NewLabelWithStyle("Panopto (optional)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			ui.HintedField{Label: "Panopto domain", Input: panoptoDomain, Hint: "e.g. bsu.hosted.panopto.com"}.AsCanvasObject(),
+			ui.HintedField{Label: "Panopto domain", Input: panoptoDomain, Hint: "e.g. example.hosted.panopto.com"}.AsCanvasObject(),
 			ui.HintedField{Label: "Client ID", Input: panoptoClient, Hint: "Panopto admin → API Clients."}.AsCanvasObject(),
 			ui.HintedField{Label: "Client secret", Input: panoptoSecret, Hint: "Same place as the client ID."}.AsCanvasObject(),
 		)
@@ -1901,13 +1901,13 @@ func TestWriteAnthropicConfig_WritesWith0o600(t *testing.T) {
 func TestWriteCanvasConfig_RequiresBothFields(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("CC_HOME", tmp)
-	if err := WriteCanvasConfig("bsu.instructure.com", ""); err != nil {
+	if err := WriteCanvasConfig("example.instructure.com", ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(tmp, "canvas-config.json")); !os.IsNotExist(err) {
 		t.Error("expected no file when token is empty")
 	}
-	if err := WriteCanvasConfig("bsu.instructure.com", "tok"); err != nil {
+	if err := WriteCanvasConfig("example.instructure.com", "tok"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(tmp, "canvas-config.json")); err != nil {
@@ -2144,7 +2144,7 @@ Expected: 4 tests pass.
 package tasks
 
 // CreateUpdaterShortcuts is implemented per-OS via build tags. The Linux/unix
-// fallback is a no-op (Kevin's target audience is Windows + Mac; Linux can
+// fallback is a no-op (the professor's target audience is Windows + Mac; Linux can
 // invoke the binary directly).
 //
 // updaterBin is the absolute path to the canvas-toolchain-updater binary

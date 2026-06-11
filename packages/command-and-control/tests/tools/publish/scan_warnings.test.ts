@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('canvas-design-mcp/dist/tools/publish.js', () => ({
   scanFerpa: vi.fn((html: string) =>
-    html.includes('B12345678') ? { reason: 'possible BSU student ID', line: 1 } : undefined,
+    html.includes('B12345678') ? { reason: 'possible University student ID', line: 1 } : undefined,
   ),
 }));
 vi.mock('canvas-design-mcp/dist/tools/validate.js', () => ({

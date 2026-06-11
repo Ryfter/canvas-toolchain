@@ -77,7 +77,7 @@ These are non-negotiable constraints sourced from the Canvas RCE sanitizer. Viol
 
 `generate_page` checks each input markdown file's front matter for a `tiers:`
 block. When present AND it contains tier-1 sections, a "Quick Reference" card
-is prepended to the rendered page body. Card uses inline CSS only and the BSU
+is prepended to the rendered page body. Card uses inline CSS only and the University
 primary blue palette.
 
 Pages without a `tiers` block (or with only tier-2/3 entries) render exactly
@@ -161,7 +161,7 @@ These classes come from Canvas's own stylesheet — no admin access needed:
 From `docs/canvas-design-kb/02-design-md/DESIGN-MD-Canvas-Template.md`:
 
 ```
-Primary:        #0033A0  (BSU blue — hero banners, active nav, primary buttons)
+Primary:        #0033A0  (University blue — hero banners, active nav, primary buttons)
 Primary-dark:   #002277  (footer bars, hover states)
 Primary-light:  #E6ECF9  (callout backgrounds, light tints)
 Neutral:        #F4F3EF  (page background, nav bar background)

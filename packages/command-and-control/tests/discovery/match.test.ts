@@ -9,7 +9,7 @@ const moduleState = [
 
 describe('matchDetected', () => {
   it('flags a catalog tool whose module exists, carrying enabled state', () => {
-    const r = matchDetected(catalog, moduleState, [{ rawName: 'BSU Panopto', courses: ['ITM 370'] }]);
+    const r = matchDetected(catalog, moduleState, [{ rawName: 'University Panopto', courses: ['ITM 370'] }]);
     expect(r.matchedModules).toEqual([{ tool: 'panopto', module: 'video', enabled: false }]);
     expect(r.unmatched).toEqual([]);
   });

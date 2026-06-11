@@ -10,7 +10,7 @@
  *  rewrite the iframe `src` to point at the returned Canvas Files preview
  *  URL before pushing the page.
  *
- *  Per Phase 0 finding (2026-06-03 against BSU sandbox), Canvas Files
+ *  Per Phase 0 finding (2026-06-03 against University sandbox), Canvas Files
  *  `on_duplicate=overwrite` is delete + recreate semantics — the file_id
  *  changes on every overwrite. So every widget update triggers an iframe
  *  src rewrite, which means every widget update is also a page change.

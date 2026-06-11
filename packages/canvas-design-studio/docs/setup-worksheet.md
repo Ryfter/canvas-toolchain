@@ -18,7 +18,7 @@ Providing your brand standards URL lets your AI extract your primary and seconda
 **Brand standards URL** (optional):
 ```
 Your answer: ___________________________________
-Example:     https://www.boisestate.edu/brand/
+Example:     https://www.example.edu/brand/
 ```
 
 — OR —
@@ -38,7 +38,7 @@ The name of your college or university.
 
 ```
 Your answer: ___________________________________
-Example:     Boise State University
+Example:     Example University
 ```
 
 ---
@@ -77,7 +77,7 @@ The web address of your institution's Canvas instance — everything up to (not 
 
 ```
 Your answer: ___________________________________
-Example:     https://boisestate.instructure.com
+Example:     https://example.instructure.com
 ```
 
 ---
@@ -115,7 +115,7 @@ Example:     you@university.edu
 
 Numeric Canvas course IDs for the courses you use most often. These appear at the top of the `list_canvas_courses` results.
 
-**Where to find them:** The number in your Canvas course URL, e.g. `https://boisestate.instructure.com/courses/12345` → ID is `12345`.
+**Where to find them:** The number in your Canvas course URL, e.g. `https://example.instructure.com/courses/12345` → ID is `12345`.
 
 ```
 Your answer (comma-separated): ___________________________________
@@ -128,11 +128,11 @@ Example:                       12345, 67890
 
 Your institution's Panopto domain. Enables video embed generation (no credentials needed) and, with credentials, video search and caption download.
 
-**Where to find it:** Log into Panopto and copy the domain from the URL, e.g. `bsu.hosted.panopto.com`.
+**Where to find it:** Log into Panopto and copy the domain from the URL, e.g. `example.hosted.panopto.com`.
 
 ```
 Your answer: ___________________________________
-Example:     bsu.hosted.panopto.com
+Example:     example.hosted.panopto.com
 (leave blank to skip Panopto)
 ```
 

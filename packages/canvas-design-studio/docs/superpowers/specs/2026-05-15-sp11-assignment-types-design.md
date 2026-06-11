@@ -1,7 +1,7 @@
 # SP11: Assignment Type Customization — Design
 
 **Date:** 2026-05-15  
-**Status:** Approved (auto-accepted, Kevin sleeping before AI institute Day 3)  
+**Status:** Approved (auto-accepted, the professor sleeping before AI institute Day 3)  
 **Author:** Claude Code
 
 ---
@@ -16,7 +16,7 @@ Add `proj-assignment` and `tech-assignment` as first-class page types alongside 
 
 SP10b's `import_course` tool already detects and names files as `proj-assignment-N.M.md` and `tech-assignment-N.M.md`, but these types don't exist in `PAGE_TYPES` — the template engine falls back to `'custom'`. SP11 makes them real types end-to-end.
 
-Kevin flagged two important assignment attributes:
+The professor flagged two important assignment attributes:
 - **Timeline** — projects often span multiple weeks with staged deadlines (draft → peer review → final)
 - **Solo vs. Team** — team assignments need different page content (group formation, one-submission-per-group)
 

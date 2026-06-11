@@ -1209,7 +1209,7 @@ After Task A4.2 completes:
 
 - [ ] Run `npm test` (full monorepo): roughly +20 new tests (state_meta 7, snapshot_location 5, setup_canvas 2, publish_course_pointer 1, rollback_pattern_b 3, plus a couple of additions). Total ~1138+ passing.
 - [ ] Run `npm run build`: all 5 packages build clean.
-- [ ] **Manual verification (with Kevin, against BSU sandbox):**
+- [ ] **Manual verification (with the professor, against University sandbox):**
   - Run `preview_course_publish` against a course; verify the snapshot lands at `<courseDir>/.canvas-toolchain/publish-snapshots/<id>/` (NOT in `~/.command-and-control/`).
   - Run `publish_course`; verify `publish-state-48895.json` is created next to the snapshot dirs.
   - Run a second publish; verify the pointer file updates to the new snapshot.

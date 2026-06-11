@@ -4,7 +4,7 @@ import { chunkTranscript, parseTranscript } from '../../../src/tools/answers/chu
 const SAMPLE = `---
 sourcePlatform: panopto
 sourceId: abc-123
-deepLinkTemplate: "https://bsu.hosted.panopto.com/Pages/Viewer.aspx?id={sourceId}&start={startSeconds}"
+deepLinkTemplate: "https://example.hosted.panopto.com/Pages/Viewer.aspx?id={sourceId}&start={startSeconds}"
 title: "Week 03 - VLOOKUP"
 ---
 
@@ -28,7 +28,7 @@ describe('chunkTranscript', () => {
     expect(chunks.length).toBeGreaterThanOrEqual(1);
     const first = chunks[0]!;
     expect(first.startSeconds).toBe(0);
-    expect(first.deepLink).toBe('https://bsu.hosted.panopto.com/Pages/Viewer.aspx?id=abc-123&start=0');
+    expect(first.deepLink).toBe('https://example.hosted.panopto.com/Pages/Viewer.aspx?id=abc-123&start=0');
   });
 
   it('emits null deepLink when template is absent', () => {

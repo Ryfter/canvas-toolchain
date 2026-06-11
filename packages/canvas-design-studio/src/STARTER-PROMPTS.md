@@ -74,9 +74,9 @@ Output as a standalone HTML snippet.
 ```
 Read DESIGN.md and CLAUDE.md.
 
-Update the design system to use Boise State's official colors:
-- Primary: #0033A0 (BSU Blue)
-- Secondary: #D64309 (BSU Orange)
+Update the design system to use Example University's official colors:
+- Primary: #0033A0 (University Blue)
+- Secondary: #D64309 (University Orange)
 - Adjust any component tokens that reference primary colors.
 - Update the corresponding values in CLAUDE.md Design Tokens section.
 - Show me a before/after summary of what changed.

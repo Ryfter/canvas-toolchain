@@ -1,7 +1,7 @@
 ---
 sourcePlatform: panopto
 sourceId: abc-123
-deepLinkTemplate: "https://bsu.hosted.panopto.com/Pages/Viewer.aspx?id={sourceId}&start={startSeconds}"
+deepLinkTemplate: "https://example.hosted.panopto.com/Pages/Viewer.aspx?id={sourceId}&start={startSeconds}"
 title: "Week 01 - VLOOKUP Introduction"
 recordedAt: 2026-02-15T14:00:00Z
 durationSeconds: 600

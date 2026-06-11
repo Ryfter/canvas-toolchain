@@ -67,7 +67,7 @@ docs/scripts/                                               ← verification scr
 
 ---
 
-## Phase 0 — Pre-flight verification (manual, against BSU sandbox)
+## Phase 0 — Pre-flight verification (manual, against University sandbox)
 
 These three verifications MUST complete successfully before any rendering code is written. If any fails, the architecture is invalid and the spec needs revision. Each task produces a small verification script committed to `scripts/verify-88-*.mts` and a result note in the task's commit message.
 
@@ -128,9 +128,9 @@ console.warn(`UNCLEAR: x-frame-options="${xfo}", csp="${csp}". Manual inspection
 process.exit(3);
 ```
 
-- [ ] **Step 2: Upload a test HTML file to BSU sandbox manually**
+- [ ] **Step 2: Upload a test HTML file to University sandbox manually**
 
-Use Canvas UI: navigate to course 48895 (BSU sandbox), Files → upload `scripts/widget-iframe-probe.html` (a one-line `<p>iframe probe</p>`). Note the resulting file_id from the URL.
+Use Canvas UI: navigate to course 48895 (University sandbox), Files → upload `scripts/widget-iframe-probe.html` (a one-line `<p>iframe probe</p>`). Note the resulting file_id from the URL.
 
 - [ ] **Step 3: Run the verification script**
 
@@ -143,7 +143,7 @@ Expected: exit 0 with `PASS: iframe embedding works from same-origin Canvas page
 git add scripts/verify-88-canvas-files-iframe-headers.mts
 git commit -m "verify(#88): Canvas Files /preview iframe headers OK
 
-Probe script output against BSU sandbox course 48895:
+Probe script output against University sandbox course 48895:
   Status: 200
   x-frame-options: SAMEORIGIN
   content-security-policy: (none)
@@ -238,7 +238,7 @@ Expected: exit 0 with `PASS: on_duplicate=overwrite preserves file_id. Update st
 git add scripts/verify-88-canvas-files-overwrite.mts
 git commit -m "verify(#88): Canvas Files on_duplicate=overwrite preserves file_id
 
-Probe script output against BSU sandbox course 48895:
+Probe script output against University sandbox course 48895:
   First upload file_id: <N>
   Overwrite upload file_id: <N>  (same)
 Update story (re-render → re-publish without page-HTML rewrite) is valid."
@@ -318,7 +318,7 @@ Expected: exit 0 with `PASS: Canvas RCE preserved sandbox attribute exactly.`
 git add scripts/verify-88-rce-iframe-sandbox.mts
 git commit -m "verify(#88): Canvas RCE preserves iframe sandbox attributes
 
-Probe script output against BSU sandbox course 48895:
+Probe script output against University sandbox course 48895:
   wrote sandbox=\"allow-scripts allow-same-origin allow-forms\"
   read   sandbox=\"allow-scripts allow-same-origin allow-forms\"
 Architecture's iframe embed shape is safe to ship."
@@ -1280,7 +1280,7 @@ git commit -m "feat(cds): widget HTML wrapper — full standalone document
 
 buildWidgetHtml() composes a complete <!DOCTYPE html> document from renderer
 body+css+js plus the a11y harness (sr-only region, prefers-reduced-motion,
-touch-target), dimension CSS, BSU-brand base typography. spec.name is HTML-escaped
+touch-target), dimension CSS, University-brand base typography. spec.name is HTML-escaped
 in <title>. Wrapper a11y CSS/JS precedes renderer CSS/JS so renderers can
 override base styles but inherit the harness."
 ```

@@ -8,7 +8,7 @@
 
 ## 1. Real course data — corrections
 
-Kevin teaches three courses:
+The professor teaches three courses:
 
 | Course | Sections | Notes |
 |--------|----------|-------|

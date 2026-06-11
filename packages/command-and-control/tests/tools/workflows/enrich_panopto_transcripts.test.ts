@@ -18,7 +18,7 @@ import { loadTranscriptConfig } from '../../../src/tools/setup_transcript_source
 import { enrichPanoptoTranscripts } from '../../../src/tools/workflows/enrich_panopto_transcripts.js';
 
 const MOCK_CONFIG = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   clientId: 'id',
   clientSecret: 'secret',
   iframeWhitelisted: true,
@@ -29,7 +29,7 @@ const MOCK_CONFIG = {
 const MOCK_VOCAB = { fillerWords: [], corrections: [] };
 
 const MANIFEST = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   generatedAt: '2026-06-01T00:00:00Z',
   sessions: [
     {

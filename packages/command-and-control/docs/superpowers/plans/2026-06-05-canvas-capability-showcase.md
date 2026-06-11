@@ -145,7 +145,7 @@ patterns:
     supportStatus: supported
     description: Highlighted advice, warning, or "did you know" sidebar.
     whenToUse: Procedural reminders, deadlines, or context the student must not miss.
-    notes: Uses BSU info-blue palette from the design tokens.
+    notes: Uses University info-blue palette from the design tokens.
     exampleHtml: |
       <div style="background:#E6F1FB; border-left:4px solid #185FA5; padding:1em; margin:1em 0; border-radius:0 4px 4px 0;">
         <strong style="color:#185FA5;">Note:</strong> Submissions close at 11:59 PM Mountain Time the night before class.

@@ -23,7 +23,7 @@ const t = (id: string, over = {}) => ({ id, name: id, source: 'detected' as cons
 describe('saveInstitutionProfile', () => {
   it('writes a new profile and reports added ids', async () => {
     const res = await saveInstitutionProfile({
-      identifiers: { canvas: 'bsu.instructure.com' },
+      identifiers: { canvas: 'example.instructure.com' },
       tools: [t('panopto', { module: 'video' }), t('iclicker')],
     });
     expect(res.ok).toBe(true);

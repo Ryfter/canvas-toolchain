@@ -48,7 +48,7 @@ interface ConfirmResponse {
  *
  *  Always uses on_duplicate=overwrite, which on Canvas's actual file system is
  *  "delete + recreate under same display_name" (file_id changes each time —
- *  verified against BSU sandbox 2026-06-03 per spec amendment).
+ *  verified against University sandbox 2026-06-03 per spec amendment).
  */
 export async function uploadCanvasFile(cfg: CanvasConfig, input: UploadInput): Promise<UploadResult> {
   const { courseId, filename, contentType, body, parentFolderPath = '/widgets' } = input;

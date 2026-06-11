@@ -5,13 +5,13 @@ import type { WizardDefaults } from '../src/utils/worksheet.js';
 const FILLED_WORKSHEET = `
 ## Brand Standards (Fill this first — it can save you the color lookup)
 
-Your answer: https://www.boisestate.edu/brand/
-Example:     https://www.boisestate.edu/brand/
+Your answer: https://www.example.edu/brand/
+Example:     https://www.example.edu/brand/
 
 ## Institution Name
 
-Your answer: Boise State University
-Example:     Boise State University
+Your answer: Example University
+Example:     Example University
 
 ## Primary Brand Color
 
@@ -25,8 +25,8 @@ Example:                   #D64309
 
 ## Canvas Base URL
 
-Your answer: https://boisestate.instructure.com
-Example:     https://boisestate.instructure.com
+Your answer: https://example.instructure.com
+Example:     https://example.instructure.com
 
 ## Canvas API Token (Optional)
 
@@ -35,7 +35,7 @@ Your answer: mysecrettoken12345678901234567890
 
 ## Professor Email (Optional)
 
-Your answer: kevin@boisestate.edu
+Your answer: professor@example.edu
 Example:     you@university.edu
 
 ## Favorite Canvas Course IDs (Optional)
@@ -45,8 +45,8 @@ Example:                       12345, 67890
 
 ## Panopto Domain (Optional)
 
-Your answer: bsu.hosted.panopto.com
-Example:     bsu.hosted.panopto.com
+Your answer: example.hosted.panopto.com
+Example:     example.hosted.panopto.com
 
 ## Panopto API Client ID and Secret (Optional)
 
@@ -76,11 +76,11 @@ Your answer: ___________________________________
 
 describe('parseWorksheet', () => {
   it('extracts institution from a filled worksheet', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).institution).toBe('Boise State University');
+    expect(parseWorksheet(FILLED_WORKSHEET).institution).toBe('Example University');
   });
 
   it('extracts brandUrl from the brand standards section', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).brandUrl).toBe('https://www.boisestate.edu/brand/');
+    expect(parseWorksheet(FILLED_WORKSHEET).brandUrl).toBe('https://www.example.edu/brand/');
   });
 
   it('extracts primaryColor', () => {
@@ -92,7 +92,7 @@ describe('parseWorksheet', () => {
   });
 
   it('extracts canvasUrl', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).canvasUrl).toBe('https://boisestate.instructure.com');
+    expect(parseWorksheet(FILLED_WORKSHEET).canvasUrl).toBe('https://example.instructure.com');
   });
 
   it('extracts apiToken', () => {
@@ -100,7 +100,7 @@ describe('parseWorksheet', () => {
   });
 
   it('extracts professorEmail', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).professorEmail).toBe('kevin@boisestate.edu');
+    expect(parseWorksheet(FILLED_WORKSHEET).professorEmail).toBe('professor@example.edu');
   });
 
   it('extracts favoriteCourses as raw comma string', () => {
@@ -108,7 +108,7 @@ describe('parseWorksheet', () => {
   });
 
   it('extracts panoptoDomain', () => {
-    expect(parseWorksheet(FILLED_WORKSHEET).panoptoDomain).toBe('bsu.hosted.panopto.com');
+    expect(parseWorksheet(FILLED_WORKSHEET).panoptoDomain).toBe('example.hosted.panopto.com');
   });
 
   it('extracts panoptoClientId and panoptoClientSecret', () => {
@@ -131,13 +131,13 @@ describe('parseWorksheet', () => {
   });
 
   it('excludes blank ___ values from result', () => {
-    const ws = '## Institution Name\n\nYour answer: ___________________________________\nExample: Boise State\n';
+    const ws = '## Institution Name\n\nYour answer: ___________________________________\nExample: Example University\n';
     expect(parseWorksheet(ws).institution).toBeUndefined();
   });
 
   it('trims whitespace from extracted values', () => {
-    const ws = '## Institution Name\n\nYour answer:   Boise State University   \n';
-    expect(parseWorksheet(ws).institution).toBe('Boise State University');
+    const ws = '## Institution Name\n\nYour answer:   Example University   \n';
+    expect(parseWorksheet(ws).institution).toBe('Example University');
   });
 
   it('returns empty object for empty input', () => {
@@ -155,7 +155,7 @@ describe('validateWorksheet', () => {
       validateWorksheet({
         primaryColor: '#0033A0',
         secondaryColor: '#D64309',
-        canvasUrl: 'https://boisestate.instructure.com',
+        canvasUrl: 'https://example.instructure.com',
       })
     ).toEqual([]);
   });
@@ -184,20 +184,20 @@ describe('validateWorksheet', () => {
   });
 
   it('returns error for canvasUrl missing https://', () => {
-    const errors = validateWorksheet({ canvasUrl: 'boisestate.instructure.com' });
+    const errors = validateWorksheet({ canvasUrl: 'example.instructure.com' });
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toContain('boisestate.instructure.com');
+    expect(errors[0]).toContain('example.instructure.com');
     expect(errors[0]).toContain('Example: https://');
   });
 
   it('returns no error for valid canvasUrl', () => {
-    expect(validateWorksheet({ canvasUrl: 'https://boisestate.instructure.com' })).toEqual([]);
+    expect(validateWorksheet({ canvasUrl: 'https://example.instructure.com' })).toEqual([]);
   });
 
   it('returns two errors when both primaryColor and canvasUrl are invalid', () => {
     const errors = validateWorksheet({
       primaryColor: '#GGGGGG',
-      canvasUrl: 'boisestate.instructure.com',
+      canvasUrl: 'example.instructure.com',
     });
     expect(errors).toHaveLength(2);
   });

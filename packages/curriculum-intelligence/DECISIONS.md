@@ -148,7 +148,7 @@ This file records decisions made during design and implementation that are not o
 
 **Decision:** Course IDs are short alphanumeric strings (letters, digits, dot, dash, underscore). Example: `ITM370`. Section numbers are included for courses with multiple sections (`ITM105-01`) but omitted for single-section courses (`ITM370`).
 
-**Why:** Kevin teaches ITM 370 (single section), ITM 105, and ITM 310. ITM 370 was first offered ~2023 — don't assume older semesters exist for it. The folder naming mirrors how Kevin already organizes his course materials.
+**Why:** the professor teaches ITM 370 (single section), ITM 105, and ITM 310. ITM 370 was first offered ~2023 — don't assume older semesters exist for it. The folder naming mirrors how the professor already organizes his course materials.
 
 ---
 

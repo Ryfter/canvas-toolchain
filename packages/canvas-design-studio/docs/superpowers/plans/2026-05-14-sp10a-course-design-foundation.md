@@ -226,7 +226,7 @@ Create `tests/fixtures/course-config/basic/course-config.md`:
 
 ```markdown
 ---
-institution: Boise State University
+institution: Example University
 course_name: AI Augmented Projects
 course_number: ITM 370
 professor: Dr. Rank
@@ -268,7 +268,7 @@ Create `tests/fixtures/course-config/color-overrides/course-config.md`:
 
 ```markdown
 ---
-institution: Boise State University
+institution: Example University
 course_name: Web Development
 course_number: CS 208
 professor: Dr. Smith
@@ -311,7 +311,7 @@ const fixturesDir = join(import.meta.dirname, 'fixtures/course-config');
 describe('parseCourseConfig', () => {
   it('reads required string fields', () => {
     const config = parseCourseConfig(join(fixturesDir, 'basic/course-config.md'));
-    expect(config.institution).toBe('Boise State University');
+    expect(config.institution).toBe('Example University');
     expect(config.courseName).toBe('AI Augmented Projects');
     expect(config.courseNumber).toBe('ITM 370');
     expect(config.professor).toBe('Dr. Rank');
@@ -346,7 +346,7 @@ describe('parseCourseConfig', () => {
 
   it('inherits institution colors when course colors are blank', () => {
     const config = parseCourseConfig(join(fixturesDir, 'basic/course-config.md'));
-    // Institution config may not exist in test env — falls back to BSU defaults
+    // Institution config may not exist in test env — falls back to University defaults
     expect(config.colors.primary).toMatch(/^#/);
     expect(config.colors.primaryDark).toMatch(/^#/);
     expect(config.colors.primaryLight).toMatch(/^#/);
@@ -1005,7 +1005,7 @@ import type { CourseConfig } from '../src/course-types.js';
 
 function makeConfig(overrides: Partial<CourseConfig> = {}): CourseConfig {
   return {
-    institution: 'Boise State University',
+    institution: 'Example University',
     courseName: 'AI Augmented Projects',
     courseNumber: 'ITM 370',
     professor: 'Dr. Rank',
@@ -1644,7 +1644,7 @@ These fixtures are used by generate-page, generate-week, and generate-course tes
 
 ```markdown
 ---
-institution: Boise State University
+institution: Example University
 course_name: AI Augmented Projects
 course_number: ITM 370
 professor: Dr. Rank
@@ -2340,7 +2340,7 @@ import type { CourseWizardAnswers } from '../src/tools/setup-course.js';
 
 function makeAnswers(overrides: Partial<CourseWizardAnswers> = {}): CourseWizardAnswers {
   return {
-    institution: 'Boise State University',
+    institution: 'Example University',
     courseName: 'AI Augmented Projects',
     courseNumber: 'ITM 370',
     professor: 'Dr. Rank',
@@ -2473,7 +2473,7 @@ export async function runCourseWizard(rootDir?: string): Promise<string[]> {
 
   const institution = await input({
     message: 'Institution name:',
-    default: 'Boise State University',
+    default: 'Example University',
   });
 
   const courseName = await input({

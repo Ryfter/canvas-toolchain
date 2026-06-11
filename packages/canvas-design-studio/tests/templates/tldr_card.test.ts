@@ -58,7 +58,7 @@ describe('renderTldrCard', () => {
     expect(html).not.toContain('<em>raw</em>');
   });
 
-  it('uses BSU primary blue (#0033A0) palette', () => {
+  it('uses University primary blue (#0033A0) palette', () => {
     const html = renderTldrCard({
       tiers: { sections: [{ heading: 'X', tier: 1, summary: 'y' }] },
     });

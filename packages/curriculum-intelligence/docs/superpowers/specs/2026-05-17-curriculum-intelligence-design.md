@@ -1,6 +1,6 @@
 # Curriculum Intelligence — Design & Implementation Plan
 
-**Plan owner:** Kevin Rank
+**Plan owner:** the toolchain author
 **Date:** 2026-05-17
 **Target milestone:** v0.5/0.6 (MVP + transcripts + currency scoring)
 **Source documents:** `idea.md`, `workflow-overview.md`

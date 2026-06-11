@@ -28,12 +28,12 @@ describe('scanCanvasTools', () => {
 
   it('returns account tier when account external_tools succeeds', async () => {
     const fetchFn = async (url: string) => {
-      if (url.includes('/accounts/self/external_tools')) return jsonResponse([{ name: 'BSU Panopto' }, { name: 'Zoom' }]);
+      if (url.includes('/accounts/self/external_tools')) return jsonResponse([{ name: 'University Panopto' }, { name: 'Zoom' }]);
       throw new Error('should not reach per-course');
     };
     const res = await scanCanvasTools(cfg, fetchFn as unknown as typeof fetch);
     expect(res.tier).toBe('account');
-    expect(res.tools.map((t) => t.rawName)).toContain('BSU Panopto');
+    expect(res.tools.map((t) => t.rawName)).toContain('University Panopto');
     expect(res.gaps).toEqual([]);
   });
 

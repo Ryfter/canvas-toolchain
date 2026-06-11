@@ -137,7 +137,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         type: 'object' as const,
         required: ['host', 'token'],
         properties: {
-          host: { type: 'string', description: 'Canvas hostname, e.g. "bsu.instructure.com". Leading https:// is stripped automatically.' },
+          host: { type: 'string', description: 'Canvas hostname, e.g. "example.instructure.com". Leading https:// is stripped automatically.' },
           token: { type: 'string', description: 'Canvas API access token from Canvas → Account → Settings → New Access Token. Stored locally and never echoed back.' },
           test: { type: 'boolean', description: 'Validate the token with /api/v1/users/self before saving (default: true).' },
         },
@@ -248,7 +248,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
               },
             },
           },
-          identifiers: { type: 'object' as const, description: 'e.g. { canvas: "bsu.instructure.com" }.' },
+          identifiers: { type: 'object' as const, description: 'e.g. { canvas: "example.instructure.com" }.' },
           perClass: {
             type: 'array',
             description: 'Per-class deltas written into each course-config.md.',

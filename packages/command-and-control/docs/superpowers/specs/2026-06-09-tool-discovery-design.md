@@ -7,7 +7,7 @@
 
 ## Problem
 
-After install, the toolchain has no idea what tools a professor actually uses. We want two things: (1) help the professor by detecting tools they have and offering to enable the matching modules, and (2) build a standardized "institution profile" that #77 can submit via GitHub so the author can prioritize what to support next. Most institutions will NOT have the API access BSU has — discovery must degrade gracefully to a manual path (universal-tool rule, `docs/institutions/boise-state.md`).
+After install, the toolchain has no idea what tools a professor actually uses. We want two things: (1) help the professor by detecting tools they have and offering to enable the matching modules, and (2) build a standardized "institution profile" that #77 can submit via GitHub so the author can prioritize what to support next. Most institutions will NOT have this level of API access — discovery must degrade gracefully to a manual path (universal-tool rule, `docs/institutions/example-university.md`).
 
 ## Solution overview
 
@@ -34,7 +34,7 @@ Human-readable for the GitHub submission (#77), machine-parseable for aggregatio
 # Institution Profile
 
 ## Identifiers
-- canvas: bsu.instructure.com
+- canvas: example.instructure.com
 
 ## Tools
 ​```yaml
@@ -69,7 +69,7 @@ Hybrid: catalog the tools that map to a module (so suggestions are precise) and 
 ```yaml
 - id: panopto
   name: Panopto
-  identifiers: [panopto, bsu.hosted.panopto.com]   # LTI names/domains as they appear in Canvas external_tools
+  identifiers: [panopto, example.hosted.panopto.com]   # LTI names/domains as they appear in Canvas external_tools
   module: video                                    # handles[] id, or null
 ```
 
@@ -121,7 +121,7 @@ Read-only. The handler reads module state via the same registry helpers `list_mo
 ```ts
 {
   tools: Array<{ id: string; name: string; scope?: 'global'|'class'; module?: string; source: 'detected'|'self-reported' }>;
-  identifiers?: Record<string, string>;     // e.g. { canvas: 'bsu.instructure.com' }
+  identifiers?: Record<string, string>;     // e.g. { canvas: 'example.instructure.com' }
   perClass?: Array<{ courseDir: string; uses?: string[]; skips?: string[] }>;
 }
 ```
@@ -138,9 +138,9 @@ professor runs discover_tools (post-install; installer may nudge)
 Claude presents conversationally:
   "Across your courses I found Panopto (→ video module, currently DISABLED), iClicker, Google Forms.
    Enable video? Anything to add?"
-professor: "yes, and add Rhetorix"
+professor: "yes, and add our oral-assessment tool"
   → Claude calls set_module_enabled({ module:'video', enabled:true })
-  → Claude calls save_institution_profile({ tools:[…, rhetorix], identifiers, perClass })
+  → Claude calls save_institution_profile({ tools:[…, oral-assessment], identifiers, perClass })
   → master institution-profile.md written/merged; #77 can later submit it
 ```
 

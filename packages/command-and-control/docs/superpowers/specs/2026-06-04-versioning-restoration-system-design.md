@@ -1,7 +1,7 @@
 # Versioning & Restoration System Design
 
 **Status:** Design approved 2026-06-04
-**Author:** Claude + Kevin (brainstormed 2026-06-04)
+**Author:** Claude + the professor (brainstormed 2026-06-04)
 **Depends on:** Plan A + Plan B of widget renderer (#88) shipped; touches the same snapshot/publish surfaces.
 
 ## Goal

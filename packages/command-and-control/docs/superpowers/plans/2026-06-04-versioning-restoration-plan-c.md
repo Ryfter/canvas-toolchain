@@ -2408,7 +2408,7 @@ npm run smoke:integration --workspace=packages/command-and-control
 
 Expected: existing cross-app contract verification still passes (Plan C is additive — nothing existing breaks).
 
-### Task C7.2: Manual verification against BSU sandbox
+### Task C7.2: Manual verification against University sandbox
 
 Walk through the full faculty workflow against sandbox course 48895.
 

@@ -129,7 +129,7 @@ Plain `node:http` + server-rendered HTML; no client JS, no external assets. Bind
 
 The spec at `installer/docs/specs/2026-05-26-installer-design.md` is the canonical reference for every detail (screens, paths, error handling, update flow, CI). Don't duplicate it here.
 
-**Kevin's hard constraint that drove all of this:** "rational, intelligent people see (or hear) command line and just shut their brains down. It's easier to have a gui walkthrough for most people."
+**the professor's hard constraint that drove all of this:** "rational, intelligent people see (or hear) command line and just shut their brains down. It's easier to have a gui walkthrough for most people."
 
 ## Future Ideas (not yet specced)
 
@@ -154,7 +154,7 @@ This could drive visual design decisions (prominence, placement, callout styles)
 
 **Reasoning:** "I have a rubric from this past semester. In reading it, I knew what it meant, but in reading it and trying to explain it to a student, I realized it sucked. Like it was HORRIBLE. Right now it is not simple to get the rubric."
 
-The core pain: Kevin could interpret the rubric as faculty but couldn't explain it to a student because the language wasn't written for students. Official Canvas rubrics are faculty-facing — dense, criterion-heavy, written to justify grades rather than guide work.
+The core pain: The professor could interpret the rubric as faculty but couldn't explain it to a student because the language wasn't written for students. Official Canvas rubrics are faculty-facing — dense, criterion-heavy, written to justify grades rather than guide work.
 
 Ideas:
 - Rewrite rubric criteria in student-facing language with per-criterion plain-English explainers

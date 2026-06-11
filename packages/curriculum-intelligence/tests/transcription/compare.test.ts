@@ -96,7 +96,7 @@ describe('compareTranscripts + renderComparisonMd', () => {
   const ctx = {
     knownTerms: ['COBE'],
     fillerWords: ['uh'],
-    domain: 'bsu.hosted.panopto.com',
+    domain: 'example.hosted.panopto.com',
     sessionId: 'sess-1',
     title: 'Week 03 — Tableau Intro',
   };
@@ -122,6 +122,6 @@ describe('compareTranscripts + renderComparisonMd', () => {
     expect(md).toContain('Divergence:');
     expect(md).toContain('| # | Panopto | Whisper |');
     expect(md).toContain('## Suggested corrections');
-    expect(md).toContain('bsu.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=sess-1&start=');
+    expect(md).toContain('example.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=sess-1&start=');
   });
 });

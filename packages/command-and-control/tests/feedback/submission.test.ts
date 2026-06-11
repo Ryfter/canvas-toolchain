@@ -4,7 +4,7 @@ import type { InstitutionProfile } from '../../src/discovery/profile.js';
 import { parse as parseYaml } from 'yaml';
 
 const profile: InstitutionProfile = {
-  identifiers: { 'Canvas LMS': 'bsu.instructure.com', Panopto: 'bsu.hosted.panopto.com', lms: 'canvas' },
+  identifiers: { 'Canvas LMS': 'example.instructure.com', Panopto: 'example.hosted.panopto.com', lms: 'canvas' },
   tools: [
     { id: 'panopto', name: 'Panopto', scope: 'global', module: 'video', source: 'detected' },
     { id: 'iclicker', name: 'iClicker', scope: 'global', module: 'none', source: 'self-reported' },
@@ -21,7 +21,7 @@ describe('buildSubmissionPayload', () => {
 
   it('anonymized with no safe keys → empty identifiers, tools still present', () => {
     const p = buildSubmissionPayload({
-      identifiers: { 'Canvas LMS': 'bsu.instructure.com' },
+      identifiers: { 'Canvas LMS': 'example.instructure.com' },
       tools: profile.tools,
     });
     expect(p.identifiers).toEqual({});
@@ -70,8 +70,8 @@ describe('renderIssueTitle', () => {
   });
 
   it('named → institution name when an identifier names it, else "named"', () => {
-    const withName = buildSubmissionPayload({ identifiers: { institution: 'Boise State' }, tools: [] }, { named: true });
-    expect(renderIssueTitle(withName)).toBe('usage-feedback: Boise State — 0 tools');
+    const withName = buildSubmissionPayload({ identifiers: { institution: 'Example University' }, tools: [] }, { named: true });
+    expect(renderIssueTitle(withName)).toBe('usage-feedback: Example University — 0 tools');
     const noName = buildSubmissionPayload({ identifiers: { lms: 'canvas' }, tools: profile.tools }, { named: true });
     expect(renderIssueTitle(noName)).toBe('usage-feedback: named — 2 tools');
   });
@@ -80,10 +80,10 @@ describe('renderIssueTitle', () => {
 describe('renderIssueTitle — named priority (review I-1)', () => {
   it('prefers institution over a stray name key regardless of insertion order', () => {
     const p = buildSubmissionPayload(
-      { identifiers: { name: 'Kevin sandbox', institution: 'Boise State' }, tools: [] },
+      { identifiers: { name: 'Professor sandbox', institution: 'Example University' }, tools: [] },
       { named: true },
     );
-    expect(renderIssueTitle(p)).toBe('usage-feedback: Boise State — 0 tools');
+    expect(renderIssueTitle(p)).toBe('usage-feedback: Example University — 0 tools');
   });
 
   it('falls back to name when no institution key is present', () => {

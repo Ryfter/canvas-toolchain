@@ -95,7 +95,7 @@ ITM 370 is AI-Augmented Projects. AI changes faster than any other subject area.
 - Add topics that didn't exist when the course was last revised
 - Decide which "current events" moments are worth keeping as case studies vs. dropping
 
-This tool should be able to look at the full ITM 370 archive, produce a topic evolution timeline, and give Kevin a defensible recommendation for what the course should look like this semester — not just what it looked like last semester.
+This tool should be able to look at the full ITM 370 archive, produce a topic evolution timeline, and give the professor a defensible recommendation for what the course should look like this semester — not just what it looked like last semester.
 
 ---
 

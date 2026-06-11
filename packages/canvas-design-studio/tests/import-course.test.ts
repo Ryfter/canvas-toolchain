@@ -260,7 +260,7 @@ describe('importCourse — preserveOriginalHtml mode (#80)', () => {
     const content = parsePageContent(mdPath, 'overview');
     expect(content.verbatimBody).toBeDefined();
     const config: CourseConfig = {
-      institution: 'Boise State University',
+      institution: 'Example University',
       courseName: 'AI Augmented Projects',
       courseNumber: 'ITM 370',
       professor: 'Dr. Rank',

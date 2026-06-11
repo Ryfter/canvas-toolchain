@@ -174,7 +174,7 @@ Copy this into the Canvas RCE HTML view. Replace all placeholder text.
   <!-- Footer Bar -->
   <div style="background: #085041; border-radius: 12px; padding: 20px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
     <p style="color: rgba(255,255,255,0.75); font-size: 13px; margin: 0 16px 0 0;">Questions? Office hours Mon/Wed 2–3 PM · Zoom link in Canvas</p>
-    <a href="mailto:kevin.lastname@boisestate.edu" style="color: #5DCAA5; font-size: 13px; font-weight: 500; text-decoration: none;">Email Prof. Kevin →</a>
+    <a href="mailto:professor@example.edu" style="color: #5DCAA5; font-size: 13px; font-weight: 500; text-decoration: none;">Email Your Professor →</a>
   </div>
 
 </div>

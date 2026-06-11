@@ -10,7 +10,7 @@ describe('validateWorksheetTool', () => {
       '',
       '## Canvas Base URL',
       '',
-      'Your answer: https://boisestate.instructure.com',
+      'Your answer: https://example.instructure.com',
     ].join('\n');
     expect(validateWorksheetTool(worksheet)).toContain('✓ Worksheet valid');
   });
@@ -38,11 +38,11 @@ describe('validateWorksheetTool', () => {
       '',
       '## Canvas Base URL',
       '',
-      'Your answer: boisestate.instructure.com',
+      'Your answer: example.instructure.com',
     ].join('\n');
     const result = validateWorksheetTool(worksheet);
     expect(result).toContain('2 error(s)');
     expect(result).toContain('GGGGGG');
-    expect(result).toContain('boisestate.instructure.com');
+    expect(result).toContain('example.instructure.com');
   });
 });

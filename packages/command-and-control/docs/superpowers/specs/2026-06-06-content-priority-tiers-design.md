@@ -16,7 +16,7 @@ This spec adds a tier label per page section and a TL;DR card built from the hig
 
 ## Motivation
 
-- Kevin's own words: *"Maybe create a ranking of sorts that helps identify what information on a page needs to be really easy to find — just a glance / get the gist — vs what is needed for a deeper look, all the deeper supporting docs."*
+- The professor's own words: *"Maybe create a ranking of sorts that helps identify what information on a page needs to be really easy to find — just a glance / get the gist — vs what is needed for a deeper look, all the deeper supporting docs."*
 - Tier-1 content (due date, deliverable, one-sentence context) currently has the same visual weight as tier-3 content (rubric breakdowns, examples).
 - The CI pipeline already understands the *content* of each page; assigning a tier is a natural extension of that analysis.
 - Additive rendering (a card prepended to existing body) means zero regression risk on pages that already work.
@@ -79,7 +79,7 @@ CDS (canvas-design-studio) — render pass
   src/templates/
     tldr_card.ts                     [NEW — renders the TL;DR card HTML from
                                       tier-1 summaries. Canvas-safe inline
-                                      CSS; BSU primary blue palette.]
+                                      CSS; University primary blue palette.]
   src/tools/generate-page.ts         [MODIFY — at render time, if the page
                                       front matter has tier-1 sections,
                                       prepend the TL;DR card to the body.]
@@ -302,7 +302,7 @@ Pages without `tiers` in front matter → `tldr === ''` → output is unchanged 
 |---|---|
 | `packages/curriculum-intelligence/tests/analyze/assign_tiers.test.ts` | (6) Happy path with mocked LlmClient returning valid response; rejects out-of-range tier value; rejects empty summary; partial-section failure (1 of 3 invalid) → other 2 still returned; LLM call throws → `TIER_ASSIGN_FAILED`; respects `tiers.locked: true` (returns existing tiers unchanged). |
 | `packages/curriculum-intelligence/tests/tools/analyze_course.test.ts` (modify) | (+3) Tier-assignment phase runs after semantic analysis; tier data lands in front matter atomically; locked pages skipped. |
-| `packages/canvas-design-studio/tests/templates/tldr_card.test.ts` | (5) Renders bullet list from tier-1 summaries; returns empty string when no tier-1 sections; respects section order; HTML-escapes summary content; uses BSU primary blue palette (`#0033A0`). |
+| `packages/canvas-design-studio/tests/templates/tldr_card.test.ts` | (5) Renders bullet list from tier-1 summaries; returns empty string when no tier-1 sections; respects section order; HTML-escapes summary content; uses University primary blue palette (`#0033A0`). |
 | `packages/canvas-design-studio/tests/generate-page.test.ts` (modify) | (+4) Page with tier-1 sections → card prepended (assert HTML order: card before body); page with only tier-2/3 → no card; page with no tier data → no card (output unchanged from today); existing tests still pass. |
 
 ### Test counts
@@ -327,7 +327,7 @@ Pages without `tiers` in front matter → `tldr === ''` → output is unchanged 
 | **Tier 2/3 rendering** | ADR 2 — TL;DR card only at v1; data captured for v2 |
 | **Page reordering** | Narrative flow matters; tier doesn't change source order |
 | **Per-page TL;DR card OFF switch beyond `tiers.locked`** | YAGNI — locked + front-matter deletion covers it |
-| **Card customization (color, position, heading)** | YAGNI — one BSU-themed shape ships in v1 |
+| **Card customization (color, position, heading)** | YAGNI — one University-themed shape ships in v1 |
 | **Bulk-edit tier data via dedicated MCP tool** | YAGNI — front-matter edits are how every CDS field works |
 | **Tier suggestions during `brainstorm_interactive`** | `analyze_course` is the right place; brainstorm stays focused |
 

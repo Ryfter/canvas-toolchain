@@ -6,45 +6,45 @@ import { parseCalendarHtml, inferCalendarFromPattern } from '../../src/parsers/a
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const BSU_HTML = readFileSync(join(__dirname, '..', 'fixtures', 'academic-calendar-bsu.html'), 'utf-8');
+const EXAMPLE_HTML = readFileSync(join(__dirname, '..', 'fixtures', 'academic-calendar-example.html'), 'utf-8');
 
 describe('parseCalendarHtml', () => {
   test('extracts classesBegin', () => {
-    expect(parseCalendarHtml(BSU_HTML, 'Fall2026').classesBegin).toBe('2026-08-24');
+    expect(parseCalendarHtml(EXAMPLE_HTML, 'Fall2026').classesBegin).toBe('2026-08-24');
   });
 
   test('extracts classesEnd', () => {
-    expect(parseCalendarHtml(BSU_HTML, 'Fall2026').classesEnd).toBe('2026-12-11');
+    expect(parseCalendarHtml(EXAMPLE_HTML, 'Fall2026').classesEnd).toBe('2026-12-11');
   });
 
   test('extracts finals as date range', () => {
-    expect(parseCalendarHtml(BSU_HTML, 'Fall2026').finals).toEqual({
+    expect(parseCalendarHtml(EXAMPLE_HTML, 'Fall2026').finals).toEqual({
       start: '2026-12-14',
       end: '2026-12-18',
     });
   });
 
   test('extracts dead week as date range', () => {
-    expect(parseCalendarHtml(BSU_HTML, 'Fall2026').deadWeek).toEqual({
+    expect(parseCalendarHtml(EXAMPLE_HTML, 'Fall2026').deadWeek).toEqual({
       start: '2026-12-07',
       end: '2026-12-11',
     });
   });
 
   test('extracts multi-day Thanksgiving break', () => {
-    const cal = parseCalendarHtml(BSU_HTML, 'Fall2026');
+    const cal = parseCalendarHtml(EXAMPLE_HTML, 'Fall2026');
     const t = cal.breaks.find((b) => b.name === 'Thanksgiving Break');
     expect(t).toEqual({ name: 'Thanksgiving Break', start: '2026-11-23', end: '2026-11-27' });
   });
 
   test('extracts single-day Labor Day break', () => {
-    const cal = parseCalendarHtml(BSU_HTML, 'Fall2026');
+    const cal = parseCalendarHtml(EXAMPLE_HTML, 'Fall2026');
     const ld = cal.breaks.find((b) => b.name === 'Labor Day');
     expect(ld).toEqual({ name: 'Labor Day', start: '2026-09-07', end: '2026-09-07' });
   });
 
   test('source is "url" and partial is false when all required fields found', () => {
-    const cal = parseCalendarHtml(BSU_HTML, 'Fall2026');
+    const cal = parseCalendarHtml(EXAMPLE_HTML, 'Fall2026');
     expect(cal.source).toBe('url');
     expect(cal.partial).toBe(false);
   });

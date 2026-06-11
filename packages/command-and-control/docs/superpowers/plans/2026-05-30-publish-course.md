@@ -550,7 +550,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('canvas-design-mcp/dist/tools/publish.js', () => ({
   scanFerpa: vi.fn((html: string) =>
-    html.includes('B12345678') ? { reason: 'possible BSU student ID', line: 1 } : undefined,
+    html.includes('B12345678') ? { reason: 'possible University student ID', line: 1 } : undefined,
   ),
 }));
 vi.mock('canvas-design-mcp/dist/tools/validate.js', () => ({
@@ -1427,11 +1427,11 @@ import { loadInstitutionConfig } from '../../../src/tools/publish/canvas_config_
 describe('loadInstitutionConfig', () => {
   it('translates CanvasSetupConfig to InstitutionConfig', () => {
     vi.mocked(loadCanvasConfig).mockReturnValue({
-      host: 'bsu.instructure.com', token: 'abc',
+      host: 'example.instructure.com', token: 'abc',
       configuredAt: '2026-05-26T00:00:00Z', lastValidatedAt: '2026-05-26T00:00:00Z',
     });
     const cfg = loadInstitutionConfig();
-    expect(cfg).toEqual({ canvasUrl: 'https://bsu.instructure.com', apiToken: 'abc' });
+    expect(cfg).toEqual({ canvasUrl: 'https://example.instructure.com', apiToken: 'abc' });
   });
 
   it('throws CANVAS_NOT_CONFIGURED when underlying load throws', () => {
@@ -2348,7 +2348,7 @@ git commit -m "feat(cc): register preview/publish/rollback_course_publish MCP to
 
 ## Manual test plan (post-merge, before v1.0 cut)
 
-Run against a BSU sandbox course where damage is recoverable.
+Run against a University sandbox course where damage is recoverable.
 
 1. `setup_canvas` with the sandbox host + a token that has page-write + assignment-write.
 2. `preview_course_publish { courseDir: <a real CDS course folder>, courseId: <sandbox> }` — verify manifest has expected page count + at least one assignment match.
@@ -2359,7 +2359,7 @@ Run against a BSU sandbox course where damage is recoverable.
 7. Initialize `courseDir` as a git repo with an origin remote, run preview + publish, verify the pre-publish commit and success tag exist. Decline `pushTag` first time; accept it second time; verify the tag lands on the remote.
 8. Repeat steps 2–3 in a `courseDir` that is *not* a git repo to confirm the nudge surfaces correctly.
 
-Add the steps to `packages/command-and-control/docs/manual-test-plans/2026-05-30-publish-course.md` as part of Task 15's commit if Kevin wants the trail in-tree.
+Add the steps to `packages/command-and-control/docs/manual-test-plans/2026-05-30-publish-course.md` as part of Task 15's commit if the professor wants the trail in-tree.
 
 ---
 

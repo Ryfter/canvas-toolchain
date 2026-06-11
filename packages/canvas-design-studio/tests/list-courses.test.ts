@@ -3,14 +3,14 @@ import type { CanvasCourse, InstitutionConfig } from '../src/types.js';
 import { listCanvasCourses } from '../src/tools/list-courses.js';
 
 const config: InstitutionConfig = {
-  institution: 'Boise State University',
+  institution: 'Example University',
   colors: {
     primary: '#0033A0',
     primaryDark: '#002277',
     primaryLight: '#E6ECF9',
     secondary: '#D64309',
   },
-  canvasUrl: 'https://boisestate.instructure.com',
+  canvasUrl: 'https://example.instructure.com',
   apiToken: 'token',
   favoriteCourses: [2],
   kbTipShown: false,
@@ -175,6 +175,6 @@ describe('missingTokenText enrichment', () => {
     const api = { listCourses: vi.fn() };
     const saveConfig = vi.fn();
     const result = await listCanvasCourses({}, { ...config, apiToken: '' }, api, saveConfig);
-    expect(result.text).toContain('boisestate.instructure.com');
+    expect(result.text).toContain('example.instructure.com');
   });
 });

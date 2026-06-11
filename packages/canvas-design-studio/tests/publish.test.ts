@@ -4,22 +4,22 @@ import type { CanvasPage, InstitutionConfig } from '../src/types.js';
 import { publishToCanvas, scanFerpa, titleSimilarity, type PublishSuccess } from '../src/tools/publish.js';
 
 const config: InstitutionConfig = {
-  institution: 'Boise State University',
+  institution: 'Example University',
   colors: {
     primary: '#0033A0',
     primaryDark: '#002277',
     primaryLight: '#E6ECF9',
     secondary: '#D64309',
   },
-  canvasUrl: 'https://boisestate.instructure.com',
+  canvasUrl: 'https://example.instructure.com',
   apiToken: 'token',
-  professorEmail: 'kevin.rank@boisestate.edu',
+  professorEmail: 'professor@example.edu',
 };
 
 const page: CanvasPage = {
   title: 'ITM 310 - Assignment 16.06',
   url: 'itm-310-assignment-16-06',
-  html_url: 'https://boisestate.instructure.com/courses/42/pages/itm-310-assignment-16-06',
+  html_url: 'https://example.instructure.com/courses/42/pages/itm-310-assignment-16-06',
 };
 
 function apiMock(overrides: Partial<{
@@ -35,9 +35,9 @@ function apiMock(overrides: Partial<{
 }
 
 describe('scanFerpa', () => {
-  it('flags obvious BSU student IDs', () => {
+  it('flags obvious University student IDs', () => {
     expect(scanFerpa('<p>Student B12345678</p>', config.professorEmail)).toMatchObject({
-      reason: 'possible BSU student ID',
+      reason: 'possible University student ID',
     });
   });
 
@@ -239,7 +239,7 @@ describe('missingTokenError enrichment', () => {
       configNoToken,
       apiMock()
     );
-    expect('error' in result && result.error).toContain('boisestate.instructure.com');
+    expect('error' in result && result.error).toContain('example.instructure.com');
   });
 });
 

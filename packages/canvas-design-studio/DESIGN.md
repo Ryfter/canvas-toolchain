@@ -187,9 +187,9 @@ Tone: structured but human. Not cold corporate, not casual chaotic. Think "thoug
 
 ## Colors
 
-The palette is anchored by BSU's institutional blue (primary) with warm neutral backgrounds and semantic accent colors.
+The palette is anchored by University's institutional blue (primary) with warm neutral backgrounds and semantic accent colors.
 
-- **Primary (#0033A0):** BSU blue. Hero banners, section labels, active nav states, left-border callout accents, primary CTA buttons, and the week-row color strip. Contrast on white: 7.2:1 (passes WCAG AA).
+- **Primary (#0033A0):** University blue. Hero banners, section labels, active nav states, left-border callout accents, primary CTA buttons, and the week-row color strip. Contrast on white: 7.2:1 (passes WCAG AA).
 - **Primary-dark (#002277):** Footer bars, hover states, text on primary-light backgrounds.
 - **Primary-light (#E6ECF9):** Light blue tint for info/tip callout backgrounds.
 - **Neutral (#F4F3EF):** Warm off-white page background. All cards sit on this.
@@ -201,7 +201,7 @@ The palette is anchored by BSU's institutional blue (primary) with warm neutral 
 
 ## Typography
 
-Canvas LMS at Boise State loads Lato via the institutional theme. Always declare `Lato, sans-serif` as the font stack.
+Canvas LMS at Example University loads Lato via the institutional theme. Always declare `Lato, sans-serif` as the font stack.
 
 **Canvas constraint:** `<h1>` is reserved for the page title. All content headings start at `<h2>`. Heading hierarchy: H2 → H3 → H4. Never skip levels.
 
@@ -281,8 +281,8 @@ No `box-shadow` in Canvas RCE. Depth through:
 - [ ] Content wrapped in a max-width div if it's a full page
 
 **Course-specific context:**
-- Institution: Boise State University
-- Primary courses: ITM 310 (Business Intelligence), ITM 370 (AI Augmented Projects), BusApp 105
+- Institution: Example University
+- Primary courses: undergraduate business/IT courses (e.g., ITM 310, ITM 370, BUS 105)
 - Student audience: Business/IT undergraduate and graduate students
 - Canvas theme: Loads Lato font at institutional level
 - External add-ons: not required; pages must work as Canvas-safe HTML in the standard editor

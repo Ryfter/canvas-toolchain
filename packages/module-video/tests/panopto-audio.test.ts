@@ -6,7 +6,7 @@ import { fetchSessionAudio } from '../src/panopto/audio.js';
 import type { PanoptoConfig } from '../src/types.js';
 
 const CONFIG: PanoptoConfig = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   clientId: 'cid',
   clientSecret: 'secret',
 } as PanoptoConfig;

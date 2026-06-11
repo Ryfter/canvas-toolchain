@@ -36,11 +36,11 @@ const tool = (id: string, over: Partial<ProfileTool> = {}): ProfileTool => ({
 
 describe('profile round-trip + merge', () => {
   it('saves and reloads a profile with identifiers and tools', () => {
-    const path = saveProfile({ identifiers: { canvas: 'bsu.instructure.com' }, tools: [tool('panopto', { module: 'video' })] });
+    const path = saveProfile({ identifiers: { canvas: 'example.instructure.com' }, tools: [tool('panopto', { module: 'video' })] });
     expect(path).toBe(getProfilePath());
     if (platform() !== 'win32') expect(statSync(path).mode & 0o777).toBe(0o600);
     const reloaded = loadProfile();
-    expect(reloaded.identifiers.canvas).toBe('bsu.instructure.com');
+    expect(reloaded.identifiers.canvas).toBe('example.instructure.com');
     expect(reloaded.tools.find((t) => t.id === 'panopto')?.module).toBe('video');
   });
 

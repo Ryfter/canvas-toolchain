@@ -3,7 +3,7 @@ import { submitUsageFeedback, makeGhRunner } from '../../src/tools/submit_usage_
 import type { InstitutionProfile } from '../../src/discovery/profile.js';
 
 const profile: InstitutionProfile = {
-  identifiers: { lms: 'canvas', 'Canvas LMS': 'bsu.instructure.com' },
+  identifiers: { lms: 'canvas', 'Canvas LMS': 'example.instructure.com' },
   tools: [{ id: 'panopto', name: 'Panopto', scope: 'global', module: 'video', source: 'detected' }],
 };
 
@@ -67,7 +67,7 @@ describe('submitUsageFeedback', () => {
   it('named:true rides the full identifiers into the rendered body', async () => {
     const gh = ghSpy();
     const r = await submitUsageFeedback({ named: true }, { load: () => profile, gh });
-    if (r.ok && r.stage === 'review') expect(r.body).toContain('bsu.instructure.com');
+    if (r.ok && r.stage === 'review') expect(r.body).toContain('example.instructure.com');
     else throw new Error('expected review stage');
   });
 });

@@ -13,7 +13,7 @@ import { ingestTranscripts } from 'curriculum-intelligence-mcp/dist/tools/ingest
 import { bulkFetchPanoptoTranscripts } from '../../../src/tools/workflows/bulk_fetch_panopto_transcripts.js';
 
 const MOCK_CONFIG = {
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
   clientId: 'id',
   clientSecret: 'secret',
   iframeWhitelisted: true,

@@ -24,7 +24,7 @@ const MOCK_SESSION: SessionManifestEntry = {
 const BASE_OPTS: EnrichVttOptions = {
   fillerWords: [...BUILTIN_FILLER_WORDS],
   corrections: [],
-  domain: 'bsu.hosted.panopto.com',
+  domain: 'example.hosted.panopto.com',
 };
 
 beforeEach(() => {

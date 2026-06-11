@@ -12,7 +12,7 @@ If your institution has Canvas branding set at the admin level (via Theme Editor
 
 | Institution | Primary | Secondary |
 |---|---|---|
-| Boise State University | `#0033A0` (blue) | `#D64309` (orange) |
+| Example University | `#0033A0` (blue) | `#D64309` (orange) |
 | University of Utah | `#CC0000` (red) | `#000000` (black) |
 | Generic "safe" palette | `#0F6E56` (green) | `#D64309` (amber) |
 

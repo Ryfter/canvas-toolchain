@@ -110,7 +110,7 @@ describe('loadCatalog', () => {
 describe('matchIdentifier', () => {
   it('matches a Canvas tool name/domain to a catalog entry (case-insensitive, substring)', () => {
     const cat = loadCatalog();
-    expect(matchIdentifier(cat, 'BSU Hosted Panopto')?.id).toBe('panopto');
+    expect(matchIdentifier(cat, 'University Hosted Panopto')?.id).toBe('panopto');
     expect(matchIdentifier(cat, 'zoom.us')?.id).toBe('zoom');
   });
 
@@ -210,12 +210,12 @@ function jsonResponse(body: unknown, status = 200): Response {
 describe('scanCanvasTools', () => {
   it('returns account tier when account external_tools succeeds', async () => {
     const fetchFn = async (url: string) => {
-      if (url.includes('/accounts/self/external_tools')) return jsonResponse([{ name: 'BSU Panopto' }, { name: 'Zoom' }]);
+      if (url.includes('/accounts/self/external_tools')) return jsonResponse([{ name: 'University Panopto' }, { name: 'Zoom' }]);
       throw new Error('should not reach per-course');
     };
     const res = await scanCanvasTools(cfg, fetchFn as unknown as typeof fetch);
     expect(res.tier).toBe('account');
-    expect(res.tools.map((t) => t.rawName)).toContain('BSU Panopto');
+    expect(res.tools.map((t) => t.rawName)).toContain('University Panopto');
     expect(res.gaps).toEqual([]);
   });
 
@@ -417,7 +417,7 @@ const moduleState = [
 
 describe('matchDetected', () => {
   it('flags a catalog tool whose module exists, carrying enabled state', () => {
-    const r = matchDetected(catalog, moduleState, [{ rawName: 'BSU Panopto', courses: ['ITM 370'] }]);
+    const r = matchDetected(catalog, moduleState, [{ rawName: 'University Panopto', courses: ['ITM 370'] }]);
     expect(r.matchedModules).toEqual([{ tool: 'panopto', module: 'video', enabled: false }]);
     expect(r.unmatched).toEqual([]);
   });
@@ -560,11 +560,11 @@ const tool = (id: string, over: Partial<ProfileTool> = {}): ProfileTool => ({
 
 describe('profile round-trip + merge', () => {
   it('saves and reloads a profile with identifiers and tools', () => {
-    const path = saveProfile({ identifiers: { canvas: 'bsu.instructure.com' }, tools: [tool('panopto', { module: 'video' })] });
+    const path = saveProfile({ identifiers: { canvas: 'example.instructure.com' }, tools: [tool('panopto', { module: 'video' })] });
     expect(path).toBe(getProfilePath());
     if (platform() !== 'win32') expect(statSync(path).mode & 0o777).toBe(0o600);
     const reloaded = loadProfile();
-    expect(reloaded.identifiers.canvas).toBe('bsu.instructure.com');
+    expect(reloaded.identifiers.canvas).toBe('example.instructure.com');
     expect(reloaded.tools.find((t) => t.id === 'panopto')?.module).toBe('video');
   });
 
@@ -759,7 +759,7 @@ describe('discoverTools', () => {
       loadConfig: () => ({ canvasUrl: 'https://x.instructure.com', apiToken: 't' }),
       fetchFn: (async (url: string) =>
         url.includes('/accounts/self/external_tools')
-          ? jsonResponse([{ name: 'BSU Panopto' }, { name: 'iClicker' }])
+          ? jsonResponse([{ name: 'University Panopto' }, { name: 'iClicker' }])
           : jsonResponse({}, 404)) as unknown as typeof fetch,
       moduleState: async () => [{ id: 'video', name: 'Lecture Video', enabled: false, handles: ['panopto'], activeProvider: undefined }],
     };
@@ -917,7 +917,7 @@ const t = (id: string, over = {}) => ({ id, name: id, source: 'detected' as cons
 describe('saveInstitutionProfile', () => {
   it('writes a new profile and reports added ids', async () => {
     const res = await saveInstitutionProfile({
-      identifiers: { canvas: 'bsu.instructure.com' },
+      identifiers: { canvas: 'example.instructure.com' },
       tools: [t('panopto', { module: 'video' }), t('iclicker')],
     });
     expect(res.ok).toBe(true);
@@ -1113,7 +1113,7 @@ import { saveInstitutionProfile } from './tools/save_institution_profile.js';
               },
             },
           },
-          identifiers: { type: 'object' as const, description: 'e.g. { canvas: "bsu.instructure.com" }.' },
+          identifiers: { type: 'object' as const, description: 'e.g. { canvas: "example.instructure.com" }.' },
           perClass: {
             type: 'array',
             description: 'Per-class deltas written into each course-config.md.',

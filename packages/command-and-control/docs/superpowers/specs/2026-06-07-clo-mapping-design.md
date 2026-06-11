@@ -22,7 +22,7 @@ Pedagogical-framework-agnostic in v1: doesn't require Bloom's, doesn't require a
 ## Motivation
 
 - Standard accreditation expectation across higher ed.
-- Concrete v1.x request from #91, with the "alternative assessment" article (Gulya) as the trigger context. Kevin: confirmed catalog + tagging + render scope without the gradebook reorganization.
+- Concrete v1.x request from #91, with the "alternative assessment" article (Gulya) as the trigger context. The professor: confirmed catalog + tagging + render scope without the gradebook reorganization.
 - Naturally complements #92 (AIAS — *how* you may engage) and #66 (tier system — *what's important on this page*). CLOs answer *why this assignment exists.*
 
 ---

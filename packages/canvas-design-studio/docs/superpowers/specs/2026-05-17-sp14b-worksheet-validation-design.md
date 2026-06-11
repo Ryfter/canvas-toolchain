@@ -35,7 +35,7 @@ Added to `src/utils/worksheet.ts`. Pure function — no I/O, no side effects.
 |-------|------|---------------|
 | `primaryColor` | `/^#[0-9A-Fa-f]{6}$/` | `Primary color "{value}" is not a valid 6-digit hex. Example: #0033A0` |
 | `secondaryColor` | `/^#[0-9A-Fa-f]{6}$/` | `Secondary color "{value}" is not a valid 6-digit hex. Example: #D64309` |
-| `canvasUrl` | Starts with `https://` | `Canvas URL "{value}" must start with https://. Example: https://boisestate.instructure.com` |
+| `canvasUrl` | Starts with `https://` | `Canvas URL "{value}" must start with https://. Example: https://example.instructure.com` |
 
 Returns all errors found in a single call — professor sees everything at once, not one error at a time.
 
@@ -56,7 +56,7 @@ Calls `parseWorksheet(worksheetContent)` then `validateWorksheet(defaults)`.
 ❌ Worksheet has 2 error(s). Fix these before running setup_institution:
 
   1. Primary color "#GGGGGG" is not a valid 6-digit hex. Example: #0033A0
-  2. Canvas URL "boisestate.instructure.com" must start with https://. Example: https://boisestate.instructure.com
+  2. Canvas URL "example.instructure.com" must start with https://. Example: https://example.instructure.com
 
 Fix these values in your worksheet and re-run validate_worksheet or setup_institution.
 ```
@@ -127,8 +127,8 @@ All tests call `validateWorksheet()` directly with a `WizardDefaults` object.
 - Bad primaryColor — missing `#` prefix (`"0033A0"`) → error containing `"0033A0"` and `"Example: #0033A0"`
 - Bad primaryColor — wrong length (`"#0033A"`) → error
 - Bad primaryColor — invalid characters (`"#GGGGGG"`) → error
-- Bad canvasUrl — missing `https://` (`"boisestate.instructure.com"`) → error containing `"Example: https://"`
-- Valid canvasUrl `https://boisestate.instructure.com` → no error
+- Bad canvasUrl — missing `https://` (`"example.instructure.com"`) → error containing `"Example: https://"`
+- Valid canvasUrl `https://example.instructure.com` → no error
 - Both primaryColor and canvasUrl bad → returns two errors
 
 ### `tests/validate-worksheet.test.ts` — new file (~4 tests)

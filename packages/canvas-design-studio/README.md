@@ -142,11 +142,11 @@ Whether you use npm or Docker, the first setup run asks:
 ║          Canvas Design Studio — First Run Setup           ║
 ╚═══════════════════════════════════════════════════════════╝
 
-Institution name (your college or university): (Boise State University)
+Institution name (your college or university): (Example University)
 Brand standards URL (optional — your AI fetches this to suggest your colors):
 Primary brand color (#hex): (#0033A0)
 Secondary / accent color (#hex): (#D64309)
-Canvas base URL (no trailing slash): (https://boisestate.instructure.com)
+Canvas base URL (no trailing slash): (https://example.instructure.com)
 Canvas API token — Account → Settings → Approved Integrations (optional):
 Professor email for FERPA scan allowlist (optional):
 Favorite Canvas course IDs, comma-separated (optional):
@@ -264,14 +264,14 @@ Config file: `~/.canvas-design-mcp/institution.json`
 
 ```json
 {
-  "institution": "Boise State University",
+  "institution": "Example University",
   "colors": {
     "primary": "#0033A0",
     "primaryDark": "#002277",
     "primaryLight": "#E6ECF9",
     "secondary": "#D64309"
   },
-  "canvasUrl": "https://boisestate.instructure.com",
+  "canvasUrl": "https://example.instructure.com",
   "apiToken": "",
   "professorEmail": "you@university.edu",
   "favoriteCourses": [12345, 67890],

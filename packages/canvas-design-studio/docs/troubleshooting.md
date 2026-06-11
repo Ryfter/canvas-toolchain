@@ -73,7 +73,7 @@ Clicking the link opens ChatGPT with the error context pre-filled. If you use a 
 
 **Fix:**
 1. Log into Canvas normally in your browser to confirm the URL
-2. Run `setup_institution` and re-enter the Canvas base URL (e.g. `https://boisestate.instructure.com`)
+2. Run `setup_institution` and re-enter the Canvas base URL (e.g. `https://example.instructure.com`)
 3. Check Canvas status at status.instructure.com
 
 ---
@@ -88,7 +88,7 @@ Clicking the link opens ChatGPT with the error context pre-filled. If you use a 
 
 **Fix:**
 1. Run `setup_institution`
-2. When prompted for Panopto domain, enter your institution's Panopto domain (e.g. `bsu.hosted.panopto.com`)
+2. When prompted for Panopto domain, enter your institution's Panopto domain (e.g. `example.hosted.panopto.com`)
 3. For video search and caption download, also provide a Panopto client ID and secret (generated in Panopto Admin → API Clients)
 
 ---
@@ -202,7 +202,7 @@ Clicking the link opens ChatGPT with the error context pre-filled. If you use a 
 
 **Cause:** The URL does not start with `https://`.
 
-**Fix:** Enter the full URL including the protocol, e.g. `https://boisestate.instructure.com`. Do not include a trailing slash or any path.
+**Fix:** Enter the full URL including the protocol, e.g. `https://example.instructure.com`. Do not include a trailing slash or any path.
 
 ---
 

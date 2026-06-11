@@ -12,7 +12,7 @@ import { loadCalendar } from '../../src/kb/next_plan.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const FIX_ARCHIVE = join(__dirname, '..', 'fixtures', 'canvas-archive-tiny');
-const FIX_HTML = readFileSync(join(__dirname, '..', 'fixtures', 'academic-calendar-bsu.html'), 'utf-8');
+const FIX_HTML = readFileSync(join(__dirname, '..', 'fixtures', 'academic-calendar-example.html'), 'utf-8');
 
 let tmpHome: string;
 

@@ -63,7 +63,7 @@ describe('config', () => {
   it('preserves optional SP2 config fields', () => {
     const config: InstitutionConfig = {
       ...SAMPLE_CONFIG,
-      professorEmail: 'kevin.rank@boisestate.edu',
+      professorEmail: 'professor@example.edu',
       favoriteCourses: [12345, 67890],
       kbTipShown: false,
     };
@@ -71,7 +71,7 @@ describe('config', () => {
     saveConfig(config);
     const loaded = loadConfig();
 
-    expect(loaded.professorEmail).toBe('kevin.rank@boisestate.edu');
+    expect(loaded.professorEmail).toBe('professor@example.edu');
     expect(loaded.favoriteCourses).toEqual([12345, 67890]);
     expect(loaded.kbTipShown).toBe(false);
   });

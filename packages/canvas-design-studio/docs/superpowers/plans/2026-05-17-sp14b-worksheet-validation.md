@@ -54,7 +54,7 @@ describe('validateWorksheet', () => {
       validateWorksheet({
         primaryColor: '#0033A0',
         secondaryColor: '#D64309',
-        canvasUrl: 'https://boisestate.instructure.com',
+        canvasUrl: 'https://example.instructure.com',
       })
     ).toEqual([]);
   });
@@ -83,20 +83,20 @@ describe('validateWorksheet', () => {
   });
 
   it('returns error for canvasUrl missing https://', () => {
-    const errors = validateWorksheet({ canvasUrl: 'boisestate.instructure.com' });
+    const errors = validateWorksheet({ canvasUrl: 'example.instructure.com' });
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toContain('boisestate.instructure.com');
+    expect(errors[0]).toContain('example.instructure.com');
     expect(errors[0]).toContain('Example: https://');
   });
 
   it('returns no error for valid canvasUrl', () => {
-    expect(validateWorksheet({ canvasUrl: 'https://boisestate.instructure.com' })).toEqual([]);
+    expect(validateWorksheet({ canvasUrl: 'https://example.instructure.com' })).toEqual([]);
   });
 
   it('returns two errors when both primaryColor and canvasUrl are invalid', () => {
     const errors = validateWorksheet({
       primaryColor: '#GGGGGG',
-      canvasUrl: 'boisestate.instructure.com',
+      canvasUrl: 'example.instructure.com',
     });
     expect(errors).toHaveLength(2);
   });
@@ -132,7 +132,7 @@ export function validateWorksheet(defaults: WizardDefaults): string[] {
   }
   if (defaults.canvasUrl !== undefined && !defaults.canvasUrl.startsWith('https://')) {
     errors.push(
-      `Canvas URL "${defaults.canvasUrl}" must start with https://. Example: https://boisestate.instructure.com`
+      `Canvas URL "${defaults.canvasUrl}" must start with https://. Example: https://example.instructure.com`
     );
   }
 
@@ -180,7 +180,7 @@ describe('validateWorksheetTool', () => {
       '',
       '## Canvas Base URL',
       '',
-      'Your answer: https://boisestate.instructure.com',
+      'Your answer: https://example.instructure.com',
     ].join('\n');
     expect(validateWorksheetTool(worksheet)).toContain('✓ Worksheet valid');
   });
@@ -208,12 +208,12 @@ describe('validateWorksheetTool', () => {
       '',
       '## Canvas Base URL',
       '',
-      'Your answer: boisestate.instructure.com',
+      'Your answer: example.instructure.com',
     ].join('\n');
     const result = validateWorksheetTool(worksheet);
     expect(result).toContain('2 error(s)');
     expect(result).toContain('GGGGGG');
-    expect(result).toContain('boisestate.instructure.com');
+    expect(result).toContain('example.instructure.com');
   });
 });
 ```

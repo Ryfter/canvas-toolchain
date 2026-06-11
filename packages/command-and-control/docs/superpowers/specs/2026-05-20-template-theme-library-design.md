@@ -18,7 +18,7 @@
 - A **visual style** (how things look)
 - **Generation instructions** (how the LLM fills the structure with brand-appropriate prose)
 
-Today these are tangled together in CDS's `course-templates.ts` — one TypeScript file with a small fixed catalog. There's no way for a professor to install a new template, swap themes, or share their own. There's no separation between "comparison layout structure" and "business school visual identity" and "Kevin's voice when describing comparisons" — even though those three things vary independently in practice.
+Today these are tangled together in CDS's `course-templates.ts` — one TypeScript file with a small fixed catalog. There's no way for a professor to install a new template, swap themes, or share their own. There's no separation between "comparison layout structure" and "business school visual identity" and "the professor's voice when describing comparisons" — even though those three things vary independently in practice.
 
 ## 2. Goals
 
@@ -111,7 +111,7 @@ Controlled set. Every template uses one or more of these. Themes and prompts kno
   "version": "1.2.0",
   "name": "Side-by-side comparison (academic)",
   "description": "Two-column comparison with explicit criteria",
-  "author": { "name": "Kevin Rank", "url": "..." },
+  "author": { "name": "the toolchain author", "url": "..." },
   "license": "MIT",
   "tier": "free",
   "slots": ["hero", "intro", "comparison", "callout", "footer"],
@@ -214,7 +214,7 @@ Controlled set. Every template uses one or more of these. Themes and prompts kno
   "kind": "prompt",
   "id": "ranks-voice",
   "version": "1.0.0",
-  "name": "Kevin Rank — professorial voice",
+  "name": "the toolchain author — professorial voice",
   "tier": "free",
   "slots": ["hero", "intro", "callout", "comparison", "examples", "objectives", "footer"],
   "files": ["prompts.json"]
@@ -235,7 +235,7 @@ Controlled set. Every template uses one or more of these. Themes and prompts kno
     "outputSchema": { "html": "string" }
   },
   "comparison": {
-    "prompt": "Compare {{itemA}} vs {{itemB}} across criteria {{criteria}}. Output a table-shaped JSON with one row per criterion and a 'verdict' field giving Kevin's actual opinion.",
+    "prompt": "Compare {{itemA}} vs {{itemB}} across criteria {{criteria}}. Output a table-shaped JSON with one row per criterion and a 'verdict' field giving the professor's actual opinion.",
     "outputSchema": { "rows": "array", "verdict": "string" }
   }
 }

@@ -71,7 +71,7 @@ If you have a `.imscc` Canvas backup archive from a previous semester, `import_c
 Run `setup_institution` once to save your institution config. It asks for:
 
 - Institution name and brand colors
-- Canvas base URL (e.g. `https://boisestate.instructure.com`)
+- Canvas base URL (e.g. `https://example.instructure.com`)
 - Canvas API token *(optional — unlocks direct publishing)*
 - Panopto domain and credentials *(optional — unlocks video search, embed, captions)*
 - Your teaching philosophy *(optional — steers tone across all tools)*

@@ -23,7 +23,7 @@ export interface CanvasSetupConfig {
 }
 
 export interface SetupCanvasInput {
-  /** Canvas hostname, e.g. "bsu.instructure.com". Leading scheme + trailing slash are stripped. */
+  /** Canvas hostname, e.g. "example.instructure.com". Leading scheme + trailing slash are stripped. */
   host: string;
   /** Canvas API access token (Canvas → Account → Settings → New Access Token). */
   token: string;
@@ -101,7 +101,7 @@ export async function setupCanvas(input: SetupCanvasInput): Promise<SetupCanvasR
         message: err instanceof Error ? err.message : String(err),
         fix: [
           'Verify the token at Canvas → Account → Settings → New Access Token',
-          'Confirm the host is your school\'s Canvas URL (e.g. "bsu.instructure.com")',
+          'Confirm the host is your school\'s Canvas URL (e.g. "example.instructure.com")',
           'Check network connectivity',
         ],
       };

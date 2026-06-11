@@ -1,5 +1,5 @@
 ---
-institution: Boise State University
+institution: Example University
 course_name: Web Development
 course_number: CS 208
 professor: Dr. Smith

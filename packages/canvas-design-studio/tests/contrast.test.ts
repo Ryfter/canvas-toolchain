@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { wcagContrastRatio } from '../src/tools/contrast.js';
 
 describe('wcagContrastRatio', () => {
-  it('BSU blue on white passes AA (10.6:1)', () => {
+  it('University blue on white passes AA (10.6:1)', () => {
     const ratio = wcagContrastRatio('#0033A0', '#ffffff');
     expect(ratio).toBeGreaterThan(4.5);
   });
 
-  it('BSU orange on white is marginal (≈4.5:1)', () => {
+  it('University orange on white is marginal (≈4.5:1)', () => {
     const ratio = wcagContrastRatio('#D64309', '#ffffff');
     expect(ratio).toBeGreaterThanOrEqual(4.4);
     expect(ratio).toBeLessThanOrEqual(4.6);

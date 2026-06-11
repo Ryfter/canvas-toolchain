@@ -10,7 +10,7 @@ vi.mock('node:fs', async () => {
   };
 });
 
-const DOMAIN = 'bsu.hosted.panopto.com';
+const DOMAIN = 'example.hosted.panopto.com';
 const CFG_API: PanoptoConfig = {
   domain: DOMAIN,
   iframeWhitelisted: true,

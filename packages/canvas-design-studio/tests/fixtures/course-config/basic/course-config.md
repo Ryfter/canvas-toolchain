@@ -1,5 +1,5 @@
 ---
-institution: Boise State University
+institution: Example University
 course_name: AI Augmented Projects
 course_number: ITM 370
 professor: Dr. Rank

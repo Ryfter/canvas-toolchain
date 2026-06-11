@@ -7,7 +7,7 @@
 ## Goal
 
 Let an opted-in professor submit a standardized, anonymized profile of the tools/infrastructure
-their institution uses, as a **GitHub issue**, so the toolchain author (Kevin) can gauge real-world
+their institution uses, as a **GitHub issue**, so the toolchain author can gauge real-world
 usage and prioritize which integrations to build next.
 
 Payload = the institution profile produced by #76
@@ -103,7 +103,7 @@ export function renderIssueTitle(payload: SubmissionPayload): string { /* … se
 
 - `named: false` (default) — keep only identifier keys whose lower-cased name is in
   `SAFE_IDENTIFIER_KEYS`. The current #76 profiles hold free-form service→host pairs
-  (`Canvas LMS: bsu.instructure.com`), **all of which are identifying and therefore stripped** —
+  (`Canvas LMS: example.instructure.com`), **all of which are identifying and therefore stripped** —
   in practice an anonymized payload today is tools-only, gaining coarse fields only if a future
   profile adds e.g. `institutionType: R1`.
 - `named: true` (opt-in) — keep the full `identifiers` map verbatim.

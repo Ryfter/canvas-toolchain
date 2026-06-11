@@ -37,10 +37,10 @@ A DESIGN.md file has two parts:
 
 ```yaml
 ---
-name: Boise State ITM
+name: Example University ITM
 colors:
-  primary: "#0033A0"        # BSU blue
-  secondary: "#D64309"      # BSU orange
+  primary: "#0033A0"        # University blue
+  secondary: "#D64309"      # University orange
   neutral: "#F5F5F5"
   text: "#1A1A1A"
 typography:
@@ -71,13 +71,13 @@ visual hierarchy. Designed for adult learners who are busy and goal-oriented.
 
 ## Colors
 
-Primary Boise State Blue (#0033A0) anchors headings, hero banners, and
+Primary Example University Blue (#0033A0) anchors headings, hero banners, and
 primary actions. Secondary Orange (#D64309) is used sparingly — only for
 call-to-action elements and important alerts, never for decorative purposes.
 
 ## Typography
 
-All Canvas pages use Lato (loaded by the BSU Canvas theme). Heading scale
+All Canvas pages use Lato (loaded by the University Canvas theme). Heading scale
 starts at H2 (Canvas reserves H1 for the page title). Minimum body text is
 16px for readability.
 

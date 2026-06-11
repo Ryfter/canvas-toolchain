@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-18  
 **Status:** Approved  
-**Author:** Kevin Rank
+**Author:** the toolchain author
 
 > **Status note, 2026-05-19:** This spec is partly superseded by the implemented integration. Command & Control now imports `curriculum-intelligence-mcp` and `canvas-design-mcp` directly, while Canvas Backup remains the Python `canvas-backup` CLI reached through a bridge. Do not copy the older placeholder package names `canvas-downloader-mcp` or `canvas-design-studio-mcp` into live code or docs.
 

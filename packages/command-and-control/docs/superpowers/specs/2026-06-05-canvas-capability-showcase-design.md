@@ -14,7 +14,7 @@ Professors currently don't know what design patterns are possible inside Canvas 
 
 ## Motivation
 
-- Kevin's own words: *"I don't know what all is possible within the capacity of what Canvas gives us. So I need a way to show off features and capabilities."*
+- The professor's own words: *"I don't know what all is possible within the capacity of what Canvas gives us. So I need a way to show off features and capabilities."*
 - Canvas's constraints (no JS, no `<style>` blocks at the page level, inline CSS only) make "what's achievable" genuinely non-obvious.
 - Professors can't ask `brainstorm_interactive` for patterns they don't know exist.
 - The owner-triage note on #65 says it's adjacent to #45 (brainstorm_interactive). Since #45 already shipped (v1.2.0), the missing piece is the *discovery surface* — what to ask for. This spec is that piece.

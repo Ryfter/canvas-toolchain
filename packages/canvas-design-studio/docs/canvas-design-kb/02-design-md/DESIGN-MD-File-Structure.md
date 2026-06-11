@@ -92,11 +92,11 @@ Defines color palettes. Must include at least the primary palette. Additional pa
 ```markdown
 ## Colors
 
-The palette uses Boise State institutional colors as anchors.
+The palette uses Example University institutional colors as anchors.
 
 - **Primary (#0033A0):** Deep blue for headings, hero banners, and primary CTA.
   High contrast — works on white and light gray backgrounds.
-- **Secondary (#D64309):** BSU orange — used *only* for the single most important
+- **Secondary (#D64309):** University orange — used *only* for the single most important
   action on a page. Never decorative.
 - **Neutral (#F5F5F5):** Page background and card backgrounds. Slightly warm.
 - **Text (#1A1A1A):** Near-black for body text. Softer than pure black on screen.
@@ -114,7 +114,7 @@ Describes the type system: fonts, scale, and usage rules.
 ```markdown
 ## Typography
 
-Canvas courses at BSU inherit the Lato typeface from the institutional theme.
+Canvas courses at University inherit the Lato typeface from the institutional theme.
 All Canvas content uses Lato; do not specify other fonts unless confirmed available.
 
 **Scale (Canvas H2 is effectively H1 — page title takes H1):**

@@ -1,5 +1,5 @@
 /**
- * #60 verification driver — runs the real Whisper-vs-Panopto comparison on Kevin's
+ * #60 verification driver — runs the real Whisper-vs-Panopto comparison on the professor's
  * local Panopto folder. Bypasses bulk_fetch_panopto_transcripts (no API) and
  * fetchSessionAudio (audio is already local). Uses the production CI modules directly:
  *   - parseSrt (handles Panopto's SRT-shaped .txt export)
@@ -22,7 +22,7 @@ const PANOPTO_DIR = 'C:/Dev/Canvas Control/ITM310/Panopto';
 const MODEL = process.env.WHISPER_MODEL ?? 'medium';
 const FFMPEG =
   process.env.FFMPEG_PATH ??
-  'C:/Users/krank/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/ffmpeg.exe';
+  'C:/Users/professor/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/ffmpeg.exe';
 
 function looksTimestamped(content: string): boolean {
   // A SRT-shaped file starts with "1\n00:HH:MM,mmm --> ..."

@@ -11,7 +11,7 @@ describe('discoverTools', () => {
       loadConfig: () => ({ canvasUrl: 'https://x.instructure.com', apiToken: 't' }),
       fetchFn: (async (url: string) =>
         url.includes('/accounts/self/external_tools')
-          ? jsonResponse([{ name: 'BSU Panopto' }, { name: 'iClicker' }])
+          ? jsonResponse([{ name: 'University Panopto' }, { name: 'iClicker' }])
           : jsonResponse({}, 404)) as unknown as typeof fetch,
       moduleState: async () => [{ id: 'video', name: 'Lecture Video', enabled: false, handles: ['panopto'], activeProvider: undefined }],
     };

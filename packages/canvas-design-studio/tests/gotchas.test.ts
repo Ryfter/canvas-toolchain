@@ -83,10 +83,10 @@ describe('gotchas', () => {
   });
 
   it('formats role-aware token permission hint against the Canvas URL', () => {
-    const message = tokenScopeGotcha('https://boisestate.instructure.com/');
+    const message = tokenScopeGotcha('https://example.instructure.com/');
 
     expect(message).toContain('Canvas API token or Canvas role');
-    expect(message).toContain('https://boisestate.instructure.com/profile/settings');
+    expect(message).toContain('https://example.instructure.com/profile/settings');
   });
 
   it('returns the version control tip', () => {

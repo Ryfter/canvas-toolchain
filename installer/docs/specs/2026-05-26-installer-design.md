@@ -1,7 +1,7 @@
 # Canvas Toolchain Native Installer — Design Spec
 
 **Status:** Approved 2026-05-26. Ready for plan writing.
-**Owner:** Kevin Rank. **Implementer:** Codex (via `codex:codex-rescue` subagent type).
+**Owner:** the toolchain author. **Implementer:** Codex (via `codex:codex-rescue` subagent type).
 **GitHub issue:** [#63 — Native installer (Go+Fyne)](https://github.com/Ryfter/canvas-toolchain/issues/63).
 **Tracks toward:** Milestone `v1.0 — Native Installer`.
 
@@ -13,7 +13,7 @@ Reduce professor setup of canvas-toolchain from "eight manual terminal commands"
 
 ## 2. Background
 
-Today, installing canvas-toolchain requires: install Node 18+, install Git, clone the repo, `npm install`, `npm run build`, edit `claude_desktop_config.json` manually, run a per-feature `setup_*` MCP tool from Claude Desktop for each API integration. Eight steps, three of them terminal-only. The target audience — university professors at BSU and elsewhere — abandons software the moment it asks them to open a terminal.
+Today, installing canvas-toolchain requires: install Node 18+, install Git, clone the repo, `npm install`, `npm run build`, edit `claude_desktop_config.json` manually, run a per-feature `setup_*` MCP tool from Claude Desktop for each API integration. Eight steps, three of them terminal-only. The target audience — university professors at University and elsewhere — abandons software the moment it asks them to open a terminal.
 
 The installer is the **v1.0 gating item**. v0.9 (workflow tools, kb-bridge, page-renderer, update_course_materials) is complete.
 
@@ -25,7 +25,7 @@ The installer is the **v1.0 gating item**. v0.9 (workflow tools, kb-bridge, page
 - Telemetry, crash reporting, analytics. None.
 - Localization. English only.
 - Self-update of the installer itself beyond "re-run = upgrade." No background service.
-- BSU-specific branding. The installer ships with a generic-enough palette and logo to share with peers.
+- University-specific branding. The installer ships with a generic-enough palette and logo to share with peers.
 
 ## 4. Architecture
 
@@ -184,12 +184,12 @@ All fields optional. Fields shown depend on screen 2 selections.
 **Always shown:**
 
 - **Anthropic API key** — `sk-ant-...` — "Powers all AI features." Link: `platform.anthropic.com/account/api-keys`. Masked input.
-- **Canvas host** (optional, paired with token) — defaults to `bsu.instructure.com`. Editable. Help text: "Your school's Canvas URL — usually `<school>.instructure.com`."
+- **Canvas host** (optional, paired with token) — defaults to `example.instructure.com`. Editable. Help text: "Your school's Canvas URL — usually `<school>.instructure.com`."
 - **Canvas API token** (optional) — "Needed only to publish pages directly to Canvas — manual paste workflow always works without this." Link: "Canvas → Account → Settings → New Access Token." Masked input.
 
 **Shown if Panopto checked:**
 
-- **Panopto domain** — e.g. `bsu.hosted.panopto.com`
+- **Panopto domain** — e.g. `example.hosted.panopto.com`
 - **Panopto OAuth client ID** — "Panopto admin → API Clients." Masked input.
 - **Panopto OAuth client secret** — "Same place as the client ID." Masked input.
 - "Iframe whitelisted?" — radio: Yes / No / Don't know.
@@ -359,7 +359,7 @@ installer/
 │   ├── stub_main.go                     # separate binary; build tag `updater_stub`
 │   └── github.go                        # release lookup
 ├── ui/
-│   ├── theme.go                         # BSU-ish palette, font setup
+│   ├── theme.go                         # university-neutral palette, font setup
 │   ├── widgets.go                       # custom widgets (masked input, progress row)
 │   └── assets/
 │       ├── logo.png
@@ -487,5 +487,5 @@ GUI smoke tests (Fyne's `test.NewWindow` etc.) for screen wiring — not for vis
 3. File the three C&C follow-up issues (`setup_anthropic`, `setup_canvas`, update-nudge) — execute these first in parallel, ship them in v0.9.x patches, so the installer has stable contracts to target.
 4. Hand the Go installer plan to Codex via `codex:codex-rescue`.
 5. Hand the GitHub Actions release workflow to Codex via `codex:codex-rescue` (separate subagent — different context).
-6. Manual end-to-end testing on Kevin's machine + at least one clean VM.
+6. Manual end-to-end testing on the professor's machine + at least one clean VM.
 7. Tag `v1.0.0`, ship the release.

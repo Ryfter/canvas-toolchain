@@ -926,7 +926,7 @@ describe('renderTldrCard', () => {
     expect(html).not.toContain('<em>raw</em>');
   });
 
-  it('uses BSU primary blue (#0033A0) palette', () => {
+  it('uses University primary blue (#0033A0) palette', () => {
     const html = renderTldrCard({
       tiers: { sections: [{ heading: 'X', tier: 1, summary: 'y' }] },
     });
@@ -1255,7 +1255,7 @@ In `packages/canvas-design-studio/CLAUDE.md`, add a new section after the "Hard 
 
 `generate_page` checks each input markdown file's front matter for a `tiers:`
 block. When present AND it contains tier-1 sections, a "Quick Reference" card
-is prepended to the rendered page body. Card uses inline CSS only and the BSU
+is prepended to the rendered page body. Card uses inline CSS only and the University
 primary blue palette.
 
 Pages without a `tiers` block (or with only tier-2/3 entries) render exactly
@@ -1329,7 +1329,7 @@ All 7 acceptance criteria met. Summary:
 - CI's `analyze_course` now accepts an optional `courseDir`. When supplied, a new tier-assignment phase runs after trajectory analysis: iterates CDS pages, LLM-assigns tier (1/2/3) + one-line summary per section, writes back to page front matter as a `tiers:` block.
 - New CI module `assign_tiers.ts` handles the LLM call + per-section validation. Per-section failures drop that section + warn; per-page failures skip + warn; atomic writes throughout.
 - `tiers.locked: true` is sacred — re-analysis skips locked pages.
-- New CDS template `tldr_card.ts` renders a "Quick Reference" card from tier-1 section summaries. BSU primary blue palette, Canvas-safe inline CSS only.
+- New CDS template `tldr_card.ts` renders a "Quick Reference" card from tier-1 section summaries. University primary blue palette, Canvas-safe inline CSS only.
 - CDS's `generate_page` prepends the card when tier-1 sections exist. Pages without tier data render exactly as before — zero regression.
 - AIAS labeling and CLO mapping (raised during brainstorming) split into separate issues #92 and #91.
 

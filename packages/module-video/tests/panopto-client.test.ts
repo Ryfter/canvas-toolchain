@@ -17,7 +17,7 @@ import {
 } from '../src/panopto/client.js';
 import type { PanoptoConfig } from '../src/types.js';
 
-const DOMAIN = 'bsu.hosted.panopto.com';
+const DOMAIN = 'example.hosted.panopto.com';
 const VIDEO_ID = 'a1b2c3d4-0000-0000-0000-000000000001';
 const TITLE = 'Introduction to Tableau';
 
@@ -226,7 +226,7 @@ describe('fetchPanoptoCaptions', () => {
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ([{ Language: 'en', FileUrl: 'https://bsu.hosted.panopto.com/captions/abc.vtt', IsDefault: true }]),
+        json: async () => ([{ Language: 'en', FileUrl: 'https://example.hosted.panopto.com/captions/abc.vtt', IsDefault: true }]),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
@@ -263,7 +263,7 @@ describe('bulkDownloadPanoptoCaptions — filename format', () => {
     // 4. Captions list
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ([{ Language: 'en', FileUrl: 'https://bsu.hosted.panopto.com/captions/abc.vtt', IsDefault: true }]),
+      json: async () => ([{ Language: 'en', FileUrl: 'https://example.hosted.panopto.com/captions/abc.vtt', IsDefault: true }]),
     } as Response);
     // 5. VTT content
     mockFetch.mockResolvedValueOnce({ ok: true, text: async () => 'WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nHello students.\n' } as Response);

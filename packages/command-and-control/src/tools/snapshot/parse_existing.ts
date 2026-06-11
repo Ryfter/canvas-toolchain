@@ -10,7 +10,7 @@ export interface ParsedSnapshot {
    *  (a placeholder that the composer fills with regenerated content). */
   orderedSegments: Array<{ prose: string } | { sectionId: SectionId }>;
   /** Existing Update Log rows in the order they appear (typically newest-first
-   *  per Kevin's convention). Used by the composer to prepend new rows. */
+   *  per the professor's convention). Used by the composer to prepend new rows. */
   existingUpdateLogRows: string[];
 }
 

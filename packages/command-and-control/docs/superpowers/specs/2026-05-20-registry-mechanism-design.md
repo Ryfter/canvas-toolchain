@@ -69,7 +69,7 @@ Every resource (template, theme, prompt, adapter-config) has a `manifest.json` a
   "version": "1.2.0",                          // semver
   "name": "Side-by-side comparison (academic)",
   "description": "...",
-  "author": { "name": "Kevin Rank", "url": "..." },
+  "author": { "name": "the toolchain author", "url": "..." },
   "license": "MIT",                            // or proprietary id
   "tier": "free",                              // free | premium
   "dependencies": [                            // other resources this needs

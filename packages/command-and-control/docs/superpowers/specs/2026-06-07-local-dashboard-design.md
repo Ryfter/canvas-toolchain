@@ -20,7 +20,7 @@ Everything else proposed in #68 (run history, semester stats, vocab/config edits
 
 ## Motivation
 
-- Kevin's own words: *"I want it to function first, and be awesome, then we can move to something more."* Explicitly lowest-priority — only opened up because the rest of the v1.x backlog shipped.
+- The professor's own words: *"I want it to function first, and be awesome, then we can move to something more."* Explicitly lowest-priority — only opened up because the rest of the v1.x backlog shipped.
 - The data already exists on disk; the dashboard surfaces it.
 - A working web-server foundation makes future views (run history, semester stats) cheap follow-ups.
 
@@ -116,7 +116,7 @@ export interface CourseHealth {
 - **Yellow**: published in the last 90 days OR transcript coverage ≥ 50%.
 - **Red**: anything else (never published, or stale + low coverage).
 
-These rules are intentionally simple. Tunable in a v2 follow-up if Kevin objects.
+These rules are intentionally simple. Tunable in a v2 follow-up if the professor objects.
 
 ### Discovery
 

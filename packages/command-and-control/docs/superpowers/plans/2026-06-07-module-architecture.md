@@ -858,7 +858,7 @@ const setupPanoptoTool: ModuleTool = {
       type: 'object',
       required: ['domain', 'clientId', 'clientSecret'],
       properties: {
-        domain: { type: 'string', description: 'Panopto hostname, e.g. "bsu.hosted.panopto.com".' },
+        domain: { type: 'string', description: 'Panopto hostname, e.g. "example.hosted.panopto.com".' },
         clientId: { type: 'string', description: 'OAuth2 client ID.' },
         clientSecret: { type: 'string', description: 'OAuth2 client secret. Stored locally, never echoed.' },
         iframeWhitelisted: { type: 'boolean', description: 'Whether Canvas allows Panopto iframes. Null = unknown.', nullable: true },

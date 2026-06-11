@@ -1580,7 +1580,7 @@ interface ConfirmResponse {
  *
  *  Always uses on_duplicate=overwrite, which on Canvas's actual file system is
  *  "delete + recreate under same display_name" (file_id changes each time —
- *  verified against BSU sandbox 2026-06-03 per spec amendment).
+ *  verified against University sandbox 2026-06-03 per spec amendment).
  */
 export async function uploadCanvasFile(cfg: CanvasConfig, input: UploadInput): Promise<UploadResult> {
   const { courseId, filename, contentType, body, parentFolderPath = '/widgets' } = input;
@@ -2181,7 +2181,7 @@ After Task B4.4 completes:
 
 - [ ] Run `npm test` (full monorepo): roughly CDS 560+ (already had 496; +5 renderers ≈ +50 tests, +canvas-files 6, +publish-widget 3), C&C 280+ (was 273, +4 widget integration tests). Total ~1010+.
 - [ ] Run `npm run build`: all 5 packages clean.
-- [ ] Verify end-to-end with a 2-widget course folder against BSU sandbox course 48895 (manual, with Kevin):
+- [ ] Verify end-to-end with a 2-widget course folder against University sandbox course 48895 (manual, with the professor):
   - Write a course folder with one page containing `{{ widget:sort-sdlc }}` and one containing `{{ widget:vocab-flip }}`.
   - Run `generate_course` → check that local HTML files have iframes pointing at relative paths.
   - Run `preview_course_publish` → check that the manifest shows widget diffs.

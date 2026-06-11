@@ -435,7 +435,7 @@ export function importCourse(input: ImportCourseInput): ImportCourseResult {
   if (!assignmentName && !weekNumber) {
     const courseCode = course.course_code ?? '';
     const mockConfig: CourseConfig = {
-      institution: 'Boise State University',
+      institution: 'Example University',
       courseName: course.name,
       courseNumber: courseCode,
       professor: '[NEEDS REVIEW — add professor name]',

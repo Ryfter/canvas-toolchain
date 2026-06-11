@@ -83,12 +83,12 @@ describe('brainstormInteractive', () => {
         topic: 'X',
         learningGoal: 'Y',
         includePhilosophy: true,
-        philosophyKb: 'KEVIN-PHILOSOPHY-TEXT',
+        philosophyKb: 'PROFESSOR-PHILOSOPHY-TEXT',
       },
       { llm },
     );
     expect(llm.calls[0].user).toContain('INSTRUCTOR PHILOSOPHY');
-    expect(llm.calls[0].user).toContain('KEVIN-PHILOSOPHY-TEXT');
+    expect(llm.calls[0].user).toContain('PROFESSOR-PHILOSOPHY-TEXT');
   });
 
   it('notes when philosophy / personas were requested but not provided', async () => {

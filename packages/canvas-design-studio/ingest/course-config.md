@@ -1,6 +1,6 @@
 # Course Config
 
-Institution: Boise State University
+Institution: Example University
 Professor: [Your Name]
 Course Number: [e.g., ITM 370]
 Course Name: [e.g., AI Augmented Projects]

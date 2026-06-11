@@ -722,7 +722,7 @@ After Task C3.1 completes:
 
 - [ ] Run `npm test` (full monorepo): roughly +12 new tests across this plan (9 experimental + 4 brainstorm prompt + 1 steering smoke). Total ~1030+.
 - [ ] Run `npm run build`: all 5 packages clean.
-- [ ] **End-to-end manual test (with Kevin):**
+- [ ] **End-to-end manual test (with the professor):**
   - Brainstorm a topic; verify the LLM produces catalog-conformant kinds.
   - Pick a concept, save as spec.json, run render_widget — widget HTML written.
   - Reference in a page, run generate_course → preview_course_publish → publish_course.

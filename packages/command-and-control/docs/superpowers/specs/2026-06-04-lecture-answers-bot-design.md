@@ -6,7 +6,7 @@
 
 ## One-line
 
-Faculty-facing MCP tool that replaces Kevin's NotebookLM workflow for "did I cover this in lecture?" questions. Hybrid keyword + semantic retrieval over a per-course corpus of enriched lecture transcripts, CDS course markdown, slide PDFs, and a hand-curated canonical FAQ. Returns answers with platform-specific deep-link citations and source references. Architecturally platform-agnostic — MVP ships with Panopto, future adapters can plug in Zoom / TechSmith Relay / Mediasite / Echo360 / Kaltura without changes to the answers bot itself.
+Faculty-facing MCP tool that replaces the professor's NotebookLM workflow for "did I cover this in lecture?" questions. Hybrid keyword + semantic retrieval over a per-course corpus of enriched lecture transcripts, CDS course markdown, slide PDFs, and a hand-curated canonical FAQ. Returns answers with platform-specific deep-link citations and source references. Architecturally platform-agnostic — MVP ships with Panopto, future adapters can plug in Zoom / TechSmith Relay / Mediasite / Echo360 / Kaltura without changes to the answers bot itself.
 
 ## Boundary
 
@@ -16,7 +16,7 @@ This is `canvas-toolchain`'s faculty-validation tool. It deliberately does NOT s
 
 ### Hybrid retrieval
 
-Keyword (SQLite FTS5) + vector (sqlite-vec extension) retrieval, merged via Reciprocal Rank Fusion (RRF). Canonical FAQ chunks get a fixed score boost so they sort above transcripts/slides when relevant. Standard 2026 setup; chosen over pure vector RAG and full-context-window stuffing per Kevin's strong preference (see `feedback-retrieval-architecture.md`).
+Keyword (SQLite FTS5) + vector (sqlite-vec extension) retrieval, merged via Reciprocal Rank Fusion (RRF). Canonical FAQ chunks get a fixed score boost so they sort above transcripts/slides when relevant. Standard 2026 setup; chosen over pure vector RAG and full-context-window stuffing per the professor's strong preference (see `feedback-retrieval-architecture.md`).
 
 ### Embedding provider — tiered setup-time fallback
 
@@ -42,7 +42,7 @@ The `.enriched.md` format is the contract between any lecture-platform downloade
 ---
 sourcePlatform: panopto | zoom | techsmith-relay | mediasite | ...
 sourceId: <platform-specific id, e.g. Panopto session GUID>
-deepLinkTemplate: "https://bsu.hosted.panopto.com/.../Viewer.aspx?id={sourceId}&start={startSeconds}"
+deepLinkTemplate: "https://example.hosted.panopto.com/.../Viewer.aspx?id={sourceId}&start={startSeconds}"
 title: "Week 03 - VLOOKUP Introduction"
 recordedAt: 2026-02-15T14:00:00Z
 durationSeconds: 3214
@@ -72,7 +72,7 @@ The lowest quiz auto-drops at semester end; you don't need to request it.
 [last-reviewed: 2026-06-04]
 ```
 
-Indexer treats each `##` section as a `source: 'canonical'` chunk. Canonical chunks get a fixed retrieval score boost. Curation is by hand — Kevin edits the file in his editor, saves, next `ask_course` query auto-detects the mtime change and incrementally re-indexes.
+Indexer treats each `##` section as a `source: 'canonical'` chunk. Canonical chunks get a fixed retrieval score boost. Curation is by hand — the professor edits the file in his editor, saves, next `ask_course` query auto-detects the mtime change and incrementally re-indexes.
 
 No ML feedback loop, no thumbs-up/down, no active learning. Those belong in AnswerBot where query volume justifies the complexity. For one-professor-one-query-a-week, disciplined hand-curation IS the loop.
 
@@ -332,7 +332,7 @@ These don't change architecture; they're concrete tuning decisions:
 
 ### ADR-1: Hybrid keyword + semantic over pure vector RAG
 
-Kevin has spent months thinking about retrieval architecture and has strong conviction that hybrid is the only acceptable default. Pure vector RAG misses named-entity matches (course codes, function names, assignment IDs) that students and faculty actually use in queries. Context-stuffing wastes tokens and doesn't scale. Hybrid via FTS5 + sqlite-vec + RRF is the 2026 standard for technical content.
+The professor has spent months thinking about retrieval architecture and has strong conviction that hybrid is the only acceptable default. Pure vector RAG misses named-entity matches (course codes, function names, assignment IDs) that students and faculty actually use in queries. Context-stuffing wastes tokens and doesn't scale. Hybrid via FTS5 + sqlite-vec + RRF is the 2026 standard for technical content.
 
 ### ADR-2: Platform-agnostic from day one
 
@@ -348,7 +348,7 @@ Matches the rest of C&C's pattern. Cross-course querying is a v1.1 enhancement t
 
 ### ADR-5: Curated markdown FAQ as the self-improvement loop
 
-For a faculty-only tool with ~1-10 queries per week per professor, ML-based feedback loops (thumbs/active learning) have no statistical power and add complexity for no benefit. Hand-curated `canonical.md` gives Kevin a real markdown artifact he owns, that survives the bot, and that solves the same problem (canonical answers rank first) with zero ML. AnswerBot will revisit this when query volume from students justifies it.
+For a faculty-only tool with ~1-10 queries per week per professor, ML-based feedback loops (thumbs/active learning) have no statistical power and add complexity for no benefit. Hand-curated `canonical.md` gives the professor a real markdown artifact he owns, that survives the bot, and that solves the same problem (canonical answers rank first) with zero ML. AnswerBot will revisit this when query volume from students justifies it.
 
 ## Spec self-review checklist
 
