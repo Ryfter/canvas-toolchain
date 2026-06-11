@@ -1,5 +1,47 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.5.0
+
+The biggest release since the toolchain shipped — **231 commits** since v1.2.0 completing the v1.x roadmap and laying the v2.0 platform foundations. This is the "build complete" milestone: the toolchain now does what it set out to do, end to end.
+
+### Plug-in module architecture (the 2.0 foundation)
+
+- **Modules + providers (#78)** — capabilities are now opt-in **modules**, enabled at config-time via `~/.command-and-control/modules.json` (no reinstall). A module is its own npm package exposing a `CanvasToolchainModule` contract; within it, concrete backends are **providers** behind an adapter. First module: **Lecture Video** (`module-video`) with Panopto as provider #1 — the boundary is the *Video capability*, not Panopto, so Teams/Zoom/Meet/YouTube become ~one-file additions. Panopto code was fully extracted out of the core packages; C&C loads modules fail-soft (a broken module is skipped, never crashes the host).
+- **`set_module_enabled` / `list_modules` (#94)** — toggle modules post-install without hand-editing the manifest.
+
+### Institutional intelligence
+
+- **Post-install tool discovery (#76)** — `discover_tools` runs a best-effort Canvas scan (account → per-course → self-report, paginated), matches findings against a curated catalog + each module's `handles[]`, and suggests modules to enable. `save_institution_profile` persists an accretive master profile + per-class deltas.
+- **Opt-in usage feedback (#77)** — `submit_usage_feedback` turns the institution profile into an **anonymized public GitHub issue** (default-deny privacy, mandatory review-before-send) so real-world tool usage can drive what gets built next.
+
+### Interactive widgets + course publishing
+
+- **Widget renderer (#88)** — `render_widget` / `publish_widget` turn an `InteractiveSpec` into a Canvas-embeddable artifact (6 widget types: card-flip, sortable ordering, drag-to-categorize, branching scenario, multi-step reveal, hotspot image), uploaded to Canvas Files and embedded via iframe.
+- **Versioned course publish (V&R System)** — `preview_course_publish` → `publish_course` → `rollback_course_publish` with snapshot bundles, widget-content lifecycle tracking, and full rollback (including restoring prior widget content).
+
+### Lecture answers bot (#61)
+
+- A RAG bot over a course corpus (transcripts + CDS markdown + slide PDFs + FAQ) with **hybrid keyword + semantic retrieval** (FTS5 + sqlite-vec, RRF fusion), platform-agnostic transcript schema, and a setup-time embedding-provider fallback chain. Four tools: `setup_lecture_answers`, `index_course_for_answers`, `ask_course`, `reembed_course_index`.
+
+### Pedagogical metadata
+
+- **Content priority tiers (#66)** — LLM-assigned at-a-glance / working-detail / deep-support tiers with a "Quick Reference" TL;DR card on generated pages.
+- **AI Assessment Scale (#92)** — Leon Furze's 5-level AIAS as first-class page metadata with an inline callout on assignment/rubric pages.
+- **Course Learning Outcomes mapping (#91)** — per-page CLO tagging that renders a "Supports CLOs" line in the TL;DR card.
+- **Rubric system (#67)** — student-facing rubric page type + AI-drafted student rewrites with markdown export for students to paste into an LLM.
+
+### Local LLM, dashboard, and showcase
+
+- **Ollama generation fallback (#89)** — run brainstorm / rubric / answers generation against a local Ollama model as a peer to Anthropic; `setup_ollama` + `set_active_llm_provider`.
+- **Local course dashboard (#68)** — read-only "course health" view served locally (`open_dashboard` MCP tool + CLI), with a deterministic green/yellow/red classifier.
+- **Canvas capability showcase (#65)** — a browsable catalog of supported Canvas design patterns with standalone HTML previews.
+
+### Quality
+
+Built throughout with subagent-driven TDD and adversarial whole-implementation review. The monorepo test suite stands at **~1,500 tests** across all packages, green, with the installer building cleanly for both targets.
+
+Full diff: [v1.2.0...v1.5.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.2.0...v1.5.0)
+
 ## What's new in v1.2.0
 
 Five features landed since v1.1.0, all in the refresh + content-creation surface of the toolchain.
