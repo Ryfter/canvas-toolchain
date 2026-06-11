@@ -28,7 +28,7 @@ describe('rollbackCoursePublish', () => {
   it('reverse-iterates published[] and restores each entry', async () => {
     const dir = createSnapshotDir('snap');
     writeManifest(dir, {
-      snapshotId: 'snap', courseId: 1, courseDir: '/x', generatedAt: '2026-05-30T00:00:00Z',
+      snapshotId: 'snap', courseId: 1, courseDir: join(cc, 'course'), generatedAt: '2026-05-30T00:00:00Z',
       git: { isRepo: false },
       entries: [
         // Need a matching manifest entry for the assignment so the lookup works.
@@ -61,7 +61,7 @@ describe('rollbackCoursePublish', () => {
   it('accumulates per-entry failures into restoreFailed[]', async () => {
     const dir = createSnapshotDir('snap');
     writeManifest(dir, {
-      snapshotId: 'snap', courseId: 1, courseDir: '/x', generatedAt: '2026-05-30T00:00:00Z',
+      snapshotId: 'snap', courseId: 1, courseDir: join(cc, 'course'), generatedAt: '2026-05-30T00:00:00Z',
       git: { isRepo: false }, entries: [],
       summary: { total: 0, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
     });
@@ -83,7 +83,7 @@ describe('rollbackCoursePublish', () => {
   it('uses canvasPageSlug directly to avoid URL double-encoding for special-char titles', async () => {
     const dir = createSnapshotDir('snap-amp');
     writeManifest(dir, {
-      snapshotId: 'snap-amp', courseId: 1, courseDir: '/x', generatedAt: '2026-05-30T00:00:00Z',
+      snapshotId: 'snap-amp', courseId: 1, courseDir: join(cc, 'course'), generatedAt: '2026-05-30T00:00:00Z',
       git: { isRepo: false }, entries: [],
       summary: { total: 0, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
     });

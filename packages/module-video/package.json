@@ -20,5 +20,5 @@
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   },
-  "engines": { "node": ">=18" }
+  "engines": { "node": ">=20" }
 }

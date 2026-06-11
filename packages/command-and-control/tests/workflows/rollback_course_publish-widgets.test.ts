@@ -36,7 +36,7 @@ function setupSnapshot(published: PublishedEntry[]): string {
   const snapshotId = `roll-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const dir = createSnapshotDir(snapshotId);
   const manifest: PreviewManifest = {
-    snapshotId, courseId: 48895, courseDir: '/course',
+    snapshotId, courseId: 48895, courseDir: join(ccHome, 'course'),
     generatedAt: '2026-06-03T12:00:00.000Z',
     git: { isRepo: false },
     entries: [

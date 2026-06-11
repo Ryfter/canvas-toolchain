@@ -16,6 +16,6 @@
     "dev:cc": "npm run dev --workspace=packages/command-and-control"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }

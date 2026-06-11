@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# download-node.sh — Download the matching Node 18 LTS distribution for the
+# download-node.sh — Download the matching Node LTS distribution for the
 # target OS/arch and place it at installer/payload/node-runtime.tar.gz.
 #
 # Usage:
@@ -13,7 +13,9 @@
 
 set -euo pipefail
 
-NODE_VERSION="${NODE_VERSION:-18.20.7}"
+# 24.x = active LTS and the runtime the toolchain is developed/tested on.
+# Do not drop below 20: cheerio -> undici 7 needs the Node 20+ global File API.
+NODE_VERSION="${NODE_VERSION:-24.12.0}"
 TARGET="${1:?Usage: download-node.sh <win-x64|darwin-x64|darwin-arm64>}"
 
 case "$TARGET" in

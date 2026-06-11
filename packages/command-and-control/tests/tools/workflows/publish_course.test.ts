@@ -48,7 +48,7 @@ afterEach(() => {
 function seedSnapshot(snapshotId: string, entries: PreviewManifest['entries']): void {
   const dir = createSnapshotDir(snapshotId);
   const m: PreviewManifest = {
-    snapshotId, courseId: 42, courseDir: '/x', generatedAt: '2026-05-30T00:00:00Z',
+    snapshotId, courseId: 42, courseDir: join(cc, 'course'), generatedAt: '2026-05-30T00:00:00Z',
     git: { isRepo: false }, entries,
     summary: { total: entries.length, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
   };
