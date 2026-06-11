@@ -22,3 +22,6 @@ packages/curriculum-intelligence/output/
 # Built installer binary — distributed via GitHub Releases, not committed
 installer/canvas-toolchain-installer.exe
 installer/canvas-toolchain-installer.pkg
+
+# runtime artifacts
+.canvas-toolchain-update-cache.json
