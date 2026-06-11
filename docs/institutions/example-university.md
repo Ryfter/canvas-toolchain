@@ -10,7 +10,7 @@
 |---|---|
 | Canvas LMS | `example.instructure.com` |
 | Panopto | `example.hosted.panopto.com` |
-| Institution-hosted assessment tool | `assessment.example.edu` |
+| Rhetorix Lab | `rhetorixlab.example.edu` |
 | Business college shorthand | A college-name abbreviation that speech-to-text frequently mishears (basis for the `KOBE → COBE`-style Panopto vocab corrections) |
 
 ## Access status (institution-specific — do NOT assume elsewhere)
@@ -20,7 +20,7 @@
 | Canvas API token | Available to faculty | Optional — manual HTML paste must stay first-class |
 | Panopto API (client ID/secret) | **Available** (the professor has it — but did NOT for a long time) | Often unavailable; many institutions never grant it |
 | Panopto audio/video **download** | **Enabled** (the professor can download recordings) | Frequently **disabled** by admin; the Whisper feature's `audioMode: manual` + guided web-download walkthrough exists precisely because of this |
-| Institution-hosted assessment tool | Hosted by the institution; access via institutional SSO | Institution-specific; not present elsewhere |
+| Rhetorix Lab | Hosted by the institution; access via institutional SSO | Institution-specific; not present elsewhere |
 
 The "the professor did not have Panopto API access for a long time" fact is the canonical reminder: access can be absent or revoked, so every integration needs a no-API path.
 
@@ -32,7 +32,7 @@ The reference professor teaches introductory business-application and informatio
 
 - **Canvas** — course pages, the original target of this toolchain.
 - **Panopto** — lecture capture; transcripts feed Curriculum Intelligence.
-- **Institution-hosted oral-assessment platform** — asynchronous video assessment with AI-enhanced grading, built to assess students via recorded video responses and reduce generative-AI cheating. Integration with canvas-toolchain is a backlog item (scope TBD — no public API/LTI/export confirmed yet).
+- **Rhetorix Lab** — asynchronous video oral-assessment platform with AI-enhanced grading, built to assess students via recorded video responses and reduce generative-AI cheating. Integration with canvas-toolchain is a backlog item (scope TBD — no public API/LTI/export confirmed yet).
 
 ## Institution Profiles as a Concept
 

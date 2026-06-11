@@ -26,7 +26,7 @@ provider. This proves the contract on one real extraction so converting the rest
    also fully resolves today's cross-package smear (see §5).
 
 3. **Two layers of pluggability:**
-   - **Module** = a *capability* (Lecture Video). the oral-assessment platform (#75) is a *different* capability
+   - **Module** = a *capability* (Lecture Video). Rhetorix (#75) is a *different* capability
      (assessment + grade pull-back) → its own module later.
    - **Provider (adapter)** = a concrete backend *inside* a module. `VideoProvider` interface;
      `PanoptoProvider` is implementation #1. Teams / Meet / Zoom / YouTube / TechSmith(TechLink) are
@@ -50,7 +50,7 @@ provider. This proves the contract on one real extraction so converting the rest
 | --- | --- | --- |
 | **Core** (always on, never gated) | Canvas page editing (the base install); plus CI, design tools, downloader, registry **stay core for now** | unchanged |
 | **Modules** (gated by manifest) | `module-video` (Panopto provider) | **built now** |
-| **Future modules** | the oral-assessment platform (#75); later: CI/design/downloader/registry may convert incrementally | not now |
+| **Future modules** | Rhetorix (#75); later: CI/design/downloader/registry may convert incrementally | not now |
 
 We do not touch working code we are not modularizing yet. Converting other capabilities to modules
 later is a small, low-risk follow-up each, using the contract proven here.
@@ -211,7 +211,7 @@ manifest differs.
 
 ## §8. What this sets up
 
-- **#75 oral-assessment module** → second module, drops straight into the proven `CanvasToolchainModule` contract.
+- **#75 Rhetorix** → second module, drops straight into the proven `CanvasToolchainModule` contract.
 - **#76 discovery** → inspects the Canvas instance, reads each module's `handles[]`, and suggests
   modules to enable (e.g. detect Panopto domain → "enable Video module, Panopto provider").
 - **#77 feedback** → the institution profile = which modules/providers are enabled; ships via GitHub.

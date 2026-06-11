@@ -138,9 +138,9 @@ professor runs discover_tools (post-install; installer may nudge)
 Claude presents conversationally:
   "Across your courses I found Panopto (→ video module, currently DISABLED), iClicker, Google Forms.
    Enable video? Anything to add?"
-professor: "yes, and add our oral-assessment tool"
+professor: "yes, and add Rhetorix"
   → Claude calls set_module_enabled({ module:'video', enabled:true })
-  → Claude calls save_institution_profile({ tools:[…, oral-assessment], identifiers, perClass })
+  → Claude calls save_institution_profile({ tools:[…, rhetorix], identifiers, perClass })
   → master institution-profile.md written/merged; #77 can later submit it
 ```
 
