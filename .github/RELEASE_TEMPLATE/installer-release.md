@@ -1,10 +1,10 @@
 # Canvas Toolchain Installer
 
-## What's new in v1.5.1
+## What's new in v1.5.2
 
 The biggest release since the toolchain shipped — **230+ commits** since v1.2.0 completing the v1.x roadmap and laying the v2.0 platform foundations. This is the "build complete" milestone: the toolchain now does what it set out to do, end to end.
 
-> v1.5.1 supersedes the v1.5.0 tag, whose release build never published: it fixes the monorepo build order (`module-video` now builds after `curriculum-intelligence`, whose compiled parsers it imports) and ships fully generic example identifiers (`example.instructure.com`, `professor@example.edu`) throughout docs and defaults.
+> v1.5.2 is the first-public-release polish pass over v1.5.1: MIT license included, production dependency audit now clean (the optional `transformers-js` embedding fallback is no longer installed by default — `setup_lecture_answers` explains how to add it), a general CI workflow enforcing the full TypeScript suite on every push/PR, and repo security hardening (secret scanning, push protection, Dependabot).
 
 ### Plug-in module architecture (the 2.0 foundation)
 

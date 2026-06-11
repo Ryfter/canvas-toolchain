@@ -20,9 +20,9 @@ Canvas Backup archive
 
 **Single professor-facing entrypoint:** the Command & Control MCP server. Professors talk to it from any MCP-capable AI client (Claude Desktop, ChatGPT, Gemini). Each underlying app stays independently usable.
 
-**Status:** v0.9 core workflow, v1.0 native installer, v1.1 and v1.2 features are all shipped. The v1.x enhancement backlog is now empty. Active direction is the v2.0 milestone. **The plug-in module architecture (#78) has shipped its first cut (2026-06-08):** capabilities are now opt-in *modules* enabled via `~/.command-and-control/modules.json` (config-time, no reinstall), with the first module — **Lecture Video** (`packages/module-video`, Panopto behind a `VideoProvider` adapter) — extracted out of canvas-design-studio and command-and-control. Remaining v2.0: institutional tool-discovery (#76), usage feedback (#77), Rhetorix integration (#75, the next module). The installer compiles and passes automated checks, but the updater install/release path needs a focused review before the next installer cut — see the health-check pointer below.
+**Status:** v0.9 core workflow, v1.0 native installer, v1.1 and v1.2 features are all shipped. The v1.x enhancement backlog is now empty. Active direction is the v2.0 milestone. **The plug-in module architecture (#78) has shipped its first cut (2026-06-08):** capabilities are now opt-in *modules* enabled via `~/.command-and-control/modules.json` (config-time, no reinstall), with the first module — **Lecture Video** (`packages/module-video`, Panopto behind a `VideoProvider` adapter) — extracted out of canvas-design-studio and command-and-control. Institutional tool-discovery (#76) and usage feedback (#77) have **shipped**; the only open v2.0 item is Rhetorix integration (#75, externally blocked on the Rhetorix author). **The repo went public on 2026-06-10** (identity-scrubbed, MIT-licensed, gated CI) with v1.5.1 as the first public release — the tag → CI → published-installers path has now been exercised end-to-end for real.
 
-**Latest Codex health check:** see [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md). Automated TypeScript, Go, and C&C smoke checks passed on 2026-06-07; the main second-look item is the installer updater install/release path.
+**Latest Codex health check:** see [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md). Automated TypeScript, Go, and C&C smoke checks passed on 2026-06-07, and its open items were subsequently fixed; the release path itself was proven by the v1.5.1 publish on 2026-06-10. The one remaining verified-by-reasoning item is running the installed updater on real hardware (especially the macOS `.pkg`).
 
 ---
 
@@ -193,9 +193,7 @@ For changes inside a single package, the package-local `npm test` + `npm run bui
 
 The v1.x enhancement backlog is closed. Today's outstanding work falls into two buckets:
 
-**Installer release-readiness review** (before the next installer tag):
-
-- [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md) — Codex's automated review. Lists the open items: updater binary install path, macOS `.pkg` launch behavior, manual test plan drift, workflow checkbox copy.
+**Installer release-readiness** — resolved. The items from [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md) were fixed, and the v1.5.1 release (2026-06-10) exercised the tag → CI → published-installers path end-to-end. Remaining caveat: the macOS `.pkg` has not yet been run on physical Apple hardware (verified-by-reasoning only).
 
 **v2.0 platform direction:**
 
