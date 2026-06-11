@@ -1,5 +1,6 @@
 {
   "name": "command-and-control-mcp",
+  "license": "MIT",
   "version": "1.0.0",
   "description": "Command & Control — MCP server that orchestrates the professor toolset with task-aware model routing",
   "type": "module",

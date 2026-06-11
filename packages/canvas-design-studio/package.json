@@ -1,5 +1,6 @@
 {
   "name": "canvas-design-mcp",
+  "license": "MIT",
   "version": "1.1.0",
   "description": "Canvas Design Studio — MCP server for generating, validating, and publishing Canvas LMS pages",
   "type": "module",

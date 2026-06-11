@@ -1,5 +1,6 @@
 {
   "name": "@canvas-toolchain/module-contract",
+  "license": "MIT",
   "version": "1.0.0",
   "description": "Shared interfaces for canvas-toolchain plug-in modules",
   "type": "module",

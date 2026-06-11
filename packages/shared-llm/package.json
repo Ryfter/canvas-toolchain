@@ -1,5 +1,6 @@
 {
   "name": "@canvas-toolchain/shared-llm",
+  "license": "MIT",
   "version": "1.0.0",
   "description": "Shared Anthropic LLM client extracted from C&C tools/rubric and tools/brainstorm",
   "type": "module",

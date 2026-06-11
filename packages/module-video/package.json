@@ -1,5 +1,6 @@
 {
   "name": "@canvas-toolchain/module-video",
+  "license": "MIT",
   "version": "1.0.0",
   "description": "Lecture Video module for canvas-toolchain (Panopto provider)",
   "type": "module",
