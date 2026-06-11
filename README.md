@@ -14,6 +14,7 @@ Professors drive the whole thing by talking to the **Command & Control** MCP ser
 
 ## Where to start
 
+- **Installing as a user?** Download the native installer (Windows x64 / macOS arm64) from [Releases](https://github.com/Ryfter/canvas-toolchain/releases) — it bundles Node, the toolchain, and an auto-updater behind a five-screen wizard.
 - **Working on this repo (human or AI agent)?** Read [`AGENTS.md`](AGENTS.md) first — it maps the tools, skills, packages, and workflow conventions, and links to every per-package handoff doc.
 - **Latest repo health review:** [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md).
 
@@ -26,8 +27,10 @@ Professors drive the whole thing by talking to the **Command & Control** MCP ser
 | `packages/curriculum-intelligence/` | Course analysis, semester comparison, topic currency, planning |
 | `packages/shared-types/` | TypeScript contracts shared across packages |
 | `packages/shared-llm/` | Shared LLM client (Anthropic + Ollama providers) |
+| `packages/module-contract/` | The `CanvasToolchainModule` plug-in contract for opt-in capability modules |
+| `packages/module-video/` | Lecture Video module (Panopto as the first provider) |
 | `installer/` | Go + Fyne native installer and auto-updater |
-| `D:\Dev\Canvas-Download` (sibling repo) | Python Canvas backup downloader, reached via a CLI bridge |
+| [`canvas-backup`](https://github.com/Ryfter/canvas-backup) (separate repo) | Python Canvas backup downloader, reached via a CLI bridge |
 
 ## Verification
 
