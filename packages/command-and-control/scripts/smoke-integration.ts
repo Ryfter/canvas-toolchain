@@ -2,7 +2,8 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { setupCourse } from 'curriculum-intelligence-mcp/dist/tools/setup_course.js';
 import { importCourse } from 'canvas-design-mcp/dist/tools/import-course.js';
 import { generateCourse } from 'canvas-design-mcp/dist/tools/generate-course.js';
@@ -95,7 +96,12 @@ async function smokeAnswersOllama(): Promise<void> {
 
 const COURSE_ID = 'ITM370';
 const SEMESTER_ID = 'Fixture2026';
-const ARCHIVE_PATH = 'D:/Dev/canvas-design-studio/tests/fixtures/canvas-backup/ITM370';
+// The fixture lives in the monorepo's canvas-design-studio package — resolve it
+// relative to this script so the smoke runs on any checkout, not one dev box.
+const ARCHIVE_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..', '..', 'canvas-design-studio', 'tests', 'fixtures', 'canvas-backup', 'ITM370',
+);
 
 const tmpHome = mkdtempSync(join(tmpdir(), 'cc-integration-'));
 process.env.CC_HOME = tmpHome;
