@@ -1,8 +1,10 @@
 # Canvas Toolchain Installer
 
-## What's new in v1.5.0
+## What's new in v1.5.1
 
-The biggest release since the toolchain shipped — **231 commits** since v1.2.0 completing the v1.x roadmap and laying the v2.0 platform foundations. This is the "build complete" milestone: the toolchain now does what it set out to do, end to end.
+The biggest release since the toolchain shipped — **230+ commits** since v1.2.0 completing the v1.x roadmap and laying the v2.0 platform foundations. This is the "build complete" milestone: the toolchain now does what it set out to do, end to end.
+
+> v1.5.1 supersedes the v1.5.0 tag, whose release build never published: it fixes the monorepo build order (`module-video` now builds after `curriculum-intelligence`, whose compiled parsers it imports) and ships fully generic example identifiers (`example.instructure.com`, `professor@example.edu`) throughout docs and defaults.
 
 ### Plug-in module architecture (the 2.0 foundation)
 
