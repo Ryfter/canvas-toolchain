@@ -1,0 +1,20 @@
+flowchart LR
+    P([👩‍🏫 Professor]) -- "plain language" --> CC
+
+    subgraph TOOLCHAIN [Canvas Toolchain]
+        direction LR
+        CC{{Command & Control<br/>single MCP entrypoint}}
+        CC --> CI[Curriculum<br/>Intelligence]
+        CC --> CDS[Canvas<br/>Design Studio]
+        CC --> DL[(Canvas Backup<br/>downloader)]
+    end
+
+    DL -. "archive" .-> CI
+    CI -. "course plan" .-> CDS
+    CDS -- "Canvas-safe HTML" --> OUT{{Your course}}
+
+    classDef person fill:#FFE8C2,stroke:#F18F01,stroke-width:2px,color:#5A3A00;
+    classDef hub fill:#3D348B,stroke:#2A2363,stroke-width:2px,color:#fff;
+    classDef app fill:#EDEBFF,stroke:#3D348B,stroke-width:1.5px,color:#2A2363;
+    classDef out fill:#1B998B,stroke:#137567,stroke-width:2px,color:#fff;
+    class P person; class CC hub; class CI,CDS,DL app; class OUT out;

@@ -36,98 +36,23 @@ Canvas Backup archive
 | `packages/module-contract/` | Plug-in module interfaces (`CanvasToolchainModule`, `ModuleTool`, `ModuleManifest`) shared by C&C + module packages | `src/index.ts` |
 | `packages/module-video/` | **First plug-in module:** Lecture Video — embed + transcripts. `VideoProvider` adapter layer; `PanoptoProvider` is provider #1 (Zoom/Teams/Meet/YouTube are future providers) | `src/index.ts`, `src/provider.ts` |
 | `packages/shared-types/` | TypeScript contracts shared across packages | `src/index.ts` |
-| `D:\Dev\Canvas-Download` (sibling) | Python Canvas backup downloader; reached via CLI bridge | repo README |
+| [`canvas-backup`](https://github.com/Ryfter/canvas-backup) (separate repo) | Python Canvas backup downloader; reached via CLI bridge | repo README |
 
 ---
 
-## The full AI toolkit map
+## Working with AI agents
 
-Different tools have different strengths. Use the right one for the job — and document who did what when you commit or close an issue.
+This repo is routinely worked on with AI coding agents (Claude Code, and others). The
+project conventions that matter are in this file and the per-package `CLAUDE.md` /
+`AGENTS.md` handoffs. Pick whatever agent/tooling you prefer — nothing here depends on a
+specific vendor.
 
-### Claude Code (this CLI)
+GitHub issues carry an optional `agent:*` label recording a *suggested* model tier for the
+task; treat it as advisory. When you finish work, note in the commit/PR which tool actually
+did it.
 
-**What it is.** The interactive CLI you are reading this in. Best for: conversational planning, file edits, running tests, coordinating multi-step tasks, dispatching subagents.
-
-**Models.** Sonnet 4.6 (default — integration tasks, multi-file edits), Opus 4.8 (architecture, judgment, hard reviews), Haiku 4.5 (cheap mechanical tasks).
-
-**Key skills (invoke via the `Skill` tool):**
-
-- `superpowers:brainstorming` — turn ideas into specs before any code
-- `superpowers:writing-plans` — turn specs into step-by-step task plans
-- `superpowers:subagent-driven-development` — execute plans with fresh subagents per task and two-stage review
-- `superpowers:executing-plans` — execute plans in this session in larger batches
-- `superpowers:finishing-a-development-branch` — verify tests, present merge/PR options, clean up
-- `superpowers:using-git-worktrees` — isolate work in a sibling worktree
-- `superpowers:test-driven-development` — red/green/refactor discipline
-
-**Specialized subagent types (dispatch via the `Agent` tool):**
-
-- `Explore` — fast read-only search across the codebase
-- `Plan` — design implementation plans
-- `general-purpose` — multi-step research and tasks
-- `octo:droids:octo-*` — code review, security audit, performance, debugger, etc.
-- `octo:personas:*` — backend-architect, frontend-developer, ai-engineer, python-pro, typescript-pro, etc.
-- `codex:codex-rescue` — hand a substantial coding task to Codex via the shared runtime
-
-**Slash commands (user-invoked, type `/<name>`):**
-
-- `/octo` — discoverable menu of octo agents and skills
-- `/codex` — discoverable menu of Codex-handoff capabilities
-- `/github` — GitHub MCP server (browser-installed tools like `mcp__github__*`)
-- `/loop` — schedule self-paced iterations of a task
-- `/schedule` — schedule a one-shot follow-up
-- `/ultrareview` — multi-agent cloud review of the current branch or a PR
-
-### Codex (ChatGPT CLI)
-
-**What it is.** OpenAI's Codex CLI. Strong at pure code generation, algorithms, mechanical refactors, single-file work with a clear spec.
-
-**Reach for it when.** A task is well-specified, isolated to 1-3 files, and mostly about writing code (not making architecture decisions). Examples: implementing a Go installer screen, writing a parser, porting an algorithm.
-
-**Two ways to hand off:**
-
-1. **In Claude Code:** dispatch the `codex:codex-rescue` subagent type. Pass a self-contained prompt with file paths and spec.
-2. **In Codex CLI directly:** the professor runs Codex in a separate terminal against the same repo.
-
-**Label issues for Codex with:** `agent:codex`.
-
-### Gemini / Antigravity CLI
-
-**What it is.** Google's Antigravity CLI, Gemini-backed. Strong at architecture review, broad context reasoning, and HTML/Canvas rendering questions.
-
-**Reach for it when.** You want an independent architecture review of a branch, a second opinion on a design, or layout/visual reasoning.
-
-**How to hand off.** the professor runs Antigravity CLI in a separate terminal. Point it at the relevant branch or directory and the spec.
-
-**Label issues for Gemini with:** `agent:gemini`.
-
-### GitHub MCP (`/github` plugin in Claude Code)
-
-**What it is.** The `/github` slash command in Claude Code loads the GitHub MCP server, which surfaces `mcp__github__*` tools (issue create/read/write, PR create/review, file ops, search, etc.). This is **separate from** the `gh` CLI on your shell.
-
-**Reach for it when.** You need direct API access to GitHub from inside a Claude Code session (create issues without shelling out, add review comments inline, etc.).
-
-**Quick distinction:**
-
-- `gh` = a shell command you (or Claude via the `Bash` tool) run from a terminal
-- `/github` = the MCP plugin inside Claude Code that gives Claude direct API tools
-
-Both end up calling the same GitHub REST/GraphQL APIs.
-
----
-
-## Choosing the right agent for an issue
-
-Labels on every issue (`agent:sonnet`, `agent:opus`, `agent:codex`, `agent:gemini`) record the recommended agent. Use this rubric:
-
-| Signal | Agent |
-| --- | --- |
-| Architecture, design judgment, hard review | `agent:opus` (Claude Opus) |
-| Multi-file integration, pattern matching, LLM calls | `agent:sonnet` (Claude Sonnet) |
-| Mechanical code generation, algorithms, isolated implementation | `agent:codex` (Codex) |
-| HTML/Canvas rendering, layout, broad-context review | `agent:gemini` (Gemini/Antigravity) |
-
-When you finish a task, mention which agent actually did the work in the closing commit or comment — labels reflect plan, completion text reflects reality.
+> Operator note: a private, machine-specific multi-agent playbook lives in the gitignored
+> `AGENTS.local.md` (not part of the public repo).
 
 ---
 
@@ -169,10 +94,13 @@ The GitHub Project "Canvas Toolchain Roadmap" pulls all of this together with bo
 For any cross-package contract change, run:
 
 ```powershell
-cd D:\Dev\canvas-toolchain; npm test; npm run build
-cd D:\Dev\Curriculum-Intelligence; npm test; npm run build
-cd D:\Dev\canvas-design-studio; npm test; npm run build
-cd D:\Dev\Canvas-Download; .\.venv\Scripts\python.exe -m pytest
+# From the monorepo root — covers every TypeScript package:
+npm test
+npm run build
+npm run smoke:integration --workspace=packages/command-and-control
+
+# Canvas Backup (separate Python repo), from its own checkout:
+python -m pytest
 ```
 
 For changes inside a single package, the package-local `npm test` + `npm run build` is enough, plus C&C's `npm run smoke:integration` if you changed a contract C&C calls.
@@ -224,10 +152,10 @@ GitHub Project view: [Canvas Toolchain Roadmap](https://github.com/users/Ryfter/
 <!-- grimdex:start -->
 # Grimdex — coding knowledge base (read first)
 
-PROGRAMMING DECISIONS, rules, and lessons → record them in **Grimdex** at
-`D:\Dev\Grimdex` (this project's tier: `projects/canvas-toolchain/`).
+PROGRAMMING DECISIONS, rules, and lessons → record them in **Grimdex**
+(public repo: <https://github.com/Ryfter/Grimdex> — this project's tier: `projects/canvas-toolchain/`).
 
-- Read `D:\Dev\Grimdex\GRIMDEX.md` FIRST — layout and contribution rules.
+- Read [`GRIMDEX.md`](https://github.com/Ryfter/Grimdex/blob/main/GRIMDEX.md) FIRST — layout and contribution rules.
 - When you make or revise a coding rule, decision, or lesson, write it there.
 - Reference decision records by id (e.g. `d012`); do not duplicate them in app repos.
 <!-- grimdex:end -->

@@ -1,0 +1,46 @@
+flowchart TB
+    subgraph CLIENT [Your AI client]
+        AIC([Claude · ChatGPT · Gemini])
+    end
+
+    AIC <== "MCP" ==> CC
+
+    subgraph CORE [Command & Control · the coordinator]
+        CC{{Orchestration · routing · registry · module loader}}
+    end
+
+    subgraph APPS [Worker apps]
+        CI[Curriculum Intelligence<br/>analyze · plan]
+        CDS[Canvas Design Studio<br/>generate · publish]
+    end
+
+    subgraph SHARED [Shared libraries]
+        SL[shared-llm<br/>Anthropic + Ollama]
+        ST[shared-types]
+    end
+
+    subgraph MODULES [Opt-in modules]
+        MV[module-video<br/>Panopto provider]
+    end
+
+    CC --> CI & CDS
+    CC --> MV
+    CI & CDS --> SL & ST
+
+    subgraph EXT [External services · all optional]
+        ANT([Anthropic]):::ext
+        CANVAS([Canvas LMS]):::ext
+        PAN([Panopto]):::ext
+    end
+
+    SL -.-> ANT
+    CDS -.-> CANVAS
+    MV -.-> PAN
+
+    classDef hub fill:#3D348B,stroke:#2A2363,stroke-width:2px,color:#fff;
+    classDef app fill:#EDEBFF,stroke:#3D348B,stroke-width:1.5px,color:#2A2363;
+    classDef lib fill:#F3F2FA,stroke:#8A82C9,stroke-width:1px,color:#2A2363;
+    classDef mod fill:#E6F6F3,stroke:#1B998B,stroke-width:1.5px,color:#0F5A4F;
+    classDef ext fill:#FFE8C2,stroke:#F18F01,stroke-width:1.5px,color:#5A3A00;
+    classDef client fill:#fff,stroke:#999,stroke-width:1.5px,color:#333;
+    class CC hub; class CI,CDS app; class SL,ST lib; class MV mod; class ANT,CANVAS,PAN ext; class AIC client;

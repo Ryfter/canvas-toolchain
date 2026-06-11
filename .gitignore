@@ -25,3 +25,6 @@ installer/canvas-toolchain-installer.pkg
 
 # runtime artifacts
 .canvas-toolchain-update-cache.json
+
+# Operator-private multi-agent playbook (machine/tooling-specific; not for the public repo)
+AGENTS.local.md

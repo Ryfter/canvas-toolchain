@@ -18,6 +18,14 @@ Professors drive the whole thing by talking to the **Command & Control** MCP ser
 - **Working on this repo (human or AI agent)?** Read [`AGENTS.md`](AGENTS.md) first — it maps the tools, skills, packages, and workflow conventions, and links to every per-package handoff doc.
 - **Latest repo health review:** [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md).
 
+## Documentation
+
+| Doc | What's in it |
+| --- | --- |
+| 📘 [**Commands & Credentials reference**](docs/commands-and-credentials.md) | Every command (MCP tool) with its parameters, and every API key/secret — what it's for, why, and whether it's optional |
+| 🧩 [**Module view**](docs/modules.md) | The toolchain broken into modules: what each is, why it exists, what it does, and its commands |
+| 🎨 [**Visual guide**](docs/visual-guide/README.md) | Picture-first tour — diagrams of the pipeline, architecture, and setup ([rendered PNG/SVG](docs/visual-guide/images/) + an editable [Excalidraw scene](docs/visual-guide/pipeline.excalidraw)) |
+
 ## What lives where
 
 | Path | What it owns |

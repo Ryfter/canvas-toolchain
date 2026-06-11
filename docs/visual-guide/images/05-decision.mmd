@@ -1,0 +1,22 @@
+flowchart TD
+    START([What do you want to do?])
+
+    START --> Q1{Just rebuild<br/>and paste manually?}
+    Q1 -- Yes --> NONE[/No credentials needed/]
+
+    START --> Q2{Want the AI to<br/>draft & analyze?}
+    Q2 -- Yes --> A[setup_anthropic]
+
+    START --> Q3{Publish straight<br/>to Canvas?}
+    Q3 -- Yes --> C[setup_canvas]
+
+    START --> Q4{Use lecture videos<br/>/ transcripts?}
+    Q4 -- Yes --> P[enable Video module<br/>+ setup_panopto]
+
+    START --> Q5{Prefer a fully<br/>local LLM?}
+    Q5 -- Yes --> O[setup_ollama]
+
+    classDef q fill:#EDEBFF,stroke:#3D348B,stroke-width:1.5px,color:#2A2363;
+    classDef none fill:#E6F6F3,stroke:#1B998B,stroke-width:2px,color:#0F5A4F;
+    classDef act fill:#FFE8C2,stroke:#F18F01,stroke-width:1.5px,color:#5A3A00;
+    class START,Q1,Q2,Q3,Q4,Q5 q; class NONE,O none; class A,C,P act;

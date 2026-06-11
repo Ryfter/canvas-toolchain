@@ -1,0 +1,12 @@
+flowchart LR
+    S1["⬇️ Install<br/>native wizard<br/>(Win x64 / macOS arm64)"]
+    S2["🔌 Connect<br/>add C&C to your<br/>AI client"]
+    S3["🧭 Orient<br/>ask: <i>get_started</i> /<br/>get_cc_status"]
+    S4["🔑 (Optional)<br/>setup_anthropic,<br/>setup_canvas…"]
+    S5["▶️ Run<br/>“analyze my course”<br/>then full_pipeline"]
+
+    S1 --> S2 --> S3 --> S4 --> S5
+
+    classDef a fill:#EDEBFF,stroke:#3D348B,stroke-width:2px,color:#2A2363,rx:8,ry:8;
+    classDef go fill:#1B998B,stroke:#137567,stroke-width:2px,color:#fff;
+    class S1,S2,S3,S4 a; class S5 go;

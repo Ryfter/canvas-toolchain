@@ -1,0 +1,13 @@
+flowchart LR
+    A["📥 1. Download<br/><b>Backup the old shell</b><br/>download_canvas_archive"]
+    B["🔎 2. Analyze<br/><b>How stale is it?</b><br/>analyze_course → KEEP/UPDATE/DROP/ADD"]
+    C["🗓️ 3. Plan<br/><b>Set up next term</b><br/>plan_next_semester (shift dates)"]
+    D["✍️ 4. Rebuild<br/><b>Refresh materials</b><br/>update_course_materials"]
+    E["🎨 5. Design<br/><b>Generate HTML</b><br/>generate_course (Canvas-safe)"]
+    F["🚀 6. Publish<br/><b>Push or paste</b><br/>publish_course  ·or·  paste by hand"]
+
+    A --> B --> C --> D --> E --> F
+
+    classDef step fill:#EDEBFF,stroke:#3D348B,stroke-width:2px,color:#2A2363,rx:8,ry:8;
+    classDef ship fill:#1B998B,stroke:#137567,stroke-width:2px,color:#fff;
+    class A,B,C,D,E step; class F ship;

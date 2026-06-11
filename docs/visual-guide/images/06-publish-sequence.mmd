@@ -1,0 +1,17 @@
+sequenceDiagram
+    autonumber
+    participant U as 👩‍🏫 Professor
+    participant CC as Command & Control
+    participant CV as Canvas LMS
+
+    U->>CC: preview_course_publish(courseDir, courseId)
+    CC->>CC: build per-page diffs + manifest (snapshotId)
+    CC-->>U: "Here's what would change"
+    U->>CC: publish_course(snapshotId, approvals: approve/skip)
+    CC->>CV: write only approved pages
+    CV-->>CC: results (stops on first failure)
+    CC-->>U: published ✅  (snapshot saved)
+    Note over U,CV: Changed your mind?
+    U->>CC: rollback_course_publish(snapshotId)
+    CC->>CV: restore prior state of each page
+    CC-->>U: rolled back ↩️
