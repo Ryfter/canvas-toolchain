@@ -3,6 +3,8 @@
 > Full documentation of **what the application does**, **every command (MCP tool) it exposes**, and **every API key / secret it asks for and why**.
 >
 > Audience: professors evaluating or operating the toolchain, IT/security reviewers, and contributors. Last reconciled against the source tree on 2026-06-11.
+>
+> **Want how-to / why-to instead of a lookup table?** Read the [User Guide & Tutorial](user-guide.md) — it walks the toolchain end to end and explains *why* you'd reach for each command.
 
 ---
 

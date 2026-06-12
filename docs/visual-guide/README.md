@@ -4,7 +4,7 @@ A picture-first tour of what the toolchain is, how the pieces fit, and how you a
 All diagrams below are **Mermaid** — they render automatically on GitHub and in most Markdown viewers.
 A companion hand-drawn **Excalidraw** scene lives at [`pipeline.excalidraw`](pipeline.excalidraw) (open it at <https://excalidraw.com>).
 Every diagram below is also exported to **PNG and SVG** under [`images/`](images/) (re-render from the `.mmd` sources with `mmdc`).
-For full text reference, see [`../commands-and-credentials.md`](../commands-and-credentials.md).
+New here? Read the [**User Guide & Tutorial**](../user-guide.md) first. For the full text reference, see [`../commands-and-credentials.md`](../commands-and-credentials.md).
 
 ---
 
