@@ -212,6 +212,14 @@ const PAGE_PROMPTS: Record<PageType, string> = {
 
 [Optional: how to use this rubric, where to ask questions, how to download as markdown for LLM-paste.]
 `,
+  'oral-assessment': `## What to expect
+[One short student-facing paragraph: what the oral/video assessment covers and how it works. The timing, randomization, and attempts fields live in the page front matter (prep_seconds, response_seconds, randomize_pick, randomize_of, attempts).]
+
+## Rubric
+
+## Criterion 1: [Criterion Name] — [N] pts
+[What this criterion is checking for, in plain student-facing language.]
+`,
   'custom': `## [Section 1 Title]
 [Content for section 1]
 
