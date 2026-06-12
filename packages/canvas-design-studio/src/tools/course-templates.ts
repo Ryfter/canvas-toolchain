@@ -632,10 +632,17 @@ function renderOralAssessment(c: PageContent, cfg: CourseConfig): string {
   const fm = c.frontMatter as Record<string, unknown>;
   const week = typeof fm.week === 'number' ? fm.week : undefined;
   const title = typeof fm.title === 'string' ? fm.title : 'Oral Assessment';
-  const prep = typeof fm.prep_seconds === 'number' ? fm.prep_seconds : 0;
-  const resp = typeof fm.response_seconds === 'number' ? fm.response_seconds : 0;
-  const pick = typeof fm.randomize_pick === 'number' ? fm.randomize_pick : 1;
-  const of = typeof fm.randomize_of === 'number' ? fm.randomize_of : 1;
+  // The real generate_page parser (parseFrontMatterSimple) only coerces a few
+  // known numeric keys; unknown keys like these arrive as strings. Coerce here
+  // so the renderer honors them whether they came in as number or string.
+  const num = (v: unknown, dflt: number): number => {
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : dflt;
+  };
+  const prep = num(fm.prep_seconds, 0);
+  const resp = num(fm.response_seconds, 0);
+  const pick = num(fm.randomize_pick, 1);
+  const of = num(fm.randomize_of, 1);
   const attempts = String(fm.attempts ?? '1');
   const launchUrl = typeof fm.launch_url === 'string' ? fm.launch_url : '';
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
