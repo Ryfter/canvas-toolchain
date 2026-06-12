@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/shared-types && npm run build --workspace=packages/shared-llm && npm run build --workspace=packages/module-contract && npm run build --workspace=packages/curriculum-intelligence && npm run build --workspace=packages/module-video && npm run build --workspace=packages/canvas-design-studio && npm run build --workspace=packages/command-and-control",
+    "build": "npm run build --workspace=packages/shared-types && npm run build --workspace=packages/shared-llm && npm run build --workspace=packages/module-contract && npm run build --workspace=packages/curriculum-intelligence && npm run build --workspace=packages/module-video && npm run build --workspace=packages/module-oral-assessment && npm run build --workspace=packages/canvas-design-studio && npm run build --workspace=packages/command-and-control",
     "test": "npm run test --workspaces --if-present",
     "dev:ci": "npm run dev --workspace=packages/curriculum-intelligence",
     "dev:cds": "npm run dev --workspace=packages/canvas-design-studio",
