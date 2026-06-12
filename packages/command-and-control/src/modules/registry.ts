@@ -5,6 +5,7 @@ import { loadModuleManifest } from './manifest.js';
 /** Static registry of known modules. Future runtime-loading swaps this map for dynamic import. */
 export const KNOWN_MODULES: Record<string, () => Promise<CanvasToolchainModule>> = {
   video: async () => (await import('@canvas-toolchain/module-video')).default,
+  'oral-assessment': async () => (await import('@canvas-toolchain/module-oral-assessment')).default,
 };
 
 /** Ids of all known modules (whether enabled or not). */

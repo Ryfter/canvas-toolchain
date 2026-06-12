@@ -54,3 +54,9 @@ describe('knownModuleIds', () => {
     expect(knownModuleIds({ foo: async () => ({} as never) })).toEqual(['foo']);
   });
 });
+
+describe('oral-assessment is a known module', () => {
+  it('appears in knownModuleIds', () => {
+    expect(knownModuleIds()).toContain('oral-assessment');
+  });
+});
