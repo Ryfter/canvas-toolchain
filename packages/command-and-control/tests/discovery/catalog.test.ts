@@ -13,6 +13,13 @@ describe('loadCatalog', () => {
     expect(cat.all.length).toBeGreaterThanOrEqual(10);
     expect(cat.all.every((t) => typeof t.id === 'string' && typeof t.name === 'string')).toBe(true);
   });
+
+  it('lists rhetorix mapped to the oral-assessment module', () => {
+    const cat = loadCatalog();
+    const rhetorix = cat.byId.get('rhetorix');
+    expect(rhetorix).toBeDefined();
+    expect(rhetorix?.module).toBe('oral-assessment');
+  });
 });
 
 describe('matchIdentifier', () => {

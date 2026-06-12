@@ -47,3 +47,7 @@ tools:
     name: Gradescope
     identifiers: [gradescope, gradescope.com]
     module: null
+  - id: rhetorix
+    name: Rhetorix Lab
+    identifiers: [rhetorix, rhetorix lab, rhetorixlab, rhetorixlab.io, rhetorixlab.boisestate.edu]
+    module: oral-assessment
