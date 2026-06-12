@@ -24,11 +24,27 @@ export class RhetorixProvider implements OralAssessmentProvider {
     return { prepSeconds: 30, responseSeconds: 120, randomization: { pick: 1, of: 3 }, attempts: 1 };
   }
 
-  // formatAssessment + buildLaunchUrl added in Task 4.
-  formatAssessment(_spec: AssessmentSpec): string {
-    throw new Error('not implemented');
+  formatAssessment(spec: AssessmentSpec): string {
+    const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const lines: string[] = [
+      `# ${spec.title} — paste into Rhetorix Lab assignment creator`,
+      '',
+      `Prep: ${spec.prepSeconds}s  ·  Response: ${mmss(spec.responseSeconds)}  ·  ` +
+        `Randomization: ${spec.randomization.pick} of ${spec.randomization.of}  ·  ` +
+        `Attempts: ${spec.attempts}`,
+      '',
+      '## Questions',
+      ...spec.questions.map((q, i) => `${i + 1}. ${q.prompt}`),
+      '',
+      '## Rubric',
+      ...spec.rubricCriteria.map((c) => `- ${c.name} (${c.points} pts): ${c.description}`),
+      '',
+    ];
+    return lines.join('\n');
   }
-  buildLaunchUrl(_domain: string | undefined): string | null {
-    throw new Error('not implemented');
+
+  buildLaunchUrl(domain: string | undefined): string | null {
+    if (!domain || !domain.trim()) return null;
+    return `https://${domain.trim()}/lti/launch`;
   }
 }
