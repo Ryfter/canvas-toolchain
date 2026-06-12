@@ -15,6 +15,7 @@ export const PAGE_TYPES = [
   'discussion-board',
   'extra-credit',
   'rubric',
+  'oral-assessment',
   'custom',
 ] as const;
 
@@ -37,6 +38,7 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   'discussion-board':  'Discussion Board',
   'extra-credit':      'Extra Credit',
   'rubric':            'Rubric (student-facing rubric with worked examples + LLM-paste export)',
+  'oral-assessment':   'Oral Assessment (video oral-exam wrapper page + launch link)',
   'custom':            'Custom (professor-defined sections)',
 };
 
@@ -75,6 +77,7 @@ export interface CourseConfig {
   colors: CourseColors;
   heroImages: Partial<Record<PageType, string>>;
   weekOutline: WeekEntry[];
+  oralAssessmentLaunchDomain?: string;
 }
 
 export interface PageFrontMatter {
