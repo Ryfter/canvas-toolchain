@@ -1,8 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'node:path';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { parseCourseConfig } from '../src/tools/course-config.js';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures/course-config');
+
+/** Write a temp course-config.md with the given front matter and return its path. */
+function writeTmpConfig(frontMatter: string): { path: string; dir: string } {
+  const dir = mkdtempSync(join(tmpdir(), 'course-config-'));
+  const path = join(dir, 'course-config.md');
+  writeFileSync(path, `---\n${frontMatter}\n---\n\n## Week Outline\n| Week | Title | Topic |\n|------|-------|-------|\n`);
+  return { path, dir };
+}
 
 describe('parseCourseConfig', () => {
   it('reads required string fields', () => {
@@ -65,5 +75,26 @@ describe('parseCourseConfig', () => {
     expect(() =>
       parseCourseConfig(join(fixturesDir, 'nonexistent/course-config.md'))
     ).toThrow();
+  });
+
+  it('reads oral_assessment_launch_domain when present', () => {
+    const { path, dir } = writeTmpConfig(
+      'institution: Example University\noral_assessment_launch_domain: rhetorixlab.boisestate.edu',
+    );
+    try {
+      const cfg = parseCourseConfig(path);
+      expect(cfg.oralAssessmentLaunchDomain).toBe('rhetorixlab.boisestate.edu');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves oralAssessmentLaunchDomain undefined when absent', () => {
+    const { path, dir } = writeTmpConfig('institution: Example University');
+    try {
+      expect(parseCourseConfig(path).oralAssessmentLaunchDomain).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

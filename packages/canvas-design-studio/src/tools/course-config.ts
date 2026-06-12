@@ -138,5 +138,9 @@ export function parseCourseConfig(filePath: string): CourseConfig {
     colors,
     heroImages,
     weekOutline,
+    oralAssessmentLaunchDomain:
+      typeof fm.oral_assessment_launch_domain === 'string' && fm.oral_assessment_launch_domain.trim()
+        ? String(fm.oral_assessment_launch_domain).trim()
+        : undefined,
   };
 }
