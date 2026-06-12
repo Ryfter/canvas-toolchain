@@ -74,7 +74,8 @@ export function generatePage(input: GeneratePageInput): GeneratePageResult {
   const tldrHtml = (tiers || pageClos) ? renderTldrCard({ tiers, clos: pageClos }) : '';
   const withTldr = tldrHtml + renderedHtml;
 
-  const isAiasEligible = pageType === 'assignment' || pageType === 'rubric';
+  const isAiasEligible =
+    pageType === 'assignment' || pageType === 'rubric' || pageType === 'oral-assessment';
   let aiasHtml = '';
   if (isAiasEligible) {
     const pageOverride = extractAiasFromFile(absPath);

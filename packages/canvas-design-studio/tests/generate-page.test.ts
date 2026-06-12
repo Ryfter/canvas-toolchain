@@ -293,6 +293,33 @@ describe('generatePage — AIAS callout (#92)', () => {
   });
 });
 
+describe('generatePage — oral-assessment AIAS + launch (#76)', () => {
+  function setupCourse(tmpDir: string, courseConfigContent: string): string {
+    const courseDir = mkdtempSync(join(tmpdir(), tmpDir));
+    writeFileSync(join(courseDir, 'course-config.md'), courseConfigContent);
+    mkdirSync(join(courseDir, 'week-04'), { recursive: true });
+    return courseDir;
+  }
+
+  it('renders the AIAS callout on an oral-assessment page when aiasLevel is set', () => {
+    const courseDir = setupCourse('oa-aias-',
+      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\n---\n');
+    try {
+      const mdPath = join(courseDir, 'week-04', 'oral-assessment.md');
+      writeFileSync(mdPath, [
+        '---', 'week: 4', 'title: "Concept Check"', 'prep_seconds: 30',
+        'response_seconds: 120', 'randomize_pick: 1', 'randomize_of: 3', 'attempts: "1"',
+        'launch_url: "https://r.edu/lti/launch"', 'aiasLevel: 3', '---', '',
+        '## What to expect', 'Explain opportunity cost aloud.', '',
+      ].join('\n'));
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.pageType).toBe('oral-assessment');
+      expect(result.html).toContain('AI Use Policy');           // from renderAiasCallout
+      expect(result.html).toContain('Launch the assessment');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+});
+
 describe('generatePage — CLO mapping (#91)', () => {
   function setupCourse(tmpDir: string, courseConfigContent: string): string {
     const courseDir = mkdtempSync(join(tmpdir(), tmpDir));
