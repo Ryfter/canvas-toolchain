@@ -628,6 +628,42 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function renderOralAssessment(c: PageContent, cfg: CourseConfig): string {
+  const fm = c.frontMatter as Record<string, unknown>;
+  const week = typeof fm.week === 'number' ? fm.week : undefined;
+  const title = typeof fm.title === 'string' ? fm.title : 'Oral Assessment';
+  const prep = typeof fm.prep_seconds === 'number' ? fm.prep_seconds : 0;
+  const resp = typeof fm.response_seconds === 'number' ? fm.response_seconds : 0;
+  const pick = typeof fm.randomize_pick === 'number' ? fm.randomize_pick : 1;
+  const of = typeof fm.randomize_of === 'number' ? fm.randomize_of : 1;
+  const attempts = String(fm.attempts ?? '1');
+  const launchUrl = typeof fm.launch_url === 'string' ? fm.launch_url : '';
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+  const summary = c.sections['What to expect'] ?? c.sections['What to Expect'] ?? '';
+
+  const whatToExpect = card(
+    sectionHeading('What to expect') +
+    `<div style="font-family: Lato, sans-serif; font-size:15px; line-height:1.7; color:#1A1A1A;">${markdownToHtml(summary)}</div>` +
+    `<ul style="font-family: Lato, sans-serif; font-size:14px; color:#555550; margin:12px 0 0; padding-left:1.25em;">` +
+    `<li>Prep time: ${prep}s</li>` +
+    `<li>Response limit: ${mmss(resp)}</li>` +
+    `<li>You will answer ${pick} of ${of} question(s)</li>` +
+    `<li>Attempts: ${escapeHtml(attempts)}</li>` +
+    `</ul>`,
+  );
+
+  const launch = launchUrl
+    ? `<div style="margin:1.5em 0;"><a href="${escapeHtml(launchUrl)}" style="display:inline-block; background:${cfg.colors.primary}; color:#fff; font-family: Lato, sans-serif; font-weight:700; padding:12px 24px; border-radius:6px; text-decoration:none;">Launch the assessment</a></div>`
+    : `<p style="font-family: Lato, sans-serif; font-size:14px; color:#854F0B;"><em>Launch link will appear here once your institution's assessment tool is linked in Canvas.</em></p>`;
+
+  return wrap([
+    heroHtml(cfg, 'oral-assessment', week, title, '', typeof fm.hero_image === 'string' ? fm.hero_image : undefined),
+    whatToExpect,
+    launch,
+  ]);
+}
+
 function renderCustom(c: PageContent, cfg: CourseConfig): string {
   const week = c.frontMatter.week;
   const title = c.frontMatter.title || 'Custom Page';
@@ -665,6 +701,13 @@ export function renderPage(
   // that doesn't map onto the slot-based template registry. Render directly.
   if (content.pageType === 'rubric') {
     return renderRubric(content, config);
+  }
+
+  // Oral-assessment pages are a flat-front-matter wrapper (timing +
+  // randomization + an LTI launch link) that doesn't map onto the slot-based
+  // template registry. Render directly.
+  if (content.pageType === 'oral-assessment') {
+    return renderOralAssessment(content, config);
   }
 
   // Load the structured layout from the template registry
