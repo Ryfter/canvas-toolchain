@@ -19,7 +19,7 @@ export interface DiscoverToolsReport {
   detected: Array<{ rawName: string; courses?: string[] }>;
   matchedModules: Array<{ tool: string; module: string; enabled: boolean }>;
   unmatched: string[];
-  catalogPickList: Array<{ id: string; name: string; module: string | null }>;
+  catalogPickList: Array<{ id: string; name: string; module: string | null; recommended?: boolean }>;
 }
 
 const defaultDeps: DiscoverToolsDeps = {
@@ -33,7 +33,12 @@ export async function discoverTools(
   deps: DiscoverToolsDeps = defaultDeps,
 ): Promise<DiscoverToolsReport> {
   const catalog = loadCatalog();
-  const pickList = catalog.all.map((t) => ({ id: t.id, name: t.name, module: t.module }));
+  const pickList = catalog.all.map((t) => ({
+    id: t.id,
+    name: t.name,
+    module: t.module,
+    ...(t.recommended ? { recommended: true } : {}),
+  }));
 
   let cfg: InstitutionConfigLike;
   try {

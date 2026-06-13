@@ -20,6 +20,12 @@ describe('loadCatalog', () => {
     expect(rhetorix).toBeDefined();
     expect(rhetorix?.module).toBe('oral-assessment');
   });
+
+  it('tags rhetorix as recommended (spec §8) and leaves others falsy', () => {
+    const cat = loadCatalog();
+    expect(cat.byId.get('rhetorix')?.recommended).toBe(true);
+    expect(cat.byId.get('panopto')?.recommended).toBeFalsy();
+  });
 });
 
 describe('matchIdentifier', () => {

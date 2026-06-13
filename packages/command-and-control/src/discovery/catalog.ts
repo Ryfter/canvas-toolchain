@@ -7,6 +7,9 @@ export interface CatalogEntry {
   name: string;
   identifiers: string[];
   module: string | null;
+  /** Best-of-breed/recommended provider for its capability (spec §8).
+   *  Absent in the catalog → undefined (treated as not recommended). */
+  recommended?: boolean;
 }
 
 export interface Catalog {
@@ -29,6 +32,7 @@ export function loadCatalog(path: string = catalogPath()): Catalog {
     name: t.name,
     identifiers: (t.identifiers ?? []).map((s) => s.toLowerCase()),
     module: t.module ?? null,
+    recommended: t.recommended === true ? true : undefined,
   }));
   const byId = new Map(all.map((t) => [t.id, t]));
   return { all, byId };

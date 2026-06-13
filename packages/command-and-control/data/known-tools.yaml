@@ -51,3 +51,4 @@ tools:
     name: Rhetorix Lab
     identifiers: [rhetorix, rhetorix lab, rhetorixlab, rhetorixlab.io, rhetorixlab.boisestate.edu]
     module: oral-assessment
+    recommended: true
