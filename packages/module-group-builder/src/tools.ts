@@ -39,7 +39,7 @@ const createGroupsTool: ModuleTool = {
       'Form student teams from Canvas data + a thin roster file. Preview-safe: always writes a CSV ' +
       'and a markdown report (and optionally pushes to Canvas), but NEVER records the grouping into ' +
       "the semester pairing history — call record_groups for that once you've committed to a grouping. " +
-      'strategy is one of: random, alphabetical, heterogeneous, homogeneous, weighted, majorDiversity.',
+      'strategy is one of: random, alphabetical, weighted, heterogeneous, homogeneous, major-diversity.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'strategy'],
@@ -48,8 +48,8 @@ const createGroupsTool: ModuleTool = {
         strategy: {
           type: 'string',
           description:
-            'Grouping strategy id. One of: random, alphabetical, heterogeneous, homogeneous, ' +
-            'weighted, majorDiversity.',
+            'Grouping strategy id. One of: random, alphabetical, weighted, heterogeneous, ' +
+            'homogeneous, major-diversity.',
         },
         groupSize: { type: 'number', description: 'Target members per group (give this OR groupCount).' },
         groupCount: { type: 'number', description: 'Target number of groups (give this OR groupSize).' },
@@ -70,7 +70,7 @@ const createGroupsTool: ModuleTool = {
           type: 'object' as const,
           additionalProperties: { type: 'string' },
           description:
-            'major→archetype-bucket map for majorDiversity (from propose_major_buckets, reviewed). ' +
+            'major→archetype-bucket map for major-diversity (from propose_major_buckets, reviewed). ' +
             'Falls back to the saved major-buckets.json when omitted.',
         },
         seed: { type: 'number', description: 'RNG seed for deterministic output (default 1).' },
