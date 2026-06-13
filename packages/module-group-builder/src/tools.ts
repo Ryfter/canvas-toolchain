@@ -1,7 +1,8 @@
 import type { ModuleTool } from '@canvas-toolchain/module-contract';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { parseRosterFile } from './data/roster.js';
-import { proposeMajorBuckets } from './buckets/heuristic.js';
+import { proposeMajorBuckets, type Bucket } from './buckets/heuristic.js';
+import { saveMajorBuckets } from './buckets/store.js';
 import { createGroups, recordGroups, type CreateGroupsInput } from './run.js';
 import type { Grouping } from './types.js';
 
@@ -11,24 +12,42 @@ const proposeBucketsTool: ModuleTool = {
   schema: {
     name: 'propose_major_buckets',
     description:
-      'Propose a major→archetype-bucket map (technical/quantitative/creative/business/other) ' +
-      'from the distinct majors in the roster file, for the professor to review/edit before using ' +
-      'the major-diversity grouping strategy. Heuristic, no LLM.',
+      'Preview-then-commit major→archetype-bucket map (technical/quantitative/creative/business/other) ' +
+      'for the major-diversity grouping strategy. PROPOSE: with rosterFile (and no buckets), runs the ' +
+      'keyword heuristic over the distinct majors and returns a draft map + the majors that fell to ' +
+      "'other', for the professor to review/edit. No LLM. COMMIT: with a reviewed buckets map, persists " +
+      'it to the per-course major-buckets.json so create_groups uses it.',
     inputSchema: {
       type: 'object' as const,
-      required: ['courseId', 'rosterFile'],
+      required: ['courseId'],
       properties: {
         courseId: { type: 'string', description: 'Canvas course id (for saving the reviewed map).' },
-        rosterFile: { type: 'string', description: 'Path to the canvas_id,pseudonym,major CSV.' },
+        rosterFile: { type: 'string', description: 'Path to the canvas_id,pseudonym,major CSV (propose path only).' },
+        buckets: {
+          type: 'object' as const,
+          additionalProperties: { type: 'string' },
+          description: 'Reviewed major→bucket map to persist (commit path). When given, the map is saved and rosterFile is ignored.',
+        },
       },
     },
   },
   handler: async (args) => {
-    const { rosterFile } = args as { courseId: string; rosterFile: string };
+    const { courseId, rosterFile, buckets } = args as {
+      courseId: string;
+      rosterFile?: string;
+      buckets?: Record<string, string>;
+    };
+    if (buckets) {
+      const path = saveMajorBuckets(courseId, buckets as Record<string, Bucket>);
+      return text(JSON.stringify({ saved: true, path, note: `Reviewed major buckets saved to ${path}.` }, null, 2));
+    }
+    if (!rosterFile) {
+      return text(JSON.stringify({ error: 'rosterFile is required to propose a draft (or pass buckets to save a reviewed map).' }, null, 2));
+    }
     const rows = parseRosterFile(rosterFile);
     const majors = rows.map((r) => r.major ?? '').filter(Boolean);
     const { map, other } = proposeMajorBuckets(majors);
-    return text(JSON.stringify({ map, other, note: 'Review/edit, then pass as majorBuckets to create_groups (or save to major-buckets.json).' }, null, 2));
+    return text(JSON.stringify({ map, other, note: 'Review/edit, then call propose_major_buckets again with buckets to save (or pass majorBuckets to create_groups).' }, null, 2));
   },
 };
 
