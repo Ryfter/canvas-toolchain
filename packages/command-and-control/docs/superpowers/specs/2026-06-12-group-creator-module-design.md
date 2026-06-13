@@ -76,7 +76,14 @@ Each strategy defines a **candidate generator** (produces many strategy-consiste
 3. **Weighted by accomplishment** — compute a composite score per student from a configurable weight map over metric columns; default weights encode Kevin's ranking (highest→lowest: `priorReview`, `attendance`, `assignmentsCompleted`, `overallGrade`). Metrics absent for the term (e.g. `priorReview` before the PeerAssessment module exists) drop out and remaining weights renormalize. Default behavior **balances** the composite across groups (fair teams); a `mode: balance|cluster` flag allows clustering instead. (Balance is the default per the "fair final teams" intent; confirm at review.)
 4. **Heterogeneous / balanced** — spread a chosen metric (default `overallGrade`) evenly across groups via tiered snake-draft (one from each performance tier per group); candidates via shuffling within tiers.
 5. **Homogeneous** — cluster similar performers on a chosen metric (sort + chunk, shuffle within ties).
-6. **Major diversity** — distribute **major archetype buckets** across groups so each team mixes types. The professor supplies a one-time `major→bucket` map (e.g. `IT→technical`, `Marketing→creative`, `Accounting→business`, `General Business→business`); the generator round-robins buckets into groups; candidates via shuffles. Unmapped majors fall into an `other` bucket (flagged so the map can be extended).
+6. **Major diversity** — distribute **major archetype buckets** across groups so each team mixes types. Because bucketing is subjective and program-specific (professors eyeball it), the tool **proposes** a bucketing of the *actual distinct majors present in the roster* via a keyword heuristic, then the professor **reviews and overrides** it before grouping (and it's saved per course for reuse). Default archetype buckets + seed heuristics (from how Kevin groups them):
+   - **technical** — IT / IT Management, Business Analytics, Information Systems, "analytics"/analytics-cert students (the bucket Kevin says is the hard part to fill);
+   - **quantitative** — Accounting, Finance, Economics ("numbers people");
+   - **creative** — Marketing and similar;
+   - **business / general** — General Business, Management, and the long tail;
+   - **other** — anything unmatched.
+
+   The generator round-robins buckets across groups so each team spans types; candidates via shuffles. The proposed map is surfaced for review and persisted to a per-course `major-buckets.json` once confirmed; `other`/unmatched majors are flagged so the professor can refine. Classification is **heuristic / no-LLM by default** (deterministic + testable, matching "do your best"); an optional LLM-assisted refinement is a future enhancement. (Context: Kevin notes business programs tend to have more major diversity than many fields, so this strategy earns its keep there.)
 
 All strategies except alphabetical feed the optimizer, so the **no-repeat-pairing** objective applies on top of the strategy's intent.
 
@@ -107,6 +114,7 @@ return best, diagnostics(best)   // incl. unavoidable repeat pairings, size spre
 
 - **`create_groups`** — inputs: `courseId`, `strategy`, `groupSize` *or* `groupCount`, optional `rosterFile` path, optional `weights` map, optional `majorBuckets` map, optional `metric` (for heterogeneous/homogeneous), optional `seed`, optional `attendanceColumn` / `assignmentGroup` (Canvas sourcing config), `pushToCanvas?`. Pulls Canvas data, merges the roster file, runs the engine, writes the output file, optionally creates the Canvas Group Set, and returns a summary + diagnostics (unavoidable repeats, size spread, any unmapped majors / missing pseudonyms). **Does not** mutate the pairing history (preview-safe).
 - **`record_groups`** — inputs: `courseId`, the grouping (or a path/handle to the just-created output). Appends the grouping to the pairing-history store so future runs avoid it. Separate from `create_groups` so the professor previews before committing.
+- **`propose_major_buckets`** — inputs: `courseId`, optional `rosterFile`. Runs the keyword heuristic (§5.6) over the distinct majors present and returns a **draft** `major→bucket` map for the professor to review/edit, plus the majors that landed in `other`. Saving the edited map to the per-course `major-buckets.json` makes the `major-diversity` strategy use it. For `strategy: major-diversity`, `create_groups` uses the saved map if present; otherwise it proposes one inline and flags it in diagnostics as "review these buckets." Mirrors the preview-then-commit pattern.
 
 ## 9. Output
 
@@ -119,10 +127,11 @@ New package **`@canvas-toolchain/module-group-builder`** (module id `group-build
 
 - `src/data/` — Canvas pull (reuses the existing C&C Canvas API client; injected for tests) + roster-file parse + merge → `StudentRecord[]`.
 - `src/strategies/` — one file per strategy, each exposing a `generateCandidate` + `strategyMisfit`; a registry maps strategy id → implementation.
+- `src/buckets/` — the keyword major→bucket heuristic + per-course `major-buckets.json` read/write (§5.6).
 - `src/engine/` — the score-and-optimize loop, the penalty functions, seeded RNG.
 - `src/history/` — pairing-history store (read/append, per-course, atomic write 0o600).
 - `src/output/` — CSV + markdown writers; Canvas Group Set push (injected Canvas client).
-- `src/tools.ts` — `create_groups`, `record_groups` ModuleTools.
+- `src/tools.ts` — `create_groups`, `record_groups`, `propose_major_buckets` ModuleTools.
 - `src/index.ts` — the module default export.
 
 Boundary note: this module needs the **Canvas API client**. To avoid inverting the dependency (module importing C&C), the Canvas client is **injected** into the tool handlers by C&C at registration, or the module depends on a shared Canvas-client package. Resolve in the plan (mirror however `module-video` reaches shared infrastructure; if there's no shared Canvas-client package, the module reads `canvas-config.json` itself like `module-video` reads its own config, and uses a minimal local Canvas client for the few endpoints it needs: list students, get grades, get assignment submissions, create group categories/groups).
@@ -136,7 +145,7 @@ Boundary note: this module needs the **Canvas API client**. To avoid inverting t
 
 ## 12. Testing
 
-Fully hermetic: the Canvas client is injected/stubbed; the RNG is seeded so group output is deterministic; the pairing-history store uses a temp dir. Unit tests per strategy (generator produces strategy-consistent groups), the penalty functions, the optimizer (best-candidate selection, reproducibility under a fixed seed), the history store (read/append/no-repeat enforcement), the output writers, and the two tools (preview vs commit separation, pushToCanvas path with a stubbed client). No network.
+Fully hermetic: the Canvas client is injected/stubbed; the RNG is seeded so group output is deterministic; the pairing-history store and per-course `major-buckets.json` use a temp dir. Unit tests per strategy (generator produces strategy-consistent groups), the major→bucket heuristic (Kevin's seed cases: IT Management/Business Analytics→technical, Accounting/Finance/Econ→quantitative, Marketing→creative, Gen Bus→business, unknown→other), the penalty functions, the optimizer (best-candidate selection, reproducibility under a fixed seed), the history store (read/append/no-repeat enforcement), the output writers, and the three tools (preview vs commit separation, the propose-buckets draft/persist flow, pushToCanvas path with a stubbed client). No network.
 
 ## 13. Source-of-truth pointers (for the implementation plan)
 
