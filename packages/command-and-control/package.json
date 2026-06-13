@@ -21,6 +21,7 @@
     "yaml": "^2.9.0",
     "@canvas-toolchain/module-video": "*",
     "@canvas-toolchain/module-oral-assessment": "*",
+    "@canvas-toolchain/module-group-builder": "*",
     "@canvas-toolchain/shared-llm": "*",
     "@canvas-toolchain/shared-types": "*",
     "@llamaindex/liteparse": "^2.0.5",

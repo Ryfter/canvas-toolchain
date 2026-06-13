@@ -60,3 +60,9 @@ describe('oral-assessment is a known module', () => {
     expect(knownModuleIds()).toContain('oral-assessment');
   });
 });
+
+describe('group-builder is a known module', () => {
+  it('group-builder is a known module', () => {
+    expect(knownModuleIds()).toContain('group-builder');
+  });
+});
