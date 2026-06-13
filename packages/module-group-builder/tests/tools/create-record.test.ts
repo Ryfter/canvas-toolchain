@@ -35,6 +35,16 @@ describe('createGroups orchestration', () => {
     expect(readFileSync(res.csvPath, 'utf-8')).toContain('group,pseudonym,canvas_id');
     expect(loadHistory('5').pairCounts).toEqual({}); // preview-safe
   });
+
+  it('surfaces canvasIds with no roster pseudonym in diagnostics.missingPseudonyms', async () => {
+    home = mkdtempSync(join(tmpdir(), 'gb-miss-')); process.env.CC_HOME = home;
+    const roster = join(home, 'roster.csv');
+    // enrollment ids are 1..4; omit id 4 from the roster file
+    writeFileSync(roster, 'canvas_id,pseudonym,major\n1,SU26-001,IT\n2,SU26-002,Marketing\n3,SU26-003,Accounting\n');
+    const out = join(home, 'out');
+    const res = await createGroups({ courseId: '6', strategy: 'heterogeneous', groupCount: 2, rosterFile: roster, outputDir: out, seed: 1 }, { client: fakeClient() as never });
+    expect(res.diagnostics.missingPseudonyms).toContain('4');
+  });
 });
 
 describe('record_groups tool', () => {

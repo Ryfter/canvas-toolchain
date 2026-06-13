@@ -40,19 +40,28 @@ export async function createGroups(input: CreateGroupsInput, deps: RunDeps = {})
   const enrollments = await client.listStudentEnrollments(courseIdNum);
   const submissions = input.assignmentIds?.length ? await client.listSubmissions(courseIdNum, input.assignmentIds) : [];
   const roster = input.rosterFile ? parseRosterFile(input.rosterFile) : [];
-  const { records } = buildStudentRecords({ enrollments, submissions, roster });
+  const { records, diagnostics: mergeDiag } = buildStudentRecords({ enrollments, submissions, roster });
 
   const spec = resolveGroupSpec({ groupSize: input.groupSize, groupCount: input.groupCount }, records.length);
+  const majorBuckets = input.majorBuckets ?? loadMajorBuckets(input.courseId);
   const opts: StrategyOpts = {
     metric: input.metric,
     weights: input.weights,
     weightedMode: input.weightedMode,
-    majorBuckets: input.majorBuckets ?? loadMajorBuckets(input.courseId),
+    majorBuckets,
   };
   const { grouping, diagnostics } = optimize({
     records, spec, strategy: getStrategy(input.strategy), history: loadHistory(input.courseId),
     opts, seed: input.seed ?? 1,
   });
+
+  if (mergeDiag.missingPseudonyms.length) diagnostics.missingPseudonyms = mergeDiag.missingPseudonyms;
+  if (majorBuckets) {
+    const mapped = new Set(Object.keys(majorBuckets));
+    const unmapped = [...new Set(records.map((r) => r.major).filter((m): m is string => !!m))]
+      .filter((m) => !mapped.has(m));
+    if (unmapped.length) diagnostics.unmappedMajors = unmapped;
+  }
 
   const outDir = input.outputDir ?? join(process.env.CC_HOME ?? '.', 'groups', input.courseId, 'output');
   mkdirSync(outDir, { recursive: true });
