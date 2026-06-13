@@ -11,6 +11,10 @@ describe('penalties', () => {
   });
   it('sizeImbalancePenalty is 0 when sizes match targets', () => {
     expect(sizeImbalancePenalty([['1', '2'], ['3']], [2, 1])).toBe(0);
-    expect(sizeImbalancePenalty([['1'], ['2', '3']], [2, 1])).toBeGreaterThan(0);
+    expect(sizeImbalancePenalty([['1'], ['2', '3', '4']], [2, 2])).toBeGreaterThan(0);
+  });
+  it('sizeImbalancePenalty compares size multisets, not positions (equal multiset → 0)', () => {
+    // snake-draft [3,3,4] vs target [4,3,3]: identical multiset, different order
+    expect(sizeImbalancePenalty([['a', 'b', 'c'], ['d', 'e', 'f'], ['g', 'h', 'i', 'j']], [4, 3, 3])).toBe(0);
   });
 });

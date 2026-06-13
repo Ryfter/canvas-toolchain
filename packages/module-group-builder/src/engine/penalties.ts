@@ -22,8 +22,13 @@ export function repeatPairs(grouping: Grouping, history: History): Array<[string
 }
 
 export function sizeImbalancePenalty(grouping: Grouping, targetSizes: number[]): number {
+  // Compare size multisets (sorted descending), not positions: a candidate whose
+  // group sizes match the target sizes as a set scores 0 regardless of which index
+  // holds the larger group (e.g. snake-draft [3,3,4] vs target [4,3,3] → 0).
+  const sizes = grouping.map((g) => g.length).sort((a, b) => b - a);
+  const targets = [...targetSizes].sort((a, b) => b - a);
   let p = 0;
-  for (let i = 0; i < Math.max(grouping.length, targetSizes.length); i++)
-    p += Math.abs((grouping[i]?.length ?? 0) - (targetSizes[i] ?? 0));
+  for (let i = 0; i < Math.max(sizes.length, targets.length); i++)
+    p += Math.abs((sizes[i] ?? 0) - (targets[i] ?? 0));
   return p;
 }
