@@ -319,6 +319,24 @@ describe('generatePage — oral-assessment AIAS + launch (#76)', () => {
     } finally { rmSync(courseDir, { recursive: true, force: true }); }
   });
 
+  it('builds the launch link from course-config domain when the page omits launch_url', () => {
+    const courseDir = setupCourse('oa-domain-',
+      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\noral_assessment_launch_domain: rhetorixlab.boisestate.edu\n---\n');
+    try {
+      const mdPath = join(courseDir, 'week-04', 'oral-assessment.md');
+      writeFileSync(mdPath, [
+        '---', 'week: 4', 'title: "Concept Check"', 'prep_seconds: 30',
+        'response_seconds: 120', 'randomize_pick: 1', 'randomize_of: 3', 'attempts: "1"',
+        '---', '',
+        '## What to expect', 'Explain opportunity cost aloud.', '',
+      ].join('\n'));
+      const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
+      expect(result.pageType).toBe('oral-assessment');
+      expect(result.html).toContain('https://rhetorixlab.boisestate.edu/lti/launch');
+      expect(result.html).toContain('Launch the assessment');
+    } finally { rmSync(courseDir, { recursive: true, force: true }); }
+  });
+
   it('coerces string front-matter timing/randomization through the real parser', () => {
     const courseDir = setupCourse('oa-coerce-',
       '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\n---\n');

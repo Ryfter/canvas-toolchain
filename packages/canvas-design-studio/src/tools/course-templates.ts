@@ -644,7 +644,13 @@ function renderOralAssessment(c: PageContent, cfg: CourseConfig): string {
   const pick = num(fm.randomize_pick, 1);
   const of = num(fm.randomize_of, 1);
   const attempts = String(fm.attempts ?? '1');
-  const launchUrl = typeof fm.launch_url === 'string' ? fm.launch_url : '';
+  // Launch URL resolution (spec §4.3 / D6): prefer the page's own launch_url
+  // front-matter key; otherwise build it CDS-side from the institution's
+  // stored launch domain in course-config (kept provider-agnostic — we inline
+  // the `https://<domain>/lti/launch` shape rather than importing the module).
+  const pageLaunchUrl = typeof fm.launch_url === 'string' ? fm.launch_url.trim() : '';
+  const domain = cfg.oralAssessmentLaunchDomain?.trim();
+  const launchUrl = pageLaunchUrl || (domain ? `https://${domain}/lti/launch` : '');
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   const summary = c.sections['What to expect'] ?? c.sections['What to Expect'] ?? '';
