@@ -119,7 +119,7 @@ return best, diagnostics(best)   // incl. unavoidable repeat pairings, size spre
 ## 9. Output
 
 - **Always:** a canonical groups file under the course output dir — CSV (`group,pseudonym,canvas_id`) + a readable markdown roster (groups with member pseudonyms + the diagnostics summary).
-- **Optional (`pushToCanvas: true`):** create a Canvas **Group Set / category** and the member groups via the Canvas API, mapping pseudonyms back to Canvas IDs (which the tool already holds). Requires Canvas credentials; absent them, it writes the file and notes the push was skipped.
+- **Optional (`pushToCanvas: true`):** create a Canvas **Group Set / category** and the member groups via the Canvas API, mapping pseudonyms back to Canvas IDs (which the tool already holds). Canvas credentials are **required for this module** regardless of `pushToCanvas` — Canvas enrollments are the authoritative student roster (the roster file only *enriches* by `canvas_id`), so a missing `canvas-config.json` is an error, not a degrade-and-skip. `pushToCanvas` gates only the **Group-Set creation** step, not the file output: with credentials present and `pushToCanvas: false`, the tool still pulls enrollments and writes the CSV + markdown.
 
 ## 10. Architecture & package
 
@@ -142,6 +142,11 @@ Boundary note: this module needs the **Canvas API client**. To avoid inverting t
 - **PeerAssessment.com round-trip** — separate module; later feeds `priorReview`.
 - **Attendance capture** beyond reading a designated Canvas column — if attendance isn't in Canvas, it comes via the roster file; no new attendance-tracking system here.
 - **Optimization beyond random-restart scoring** (e.g. simulated annealing, ILP) — only if the simple optimizer proves inadequate at real class sizes.
+
+### Known limitations / deferred (as built, v1)
+
+- **(a) Attendance from a Canvas gradebook column is not implemented in v1.** §4/§5 describe sourcing `attendance` from a designated Canvas gradebook column; v1 does not read gradebook columns — attendance comes in via the roster file (as an extra metric column) only.
+- **(b) Only `random` and `major-diversity` actively rotate under the no-repeat optimizer.** The deterministic strategies (`heterogeneous`, `homogeneous`, `alphabetical`, `weighted`) emit a single candidate per run, so the score-and-optimize loop has nothing to rotate among for them: they produce the same composition each run for the same inputs. This is acceptable — those strategies are about *deliberate composition* (balance/cluster/sort), not rotation; `random` (and, to a lesser degree, `major-diversity`) is the no-repeat rotation workhorse.
 
 ## 12. Testing
 
