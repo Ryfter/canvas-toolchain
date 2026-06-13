@@ -1,5 +1,31 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.6.0
+
+Two new capability **modules** land on the plug-in architecture introduced in v1.5, plus a full user guide. Both modules follow the established `CanvasToolchainModule` contract, are enabled at config-time via `~/.command-and-control/modules.json` (no reinstall), and load fail-soft.
+
+### Oral Assessment module (#75)
+
+- **`design_oral_assessment`** — authoring-side design of oral / viva-style assessments. Give it either a finished brief or just a topic + learning goal, and it produces both a Canvas-ready CDS `oral-assessment` page **and** a faculty sidecar (rubric language, prompts, logistics). Carries the AI Assessment Scale callout like the rest of the assignment surface.
+- **Capability, not a vendor.** The boundary is the *Oral Assessment capability*; concrete tools are providers behind an adapter. **Rhetorix Lab** ships as the recommended provider #1 (flagged in the discovery catalog), with an optional `oral_assessment_launch_domain` for linking. Rhetorix is already LTI-native in Canvas, so this module is authoring-side — no extra plumbing or credentials required.
+
+### Group Creator / Maintainer module (#101)
+
+- **`create_groups` / `record_groups` / `propose_major_buckets`** — build balanced student project teams from a Canvas roster with a privacy-preserving identity model: groups key on the opaque **Canvas user ID paired with a professor pseudonym** (e.g. `SU26-001`) — the tool never reads or emits student names or emails.
+- **Six formation strategies** — random, alphabetical, performance (heterogeneous / homogeneous), accomplishment-weighted, and major-diversity — layered with cross-cutting constraints: a **soft no-repeat-pairing "maintainer"** (per-course pairing history) and group-size balancing, resolved by a seeded **score-and-optimize** engine.
+- **Major-diversity** proposes archetype buckets (technical / quantitative / creative / business / other) for the professor to review and persist, rather than guessing silently.
+- Outputs a CSV + markdown report with diagnostics, and can optionally push the result straight to a Canvas Group Set.
+
+### Documentation
+
+- **User Guide & tutorial** — a narrative "start here" guide with an end-to-end walkthrough plus a task-by-task command catalog (what each tool does, how it works, and why you'd reach for it) covering ~120 MCP tools.
+
+### Quality
+
+Both modules built with subagent-driven TDD and adversarial whole-implementation review. The monorepo test suite now stands at **~1,610 tests**, green, with the integration smoke test and both installer targets building cleanly.
+
+Full diff: [v1.5.2...v1.6.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.5.2...v1.6.0)
+
 ## What's new in v1.5.2
 
 The biggest release since the toolchain shipped — **230+ commits** since v1.2.0 completing the v1.x roadmap and laying the v2.0 platform foundations. This is the "build complete" milestone: the toolchain now does what it set out to do, end to end.
