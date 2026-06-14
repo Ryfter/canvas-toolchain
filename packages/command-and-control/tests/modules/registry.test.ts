@@ -66,3 +66,9 @@ describe('group-builder is a known module', () => {
     expect(knownModuleIds()).toContain('group-builder');
   });
 });
+
+describe('roster is a known module', () => {
+  it('includes the roster module', () => {
+    expect(knownModuleIds()).toContain('roster');
+  });
+});
