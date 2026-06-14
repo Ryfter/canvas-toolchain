@@ -34,19 +34,29 @@ const buildImportTool: ModuleTool = {
     const a = args as {
       courseId: string; groupSetName: string; peopleSoftFile?: string; outputDir?: string; dryRun?: boolean;
     };
-    const canvas = new PaCanvasClient(loadCanvasCreds());
-    const groups = await canvas.readGroupSet(Number(a.courseId), a.groupSetName);
-    const allStudents = await canvas.listCourseStudents(Number(a.courseId));
-    const report = buildPeerAssessmentImport({
-      courseId: a.courseId,
-      groupSetName: a.groupSetName,
-      groups,
-      allStudents,
-      sources: { vaultIndex: buildVaultIndex(), peopleSoftIndex: loadPeopleSoftIndex(a.peopleSoftFile) },
-      outputDir: a.outputDir,
-      dryRun: a.dryRun,
-    });
-    return json(report);
+    try {
+      const canvas = new PaCanvasClient(loadCanvasCreds());
+      const groups = await canvas.readGroupSet(Number(a.courseId), a.groupSetName);
+      const allStudents = await canvas.listCourseStudents(Number(a.courseId));
+      const report = buildPeerAssessmentImport({
+        courseId: a.courseId,
+        groupSetName: a.groupSetName,
+        groups,
+        allStudents,
+        sources: { vaultIndex: buildVaultIndex(), peopleSoftIndex: loadPeopleSoftIndex(a.peopleSoftFile) },
+        outputDir: a.outputDir,
+        dryRun: a.dryRun,
+      });
+      return json(report);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return json({
+        error: 'BUILD_FAILED',
+        message,
+        fix: 'Verify the course id and the exact group-set name, that Canvas is configured (setup_canvas), ' +
+          'that the roster vault is readable, and that any peopleSoftFile path + remembered column mapping are valid.',
+      });
+    }
   },
 };
 

@@ -22,7 +22,9 @@ export function resolveRow(team: string, m: PaCanvasUser, src: ResolveSources): 
 
   const email = m.email || ps?.email || '';
   const loginId = m.loginId || ps?.userId || '';
-  const studentId = m.sisUserId || studentNumber || ps?.studentNumber || '';
+  // studentNumber is the vault's student_number (and equals ps.studentNumber when ps exists),
+  // so it already covers the PeopleSoft fallback for this column.
+  const studentId = m.sisUserId || studentNumber || '';
 
   let { firstName, lastName } = splitName(m.sortableName || m.name || '');
   if (!firstName && !lastName && ps?.name) ({ firstName, lastName } = splitName(ps.name));

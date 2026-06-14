@@ -5,7 +5,10 @@ import type { PeerAssessmentRow } from './types.js';
 const HEADER = 'Team,Login ID,Email,First Name,Last Name,Student ID #';
 
 function csvCell(value: string): string {
-  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  // Guard against CSV/formula injection when the file is opened in Excel/Sheets:
+  // a cell beginning with a formula-trigger char is prefixed with a single quote.
+  const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[",\n]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
 }
 
 /** Render rows as the PeerAssessment.com import CSV (header + one row per student). */

@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { writeImportCsv } from './output.js';
 import { importCsvPath, importCsvFileName } from './paths.js';
 import { resolveMembers, type ResolveSources } from './join/resolve.js';
-import { findIncomplete, findUngrouped, findDuplicateEmails } from './report.js';
+import { findIncomplete, findUngrouped, findDuplicateEmails, findMultiGrouped } from './report.js';
 import type { PaGroup, PaCanvasUser, ImportReport } from './types.js';
 
 const FERPA_NOTE =
@@ -45,6 +45,7 @@ export function buildPeerAssessmentImport(input: BuildInput): ImportReport {
     incomplete: findIncomplete(resolved),
     ungrouped: findUngrouped(input.allStudents, resolved),
     duplicateEmails: findDuplicateEmails(resolved),
+    multiGrouped: findMultiGrouped(resolved),
     warnings,
   };
 }

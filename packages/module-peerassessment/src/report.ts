@@ -1,5 +1,5 @@
 import type {
-  PaCanvasUser, PeerAssessmentRow, IncompleteStudent, UngroupedStudent, DuplicateEmail,
+  PaCanvasUser, PeerAssessmentRow, IncompleteStudent, UngroupedStudent, DuplicateEmail, MultiGroupedStudent,
 } from './types.js';
 import type { ResolvedMember } from './join/resolve.js';
 
@@ -30,15 +30,36 @@ export function findUngrouped(allStudents: PaCanvasUser[], grouped: ResolvedMemb
     .map((s) => ({ name: s.name, canvasId: s.canvasId }));
 }
 
-/** Emails shared by more than one output row (PeerAssessment.com keys on email). */
+/** Emails shared by more than one DISTINCT student (different canvas_ids). A single student in
+ *  two groups is NOT a duplicate email — that is reported separately by findMultiGrouped. */
 export function findDuplicateEmails(resolved: ResolvedMember[]): DuplicateEmail[] {
-  const byEmail = new Map<string, string[]>();
+  const byEmail = new Map<string, Map<string, string>>(); // email -> (canvasId -> name)
   for (const { member, row } of resolved) {
     const e = row.email.trim().toLowerCase();
     if (!e) continue;
-    byEmail.set(e, [...(byEmail.get(e) ?? []), member.name]);
+    const people = byEmail.get(e) ?? new Map<string, string>();
+    people.set(member.canvasId, member.name);
+    byEmail.set(e, people);
   }
   const out: DuplicateEmail[] = [];
-  for (const [email, names] of byEmail) if (names.length > 1) out.push({ email, names });
+  for (const [email, people] of byEmail) {
+    if (people.size > 1) out.push({ email, names: [...people.values()] });
+  }
+  return out;
+}
+
+/** Students (by canvas_id) appearing in more than one group of the set — produces duplicate
+ *  rows in the upload file (PeerAssessment.com keys on email), so the professor must resolve it. */
+export function findMultiGrouped(resolved: ResolvedMember[]): MultiGroupedStudent[] {
+  const byId = new Map<string, { name: string; teams: string[] }>();
+  for (const { member, row } of resolved) {
+    const entry = byId.get(member.canvasId) ?? { name: member.name, teams: [] };
+    if (!entry.teams.includes(row.team)) entry.teams.push(row.team);
+    byId.set(member.canvasId, entry);
+  }
+  const out: MultiGroupedStudent[] = [];
+  for (const [canvasId, { name, teams }] of byId) {
+    if (teams.length > 1) out.push({ canvasId, name, teams });
+  }
   return out;
 }

@@ -23,6 +23,12 @@ describe('renderImportCsv', () => {
     ]);
     expect(csv).toContain('"A,B",x,e@e,"Jo ""JJ""","Line\nBreak",1');
   });
+  it('neutralizes formula-injection leading characters', () => {
+    const csv = renderImportCsv([
+      { team: 'T', loginId: 'x', email: 'e@e', firstName: '=cmd()', lastName: '+evil', studentId: '1' },
+    ]);
+    expect(csv).toContain("T,x,e@e,'=cmd(),'+evil,1");
+  });
 });
 
 describe('writeImportCsv', () => {

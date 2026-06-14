@@ -52,3 +52,29 @@ describe('PaCanvasClient.readGroupSet', () => {
     ]);
   });
 });
+
+describe('PaCanvasClient paging', () => {
+  it('follows rel="next" Link headers and concatenates pages', async () => {
+    const fetchImpl = (async (url: string) => {
+      if (url.includes('/courses/5/users') && !url.includes('page=2')) {
+        return {
+          ok: true, status: 200,
+          json: async () => [{ id: 1, name: 'A One', sortable_name: 'One, A' }],
+          headers: { get: (h: string) => h.toLowerCase() === 'link'
+            ? '<https://canvas.test/api/v1/courses/5/users?page=2>; rel="next"' : null },
+        } as unknown as Response;
+      }
+      if (url.includes('/courses/5/users') && url.includes('page=2')) {
+        return {
+          ok: true, status: 200,
+          json: async () => [{ id: 2, name: 'B Two', sortable_name: 'Two, B' }],
+          headers: { get: () => null },
+        } as unknown as Response;
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as unknown as typeof fetch;
+    const client = new PaCanvasClient({ host: 'canvas.test', token: 't' }, { fetchImpl });
+    const students = await client.listCourseStudents(5);
+    expect(students.map((s) => s.canvasId)).toEqual(['1', '2']);
+  });
+});

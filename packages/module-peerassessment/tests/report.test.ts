@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findIncomplete, findUngrouped, findDuplicateEmails } from '../src/report.js';
+import { findIncomplete, findUngrouped, findDuplicateEmails, findMultiGrouped } from '../src/report.js';
 import type { ResolvedMember } from '../src/join/resolve.js';
 import type { PaCanvasUser } from '../src/types.js';
 
@@ -37,5 +37,26 @@ describe('findDuplicateEmails', () => {
   });
   it('ignores blank emails', () => {
     expect(findDuplicateEmails([rm('100', 'Jane', { email: '' }), rm('200', 'Bob', { email: '' })])).toEqual([]);
+  });
+});
+
+describe('findDuplicateEmails — same student in two groups', () => {
+  it('does NOT flag one canvas_id appearing twice as a duplicate email', () => {
+    const out = findDuplicateEmails([
+      { member: { canvasId: '100', name: 'Jane' }, row: { team: 'T1', loginId: 'l', email: 'jane@u.edu', firstName: 'F', lastName: 'L', studentId: 's' } },
+      { member: { canvasId: '100', name: 'Jane' }, row: { team: 'T2', loginId: 'l', email: 'jane@u.edu', firstName: 'F', lastName: 'L', studentId: 's' } },
+    ]);
+    expect(out).toEqual([]);
+  });
+});
+
+describe('findMultiGrouped', () => {
+  it('flags a student whose canvas_id appears in more than one team', () => {
+    const out = findMultiGrouped([
+      { member: { canvasId: '100', name: 'Jane' }, row: { team: 'T1', loginId: 'l', email: 'e@e', firstName: 'F', lastName: 'L', studentId: 's' } },
+      { member: { canvasId: '100', name: 'Jane' }, row: { team: 'T2', loginId: 'l', email: 'e@e', firstName: 'F', lastName: 'L', studentId: 's' } },
+      { member: { canvasId: '200', name: 'Bob' }, row: { team: 'T1', loginId: 'l', email: 'b@e', firstName: 'F', lastName: 'L', studentId: 's' } },
+    ]);
+    expect(out).toEqual([{ canvasId: '100', name: 'Jane', teams: ['T1', 'T2'] }]);
   });
 });

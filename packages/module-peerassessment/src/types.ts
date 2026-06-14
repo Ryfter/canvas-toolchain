@@ -49,6 +49,13 @@ export interface DuplicateEmail {
   names: string[];
 }
 
+/** A student (one canvas_id) who appears in more than one group of the set. */
+export interface MultiGroupedStudent {
+  name: string;
+  canvasId: string;
+  teams: string[];
+}
+
 /** The pre-upload report returned by buildPeerAssessmentImport. */
 export interface ImportReport {
   /** Path written, or null when dryRun or zero rows. */
@@ -58,6 +65,7 @@ export interface ImportReport {
   incomplete: IncompleteStudent[];
   ungrouped: UngroupedStudent[];
   duplicateEmails: DuplicateEmail[];
+  multiGrouped: MultiGroupedStudent[];
   /** Non-fatal advisories (FERPA note + sourcing caveats). */
   warnings: string[];
 }
