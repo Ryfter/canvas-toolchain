@@ -19,3 +19,8 @@ export default rosterModule;
 export { proposeRoster } from './propose.js';
 export { commitRoster } from './commit.js';
 export { resolveIdentity } from './resolve.js';
+// Reused by @canvas-toolchain/module-peerassessment (vault bridge + PeopleSoft fallback).
+export { loadVault } from './vault/store.js';
+export { loadColumnMap } from './peoplesoft/column-map.js';
+export { parseRosterFile } from './peoplesoft/parse.js';
+export type { VaultRecord, ColumnMapping, PeopleSoftRow } from './types.js';
