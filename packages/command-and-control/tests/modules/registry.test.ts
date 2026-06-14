@@ -72,3 +72,9 @@ describe('roster is a known module', () => {
     expect(knownModuleIds()).toContain('roster');
   });
 });
+
+describe('peerassessment is a known module', () => {
+  it('includes the peerassessment module', () => {
+    expect(knownModuleIds()).toContain('peerassessment');
+  });
+});

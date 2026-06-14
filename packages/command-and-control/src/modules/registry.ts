@@ -8,6 +8,7 @@ export const KNOWN_MODULES: Record<string, () => Promise<CanvasToolchainModule>>
   'oral-assessment': async () => (await import('@canvas-toolchain/module-oral-assessment')).default,
   'group-builder': async () => (await import('@canvas-toolchain/module-group-builder')).default,
   roster: async () => (await import('@canvas-toolchain/module-roster')).default,
+  peerassessment: async () => (await import('@canvas-toolchain/module-peerassessment')).default,
 };
 
 /** Ids of all known modules (whether enabled or not). */
