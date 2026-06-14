@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { columnMapPath, rosterVaultDir } from '../paths.js';
 import type { ColumnMapping } from '../types.js';
 
@@ -17,6 +17,8 @@ export function loadColumnMap(): ColumnMapping | null {
 export function saveColumnMap(mapping: ColumnMapping): string {
   mkdirSync(rosterVaultDir(), { recursive: true });
   const path = columnMapPath();
-  writeFileSync(path, JSON.stringify(mapping, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, JSON.stringify(mapping, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  renameSync(tmp, path);
   return path;
 }

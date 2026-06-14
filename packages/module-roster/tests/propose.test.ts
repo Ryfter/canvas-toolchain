@@ -62,4 +62,14 @@ describe('proposeRoster', () => {
     expect(report.unmatchedCanvas.map((c) => c.canvasId)).toContain('700');
     expect(report.llmUsed).toBe(false);                  // passthrough
   });
+
+  it('warns when no Canvas user carries a sis_user_id or login_id', async () => {
+    const report = await proposeRoster({
+      term: 'FA26', courseId: '123',
+      peopleSoft: [ps({ studentNumber: '100', email: 'a@x.edu', name: 'Jane Doe' })],
+      canvasUsers: [cu({ canvasId: '900', email: 'a@x.edu', name: 'Jane Doe' })], // no sis/login
+      llm: null, aliases: {},
+    });
+    expect(report.warnings.some((w) => /sis_user_id or login_id/.test(w))).toBe(true);
+  });
 });

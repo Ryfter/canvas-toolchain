@@ -39,6 +39,18 @@ export async function proposeRoster(input: ProposeRosterInput): Promise<Proposal
     match.matched.map((m) => m.ps.rawMajor), input.llm, input.aliases,
   );
 
+  const warnings: string[] = [];
+  if (
+    input.canvasUsers.length > 0 &&
+    !input.canvasUsers.some((u) => u.sisUserId) &&
+    !input.canvasUsers.some((u) => u.loginId)
+  ) {
+    warnings.push(
+      'No Canvas user carried a sis_user_id or login_id, so matching could use only email and name. ' +
+      'If match coverage looks low, verify your Canvas token can read SIS ids / logins.',
+    );
+  }
+
   const rows: ProposalRow[] = match.matched.map((ms) => {
     const a = assignBySn.get(ms.ps.studentNumber)!;
     const raw = ms.ps.rawMajor.trim();
@@ -64,5 +76,6 @@ export async function proposeRoster(input: ProposeRosterInput): Promise<Proposal
     majorMap,
     collisions,
     llmUsed,
+    warnings,
   };
 }

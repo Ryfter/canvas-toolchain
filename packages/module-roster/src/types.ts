@@ -95,4 +95,6 @@ export interface ProposalReport {
   collisions: VaultCollision[];
   /** True when an LLM produced the canonical majors; false on passthrough. */
   llmUsed: boolean;
+  /** Non-fatal advisories surfaced for the professor to review. */
+  warnings: string[];
 }

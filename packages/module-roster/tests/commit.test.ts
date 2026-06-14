@@ -16,7 +16,7 @@ const row = (o: Partial<ProposalRow>): ProposalRow => ({
 });
 const report = (rows: ProposalRow[]): ProposalReport => ({
   term: 'FA26', courseId: '123', rows, ambiguous: [], unmatchedPeopleSoft: [],
-  unmatchedCanvas: [], majorMap: {}, collisions: [], llmUsed: false,
+  unmatchedCanvas: [], majorMap: {}, collisions: [], llmUsed: false, warnings: [],
 });
 
 describe('commitRoster', () => {
@@ -49,6 +49,12 @@ describe('commitRoster', () => {
   it('refuses to commit when unresolved collisions are present', () => {
     const rep = report([row({ studentNumber: '100', canvasId: '999', pseudonym: 'SU26-001' })]);
     rep.collisions = [{ studentNumber: '100', vaultCanvasId: '900', incomingCanvasId: '999' }];
+    expect(() => commitRoster(rep, join(home, 'roster.csv'))).toThrow(/collision/i);
+  });
+
+  it('refuses to commit when a row collides with the live vault even if report.collisions is empty', () => {
+    saveVault([{ studentNumber: '100', canvasId: '900', pseudonym: 'SU26-001', firstSeenTerm: 'SU26' }]);
+    const rep = report([row({ studentNumber: '100', canvasId: '999', pseudonym: 'SU26-001' })]); // collisions: []
     expect(() => commitRoster(rep, join(home, 'roster.csv'))).toThrow(/collision/i);
   });
 });

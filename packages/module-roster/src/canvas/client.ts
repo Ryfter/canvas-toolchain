@@ -57,6 +57,9 @@ export class RosterCanvasClient {
 
   /** List active students in a course with login_id / sis_user_id / email for matching. */
   async listCourseStudents(courseId: number): Promise<CanvasUser[]> {
+    // NOTE: login_id / sis_user_id are returned only when the API token has permission
+    // to read user logins / SIS ids. There is no include[] that forces them; absence is
+    // surfaced as a proposal warning (see proposeRoster) rather than an error.
     const url = `${this.base()}/courses/${courseId}/users?` +
       `enrollment_type%5B%5D=student&include%5B%5D=email&per_page=100`;
     const raw = await this.getAll<RawCanvasUser>(url);

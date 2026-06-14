@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { rosterVaultDir, vaultPath } from '../paths.js';
 import type { VaultRecord, VaultCollision } from '../types.js';
 
@@ -18,7 +18,9 @@ export function loadVault(): VaultRecord[] {
 export function saveVault(records: VaultRecord[]): string {
   mkdirSync(rosterVaultDir(), { recursive: true });
   const path = vaultPath();
-  writeFileSync(path, JSON.stringify({ records }, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, JSON.stringify({ records }, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  renameSync(tmp, path);
   return path;
 }
 

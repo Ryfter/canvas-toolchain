@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { majorAliasesPath, rosterVaultDir } from '../paths.js';
 
 /** Load remembered raw->canonical major overrides, or {} if none saved. */
@@ -13,6 +13,8 @@ export function loadMajorAliases(): Record<string, string> {
 export function saveMajorAliases(aliases: Record<string, string>): string {
   mkdirSync(rosterVaultDir(), { recursive: true });
   const path = majorAliasesPath();
-  writeFileSync(path, JSON.stringify(aliases, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, JSON.stringify(aliases, null, 2), { encoding: 'utf-8', mode: 0o600 });
+  renameSync(tmp, path);
   return path;
 }

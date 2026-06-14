@@ -14,10 +14,14 @@ export interface AssignmentResult {
   newRecords: VaultRecord[];
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** The next sequence number for a term prefix = 1 + the max existing number with that prefix. */
 export function nextSequence(vault: VaultRecord[], term: string): number {
   let max = 0;
-  const re = new RegExp(`^${term}-(\\d+)$`);
+  const re = new RegExp(`^${escapeRegExp(term)}-(\\d+)$`);
   for (const r of vault) {
     const m = r.pseudonym.match(re);
     if (m) max = Math.max(max, Number(m[1]));

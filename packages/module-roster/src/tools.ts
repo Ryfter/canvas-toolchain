@@ -43,6 +43,9 @@ const proposeRosterTool: ModuleTool = {
   },
   handler: async (args) => {
     const a = args as { courseId: string; term: string; peopleSoftFile: string; columnMap?: ColumnMapping };
+    if (!a.term || !/^[A-Za-z0-9]+$/.test(a.term)) {
+      return json({ error: 'term must be a non-empty alphanumeric code like "FA26".' });
+    }
     const mapping = a.columnMap ?? loadColumnMap();
     if (!mapping) return json({ error: 'No column mapping provided and none remembered. Pass columnMap once.' });
     if (a.columnMap) saveColumnMap(a.columnMap);

@@ -35,6 +35,15 @@ describe('vault store', () => {
     expect(idx.get('999')).toBeUndefined();
   });
 
+  it('keeps the file 0600 after a re-save (overwrite path)', () => {
+    saveVault([rec('100', '900', 'SU26-001')]);
+    const path = saveVault([rec('100', '900', 'SU26-001'), rec('101', '901', 'SU26-002')]);
+    if (process.platform !== 'win32') {
+      expect(statSync(path).mode & 0o777).toBe(0o600);
+    }
+    expect(loadVault()).toHaveLength(2);
+  });
+
   it('detects a collision when the same student number maps to a new canvas id', () => {
     const idx = indexByStudentNumber([rec('100', '900', 'SU26-001')]);
     expect(detectCollision(idx, '100', '900')).toBeNull();      // same id -> ok
