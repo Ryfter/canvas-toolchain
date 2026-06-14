@@ -68,4 +68,18 @@ export class RosterCanvasClient {
       email: u.email ?? undefined,
     }));
   }
+
+  /** Fetch a single Canvas user by id, or null if not found. */
+  async getUserById(canvasId: string): Promise<import('../types.js').CanvasUser | null> {
+    const res = await this.fetchImpl(`${this.base()}/users/${canvasId}?include%5B%5D=email`, {
+      method: 'GET', headers: this.headers(),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Canvas GET user ${canvasId} failed: ${res.status}`);
+    const u = (await res.json()) as { id: number; name: string; login_id?: string; sis_user_id?: string | null; email?: string };
+    return {
+      canvasId: String(u.id), name: u.name, loginId: u.login_id ?? undefined,
+      sisUserId: u.sis_user_id == null ? undefined : String(u.sis_user_id), email: u.email ?? undefined,
+    };
+  }
 }
