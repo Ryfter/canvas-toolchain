@@ -617,9 +617,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           courseId:          { type: 'string', description: 'Canvas course id.' },
           assignmentId:      { type: 'string', description: 'Assignment id. When set, pulls the rubric attached to that assignment; if none is attached, falls back to the course rubric list.' },
-          rubricId:          { type: 'string', description: 'Specific course rubric id — use after a list fallback to fetch the chosen rubric.' },
-          priorRenderedPath: { type: 'string', description: 'Absolute path to your last rendered rubric .md, used to detect what changed since the last rewrite.' },
-          assignmentBrief:   { type: 'string', description: 'Optional: overrides the pulled assignment description as the triage\'s assignment signal.' },
+          rubricId:          { type: 'string', description: 'Specific course rubric id — use after a list fallback to fetch the chosen rubric, instead of assignmentId.' },
+          priorRenderedPath: { type: 'string', description: 'Absolute path to the previously rendered rubric .md; used to detect what changed since the last student-facing rewrite.' },
+          assignmentBrief:   { type: 'string', description: 'Overrides the pulled assignment description as the triage\'s assignment signal.' },
         },
       },
     },
