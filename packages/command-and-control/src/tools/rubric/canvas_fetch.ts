@@ -12,7 +12,11 @@ export interface PullRubricInput {
 
 export class RubricFetchError extends Error {
   code: string;
-  constructor(code: string, message: string) { super(`${code}: ${message}`); this.name = 'RubricFetchError'; this.code = code; }
+  constructor(code: string, message: string, options?: { cause?: unknown }) {
+    super(`${code}: ${message}`, options);
+    this.name = 'RubricFetchError';
+    this.code = code;
+  }
 }
 
 interface CanvasCriterionRaw {
@@ -42,14 +46,14 @@ async function getJson(url: string, deps: PullRubricDeps): Promise<unknown> {
   try {
     res = await fetchFn(url, { headers: { Authorization: `Bearer ${deps.cfg.apiToken}`, Accept: 'application/json' } });
   } catch (err) {
-    throw new RubricFetchError('CANVAS_NETWORK_ERROR', `Canvas unreachable at ${url}.`);
+    throw new RubricFetchError('CANVAS_NETWORK_ERROR', `Canvas unreachable at ${url}.`, { cause: err });
   }
   if (!res.ok) {
     if (res.status === 401) throw new RubricFetchError('CANVAS_UNAUTHORIZED', 'Canvas rejected the API token. Re-run setup_canvas.');
     if (res.status === 404) throw new RubricFetchError('CANVAS_NOT_FOUND', `Canvas returned 404 for ${url}.`);
     throw new RubricFetchError('CANVAS_HTTP_ERROR', `Canvas returned HTTP ${res.status} for ${url}.`);
   }
-  return res.json();
+  return await res.json();
 }
 
 export async function pullRubric(input: PullRubricInput, deps: PullRubricDeps): Promise<PulledRubric> {
