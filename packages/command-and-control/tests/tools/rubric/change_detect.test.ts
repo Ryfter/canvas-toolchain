@@ -65,4 +65,24 @@ describe('change_detect', () => {
     const report = detectRubricChange(pulled, md);
     expect(report.removed).toEqual(['Style']);
   });
+
+  it('does not truncate a multi-paragraph faculty block', () => {
+    const md = `## Criterion 1: Thesis — 10 pts\n\n**Faculty rubric language:**\nFirst paragraph of the standard.\n\nSecond paragraph with more detail.\n`;
+    expect(parseFacultyBlocks(md)).toEqual({
+      Thesis: 'First paragraph of the standard.\n\nSecond paragraph with more detail.',
+    });
+  });
+
+  it('skips a criterion that has no faculty block', () => {
+    const md = `## Criterion 1: Thesis — 10 pts\n\n**For students:**\nSay what you argue.\n`;
+    expect(parseFacultyBlocks(md)).toEqual({});
+  });
+
+  it('treats an empty-string priorMd as first-draft', () => {
+    const onlyThesis = {
+      source: { kind: 'assignment' as const, courseId: '1', assignmentId: '2', title: 'A' },
+      criteria: [{ id: 'c1', name: 'Thesis', points: 10, description: 'x' }],
+    };
+    expect(detectRubricChange(onlyThesis, '').status).toBe('first-draft');
+  });
 });

@@ -13,7 +13,11 @@ export function parseFacultyBlocks(md: string): Record<string, string> {
     const start = matches[i].index ?? 0;
     const end = i + 1 < matches.length ? (matches[i + 1].index ?? md.length) : md.length;
     const section = md.slice(start, end);
-    const fac = section.match(/\*\*Faculty rubric language:\*\*\s*\n([\s\S]*?)(?:\n\s*\n|\n##|$)/);
+    // Capture the full faculty block (which may span multiple paragraphs).
+    // It is the last labeled block in a criterion section, so terminate at the
+    // next bold label, the next criterion header, or end-of-string — NOT at a
+    // blank line (that would truncate multi-paragraph faculty language).
+    const fac = section.match(/\*\*Faculty rubric language:\*\*\s*\n([\s\S]*?)(?:\n##|\n\*\*|$)/);
     if (fac) out[name] = fac[1].trim();
   }
   return out;
@@ -32,6 +36,8 @@ export function detectRubricChange(pulled: PulledRubric, priorMd?: string): Rubr
     if (!(name in prior)) { added.push(name); continue; }
     if (prior[name].trim() !== after) modified.push({ name, before: prior[name].trim(), after });
   }
+  // Note: a criterion whose NAME changed reads as one removed + one added
+  // (we key on criterion name, not position — rename detection is out of scope).
   const removed = Object.keys(prior).filter(name => !pulledByName.has(name));
 
   const status = added.length === 0 && removed.length === 0 && modified.length === 0 ? 'unchanged' : 'changed';
