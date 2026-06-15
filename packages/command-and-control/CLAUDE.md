@@ -150,7 +150,9 @@ A "ranking" layer for Canvas page content that classifies each element by how ur
 
 This could drive visual design decisions (prominence, placement, callout styles) and feed into the template creator.
 
-### AI-Friendly Rubric System
+### AI-Friendly Rubric System — SHIPPED
+
+**Status (2026-06-15): shipped.** The student-facing rewrite + per-criterion worked examples + LLM-paste `.md` shipped 2026-06-01 as `draft_student_rubric` (#67). The Canvas-sync gap shipped 2026-06-15 as **`review_canvas_rubric`** (Phase 1): pulls the rubric from Canvas (assignment-first → course-list fallback), detects changes vs the last rewrite, and runs a smart triage (acceptable / needs-update / needs-review) that proposes a revised faculty rubric before feeding the unchanged `draft_student_rubric`. Code under `src/tools/rubric/` + `src/tools/workflows/review_canvas_rubric.ts`. See decision `d004`. **Still open (not built):** per-persona criterion explanations, and Phase 2 auto-mining of prior-semester student questions (deferred behind a data spike). Original reasoning kept below for context.
 
 **Reasoning:** "I have a rubric from this past semester. In reading it, I knew what it meant, but in reading it and trying to explain it to a student, I realized it sucked. Like it was HORRIBLE. Right now it is not simple to get the rubric."
 
