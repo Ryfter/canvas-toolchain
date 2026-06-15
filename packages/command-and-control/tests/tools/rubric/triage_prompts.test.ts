@@ -24,4 +24,17 @@ describe('triage_prompts', () => {
     expect(p).toContain('Assignment now asks for 5 sources.');
     expect(p).toMatch(/CHANGE SINCE LAST REWRITE/i);
   });
+
+  it('user prompt states when no prior rewrite exists (first-draft)', () => {
+    const firstDraftChange = { status: 'first-draft' as const, added: [], removed: [], modified: [] };
+    const p = buildTriageUserPrompt({ pulled, change: firstDraftChange, assignmentSignal: '' });
+    expect(p).toContain('No prior student rewrite exists.');
+    expect(p).toContain('(none provided)');
+  });
+
+  it('user prompt states when the rubric is unchanged', () => {
+    const unchanged = { status: 'unchanged' as const, added: [], removed: [], modified: [] };
+    const p = buildTriageUserPrompt({ pulled, change: unchanged, assignmentSignal: 'Brief.' });
+    expect(p).toContain('No change from the last rewrite.');
+  });
 });
