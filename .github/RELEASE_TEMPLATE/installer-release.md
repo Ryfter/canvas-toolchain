@@ -1,5 +1,30 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.7.0
+
+Two more capability **modules** land on the plug-in architecture, completing the term-management "module wave." Both follow the established `CanvasToolchainModule` contract, are enabled at config-time via `~/.command-and-control/modules.json` (no reinstall), and load fail-soft. Together with the existing Oral Assessment and Group Builder modules, they cover the full roster → groups → external-tool pipeline.
+
+### Roster & Identity Manager module (`module-roster`)
+
+- **`propose_roster` / `commit_roster` / `resolve_identity`** — turn a PeopleSoft export into a privacy-preserving course roster. The module matches PeopleSoft rows to live Canvas enrollments (by student number → email → login → name, in priority order), assigns each student a **lifetime pseudonym** persisted in a `0600` identity vault, normalizes majors via batched AI with an alias store, and emits a de-identified `canvas_id,pseudonym,major` roster CSV.
+- **Privacy by construction.** The vault is the only place the `canvas_id ↔ student_number` bridge lives; the roster output never carries names or emails. `propose` is read-only and idempotent; `commit` is the single writer, with atomic writes and live-vault collision guards.
+- **Resilient to thin tokens.** A teacher-scoped Canvas token often withholds `login_id`/`sis_user_id`; the matcher degrades gracefully and warns rather than failing.
+
+### PeerAssessment.com Export module (`module-peerassessment`)
+
+- **`build_peerassessment_import`** — turn a Canvas group set into the exact import CSV PeerAssessment.com expects (`Team,Login ID,Email,First Name,Last Name,Student ID #`). Canvas-first field sourcing, with the roster vault + PeopleSoft export filling the login/SIS columns Canvas withholds. A `dryRun` flag produces a full pre-upload validation report (incomplete students, ungrouped students, duplicate emails, multi-group students) without writing a file.
+- **Import-only and FERPA-aware.** The module produces an upload file only — it never writes Canvas or the vault, and grade round-trip is an explicit non-goal. PII is used transiently at build time; the only at-rest artifact is the import CSV the instructor uploads to a BSU-contracted, FERPA-approved vendor. Output is RFC-4180 escaped with a CSV formula-injection guard.
+
+### Dependency & supply-chain hygiene
+
+- esbuild pinned via override to `^0.28.1` (clears Dependabot #23/#24); `action-gh-release` bumped to v3 for the Node 24 runtime; installer workflows moved to Go 1.25. `npm audit` reports **zero vulnerabilities**.
+
+### Quality
+
+Both modules built with subagent-driven TDD and adversarial whole-implementation review (which caught and fixed a CSV formula-injection gap and a multi-group false-duplicate bug before release). The monorepo test suite now stands at **~1,698 tests**, green, with the integration smoke test and both installer targets building cleanly.
+
+Full diff: [v1.6.0...v1.7.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.6.0...v1.7.0)
+
 ## What's new in v1.6.0
 
 Two new capability **modules** land on the plug-in architecture introduced in v1.5, plus a full user guide. Both modules follow the established `CanvasToolchainModule` contract, are enabled at config-time via `~/.command-and-control/modules.json` (no reinstall), and load fail-soft.
