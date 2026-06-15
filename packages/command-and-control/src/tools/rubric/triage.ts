@@ -18,12 +18,16 @@ const EVIDENCE = new Set(['assignment-drift', 'vague-language', 'change-detected
 function parseTriageJson(raw: string): RubricTriageReport {
   let t = raw.trim();
   if (t.startsWith('```')) {
-    t = t.replace(/^```(?:json)?\s*\n/, '').replace(/\n?```\s*$/, '').trim();
+    t = t.replace(/^```[a-zA-Z]*\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
   }
 
   let parsed: unknown;
   try { parsed = JSON.parse(t); }
   catch { throw new Error(`Triage LLM did not return valid JSON. First 200 chars: ${t.slice(0, 200)}`); }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`Triage LLM did not return a valid JSON object. First 200 chars: ${t.slice(0, 200)}`);
+  }
 
   const o = parsed as Record<string, unknown>;
   if (!VERDICTS.has(String(o.verdict))) {
@@ -41,7 +45,10 @@ function parseTriageJson(raw: string): RubricTriageReport {
     flags,
     rationale: String(o.rationale ?? ''),
   };
-  if (report.verdict === 'needs-update' && typeof o.proposedFacultyRubric === 'string') {
+  if (report.verdict === 'needs-update') {
+    if (typeof o.proposedFacultyRubric !== 'string' || o.proposedFacultyRubric.trim() === '') {
+      throw new Error('Triage returned verdict "needs-update" without a proposedFacultyRubric.');
+    }
     report.proposedFacultyRubric = o.proposedFacultyRubric;
   }
   return report;

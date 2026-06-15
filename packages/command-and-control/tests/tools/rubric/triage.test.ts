@@ -39,4 +39,20 @@ describe('triageRubric', () => {
     const llm = mockLlm('{"verdict":"maybe","flags":[],"rationale":"x"}');
     await expect(triageRubric({ pulled, change, assignmentSignal: '' }, { llm })).rejects.toThrow(/verdict/);
   });
+
+  it('throws when needs-update omits the proposed rubric', async () => {
+    const llm = mockLlm('{"verdict":"needs-update","flags":[],"rationale":"x"}');
+    await expect(triageRubric({ pulled, change, assignmentSignal: '' }, { llm })).rejects.toThrow(/proposedFacultyRubric/);
+  });
+
+  it('throws when JSON is valid but not an object', async () => {
+    const llm = mockLlm('[1,2,3]');
+    await expect(triageRubric({ pulled, change, assignmentSignal: '' }, { llm })).rejects.toThrow(/valid JSON/);
+  });
+
+  it('handles an uppercase JSON code fence', async () => {
+    const llm = mockLlm('```JSON\n{"verdict":"acceptable","flags":[],"rationale":"ok"}\n```');
+    const r = await triageRubric({ pulled, change, assignmentSignal: '' }, { llm });
+    expect(r.verdict).toBe('acceptable');
+  });
 });
