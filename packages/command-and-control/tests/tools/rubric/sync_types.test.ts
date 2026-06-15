@@ -15,6 +15,8 @@ describe('sync_types', () => {
       source: { kind: 'assignment', courseId: '1', assignmentId: '2', title: 'A' },
       criteria: [{ id: 'c1', name: 'Clarity', points: 10, description: 'Be clear' }],
     };
+    expect(r.criteria[0].name).toBe('Clarity');
     expect(r.criteria[0].points).toBe(10);
+    expect(r.criteria[0].description).toBe('Be clear');
   });
 });
