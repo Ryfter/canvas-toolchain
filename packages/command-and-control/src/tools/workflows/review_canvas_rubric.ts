@@ -1,5 +1,5 @@
 // src/tools/workflows/review_canvas_rubric.ts
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import type { LlmClient } from '@canvas-toolchain/shared-llm';
 import type { PulledRubric, ReviewReport } from '../rubric/sync_types.js';
 import { pullRubric, type PullRubricInput } from '../rubric/canvas_fetch.js';
@@ -28,8 +28,12 @@ export interface ReviewCanvasRubricDeps {
 export type ReviewCanvasRubricResult = ReviewReport | (Pick<ReviewReport, 'source'> & { choices: NonNullable<PulledRubric['choices']>; change?: undefined; triage?: undefined });
 
 function defaultReadPriorMd(path?: string): string | undefined {
-  if (!path || !existsSync(path)) return undefined;
-  return readFileSync(path, 'utf-8');
+  if (!path) return undefined;
+  try {
+    return readFileSync(path, 'utf-8');
+  } catch {
+    return undefined;
+  }
 }
 
 export async function reviewCanvasRubric(
@@ -46,6 +50,12 @@ export async function reviewCanvasRubric(
   // List-fallback: hand back the pick-list, no triage.
   if (pulled.choices && pulled.criteria.length === 0) {
     return { source: pulled.source, choices: pulled.choices };
+  }
+
+  // A resolved assignment/rubric with zero criteria can't be triaged — surface it
+  // rather than running the LLM on an empty rubric.
+  if (pulled.criteria.length === 0) {
+    throw new Error(`The selected rubric has no criteria to review (course ${input.courseId}${input.rubricId ? `, rubric ${input.rubricId}` : ''}).`);
   }
 
   const priorMd = (deps.readPriorMd ?? defaultReadPriorMd)(input.priorRenderedPath);

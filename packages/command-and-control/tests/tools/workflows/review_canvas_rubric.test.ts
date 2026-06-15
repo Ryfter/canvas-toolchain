@@ -24,6 +24,16 @@ describe('reviewCanvasRubric', () => {
     expect(report.triage.verdict).toBe('acceptable');
   });
 
+  it('throws when a resolved rubric has no criteria', async () => {
+    const empty = { source: { kind: 'course-rubric' as const, courseId: '1', rubricId: '9', title: 'Empty' }, criteria: [] };
+    await expect(
+      reviewCanvasRubric(
+        { courseId: '1', rubricId: '9' },
+        { pull: async () => empty, readPriorMd: () => undefined, llm: { complete: async () => ({ text: '{}' }) } },
+      ),
+    ).rejects.toThrow(/no criteria/);
+  });
+
   it('returns the pick-list (no triage) when fetch yields choices', async () => {
     const choices: PulledRubric = { source: { kind: 'course-rubric', courseId: '1', title: 'Course rubrics' }, criteria: [], choices: [{ rubricId: '7', title: 'R' }] };
     const report = await reviewCanvasRubric(

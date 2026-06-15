@@ -1,6 +1,10 @@
 // src/tools/rubric/change_detect.ts
 import type { PulledRubric, RubricChangeReport } from './sync_types.js';
 
+// NOTE: this parser is coupled to draft_student_rubric's render_md.ts output
+// format (the `## Criterion N: <name> — <pts> pts` header + `**Faculty rubric
+// language:**` block). If that renderer's format changes, update this regex.
+
 /** Parse `## Criterion N: <name> — <pts> pts` + `**Faculty rubric language:**`
  *  blocks from a previously rendered rubric markdown into { name: facultyText }. */
 export function parseFacultyBlocks(md: string): Record<string, string> {
@@ -13,11 +17,12 @@ export function parseFacultyBlocks(md: string): Record<string, string> {
     const start = matches[i].index ?? 0;
     const end = i + 1 < matches.length ? (matches[i + 1].index ?? md.length) : md.length;
     const section = md.slice(start, end);
-    // Capture the full faculty block (which may span multiple paragraphs).
-    // It is the last labeled block in a criterion section, so terminate at the
-    // next bold label, the next criterion header, or end-of-string — NOT at a
-    // blank line (that would truncate multi-paragraph faculty language).
-    const fac = section.match(/\*\*Faculty rubric language:\*\*\s*\n([\s\S]*?)(?:\n##|\n\*\*|$)/);
+    // Capture the full faculty block. It is the last labeled block in a criterion
+    // section, so terminate only at the next `##` header (e.g. the appended
+    // "## Notes" section) or end-of-string — NOT at a blank line or a bold label,
+    // either of which would truncate multi-paragraph faculty language or text that
+    // uses bold grade-level anchors like **Exemplary:**.
+    const fac = section.match(/\*\*Faculty rubric language:\*\*\s*\n([\s\S]*?)(?:\n##|$)/);
     if (fac) out[name] = fac[1].trim();
   }
   return out;

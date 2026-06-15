@@ -78,6 +78,13 @@ describe('change_detect', () => {
     expect(parseFacultyBlocks(md)).toEqual({});
   });
 
+  it('does not truncate a faculty block that uses bold grade-level labels', () => {
+    const md = `## Criterion 1: Thesis — 10 pts\n\n**Faculty rubric language:**\n**Exemplary:** cites three peer-reviewed sources.\n**Proficient:** cites two sources.\n`;
+    expect(parseFacultyBlocks(md)).toEqual({
+      Thesis: '**Exemplary:** cites three peer-reviewed sources.\n**Proficient:** cites two sources.',
+    });
+  });
+
   it('treats an empty-string priorMd as first-draft', () => {
     const onlyThesis = {
       source: { kind: 'assignment' as const, courseId: '1', assignmentId: '2', title: 'A' },

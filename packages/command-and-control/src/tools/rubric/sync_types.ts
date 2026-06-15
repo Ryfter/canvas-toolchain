@@ -4,7 +4,6 @@ export interface PulledRubricCriterion {
   name: string;
   points: number;
   description: string;
-  longDescription?: string;
   ratings?: Array<{ points: number; description: string }>;
 }
 

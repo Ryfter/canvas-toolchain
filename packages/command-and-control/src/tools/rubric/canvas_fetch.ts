@@ -89,6 +89,6 @@ export async function pullRubric(input: PullRubricInput, deps: PullRubricDeps): 
   return {
     source: { kind: 'course-rubric', courseId: input.courseId, title: 'Course rubrics' },
     criteria: [],
-    choices: list.map(r => ({ rubricId: String(r.id), title: String(r.title ?? 'Rubric') })),
+    choices: list.filter(r => r.id != null).map(r => ({ rubricId: String(r.id), title: String(r.title ?? 'Rubric') })),
   };
 }
