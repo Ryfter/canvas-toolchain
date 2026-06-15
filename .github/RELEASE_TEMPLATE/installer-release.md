@@ -1,5 +1,28 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.8.0
+
+Completes the **AI-Friendly Rubric System**. The student-facing rewrite half shipped earlier as `draft_student_rubric` (turn a faculty rubric into plain-English, per-criterion guidance + worked examples + an LLM-paste `.md`). This release adds the missing half — getting the rubric **out of Canvas** in the first place — as a new Command & Control workflow tool.
+
+### Canvas Rubric Sync (`review_canvas_rubric`)
+
+- **Pull the rubric straight from Canvas.** Give it a course and an assignment: it reads the rubric attached to that assignment, and **falls back to a course-rubric pick-list** when the assignment has none attached. No more copy-pasting a rubric out of Canvas to get started.
+- **See what changed since last time.** It diffs the freshly-pulled rubric against your last student-facing rewrite, so you know exactly which criteria moved before you regenerate anything — with no extra bookkeeping files.
+- **Smart triage before you rewrite.** A single review pass returns a verdict — **acceptable / needs-update / needs-review** — with specific flagged criteria, and *proposes a revised faculty rubric for your approval* when one is warranted. The approved rubric then feeds the existing `draft_student_rubric` unchanged.
+- **Read-only and safe.** The tool never writes to Canvas; you stay in control of every change (propose → you approve → commit).
+
+Built as a coordinator workflow (not a new module), following the established Canvas-access and TDD patterns; hermetic tests with Canvas and the LLM injected. A second phase — auto-surfacing last term's student questions as an extra review signal — is designed and deferred pending a data check.
+
+### Known advisory (accepted, tracked)
+
+`npm audit` reports 2 **moderate** advisories via the transitive `js-yaml` pulled in by the unmaintained `gray-matter` front-matter parser. This path only ever parses your **own local course files** (never untrusted input), so real-world risk is negligible. The proper fix — replacing `gray-matter` — is tracked as [#103](https://github.com/Ryfter/canvas-toolchain/issues/103) and deferred from this release to avoid a risky last-minute breaking change.
+
+### Quality
+
+Subagent-driven TDD with per-task spec + code-quality review and a final holistic review (which caught and fixed a faculty-block truncation bug on bold grade anchors, an empty-criteria guard, a file-read race, and a malformed-id filter). Full Command & Control suite green; both installer targets build cleanly.
+
+Full diff: [v1.7.0...v1.8.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.7.0...v1.8.0)
+
 ## What's new in v1.7.0
 
 Two more capability **modules** land on the plug-in architecture, completing the term-management "module wave." Both follow the established `CanvasToolchainModule` contract, are enabled at config-time via `~/.command-and-control/modules.json` (no reinstall), and load fail-soft. Together with the existing Oral Assessment and Group Builder modules, they cover the full roster → groups → external-tool pipeline.
