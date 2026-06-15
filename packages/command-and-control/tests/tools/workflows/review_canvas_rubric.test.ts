@@ -33,5 +33,6 @@ describe('reviewCanvasRubric', () => {
     expect(report.source.kind).toBe('course-rubric');
     expect(report.choices).toEqual([{ rubricId: '7', title: 'R' }]);
     expect(report.triage).toBeUndefined();
+    expect(report.change).toBeUndefined();
   });
 });
