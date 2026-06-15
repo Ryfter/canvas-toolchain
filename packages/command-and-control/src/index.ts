@@ -77,6 +77,7 @@ import { snapshotCourse } from './tools/workflows/snapshot_course.js';
 import type { SnapshotInput } from './tools/snapshot/types.js';
 import { draftStudentRubric } from './tools/workflows/draft_student_rubric.js';
 import type { DraftStudentRubricInput } from './tools/rubric/types.js';
+import { reviewCanvasRubric, type ReviewCanvasRubricInput } from './tools/workflows/review_canvas_rubric.js';
 import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 import { loadModules } from './modules/registry.js';
@@ -608,6 +609,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'review_canvas_rubric',
+      description: 'Pull a rubric from Canvas (the assignment\'s attached rubric first; falls back to the course rubric list), detect whether it changed since your last student rewrite, and run a smart triage (acceptable / needs-update / needs-review) with specific flagged criteria. Read-only — writes nothing. When the verdict is needs-update it proposes a revised faculty rubric for your approval; feed the approved rubric to draft_student_rubric. Run setup_canvas and setup_anthropic first.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId'],
+        properties: {
+          courseId:          { type: 'string', description: 'Canvas course id.' },
+          assignmentId:      { type: 'string', description: 'Assignment id. When set, pulls the rubric attached to that assignment; if none is attached, falls back to the course rubric list.' },
+          rubricId:          { type: 'string', description: 'Specific course rubric id — use after a list fallback to fetch the chosen rubric.' },
+          priorRenderedPath: { type: 'string', description: 'Absolute path to your last rendered rubric .md, used to detect what changed since the last rewrite.' },
+          assignmentBrief:   { type: 'string', description: 'Optional: overrides the pulled assignment description as the triage\'s assignment signal.' },
+        },
+      },
+    },
+    {
       name: 'brainstorm_interactive',
       description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via setup_anthropic.',
       inputSchema: {
@@ -874,6 +890,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'draft_student_rubric':
         result = await draftStudentRubric(args as unknown as DraftStudentRubricInput);
+        break;
+      case 'review_canvas_rubric':
+        result = await reviewCanvasRubric(args as unknown as ReviewCanvasRubricInput);
         break;
       case 'brainstorm_interactive':
         result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
