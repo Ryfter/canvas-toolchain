@@ -44,6 +44,7 @@ func ValidateAnthropic(ctx context.Context, apiKey, model string) error {
 }
 
 func ValidateCanvas(ctx context.Context, host, token string) error {
+	host = NormalizeCanvasHost(host)
 	url := fmt.Sprintf("https://%s/api/v1/users/self", host)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
