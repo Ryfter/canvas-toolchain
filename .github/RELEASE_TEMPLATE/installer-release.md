@@ -1,5 +1,18 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.8.2
+
+A dependency-security release — no behavior changes, just a cleaner and safer dependency tree.
+
+### Security: removed an unmaintained YAML parser
+
+- **Replaced `gray-matter` with an in-house front-matter reader.** The `gray-matter` library was the only thing pulling in the old, unmaintained `js-yaml` v3, the source of two YAML advisories (including a quadratic-complexity denial-of-service, [GHSA-h67p-54hq-rp68](https://github.com/advisories/GHSA-h67p-54hq-rp68)). It couldn't be patched in place, so it's gone — the toolchain now reads page/brief front matter with the maintained `yaml` package it already uses everywhere else. Both `gray-matter` **and** `js-yaml` are fully removed from the dependency tree. Closes [#103](https://github.com/Ryfter/canvas-toolchain/issues/103).
+- **Patched a second high-severity `undici` advisory.** A separate copy of `undici` (`6.26.0`, reached through `juice` → `cheerio`) was bumped in-place to the patched `6.27.0`.
+
+`npm audit` now reports **zero vulnerabilities**. Behavior is unchanged and verified — full build, ~1,700 tests, and the cross-app integration smoke all green; the front-matter swap was done test-first with characterization tests locking the existing parse/serialize behavior.
+
+Full diff: [v1.8.1...v1.8.2](https://github.com/Ryfter/canvas-toolchain/compare/v1.8.1...v1.8.2)
+
 ## What's new in v1.8.1
 
 A small installer fix for the **Canvas host** field on the credentials screen.
