@@ -33,6 +33,28 @@ describe('parseBriefFile', () => {
   });
 });
 
+describe('parseBriefFile edge cases', () => {
+  test('returns empty data and the original body when there is no front matter', () => {
+    const raw = 'Plain assignment text.\nNo front matter here.\n';
+    const { data, body } = parseBriefFile(raw);
+    expect(data).toEqual({});
+    expect(body).toBe(raw);
+  });
+
+  test('preserves unknown / namespaced keys (e.g. ci: planning metadata)', () => {
+    const raw = `---
+title: X
+ci_planning: { kept: true }
+custom_note: hello
+---
+Body.
+`;
+    const { data } = parseBriefFile(raw);
+    expect(data['custom_note']).toBe('hello');
+    expect(data['ci_planning']).toEqual({ kept: true });
+  });
+});
+
 describe('serializeBriefFile', () => {
   test('round-trips data + body', () => {
     const { data, body } = parseBriefFile(SAMPLE);
@@ -40,5 +62,16 @@ describe('serializeBriefFile', () => {
     const { data: data2 } = parseBriefFile(result);
     expect(data2['title']).toBe(data['title']);
     expect(data2['week']).toBe(1);
+  });
+
+  test('round-trips a newly added key and preserves scalar types', () => {
+    const { data, body } = parseBriefFile(SAMPLE);
+    const augmented = { ...data, addedFlag: true, addedCount: 7 };
+    const result = serializeBriefFile(augmented, body);
+    const { data: data2, body: body2 } = parseBriefFile(result);
+    expect(data2['addedFlag']).toBe(true);
+    expect(data2['addedCount']).toBe(7);
+    expect(data2['replacement_recommended']).toBe(false);
+    expect(body2.trim()).toBe('Introduce yourself to the class.');
   });
 });

@@ -1,6 +1,6 @@
 // packages/command-and-control/src/tools/answers/chunking/transcript.ts
 
-import matter from 'gray-matter';
+import { parseFrontMatter } from '../../../lib/front_matter.js';
 
 export interface TranscriptChunk {
   content: string;
@@ -29,7 +29,7 @@ function timestampToSeconds(ts: string): number {
 }
 
 export function parseTranscript(raw: string): { frontmatter: TranscriptFrontmatter; body: string } {
-  const parsed = matter(raw);
+  const parsed = parseFrontMatter(raw);
   return { frontmatter: parsed.data as TranscriptFrontmatter, body: parsed.content };
 }
 
