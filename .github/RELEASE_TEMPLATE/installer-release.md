@@ -11,6 +11,10 @@ A small installer fix for the **Canvas host** field on the credentials screen.
 
 Normalization is applied to both credential validation and the written `canvas-config.json`, so the validated host always matches what's saved. Covered by unit tests (bare label, scheme/path strip, vanity domain, idempotence).
 
+### Dependency hygiene
+
+- Bumped the transitive `undici` (via `cheerio`) from 7.27.2 → 7.28.0 to clear a newly-disclosed **high**-severity advisory ([GHSA-vmh5-mc38-953g](https://github.com/advisories/GHSA-vmh5-mc38-953g)). Non-breaking; full suite green. The deferred `gray-matter`/`js-yaml` moderate advisory remains tracked as [#103](https://github.com/Ryfter/canvas-toolchain/issues/103).
+
 Full diff: [v1.8.0...v1.8.1](https://github.com/Ryfter/canvas-toolchain/compare/v1.8.0...v1.8.1)
 
 ## What's new in v1.8.0
