@@ -1,6 +1,6 @@
 // packages/command-and-control/src/tools/answers/chunking/markdown.ts
 
-import matter from 'gray-matter';
+import { parseFrontMatter } from '../../../lib/front_matter.js';
 
 export interface MarkdownChunk {
   content: string;
@@ -11,7 +11,7 @@ const TARGET_TOKENS = 400;
 const HARD_MAX_TOKENS = 700;
 
 export function chunkMarkdown(raw: string): MarkdownChunk[] {
-  const { content } = matter(raw);
+  const { content } = parseFrontMatter(raw);
   const lines = content.split(/\r?\n/);
 
   type Section = { headingPath: string[]; lines: string[] };
