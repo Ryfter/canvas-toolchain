@@ -1,5 +1,18 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.8.1
+
+A small installer fix for the **Canvas host** field on the credentials screen.
+
+### Forgiving Canvas host entry
+
+- **A bare school name now works.** Entering just `yourschool` is completed to `yourschool.instructure.com` automatically, instead of failing validation with `dial tcp: lookup yourschool: no such host`. The field also accepts a pasted full `https://…` URL (scheme and path are stripped) and tolerates trailing slashes, stray whitespace, and casing. Vanity Canvas domains that already contain a dot (e.g. `canvas.yourschool.edu`) pass through untouched.
+- **Clearer field guidance.** The placeholder and hint now read as an example rather than a pre-filled prefix, and spell out that a bare name works and a full URL can be pasted — so nobody types only the first label expecting `.instructure.com` to be appended for them.
+
+Normalization is applied to both credential validation and the written `canvas-config.json`, so the validated host always matches what's saved. Covered by unit tests (bare label, scheme/path strip, vanity domain, idempotence).
+
+Full diff: [v1.8.0...v1.8.1](https://github.com/Ryfter/canvas-toolchain/compare/v1.8.0...v1.8.1)
+
 ## What's new in v1.8.0
 
 Completes the **AI-Friendly Rubric System**. The student-facing rewrite half shipped earlier as `draft_student_rubric` (turn a faculty rubric into plain-English, per-criterion guidance + worked examples + an LLM-paste `.md`). This release adds the missing half — getting the rubric **out of Canvas** in the first place — as a new Command & Control workflow tool.
