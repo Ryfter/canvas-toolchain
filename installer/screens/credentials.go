@@ -18,7 +18,7 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 	anthropicEntry.OnChanged = func(s string) { st.AnthropicAPIKey = s }
 
 	canvasHostEntry := widget.NewEntry()
-	canvasHostEntry.SetPlaceHolder("<school>.instructure.com")
+	canvasHostEntry.SetPlaceHolder("e.g. yourschool.instructure.com — or just yourschool")
 	canvasHostEntry.SetText(st.CanvasHost)
 	canvasHostEntry.OnChanged = func(s string) { st.CanvasHost = s }
 
@@ -35,7 +35,7 @@ func NewCredentialsScreen(parent fyne.Window, st *State, onNext, onBack func()) 
 		ui.HintedField{
 			Label: "Canvas host",
 			Input: canvasHostEntry,
-			Hint:  "Your school's Canvas URL — usually <school>.instructure.com.",
+			Hint:  "The Canvas address from your browser's bar, e.g. yourschool.instructure.com. Typing just the first part (\"yourschool\") works too — .instructure.com is added for you. Pasting the full https:// URL is fine.",
 		}.AsCanvasObject(),
 		ui.HintedField{
 			Label: "Canvas API token",

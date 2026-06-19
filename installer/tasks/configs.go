@@ -61,6 +61,7 @@ type canvasConfig struct {
 }
 
 func WriteCanvasConfig(host, token string) error {
+	host = NormalizeCanvasHost(host)
 	if host == "" || token == "" {
 		return nil
 	}
