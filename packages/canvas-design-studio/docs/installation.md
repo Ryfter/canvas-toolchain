@@ -6,7 +6,7 @@ This guide covers every supported MCP client. The server is a stdio MCP server â
 
 ## Prerequisites
 
-- **Either Node.js 18 or later, or Docker Desktop**
+- **Either Node.js 20 or later, or Docker Desktop**
 - **A Canvas LMS instance**
 - **A Canvas API token only if you want direct course listing/publishing**
 - (Optional) A Panopto account if you want video search/embed
@@ -92,7 +92,7 @@ nvm install --lts
 nvm use --lts
 ```
 
-After installing, run `node --version` to confirm Node 18 or later is active.
+After installing, run `node --version` to confirm Node 20 or later is active.
 
 ---
 

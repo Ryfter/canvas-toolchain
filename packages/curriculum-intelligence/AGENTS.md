@@ -8,7 +8,7 @@ This file exists for AI coding agents (ChatGPT Codex, Claude Code, etc.) picking
 
 **Curriculum Intelligence** is an MCP (Model Context Protocol) server. It runs as a local Node.js process and exposes tools that a professor can call through Claude or any MCP-compatible client. The server reads Canvas LMS export archives and lecture transcripts, scores topic currency, and plans next semester's course.
 
-**Stack:** Node.js 18+, TypeScript ESM (`"type": "module"`), MCP SDK `@modelcontextprotocol/sdk`, `@anthropic-ai/sdk` for LLM calls, `gray-matter` for YAML front matter, `fast-xml-parser` for RSS. Tests: `vitest`.
+**Stack:** Node.js 20+, TypeScript ESM (`"type": "module"`), MCP SDK `@modelcontextprotocol/sdk`, `@anthropic-ai/sdk` for LLM calls, the maintained `yaml` package for YAML front matter (via the internal `src/parsers/front_matter.ts` helper — gray-matter was removed in v1.8.2, see Grimdex d005), `fast-xml-parser` for RSS. Tests: `vitest`.
 
 **This is not a web app. There is no frontend, no database, no HTTP server.** Everything is local disk files under `CURRICULUM_INTELLIGENCE_HOME` (defaults to `~/.curriculum-intelligence`).
 
@@ -95,7 +95,7 @@ Everything lives under `CURRICULUM_INTELLIGENCE_HOME` (env var, defaults to `~/.
 
 ### Brief file format (in `next-plan/week-XX/`)
 
-Each brief is a Markdown file with YAML front matter parsed by `gray-matter`:
+Each brief is a Markdown file with YAML front matter parsed by the internal `yaml`-based helper in `src/parsers/front_matter.ts` (`parseBriefFile` / `serializeBriefFile`):
 
 ```markdown
 ---

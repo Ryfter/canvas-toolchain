@@ -33,7 +33,7 @@ To exercise the full install path locally, pack a real payload:
     tar --exclude='node_modules' -czf installer/payload/installer-payload.tar.gz \
       package.json package-lock.json packages/
     # Place an OS-matched Node 24.x tarball at:
-    cp ~/Downloads/node-v18.20.x-darwin-arm64.tar.gz installer/payload/node-runtime.tar.gz
+    cp ~/Downloads/node-v24.12.0-darwin-arm64.tar.gz installer/payload/node-runtime.tar.gz
     cd installer
     go build -ldflags '-X main.Version=v0.0.0-dev' -o canvas-toolchain-installer .
 

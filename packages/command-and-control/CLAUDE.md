@@ -125,7 +125,7 @@ Plain `node:http` + server-rendered HTML; no client JS, no external assets. Bind
 **Plans:** Plan 1 (C&C features above), Plan 2 (Go installer), Plan 3 (CI release workflow) — all under `installer/docs/plans/`.
 **Implementation:** Hand Plan 2 + Plan 3 to Codex via `codex:codex-rescue` once Plan 1 is merged.
 
-**TL;DR** — Go + Fyne native binary (.exe / .pkg). Self-contained: bundles canvas-toolchain source + Node 18 runtime. 5-screen wizard. Wires Claude Desktop + Claude Code. Auto-updater shortcut. All APIs optional with `setup_*` backfill. No code signing — release notes document the one-time SmartScreen/Gatekeeper bypass.
+**TL;DR** — Go + Fyne native binary (.exe / .pkg). Self-contained: bundles canvas-toolchain source + Node 24 runtime. 5-screen wizard. Wires Claude Desktop + Claude Code. Auto-updater shortcut. All APIs optional with `setup_*` backfill. No code signing — release notes document the one-time SmartScreen/Gatekeeper bypass.
 
 The spec at `installer/docs/specs/2026-05-26-installer-design.md` is the canonical reference for every detail (screens, paths, error handling, update flow, CI). Don't duplicate it here.
 

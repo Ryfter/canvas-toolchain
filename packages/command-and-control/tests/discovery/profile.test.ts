@@ -62,7 +62,7 @@ describe('profile round-trip + merge', () => {
 });
 
 describe('writeClassDelta', () => {
-  // The front-matter parser every consumer (dashboard, gray-matter, #77) uses.
+  // The front-matter parser every consumer (dashboard, front-matter helpers, #77) uses.
   const FM = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
 
   it('writes the tools delta INSIDE the front matter, preserving other fm keys and the body', () => {

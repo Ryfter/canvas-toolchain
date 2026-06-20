@@ -8,7 +8,7 @@ Read this before touching anything. Claude-focused guidance also lives in `CLAUD
 
 **Command & Control** (`command-and-control-mcp`) is an MCP server that acts as a unified entry point for the professor toolset. It imports Curriculum Intelligence and Canvas Design Studio as npm dependencies, reaches Canvas Backup through its Python CLI, re-exposes selected domain tools with task-category annotations, adds high-level workflow tools, and routes LLM calls to Anthropic or Ollama based on config.
 
-**Stack:** Node.js 18+, TypeScript ESM (`"type": "module"`), `@modelcontextprotocol/sdk`, `curriculum-intelligence-mcp` (local file dep at `../Curriculum-Intelligence`), `canvas-design-mcp` (local file dep at `../canvas-design-studio`).
+**Stack:** Node.js 20+, TypeScript ESM (`"type": "module"`), `@modelcontextprotocol/sdk`, `curriculum-intelligence-mcp` (local file dep at `../Curriculum-Intelligence`), `canvas-design-mcp` (local file dep at `../canvas-design-studio`).
 
 **This is not a web app. There is no frontend, no database, no HTTP server.**
 

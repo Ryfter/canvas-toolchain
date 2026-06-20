@@ -285,7 +285,7 @@ Config file: `~/.canvas-design-mcp/institution.json`
 
 ## Requirements
 
-- Node.js 18 or later
+- Node.js 20 or later
 - Any MCP-compatible AI host (Claude Code, VS Code Copilot, ChatGPT Codex, etc.)
 
 ---

@@ -93,7 +93,7 @@ const FM_PATTERN = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
 
 /**
  * Set the `tools:` delta INSIDE a course's course-config.md front matter (so the dashboard,
- * gray-matter consumers, and #77 can read it back). Re-serializes the front matter, preserves
+ * front-matter consumers, and #77 can read it back). Re-serializes the front matter, preserves
  * the body, atomic write. Throws COURSE_NOT_FOUND if the dir is absent. Mirrors writeAiasDefaults.
  */
 export function writeClassDelta(courseDir: string, delta: { uses?: string[]; skips?: string[] }): void {

@@ -220,7 +220,7 @@ That's it. Once the installer runs, it sets up canvas-toolchain and never re-pro
 
 ## What it installs
 
-The installer drops the canvas-toolchain source onto your machine, installs npm dependencies using a bundled Node 18 runtime (no Node prereq required), wires the MCP server into Claude Desktop and Claude Code CLI, and creates a Desktop / Applications "Canvas Toolchain Updater" shortcut for one-click updates.
+The installer drops the canvas-toolchain source onto your machine, installs npm dependencies using a bundled Node 24 runtime (no Node prereq required), wires the MCP server into Claude Desktop and Claude Code CLI, and creates a Desktop / Applications "Canvas Toolchain Updater" shortcut for one-click updates.
 
 ## What it does NOT install
 

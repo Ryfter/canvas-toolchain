@@ -8,7 +8,7 @@ Read this before touching anything in this package. Design-system and Canvas-HTM
 
 **Canvas Design Studio** (`canvas-design-mcp`) is an MCP server that generates, previews, and manages Canvas LMS HTML pages. It is imported as a local npm dependency by Command & Control; it is also usable standalone.
 
-**Stack:** Node.js 18+, TypeScript ESM, `@modelcontextprotocol/sdk`, `curriculum-intelligence-mcp` (local file dep for VTT parsing).
+**Stack:** Node.js 20+, TypeScript ESM, `@modelcontextprotocol/sdk`, `curriculum-intelligence-mcp` (local file dep for VTT parsing).
 
 **Run tests:** `npm test`
 **Build:** `npm run build`
