@@ -25,7 +25,7 @@ Command & Control currently calls these Design Studio functions directly:
 - `import_course`: Canvas Backup archive -> Design Studio `course/` folder
 - `generate_course`: Design Studio `course/` folder -> Canvas-safe HTML
 
-`publish_course` remains a Command & Control placeholder because course-wide publishing needs a reviewed page-by-page transaction model. Keep the manual generate-and-paste workflow first-class; Canvas API publishing is optional convenience, not a requirement.
+`publish_course` is shipped in Command & Control as a reviewed page-by-page transaction (the V&R system: preview → per-page approvals → publish, with snapshots/rollback). Keep the manual generate-and-paste workflow first-class; Canvas API publishing is optional convenience, not a requirement.
 
 Reasoning:
 

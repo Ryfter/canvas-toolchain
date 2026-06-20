@@ -60,7 +60,7 @@ Think in terms of goals, not tools. Here's the full surface area, grouped by wha
 | **Tag AI policy on assignments** | Per-page AI Assessment Scale labels (levels 1–5) rendered as inline callouts (`set_course_aias_default`). |
 | **See course health at a glance** | A local read-only dashboard scoring each course green/yellow/red on freshness and transcript coverage (`open_dashboard`). |
 | **Reuse templates & themes** | A resource registry for installing/sharing templates, themes, prompts, and brand adapters (`search_registry`, `install_resource`). |
-| **Extend the toolchain** | Opt-in plug-in modules (the Lecture Video module ships first); enable/disable without reinstalling (`list_modules`, `set_module_enabled`). |
+| **Extend the toolchain** | Opt-in plug-in modules (Lecture Video, Oral Assessment, Group Builder, Roster & Identity Manager, PeerAssessment Export); enable/disable without reinstalling (`list_modules`, `set_module_enabled`). |
 
 You don't have to use all of it. Most professors live in three or four commands. The tutorial below walks the **golden path**; section 6 documents everything.
 

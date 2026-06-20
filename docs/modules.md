@@ -3,7 +3,7 @@
 A capability-by-capability breakdown of the toolchain. Each **module** below is a self-contained functional area: what it is, **why it was created** (the problem it solves), what it does, and the commands (MCP tools) that belong to it.
 
 > Two senses of "module" live here:
-> - **Plug-in modules** — true opt-in units enabled at config time via `~/.command-and-control/modules.json` (today: Lecture Video). These follow the `CanvasToolchainModule` contract.
+> - **Plug-in modules** — true opt-in units enabled at config time via `~/.command-and-control/modules.json` (today: Lecture Video, Oral Assessment, Group Builder, Roster & Identity Manager, and PeerAssessment Export). These follow the `CanvasToolchainModule` contract.
 > - **Functional modules** — the natural capability groupings inside the core packages (analysis, design, publishing, …). They aren't separately installable, but they're how the toolchain decomposes.
 >
 > For exact parameters of any command, see [`commands-and-credentials.md`](commands-and-credentials.md) §2. For the visual map, see [`visual-guide/`](visual-guide/README.md).
@@ -29,6 +29,11 @@ A capability-by-capability breakdown of the toolchain. Each **module** below is 
 | 12 | [Course health dashboard](#12-course-health-dashboard) | Functional | One glance: how are my courses doing? |
 | 13 | [AI Assessment Scale (AIAS)](#13-ai-assessment-scale-aias) | Functional | Label assignments with an AI-use policy |
 | 14 | [Native installer](#14-native-installer) | Tooling | One double-click setup instead of eight commands |
+| 15 | [Oral Assessment](#15-oral-assessment-plug-in-module) | Plug-in | Design oral/video assessments (Rhetorix-first) |
+| 16 | [Group Builder](#16-group-builder-plug-in-module) | Plug-in | Create & rotate balanced student groups |
+| 17 | [Roster & Identity Manager](#17-roster--identity-manager-plug-in-module) | Plug-in | PeopleSoft → de-identified roster + lifetime pseudonyms |
+| 18 | [PeerAssessment Export](#18-peerassessment-export-plug-in-module) | Plug-in | Canvas group set → PeerAssessment.com import CSV |
+| 19 | [Canvas Rubric Sync](#19-canvas-rubric-sync) | Functional | Pull a Canvas rubric, triage changes, rewrite for students |
 
 ---
 
@@ -212,6 +217,66 @@ A capability-by-capability breakdown of the toolchain. Each **module** below is 
 
 ---
 
+## 15. Oral Assessment (plug-in module)
+
+**What it is.** A generic oral/video-assessment authoring module (`packages/module-oral-assessment`, #75) with an `OralAssessmentProvider` seam and **Rhetorix** as the recommended provider #1.
+
+**Why it was created.** Rhetorix Lab is already LTI-native (it handles Canvas launch + grade passback), so the toolchain's value is on the **authoring** side, not embedding. The module turns an assignment brief or a topic + learning goal into a ready-to-use oral-assessment page and a paste-ready faculty sidecar, honoring the pluggable-platforms rule (other providers are future one-file additions).
+
+**What it does.** From two-mode input it writes (1) a CDS `oral-assessment` page-type markdown (rendered into a Canvas-safe wrapper: what-to-expect card, timing/randomization, rubric, AIAS callout, launch button), (2) a `<name>.rhetorix.md` faculty sidecar via the provider, and (3) the "why this tool" rationale. No credentials required (an optional launch domain in `course-config.md` is read at render time).
+
+**Commands.** `design_oral_assessment`. Enable it with `set_module_enabled` (module: `oral-assessment`).
+
+---
+
+## 16. Group Builder (plug-in module)
+
+**What it is.** A student-grouping engine (`packages/module-group-builder`, #101) that creates and rotates balanced multi-group sets across a semester.
+
+**Why it was created.** PeerAssessment.com is clumsy at *creating* and re-rotating groups. The module builds groups from Canvas roster + metrics using a **PII-free identity model** — the Canvas user ID (an opaque key, not public PII) paired with the student's pseudonym; it never reads or emits names/emails.
+
+**What it does.** Pulls roster + grade/completion signals from Canvas (by Canvas id) plus a thin `canvas_id,pseudonym,major` CSV, then forms groups with one of six strategies (random, alphabetical, weighted-by-accomplishment, heterogeneous, homogeneous, major-diversity). A per-course pairing-history store gives **soft no-repeat pairing**; runs are seeded and reproducible. Output is a canonical CSV + markdown, with an optional push to a Canvas Group Set.
+
+**Commands.** `create_groups` (preview, never mutates history), `record_groups` (commit a grouping to history), `propose_major_buckets`. Enable it with `set_module_enabled` (module: `group-builder`).
+
+---
+
+## 17. Roster & Identity Manager (plug-in module)
+
+**What it is.** The privacy-preserving roster pipeline (`packages/module-roster`) that produces the `canvas_id,pseudonym,major` roster the Group Builder consumes.
+
+**Why it was created.** It automates the professor's manual PeopleSoft → pseudonym → de-identify workflow and is the single source of the identity bridge, so no other module has to handle raw student PII.
+
+**What it does.** Matches PeopleSoft rows to live Canvas enrollments (student number → email → login → name, in priority order), assigns each student a **lifetime pseudonym** persisted in a `0600` identity vault (`{student_number, canvas_id, pseudonym, first_seen_term}` only — no names/emails at rest), normalizes majors via batched AI with an alias store, and emits the de-identified roster CSV. `propose` is read-only and idempotent; `commit` is the single writer, with atomic writes and live-vault collision guards; thin Canvas tokens degrade gracefully with a warning.
+
+**Commands.** `propose_roster`, `commit_roster`, `resolve_identity`. Enable it with `set_module_enabled` (module: `roster`).
+
+---
+
+## 18. PeerAssessment Export (plug-in module)
+
+**What it is.** A one-way exporter (`packages/module-peerassessment`) that turns a Canvas group set into the import CSV PeerAssessment.com expects.
+
+**Why it was created.** Hand-building the PeerAssessment import file is tedious and error-prone. Scope is deliberately **import-only** — the inbound grade round-trip is an explicit non-goal, which also keeps the toolchain free of any Canvas grade-write capability.
+
+**What it does.** Emits `Team,Login ID,Email,First Name,Last Name,Student ID #` with Canvas-first field sourcing and the roster vault + PeopleSoft export filling the login/SIS columns Canvas withholds. A `dryRun` flag produces a full pre-upload validation report (incomplete rows, ungrouped students, duplicate emails, multi-grouped students) without writing a file. Output is RFC-4180 escaped with a CSV formula-injection guard; PII is used transiently and never written to the vault. (PeerAssessment.com is a BSU-contracted, FERPA-approved vendor.)
+
+**Commands.** `build_peerassessment_import` (with `dryRun`). Enable it with `set_module_enabled` (module: `peerassessment`).
+
+---
+
+## 19. Canvas Rubric Sync
+
+**What it is.** A Command & Control workflow (not a plug-in module) that completes the "AI-Friendly Rubric System": get a rubric out of Canvas and rewrite it for students. Lives in `packages/command-and-control/src/tools/rubric/` + `workflows/review_canvas_rubric.ts` (#102).
+
+**Why it was created.** Official Canvas rubrics are faculty-facing — dense and hard to explain to students — and there was no easy way to *pull* a rubric out of Canvas to begin with. The student-facing rewrite half already shipped as `draft_student_rubric`; this adds the missing Canvas-sync half.
+
+**What it does.** `review_canvas_rubric` pulls the rubric from Canvas (the assignment's attached rubric first, falling back to a course-rubric pick-list), diffs it against the last student-facing rewrite to show what changed (no new state store), and runs an LLM **triage** returning a verdict (acceptable / needs-update / needs-review) with flagged criteria — proposing a revised faculty rubric for approval, which then feeds the unchanged `draft_student_rubric`. Read-only against Canvas; you approve every change.
+
+**Commands.** `review_canvas_rubric`, `draft_student_rubric`.
+
+---
+
 ## How the modules connect
 
 ```text
@@ -226,6 +291,7 @@ A capability-by-capability breakdown of the toolchain. Each **module** below is 
                           Lecture Answers (6) ┘        Layout adapter (11)        snapshots/rollback
                                                        Resource Registry (8)
    cross-cutting: Shared LLM (10) · Discovery+Feedback (9) · Dashboard (12) · AIAS (13) · Installer (14)
+   term management: Roster (17) ──► Group Builder (16) ──► PeerAssessment Export (18) · Oral Assessment (15) · Canvas Rubric Sync (19)
 ```
 
 See the rendered architecture diagram at [`visual-guide/images/03-architecture.png`](visual-guide/images/03-architecture.png).

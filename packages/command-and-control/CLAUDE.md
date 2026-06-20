@@ -58,10 +58,10 @@ Implemented:
 - `save_institution_profile` MCP tool — writes/merges the master institution profile (`~/.command-and-control/institution-profile.md`) accretively (new tools added, existing preserved) and writes per-class `tools:` deltas into each course's `course-config.md`. Structured markdown (identifiers + fenced YAML `tools` block); identifiers + tool inventory only, never tokens/student data. The profile is the payload for usage feedback (#77).
 - `submit_usage_feedback` MCP tool — opt-in (#77). Turns the master institution profile into an **anonymized** GitHub issue (`usage-feedback` label on `Ryfter/canvas-toolchain`) so the author can see which tools professors use and prioritize integrations. Default-deny anonymization: only coarse `SAFE_IDENTIFIER_KEYS` (`lms`, `institutionType`, `sizeBucket`, `region`) survive; `named:true` opts into full identifiers. Stateless two-call confirm gate — call once to review the exact payload, call again with `confirm:true` to submit via `gh issue create`. No browser fallback: missing/unauthed `gh` → `GH_UNAVAILABLE`. Never transmits tokens or student data; tools are field-guarded to `SAFE_TOOL_KEYS`.
 
-Still pending:
+Both formerly-pending items have since shipped:
 
-- Course-wide publish as one reviewed transaction (GitHub issue #64).
-- A single native installer (GitHub issue #63 — spec + 3 implementation plans drafted, see below).
+- **Course-wide publish as one reviewed transaction (#64)** — shipped as the Versioning & Rollback (V&R) system: `preview_course_publish` + `publish_course` with per-snapshot store, rollback, widget publishing, Canvas breadcrumbs, per-page approvals, and snapshot retention/auto-pruning. No longer a placeholder.
+- **A single native installer (#63)** — shipped in v1.0 (Go + Fyne; see Native Installer Design below).
 
 Shipping in v0.9.1 (Plan 1 — `installer/docs/plans/2026-05-26-cc-credential-tools-and-update-nudge.md`):
 
@@ -247,4 +247,4 @@ Use these C&C pass-throughs for the current integrated workflow:
 - `import_course`: Canvas Backup archive -> Canvas Design Studio `course/` folder
 - `generate_course`: Canvas Design Studio `course/` folder -> Canvas-safe HTML output
 
-`publish_course` is intentionally still a placeholder. Course-wide publish needs a safer reviewed transaction model, because page publishing can touch live student-facing Canvas content.
+`publish_course` is shipped as a reviewed transaction (the V&R system): preview → per-page approvals → `publish_course`, with snapshots, rollback, widget publishing, Canvas breadcrumbs, and snapshot retention/auto-pruning. It deliberately keeps the manual generate-and-paste workflow first-class — Canvas API publishing is optional convenience. Pair it with `preview_course_publish` to review changes before anything touches live student-facing content.

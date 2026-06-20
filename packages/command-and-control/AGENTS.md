@@ -123,7 +123,7 @@ All 27 Curriculum Intelligence tools re-registered verbatim. See `src/passthroug
 
 `import_course` and `generate_course` call real Canvas Design Studio functions from `canvas-design-mcp`.
 
-`publish_course` is still a placeholder because course-wide publishing needs a reviewed page-by-page transaction model.
+`publish_course` is shipped as a reviewed page-by-page transaction (the V&R system): `preview_course_publish` → per-page approvals → `publish_course`, with snapshots, rollback, widget publishing, Canvas breadcrumbs, and snapshot retention/auto-pruning.
 
 ### Panopto tools (4)
 

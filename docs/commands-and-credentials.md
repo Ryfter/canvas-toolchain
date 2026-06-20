@@ -117,6 +117,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `open_dashboard` | *port* | Start the local read-only course-health dashboard; returns a localhost URL. |
 | `snapshot_course` | **courseId**, **outputPath** | Write/update a course reference markdown (identifiers, groups, modules, append-only update log). |
 | `draft_student_rubric` | **facultyRubricText**, **outputPath**, *assignmentBrief*, *courseContext*, *week*, *title*, *totalPoints*, *assignmentNumber* | Rewrite a faculty rubric into student-facing language + worked examples. |
+| `review_canvas_rubric` | **courseId**, *assignmentId*, *rubricId* | Pull a rubric from Canvas (assignment-attached first, course-list fallback), diff it against the last student rewrite, and triage changes (acceptable / needs-update / needs-review) before feeding `draft_student_rubric`. Read-only against Canvas. |
 | `brainstorm_interactive` | **topic**, **learningGoal**, *audienceTags*, *courseId*, *includePhilosophy*, *includePersonas*, *count* | Propose interactive Canvas widget concepts for a topic + goal. |
 | `install_resource` | **url** | Install a template/theme/prompt/adapter-config from `github://`, `ryfter://`, or `file://`. |
 | `list_installed_resources` | *kind* | List local registry resources. |
@@ -204,6 +205,42 @@ These run through C&C but are owned by other packages.
 | `setup_panopto` | **domain**, **clientId**, **clientSecret**, *iframeWhitelisted*, *test* | Configure Panopto OAuth credentials; validates against the OAuth token endpoint. |
 
 (Video embed/transcript tools route through the module's `VideoProvider` adapter; Panopto is provider #1.)
+
+### 2.12 Module Oral Assessment — when the module is enabled
+
+| Tool | Key parameters | What it does |
+| --- | --- | --- |
+| `design_oral_assessment` | **(assignmentBrief)** OR **(topic + learningGoal)**, *outputDir*, *provider* | Author an oral/video assessment: writes a CDS `oral-assessment` page + a paste-ready faculty sidecar (Rhetorix is provider #1). No credentials. |
+
+Enable with `set_module_enabled` (module: `oral-assessment`).
+
+### 2.13 Module Group Builder — when the module is enabled
+
+| Tool | Key parameters | What it does |
+| --- | --- | --- |
+| `create_groups` | **courseId**, **strategy**, **groupSize** or **groupCount**, *rosterPath*, *seed* | Preview balanced student groups (six strategies, soft no-repeat pairing). Never mutates history. |
+| `record_groups` | **courseId**, **groups** | Commit a grouping to the per-course pairing history. |
+| `propose_major_buckets` | **courseId**, *persist* | Propose (or persist) a major → diversity-bucket map for the major-diversity strategy. |
+
+Enable with `set_module_enabled` (module: `group-builder`). Uses Canvas (roster source) + a thin `canvas_id,pseudonym,major` CSV; never reads names/emails.
+
+### 2.14 Module Roster & Identity Manager — when the module is enabled
+
+| Tool | Key parameters | What it does |
+| --- | --- | --- |
+| `propose_roster` | **courseId**, **peopleSoftFile**, *columnMapping* | Read-only: match PeopleSoft → Canvas, assign/reuse lifetime pseudonyms, normalize majors → review report. Writes nothing. |
+| `commit_roster` | **courseId**, **peopleSoftFile**, *outputDir* | The single writer: emit the de-identified `canvas_id,pseudonym,major` roster + insert new students into the `0600` identity vault. |
+| `resolve_identity` | **pseudonym** | Resolve a pseudonym → live Canvas name via the vault (nothing cached). |
+
+Enable with `set_module_enabled` (module: `roster`).
+
+### 2.15 Module PeerAssessment Export — when the module is enabled
+
+| Tool | Key parameters | What it does |
+| --- | --- | --- |
+| `build_peerassessment_import` | **courseId**, **groupSetName**, *peopleSoftFile*, *outputDir*, *dryRun* | Turn a Canvas group set into the PeerAssessment.com import CSV (`Team,Login ID,Email,First Name,Last Name,Student ID #`). `dryRun` returns a validation report with no file. Import-only. |
+
+Enable with `set_module_enabled` (module: `peerassessment`).
 
 ---
 

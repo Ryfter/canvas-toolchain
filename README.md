@@ -38,6 +38,10 @@ Professors drive the whole thing by talking to the **Command & Control** MCP ser
 | `packages/shared-llm/` | Shared LLM client (Anthropic + Ollama providers) |
 | `packages/module-contract/` | The `CanvasToolchainModule` plug-in contract for opt-in capability modules |
 | `packages/module-video/` | Lecture Video module (Panopto as the first provider) |
+| `packages/module-oral-assessment/` | Oral/video assessment authoring (Rhetorix-first) |
+| `packages/module-group-builder/` | Create and rotate balanced student groups |
+| `packages/module-roster/` | Roster & Identity Manager (PeopleSoft → de-identified roster + pseudonyms) |
+| `packages/module-peerassessment/` | Export a Canvas group set to a PeerAssessment.com import CSV |
 | `installer/` | Go + Fyne native installer and auto-updater |
 | [`canvas-backup`](https://github.com/Ryfter/canvas-backup) (separate repo) | Python Canvas backup downloader, reached via a CLI bridge |
 
