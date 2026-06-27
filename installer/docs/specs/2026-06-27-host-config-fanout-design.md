@@ -106,8 +106,10 @@ func WriteHostConfigFor(h Host, nodeBin, ccServerJS string) error
 - `FormatJSONServers` → same read-merge-write, but under the `servers` key and the
   entry includes `"type": "stdio"` (VS Code).
 - `FormatTOML` → Codex. Read existing `config.toml` into `map[string]any` via
-  `go-toml/v2`, set `mcp_servers.canvas-toolchain = {command, args}`, marshal back,
-  atomic write. (Comments in the file are not preserved — accepted trade-off.)
+  `github.com/BurntSushi/toml` (already vendored in `go.mod` as an indirect dep —
+  promoted to direct, no new module added), set
+  `mcp_servers.canvas-toolchain = {command, args}`, marshal back, atomic write.
+  (Comments in the file are not preserved — accepted trade-off.)
 
 All writers: create parent dirs, preserve unrelated existing keys, write atomically
 (`.tmp` + rename, matching `atomicWriteJSON`), and are idempotent.
@@ -175,7 +177,8 @@ Extend `installer/tasks/mcphost_test.go` and add `configs`/path tests:
 
 ## Dependencies
 
-- New Go module dependency: `github.com/pelletier/go-toml/v2` (for the Codex writer).
+- `github.com/BurntSushi/toml` (already present in `go.mod` as an indirect dependency)
+  is promoted to a direct dependency for the Codex TOML writer. No new module is added.
 
 ## Rollout
 
