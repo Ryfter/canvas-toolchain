@@ -79,3 +79,66 @@ func TestWriteHostConfig_ReturnsErrorOnMalformedJSON(t *testing.T) {
 		t.Fatal("expected error for malformed JSON, got nil")
 	}
 }
+
+func TestWriteJSONServers_CreatesWithServersKeyAndType(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "mcp.json")
+	if err := writeJSONServersHostConfig(path, "/node", "/app/index.js"); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	servers, ok := parsed["servers"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected top-level 'servers' key, got %v", parsed)
+	}
+	entry := servers["canvas-toolchain"].(map[string]any)
+	if entry["type"] != "stdio" {
+		t.Errorf("expected type stdio, got %v", entry["type"])
+	}
+	if entry["command"] != "/node" {
+		t.Errorf("expected command /node, got %v", entry["command"])
+	}
+}
+
+func TestWriteJSONServers_PreservesExisting(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "mcp.json")
+	initial := map[string]any{
+		"inputs": []any{"x"},
+		"servers": map[string]any{
+			"other": map[string]any{"command": "/keep"},
+		},
+	}
+	data, _ := json.Marshal(initial)
+	_ = os.WriteFile(path, data, 0o644)
+
+	if err := writeJSONServersHostConfig(path, "/n", "/s"); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := os.ReadFile(path)
+	var parsed map[string]any
+	_ = json.Unmarshal(out, &parsed)
+	if parsed["inputs"] == nil {
+		t.Error("top-level inputs dropped")
+	}
+	servers := parsed["servers"].(map[string]any)
+	if _, ok := servers["other"]; !ok {
+		t.Error("existing 'other' server dropped")
+	}
+	if _, ok := servers["canvas-toolchain"]; !ok {
+		t.Error("canvas-toolchain not added")
+	}
+}
+
+func TestWriteJSONServers_ErrorOnMalformed(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "broken.json")
+	_ = os.WriteFile(path, []byte("{nope"), 0o644)
+	if err := writeJSONServersHostConfig(path, "/n", "/s"); err == nil {
+		t.Fatal("expected error on malformed JSON")
+	}
+}

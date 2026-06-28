@@ -175,3 +175,26 @@ func WriteHostConfig(path, nodeBin, ccServerJS string) error {
 	existing["mcpServers"] = servers
 	return atomicWriteJSON(path, existing, 0o644)
 }
+
+func writeJSONServersHostConfig(path, nodeBin, ccServerJS string) error {
+	if path == "" {
+		return nil
+	}
+	existing := map[string]any{}
+	if data, err := os.ReadFile(path); err == nil {
+		if err := json.Unmarshal(data, &existing); err != nil {
+			return err
+		}
+	}
+	servers, _ := existing["servers"].(map[string]any)
+	if servers == nil {
+		servers = map[string]any{}
+	}
+	servers["canvas-toolchain"] = map[string]any{
+		"type":    "stdio",
+		"command": nodeBin,
+		"args":    []string{ccServerJS},
+	}
+	existing["servers"] = servers
+	return atomicWriteJSON(path, existing, 0o644)
+}
