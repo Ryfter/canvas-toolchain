@@ -40,6 +40,108 @@ func ClaudeCodeConfigPath() string {
 	return ""
 }
 
+type ConfigFormat int
+
+const (
+	FormatJSONMcpServers ConfigFormat = iota // JSON, "mcpServers" key
+	FormatJSONServers                        // JSON, "servers" key (VS Code)
+	FormatTOML                               // TOML, [mcp_servers.*] (Codex)
+)
+
+type Host struct {
+	ID          string
+	DisplayName string
+	Format      ConfigFormat
+	ResolvePath func() string
+}
+
+func CodexConfigPath() string {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".codex")
+	if _, err := os.Stat(dir); err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "config.toml")
+}
+
+func GeminiConfigPath() string {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".gemini")
+	if _, err := os.Stat(dir); err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "settings.json")
+}
+
+func CursorConfigPath() string {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".cursor")
+	if _, err := os.Stat(dir); err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "mcp.json")
+}
+
+func KiroConfigPath() string {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".kiro")
+	if _, err := os.Stat(dir); err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "settings", "mcp.json")
+}
+
+func AntigravityConfigPath() string {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".gemini", "config")
+	if _, err := os.Stat(dir); err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "mcp_config.json")
+}
+
+func VSCodeConfigPath() string {
+	home, _ := os.UserHomeDir()
+	var dir string
+	switch runtime.GOOS {
+	case "darwin":
+		dir = filepath.Join(home, "Library", "Application Support", "Code", "User")
+	case "windows":
+		appdata := os.Getenv("APPDATA")
+		if appdata == "" {
+			return ""
+		}
+		dir = filepath.Join(appdata, "Code", "User")
+	default:
+		dir = filepath.Join(home, ".config", "Code", "User")
+	}
+	if _, err := os.Stat(dir); err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "mcp.json")
+}
+
+func SupportedHosts() []Host {
+	return []Host{
+		{ID: "claude-desktop", DisplayName: "Claude Desktop", Format: FormatJSONMcpServers, ResolvePath: ClaudeDesktopConfigPath},
+		{ID: "claude-code", DisplayName: "Claude Code", Format: FormatJSONMcpServers, ResolvePath: ClaudeCodeConfigPath},
+		{ID: "codex", DisplayName: "Codex CLI", Format: FormatTOML, ResolvePath: CodexConfigPath},
+		{ID: "gemini", DisplayName: "Gemini CLI", Format: FormatJSONMcpServers, ResolvePath: GeminiConfigPath},
+		{ID: "cursor", DisplayName: "Cursor", Format: FormatJSONMcpServers, ResolvePath: CursorConfigPath},
+		{ID: "vscode", DisplayName: "VS Code", Format: FormatJSONServers, ResolvePath: VSCodeConfigPath},
+		{ID: "kiro", DisplayName: "Kiro", Format: FormatJSONMcpServers, ResolvePath: KiroConfigPath},
+		{ID: "antigravity", DisplayName: "Antigravity", Format: FormatJSONMcpServers, ResolvePath: AntigravityConfigPath},
+	}
+}
+
+func DetectConnectHosts() map[string]bool {
+	out := map[string]bool{}
+	for _, h := range SupportedHosts() {
+		out[h.ID] = h.ResolvePath() != ""
+	}
+	return out
+}
+
 type mcpServerEntry struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
