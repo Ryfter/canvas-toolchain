@@ -637,7 +637,7 @@ git commit -m "feat(installer): format dispatcher for host config writers"
 
 **Interfaces:**
 - Produces: `State.ConnectHosts map[string]bool`, `State.WiredHosts map[string]bool`, both initialized non-nil by `NewState`.
-- Removes: `State.InstalledClaudeDesktop`, `State.InstalledClaudeCode`.
+- Note: `State.InstalledClaudeDesktop`/`InstalledClaudeCode` are LEFT IN PLACE here (their consumers `summary.go`/`summary_test.go`/`install.go` are migrated in Tasks 7–8). Removing them now would break package compilation before those consumers are updated. They are removed in Task 8.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -662,14 +662,7 @@ Expected: FAIL — compile error (`ConnectHosts` undefined) or nil-map assertion
 
 - [ ] **Step 3: Update State**
 
-In `installer/screens/state.go`: in the `State` struct, delete the lines:
-
-```go
-	InstalledClaudeDesktop bool
-	InstalledClaudeCode    bool
-```
-
-and add (next to `InstalledPython bool`):
+In `installer/screens/state.go`: leave `InstalledClaudeDesktop`/`InstalledClaudeCode` in place (they are removed in Task 8 after their consumers are migrated). Add the two new maps to the `State` struct (next to `InstalledPython bool`):
 
 ```go
 	ConnectHosts map[string]bool
@@ -694,7 +687,7 @@ func NewState(version string) *State {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `cd installer && go test ./screens/ -run 'TestNewState_InitializesHostMaps' -v`
-Expected: PASS. (Other `screens` tests/build will break until Tasks 6–9 — that is expected; this task's own test passes.)
+Expected: PASS. The package still compiles because the old `Installed*` bools are left in place; they are removed in Task 8.
 
 - [ ] **Step 5: Commit**
 
@@ -923,10 +916,20 @@ git commit -m "feat(installer): single MCP-host write loop step"
 **Interfaces:**
 - Consumes: `tasks.SupportedHosts()` (Task 1), `State.WiredHosts` (Task 5).
 - Produces: summary screen listing each wired host by display name.
+- Removes: `State.InstalledClaudeDesktop`, `State.InstalledClaudeCode` (now that their only
+  remaining consumers — `summary.go` reads and `summary_test.go` set — are migrated here).
 
 - [ ] **Step 1: Write the failing test**
 
-In `installer/screens/summary_test.go`, replace any reference to `InstalledClaudeDesktop`/`InstalledClaudeCode` with `WiredHosts`, and add:
+First, in `installer/screens/summary_test.go`, update the existing
+`TestNewSummaryScreen_RendersWithoutPanic` so line `st.InstalledClaudeDesktop = true`
+becomes:
+
+```go
+	st.WiredHosts = map[string]bool{"claude-desktop": true}
+```
+
+Then add the new test:
 
 ```go
 func TestSummaryScreen_ListsWiredHosts(t *testing.T) {
@@ -998,10 +1001,18 @@ with:
 	}
 ```
 
+Then remove the now-unused fields from `installer/screens/state.go` — delete these two
+lines from the `State` struct:
+
+```go
+	InstalledClaudeDesktop bool
+	InstalledClaudeCode    bool
+```
+
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `cd installer && go test ./screens/ -v`
-Expected: PASS (whole screens package).
+Expected: PASS (whole screens package — no remaining references to the removed fields).
 
 - [ ] **Step 5: Commit**
 
