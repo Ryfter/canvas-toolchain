@@ -1,10 +1,13 @@
 package tasks
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/BurntSushi/toml"
 )
 
 func ClaudeDesktopConfigPath() string {
@@ -174,6 +177,40 @@ func WriteHostConfig(path, nodeBin, ccServerJS string) error {
 	servers["canvas-toolchain"] = mcpServerEntry{Command: nodeBin, Args: []string{ccServerJS}}
 	existing["mcpServers"] = servers
 	return atomicWriteJSON(path, existing, 0o644)
+}
+
+func writeTOMLHostConfig(path, nodeBin, ccServerJS string) error {
+	if path == "" {
+		return nil
+	}
+	existing := map[string]any{}
+	if _, err := os.Stat(path); err == nil {
+		if _, err := toml.DecodeFile(path, &existing); err != nil {
+			return err
+		}
+	}
+	servers, _ := existing["mcp_servers"].(map[string]any)
+	if servers == nil {
+		servers = map[string]any{}
+	}
+	servers["canvas-toolchain"] = map[string]any{
+		"command": nodeBin,
+		"args":    []string{ccServerJS},
+	}
+	existing["mcp_servers"] = servers
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	if err := toml.NewEncoder(&buf).Encode(existing); err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, buf.Bytes(), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 func writeJSONServersHostConfig(path, nodeBin, ccServerJS string) error {

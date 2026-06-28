@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/BurntSushi/toml"
 )
 
 func TestWriteHostConfig_CreatesFileWhenAbsent(t *testing.T) {
@@ -140,5 +142,59 @@ func TestWriteJSONServers_ErrorOnMalformed(t *testing.T) {
 	_ = os.WriteFile(path, []byte("{nope"), 0o644)
 	if err := writeJSONServersHostConfig(path, "/n", "/s"); err == nil {
 		t.Fatal("expected error on malformed JSON")
+	}
+}
+
+func TestWriteTOML_CreatesMcpServersTable(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.toml")
+	if err := writeTOMLHostConfig(path, "/node", "/app/index.js"); err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]any
+	if _, err := toml.DecodeFile(path, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	servers := parsed["mcp_servers"].(map[string]any)
+	entry := servers["canvas-toolchain"].(map[string]any)
+	if entry["command"] != "/node" {
+		t.Errorf("expected command /node, got %v", entry["command"])
+	}
+	args := entry["args"].([]any)
+	if len(args) != 1 || args[0] != "/app/index.js" {
+		t.Errorf("expected args [/app/index.js], got %v", args)
+	}
+}
+
+func TestWriteTOML_PreservesExistingTables(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.toml")
+	_ = os.WriteFile(path, []byte("model = \"gpt-5\"\n\n[mcp_servers.other]\ncommand = \"/keep\"\n"), 0o644)
+
+	if err := writeTOMLHostConfig(path, "/n", "/s"); err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]any
+	if _, err := toml.DecodeFile(path, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if parsed["model"] != "gpt-5" {
+		t.Errorf("top-level model dropped: %v", parsed["model"])
+	}
+	servers := parsed["mcp_servers"].(map[string]any)
+	if _, ok := servers["other"]; !ok {
+		t.Error("existing other server dropped")
+	}
+	if _, ok := servers["canvas-toolchain"]; !ok {
+		t.Error("canvas-toolchain not added")
+	}
+}
+
+func TestWriteTOML_ErrorOnMalformed(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "broken.toml")
+	_ = os.WriteFile(path, []byte("this = = broken"), 0o644)
+	if err := writeTOMLHostConfig(path, "/n", "/s"); err == nil {
+		t.Fatal("expected error on malformed TOML")
 	}
 }
