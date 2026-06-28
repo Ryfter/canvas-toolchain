@@ -77,12 +77,75 @@ func TestDetectConnectHosts_MarksDetected(t *testing.T) {
 
 func TestSupportedHosts_HasExpectedIDs(t *testing.T) {
 	ids := map[string]bool{}
+	byID := map[string]Host{}
 	for _, h := range SupportedHosts() {
 		ids[h.ID] = true
+		byID[h.ID] = h
 	}
 	for _, want := range []string{"claude-desktop", "claude-code", "codex", "gemini", "cursor", "vscode", "kiro", "antigravity"} {
 		if !ids[want] {
 			t.Errorf("SupportedHosts missing %q", want)
 		}
+	}
+	// Fix 3: verify Format assignments that Task 2 depends on.
+	if h := byID["codex"]; h.Format != FormatTOML {
+		t.Errorf("codex: expected FormatTOML (%d), got %d", FormatTOML, h.Format)
+	}
+	if h := byID["vscode"]; h.Format != FormatJSONServers {
+		t.Errorf("vscode: expected FormatJSONServers (%d), got %d", FormatJSONServers, h.Format)
+	}
+	if h := byID["gemini"]; h.Format != FormatJSONMcpServers {
+		t.Errorf("gemini: expected FormatJSONMcpServers (%d), got %d", FormatJSONMcpServers, h.Format)
+	}
+	if h := byID["claude-desktop"]; h.Format != FormatJSONMcpServers {
+		t.Errorf("claude-desktop: expected FormatJSONMcpServers (%d), got %d", FormatJSONMcpServers, h.Format)
+	}
+}
+
+func TestGeminiConfigPath_DetectedWhenNoAntigravityConfig(t *testing.T) {
+	home := t.TempDir()
+	setHome(t, home)
+	if err := os.MkdirAll(filepath.Join(home, ".gemini"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got := GeminiConfigPath()
+	if filepath.Base(got) != "settings.json" {
+		t.Fatalf("expected settings.json path, got %q", got)
+	}
+}
+
+func TestGeminiConfigPath_NotDetectedWhenOnlyAntigravityConfig(t *testing.T) {
+	home := t.TempDir()
+	setHome(t, home)
+	if err := os.MkdirAll(filepath.Join(home, ".gemini", "config"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := GeminiConfigPath(); got != "" {
+		t.Fatalf("expected empty path for Antigravity-only ~/.gemini, got %q", got)
+	}
+}
+
+func TestGeminiConfigPath_DetectedWhenBothPresent(t *testing.T) {
+	home := t.TempDir()
+	setHome(t, home)
+	if err := os.MkdirAll(filepath.Join(home, ".gemini", "config"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".gemini", "settings.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := GeminiConfigPath(); filepath.Base(got) != "settings.json" {
+		t.Fatalf("expected settings.json when both present, got %q", got)
+	}
+}
+
+func TestAntigravityConfigPath_NoFalsePositiveFromGeminiOnly(t *testing.T) {
+	home := t.TempDir()
+	setHome(t, home)
+	if err := os.MkdirAll(filepath.Join(home, ".gemini"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := AntigravityConfigPath(); got != "" {
+		t.Fatalf("expected empty path when ~/.gemini/config absent, got %q", got)
 	}
 }

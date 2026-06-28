@@ -70,7 +70,17 @@ func GeminiConfigPath() string {
 	if _, err := os.Stat(dir); err != nil {
 		return ""
 	}
-	return filepath.Join(dir, "settings.json")
+	settings := filepath.Join(dir, "settings.json")
+	// Gemini CLI is present when its settings file exists, or when there is no
+	// Antigravity config/ subdir occupying ~/.gemini. This avoids treating an
+	// Antigravity-only ~/.gemini (which has config/ but no Gemini CLI) as Gemini.
+	if _, err := os.Stat(settings); err == nil {
+		return settings
+	}
+	if _, err := os.Stat(filepath.Join(dir, "config")); err != nil {
+		return settings
+	}
+	return ""
 }
 
 func CursorConfigPath() string {
