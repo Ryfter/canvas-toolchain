@@ -2,8 +2,21 @@
 
 Self-contained native installer for canvas-toolchain. Written in Go using Fyne.
 The installer drops the canvas-toolchain source onto the user's machine,
-installs npm dependencies, wires the MCP server into Claude Desktop and
-Claude Code, optionally installs Python 3, and creates an Updater shortcut.
+installs npm dependencies, optionally installs Python 3, and creates an Updater
+shortcut.
+
+The installer auto-detects and wires the canvas-toolchain MCP server into any of
+these apps that are installed on your machine (untick any you don't want on the
+"Choose your workflows" screen):
+
+- Claude Desktop
+- Claude Code
+- Codex CLI (`~/.codex/config.toml`)
+- Gemini CLI (`~/.gemini/settings.json`)
+- Cursor (`~/.cursor/mcp.json`)
+- VS Code (user `mcp.json`)
+- Kiro (`~/.kiro/settings/mcp.json`)
+- Antigravity (`~/.gemini/config/mcp_config.json`)
 
 ## Build
 

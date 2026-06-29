@@ -26,3 +26,13 @@ func TestNewState_Defaults(t *testing.T) {
 		t.Error("expected initial Mode to be ModeFresh")
 	}
 }
+
+func TestNewState_InitializesHostMaps(t *testing.T) {
+	st := NewState("1.0.0")
+	if st.ConnectHosts == nil {
+		t.Error("ConnectHosts should be initialized non-nil")
+	}
+	if st.WiredHosts == nil {
+		t.Error("WiredHosts should be initialized non-nil")
+	}
+}

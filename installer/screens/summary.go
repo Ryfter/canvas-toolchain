@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/Ryfter/canvas-toolchain/installer/tasks"
 	"github.com/Ryfter/canvas-toolchain/installer/ui"
 )
 
@@ -21,11 +22,10 @@ func NewSummaryScreen(parent fyne.Window, st *State, onClose func()) fyne.Canvas
 	wins := container.NewVBox(
 		ui.NewStatusRowWithStatus("Source installed to "+st.InstallDir, ui.StatusOK, ""),
 	)
-	if st.InstalledClaudeDesktop {
-		wins.Add(ui.NewStatusRowWithStatus("Wired to Claude Desktop", ui.StatusOK, ""))
-	}
-	if st.InstalledClaudeCode {
-		wins.Add(ui.NewStatusRowWithStatus("Wired to Claude Code CLI", ui.StatusOK, ""))
+	for _, h := range tasks.SupportedHosts() {
+		if st.WiredHosts[h.ID] {
+			wins.Add(ui.NewStatusRowWithStatus("Wired to "+h.DisplayName, ui.StatusOK, ""))
+		}
 	}
 	if st.InstalledPython {
 		wins.Add(ui.NewStatusRowWithStatus("Python 3 installed", ui.StatusOK, ""))

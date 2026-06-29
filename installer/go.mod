@@ -2,11 +2,13 @@ module github.com/Ryfter/canvas-toolchain/installer
 
 go 1.25.0
 
-require fyne.io/fyne/v2 v2.5.2
+require (
+	fyne.io/fyne/v2 v2.5.2
+	github.com/BurntSushi/toml v1.4.0
+)
 
 require (
 	fyne.io/systray v1.11.0 // indirect
-	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect

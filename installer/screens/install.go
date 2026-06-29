@@ -18,19 +18,9 @@ import (
 func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne.CanvasObject {
 	title := widget.NewLabelWithStyle("Installing canvas-toolchain "+st.Version, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
-	rows := []*ui.StatusRow{
-		ui.NewStatusRow("Extract embedded source"),
-		ui.NewStatusRow("Extract bundled Node runtime"),
-		ui.NewStatusRow("Install npm dependencies"),
-		ui.NewStatusRow("Build TypeScript packages"),
-		ui.NewStatusRow("Write per-feature config files"),
-		ui.NewStatusRow("Write module manifest"),
-		ui.NewStatusRow("Install optional Python 3"),
-		ui.NewStatusRow("Wire Claude Desktop"),
-		ui.NewStatusRow("Wire Claude Code CLI"),
-		ui.NewStatusRow("Install updater + shortcut"),
-		ui.NewStatusRow("Write version marker"),
-		ui.NewStatusRow("Validate credentials"),
+	var rows []*ui.StatusRow
+	for _, label := range installRowLabels() {
+		rows = append(rows, ui.NewStatusRow(label))
 	}
 	rowsBox := container.NewVBox()
 	for _, r := range rows {
@@ -140,11 +130,26 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 	)
 }
 
+func writeSelectedHosts(st *State, nodeBin, ccServerJS string) error {
+	for _, h := range tasks.SupportedHosts() {
+		if !st.ConnectHosts[h.ID] {
+			continue
+		}
+		path := h.ResolvePath()
+		if path == "" {
+			continue
+		}
+		if err := tasks.WriteHostConfigForPath(h.Format, path, nodeBin, ccServerJS); err != nil {
+			return err
+		}
+		st.WiredHosts[h.ID] = true
+	}
+	return nil
+}
+
 func buildSteps(st *State, logFn func(string)) []tasks.Step {
 	np := tasks.ResolveNodePaths(st.InstallDir)
 	ccServerJS := st.InstallDir + "/packages/command-and-control/dist/index.js"
-	cdConfig := tasks.ClaudeDesktopConfigPath()
-	ccConfig := tasks.ClaudeCodeConfigPath()
 
 	return []tasks.Step{
 		{Name: "Extract source", Run: func(ctx context.Context) error {
@@ -187,25 +192,8 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			}
 			return err
 		}},
-		{Name: "Claude Desktop", Warn: true, Run: func(ctx context.Context) error {
-			if cdConfig == "" {
-				return nil
-			}
-			if err := tasks.WriteHostConfig(cdConfig, np.Node, ccServerJS); err != nil {
-				return err
-			}
-			st.InstalledClaudeDesktop = true
-			return nil
-		}},
-		{Name: "Claude Code", Warn: true, Run: func(ctx context.Context) error {
-			if ccConfig == "" {
-				return nil
-			}
-			if err := tasks.WriteHostConfig(ccConfig, np.Node, ccServerJS); err != nil {
-				return err
-			}
-			st.InstalledClaudeCode = true
-			return nil
+		{Name: "Connect MCP hosts", Warn: true, Run: func(ctx context.Context) error {
+			return writeSelectedHosts(st, np.Node, ccServerJS)
 		}},
 		{Name: "Updater shortcut", Warn: true, Run: func(ctx context.Context) error {
 			updaterPath, err := tasks.InstallUpdater(st.InstallDir, payload.UpdaterBin)
@@ -232,6 +220,22 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			}
 			return nil
 		}},
+	}
+}
+
+func installRowLabels() []string {
+	return []string{
+		"Extract embedded source",
+		"Extract bundled Node runtime",
+		"Install npm dependencies",
+		"Build TypeScript packages",
+		"Write per-feature config files",
+		"Write module manifest",
+		"Install optional Python 3",
+		"Connect MCP-capable apps",
+		"Install updater + shortcut",
+		"Write version marker",
+		"Validate credentials",
 	}
 }
 
