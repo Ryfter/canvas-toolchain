@@ -241,3 +241,153 @@ func TestWriteHostConfigForPath_DispatchesMcpServers(t *testing.T) {
 		t.Errorf("expected mcpServers key, got %v", parsed)
 	}
 }
+
+// Fix 1: empty/whitespace-only existing file treated as empty object
+
+func TestWriteHostConfig_EmptyFileTreatedAsObject(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "claude_desktop_config.json")
+	// pre-write a 0-byte file (some MCP clients ship an empty config)
+	if err := os.WriteFile(path, []byte{}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteHostConfig(path, "/node/bin/node", "/app/dist/index.js"); err != nil {
+		t.Fatalf("expected no error on empty file, got %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	servers, ok := parsed["mcpServers"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected mcpServers key, got %v", parsed)
+	}
+	if _, ok := servers["canvas-toolchain"]; !ok {
+		t.Error("canvas-toolchain entry not present after writing to empty file")
+	}
+}
+
+func TestWriteJSONServers_EmptyFileTreatedAsObject(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "mcp.json")
+	// pre-write a whitespace-only file
+	if err := os.WriteFile(path, []byte("  \n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeJSONServersHostConfig(path, "/node", "/app/index.js"); err != nil {
+		t.Fatalf("expected no error on whitespace-only file, got %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	servers, ok := parsed["servers"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected servers key, got %v", parsed)
+	}
+	if _, ok := servers["canvas-toolchain"]; !ok {
+		t.Error("canvas-toolchain entry not present after writing to whitespace-only file")
+	}
+}
+
+// Fix 2: idempotency — calling the writer twice produces exactly one entry
+
+func TestWriteHostConfig_Idempotent(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "claude_desktop_config.json")
+	for i := 0; i < 2; i++ {
+		if err := WriteHostConfig(path, "/node/bin/node", "/app/dist/index.js"); err != nil {
+			t.Fatalf("call %d: unexpected error: %v", i+1, err)
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	servers, ok := parsed["mcpServers"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected mcpServers key, got %v", parsed)
+	}
+	if len(servers) != 1 {
+		t.Errorf("expected exactly 1 mcpServers entry after 2 writes, got %d", len(servers))
+	}
+	entry, ok := servers["canvas-toolchain"].(map[string]any)
+	if !ok {
+		t.Fatal("canvas-toolchain entry missing or wrong type")
+	}
+	if entry["command"] != "/node/bin/node" {
+		t.Errorf("unexpected command: %v", entry["command"])
+	}
+}
+
+func TestWriteJSONServers_Idempotent(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "mcp.json")
+	for i := 0; i < 2; i++ {
+		if err := writeJSONServersHostConfig(path, "/node", "/app/index.js"); err != nil {
+			t.Fatalf("call %d: unexpected error: %v", i+1, err)
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	servers, ok := parsed["servers"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected servers key, got %v", parsed)
+	}
+	if len(servers) != 1 {
+		t.Errorf("expected exactly 1 servers entry after 2 writes, got %d", len(servers))
+	}
+	entry, ok := servers["canvas-toolchain"].(map[string]any)
+	if !ok {
+		t.Fatal("canvas-toolchain entry missing or wrong type")
+	}
+	if entry["command"] != "/node" {
+		t.Errorf("unexpected command: %v", entry["command"])
+	}
+}
+
+func TestWriteTOML_Idempotent(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.toml")
+	for i := 0; i < 2; i++ {
+		if err := writeTOMLHostConfig(path, "/node", "/app/index.js"); err != nil {
+			t.Fatalf("call %d: unexpected error: %v", i+1, err)
+		}
+	}
+	var parsed map[string]any
+	if _, err := toml.DecodeFile(path, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	servers, ok := parsed["mcp_servers"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected mcp_servers table, got %v", parsed)
+	}
+	if len(servers) != 1 {
+		t.Errorf("expected exactly 1 mcp_servers entry after 2 writes, got %d", len(servers))
+	}
+	entry, ok := servers["canvas-toolchain"].(map[string]any)
+	if !ok {
+		t.Fatal("canvas-toolchain entry missing or wrong type")
+	}
+	if entry["command"] != "/node" {
+		t.Errorf("unexpected command: %v", entry["command"])
+	}
+}

@@ -116,13 +116,13 @@ All writers: create parent dirs, preserve unrelated existing keys, write atomica
 
 ### 3. Detection on the workflows screen
 
-Add a "Connect to these apps" section to `installer/screens/workflows.go`, mirroring
-the existing async Python-detect pattern:
+Add a "Connect to these apps" section to `installer/screens/workflows.go`:
 
-- On screen build, render one `widget.Check` per supported host, initially disabled
-  with a "checking…" status.
-- A goroutine calls each `ResolvePath()`; detected hosts get pre-checked and enabled,
-  undetected hosts show "not detected" and stay unchecked.
+- On screen build, call `tasks.DetectConnectHosts()` inline (synchronous — a file-stat
+  per host is instant) and assign the result to `st.ConnectHosts`.
+- Render one `widget.Check` per supported host: detected hosts are pre-checked and
+  enabled; undetected hosts are unchecked and labelled with a "(not detected)" suffix.
+- The user may override any checkbox before proceeding.
 - Each checkbox binds to `State.ConnectHosts[hostID] bool`.
 
 ### 4. Install step

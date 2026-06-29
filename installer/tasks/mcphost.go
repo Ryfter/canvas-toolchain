@@ -166,8 +166,10 @@ func WriteHostConfig(path, nodeBin, ccServerJS string) error {
 	}
 	existing := map[string]any{}
 	if data, err := os.ReadFile(path); err == nil {
-		if err := json.Unmarshal(data, &existing); err != nil {
-			return err
+		if trimmed := bytes.TrimSpace(data); len(trimmed) > 0 {
+			if err := json.Unmarshal(trimmed, &existing); err != nil {
+				return err
+			}
 		}
 	}
 	servers, _ := existing["mcpServers"].(map[string]any)
@@ -219,8 +221,10 @@ func writeJSONServersHostConfig(path, nodeBin, ccServerJS string) error {
 	}
 	existing := map[string]any{}
 	if data, err := os.ReadFile(path); err == nil {
-		if err := json.Unmarshal(data, &existing); err != nil {
-			return err
+		if trimmed := bytes.TrimSpace(data); len(trimmed) > 0 {
+			if err := json.Unmarshal(trimmed, &existing); err != nil {
+				return err
+			}
 		}
 	}
 	servers, _ := existing["servers"].(map[string]any)
