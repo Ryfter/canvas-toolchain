@@ -1,5 +1,23 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.9.0
+
+The installer now connects Canvas Toolchain to **any** AI coding host you have — not just Claude.
+
+### Model-agnostic: wire up every supported host automatically
+
+- **One install, all your hosts.** The installer detects which AI coding apps are on your machine and connects the Canvas Toolchain MCP server to each one, in that host's own config format and location: **Claude Desktop**, **Claude Code**, **Codex CLI**, **Gemini CLI**, **Cursor**, **VS Code**, **Kiro**, and **Antigravity**. Previously it only wired Claude Desktop and Claude Code.
+- **You stay in control.** The workflows screen shows a "Connect to these apps" checklist: detected hosts are pre-checked, undetected hosts are listed but unchecked, and you can override any of them before installing.
+- **Safe and repeatable.** Each host's config is written in its native shape (JSON `mcpServers`, VS Code's `servers` with `type: stdio`, or Codex's TOML `[mcp_servers]`), existing entries are preserved, and re-running the installer never duplicates the entry.
+
+Because the `command-and-control` server already speaks the cross-client MCP protocol, this was purely an installer-reach change — no server or tool changes. It's the first piece (sub-project A) of making the whole toolchain runnable from Codex, Gemini, and IDE hosts end to end.
+
+### Documentation
+
+- New [**Feature overview**](https://github.com/Ryfter/canvas-toolchain/blob/main/docs/tool-overview.md) and a full [**accessibility checks reference**](https://github.com/Ryfter/canvas-toolchain/blob/main/docs/accessibility.md), both linked from the README.
+
+Full diff: [v1.8.2...v1.9.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.8.2...v1.9.0)
+
 ## What's new in v1.8.2
 
 A dependency-security release — no behavior changes, just a cleaner and safer dependency tree.
