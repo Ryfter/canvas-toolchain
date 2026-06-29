@@ -30,8 +30,6 @@ type State struct {
 	PanoptoClientID string
 	PanoptoSecret   string
 
-	InstalledClaudeDesktop bool
-	InstalledClaudeCode    bool
 	InstalledPython        bool
 	ConnectHosts           map[string]bool
 	WiredHosts             map[string]bool
