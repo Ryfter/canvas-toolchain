@@ -22,6 +22,7 @@ Professors drive the whole thing by talking to the **Command & Control** MCP ser
 
 | Doc | What's in it |
 | --- | --- |
+| 🧭 [**Feature overview**](docs/tool-overview.md) | Concise outcome-focused summary of what Canvas Toolchain helps instructors do, with emphasis on accessibility, Canvas management, shell speed/quality, and instructor-led AI review |
 | 🚀 [**User Guide & Tutorial**](docs/user-guide.md) | **Start here.** What you can do, how to use it, a hands-on end-to-end tutorial, and a task-by-task command catalog (*what each command is · how it works · why you'd use it*) |
 | 📘 [**Commands & Credentials reference**](docs/commands-and-credentials.md) | Every command (MCP tool) with its parameters, and every API key/secret — what it's for, why, and whether it's optional |
 | 🧩 [**Module view**](docs/modules.md) | The toolchain broken into modules: what each is, why it exists, what it does, and its commands |

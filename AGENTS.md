@@ -56,6 +56,27 @@ did it.
 
 ---
 
+## Tool overview maintenance
+
+When adding, removing, or substantially changing a professor-facing capability, update
+[`docs/tool-overview.md`](docs/tool-overview.md) alongside the detailed command/module docs.
+
+Keep `docs/tool-overview.md` concise and outcome-oriented. It should explain what the
+toolchain helps instructors accomplish, especially:
+
+- instructor-led course refresh workflows
+- expert-in-the-loop AI quality gates
+- accessibility and Canvas-safe validation
+- Canvas shell speed and quality improvements
+- Canvas management, preview, publishing, rollback, and manual-paste paths
+- student-facing quality and clarity
+
+Do not turn the overview into a command catalog. Command names and parameters belong in
+[`docs/commands-and-credentials.md`](docs/commands-and-credentials.md); implementation and
+module details belong in [`docs/modules.md`](docs/modules.md).
+
+---
+
 ## Status labels and tracking
 
 Every issue carries a status:
