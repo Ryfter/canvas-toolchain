@@ -23,6 +23,14 @@ func TestNewInstallScreen_RendersWithoutPanic(t *testing.T) {
 	}
 }
 
+func TestInstallRowsAlignWithSteps(t *testing.T) {
+	st := NewState("v0.0.0")
+	steps := buildSteps(st, func(string) {})
+	if len(installRowLabels()) != len(steps) {
+		t.Fatalf("row/step count mismatch: %d rows vs %d steps", len(installRowLabels()), len(steps))
+	}
+}
+
 func TestWriteSelectedHosts_WritesOnlySelectedDetected(t *testing.T) {
 	home := t.TempDir()
 	if runtime.GOOS == "windows" {

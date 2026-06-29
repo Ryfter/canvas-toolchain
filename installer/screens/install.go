@@ -18,19 +18,9 @@ import (
 func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne.CanvasObject {
 	title := widget.NewLabelWithStyle("Installing canvas-toolchain "+st.Version, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
-	rows := []*ui.StatusRow{
-		ui.NewStatusRow("Extract embedded source"),
-		ui.NewStatusRow("Extract bundled Node runtime"),
-		ui.NewStatusRow("Install npm dependencies"),
-		ui.NewStatusRow("Build TypeScript packages"),
-		ui.NewStatusRow("Write per-feature config files"),
-		ui.NewStatusRow("Write module manifest"),
-		ui.NewStatusRow("Install optional Python 3"),
-		ui.NewStatusRow("Wire Claude Desktop"),
-		ui.NewStatusRow("Wire Claude Code CLI"),
-		ui.NewStatusRow("Install updater + shortcut"),
-		ui.NewStatusRow("Write version marker"),
-		ui.NewStatusRow("Validate credentials"),
+	var rows []*ui.StatusRow
+	for _, label := range installRowLabels() {
+		rows = append(rows, ui.NewStatusRow(label))
 	}
 	rowsBox := container.NewVBox()
 	for _, r := range rows {
@@ -230,6 +220,22 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			}
 			return nil
 		}},
+	}
+}
+
+func installRowLabels() []string {
+	return []string{
+		"Extract embedded source",
+		"Extract bundled Node runtime",
+		"Install npm dependencies",
+		"Build TypeScript packages",
+		"Write per-feature config files",
+		"Write module manifest",
+		"Install optional Python 3",
+		"Connect MCP-capable apps",
+		"Install updater + shortcut",
+		"Write version marker",
+		"Validate credentials",
 	}
 }
 
