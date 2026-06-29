@@ -29,6 +29,28 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 	registryCheck := widget.NewCheck("Registry — multi-course tracking", func(b bool) { st.WorkflowRegistry = b })
 	registryCheck.SetChecked(st.WorkflowRegistry)
 
+	detected := tasks.DetectConnectHosts()
+	st.ConnectHosts = detected
+	hostChecks := []fyne.CanvasObject{
+		widget.NewLabelWithStyle("Connect to these apps", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		func() fyne.CanvasObject {
+			l := widget.NewLabel("Detected MCP-capable apps are pre-checked. Untick any you don't want canvas-toolchain added to.")
+			l.Wrapping = fyne.TextWrapWord
+			return l
+		}(),
+	}
+	for _, h := range tasks.SupportedHosts() {
+		host := h // capture
+		label := host.DisplayName
+		if !detected[host.ID] {
+			label += " (not detected)"
+		}
+		check := widget.NewCheck(label, func(b bool) { st.ConnectHosts[host.ID] = b })
+		check.SetChecked(detected[host.ID])
+		hostChecks = append(hostChecks, check)
+	}
+	hostSection := container.NewVBox(hostChecks...)
+
 	pythonCheck := widget.NewCheck("Install Python 3 (needed later for Canvas Backup — not configured here)", func(b bool) { st.OptInPython = b })
 	pythonCheck.SetChecked(st.OptInPython)
 
@@ -58,6 +80,8 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 		panoptoCheck,
 		ciCheck,
 		registryCheck,
+		widget.NewSeparator(),
+		hostSection,
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Optional extras", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		pythonCheck,
