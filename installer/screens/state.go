@@ -33,6 +33,8 @@ type State struct {
 	InstalledClaudeDesktop bool
 	InstalledClaudeCode    bool
 	InstalledPython        bool
+	ConnectHosts           map[string]bool
+	WiredHosts             map[string]bool
 	ValidationAnthropic    StepResult
 	ValidationCanvas       StepResult
 	ValidationPanopto      StepResult
@@ -63,5 +65,7 @@ func NewState(version string) *State {
 		InstallDir:     DefaultInstallDir(),
 		Mode:           ModeFresh,
 		WorkflowCanvas: true,
+		ConnectHosts:   map[string]bool{},
+		WiredHosts:     map[string]bool{},
 	}
 }
