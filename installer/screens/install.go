@@ -140,11 +140,26 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 	)
 }
 
+func writeSelectedHosts(st *State, nodeBin, ccServerJS string) error {
+	for _, h := range tasks.SupportedHosts() {
+		if !st.ConnectHosts[h.ID] {
+			continue
+		}
+		path := h.ResolvePath()
+		if path == "" {
+			continue
+		}
+		if err := tasks.WriteHostConfigForPath(h.Format, path, nodeBin, ccServerJS); err != nil {
+			return err
+		}
+		st.WiredHosts[h.ID] = true
+	}
+	return nil
+}
+
 func buildSteps(st *State, logFn func(string)) []tasks.Step {
 	np := tasks.ResolveNodePaths(st.InstallDir)
 	ccServerJS := st.InstallDir + "/packages/command-and-control/dist/index.js"
-	cdConfig := tasks.ClaudeDesktopConfigPath()
-	ccConfig := tasks.ClaudeCodeConfigPath()
 
 	return []tasks.Step{
 		{Name: "Extract source", Run: func(ctx context.Context) error {
@@ -187,25 +202,8 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			}
 			return err
 		}},
-		{Name: "Claude Desktop", Warn: true, Run: func(ctx context.Context) error {
-			if cdConfig == "" {
-				return nil
-			}
-			if err := tasks.WriteHostConfig(cdConfig, np.Node, ccServerJS); err != nil {
-				return err
-			}
-			st.InstalledClaudeDesktop = true
-			return nil
-		}},
-		{Name: "Claude Code", Warn: true, Run: func(ctx context.Context) error {
-			if ccConfig == "" {
-				return nil
-			}
-			if err := tasks.WriteHostConfig(ccConfig, np.Node, ccServerJS); err != nil {
-				return err
-			}
-			st.InstalledClaudeCode = true
-			return nil
+		{Name: "Connect MCP hosts", Warn: true, Run: func(ctx context.Context) error {
+			return writeSelectedHosts(st, np.Node, ccServerJS)
 		}},
 		{Name: "Updater shortcut", Warn: true, Run: func(ctx context.Context) error {
 			updaterPath, err := tasks.InstallUpdater(st.InstallDir, payload.UpdaterBin)
