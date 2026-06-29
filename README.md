@@ -25,6 +25,7 @@ Professors drive the whole thing by talking to the **Command & Control** MCP ser
 | 🚀 [**User Guide & Tutorial**](docs/user-guide.md) | **Start here.** What you can do, how to use it, a hands-on end-to-end tutorial, and a task-by-task command catalog (*what each command is · how it works · why you'd use it*) |
 | 📘 [**Commands & Credentials reference**](docs/commands-and-credentials.md) | Every command (MCP tool) with its parameters, and every API key/secret — what it's for, why, and whether it's optional |
 | 🧩 [**Module view**](docs/modules.md) | The toolchain broken into modules: what each is, why it exists, what it does, and its commands |
+| ♿ [**Accessibility checks**](docs/accessibility.md) | Every automated accessibility check the toolchain runs — what each one catches, how it works (with the contrast math), where it runs (advisory vs blocking), how to fix findings, and its limitations |
 | 🎨 [**Visual guide**](docs/visual-guide/README.md) | Picture-first tour — diagrams of the pipeline, architecture, and setup ([rendered PNG/SVG](docs/visual-guide/images/) + an editable [Excalidraw scene](docs/visual-guide/pipeline.excalidraw)) |
 
 ## What lives where

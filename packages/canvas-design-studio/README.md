@@ -191,6 +191,32 @@ The validator and generator both enforce Canvas RCE constraints:
 
 ---
 
+## Accessibility Checks
+
+Every page is checked against **WCAG 2.1 AA** as it's generated, validated, and
+published. The `validate_canvas_html`, `generate_*`, `redesign_canvas_page`, and
+publish tools all surface these. There are three layers:
+
+1. **A six-check WCAG content audit** (advisory warnings):
+   - **Contrast ratio** — inline text vs. background colour, against 4.5:1 (body) / 3:1 (large or bold ≥18px) thresholds.
+   - **Meaningful alt text** — content images with an empty `alt=""` that aren't decorative.
+   - **Heading hierarchy** — skipped levels (e.g. H2 → H4) that break screen-reader navigation.
+   - **Descriptive links** — vague link text like "click here" / "read more".
+   - **Table headers** — data tables with no `<th>` cells.
+   - **Video captions** — Panopto embeds without `captions=true`.
+2. **A blocking rule** — every `<img>` must have an `alt` attribute (a missing `alt` fails validation outright).
+3. **Widget scaffolding** — interactive widgets ship with an `aria-live` status region, 44×44px touch targets, visible focus rings, and `prefers-reduced-motion` support built in.
+
+Checks are **advisory** (they warn, they don't block) — except the missing-`alt` rule.
+They're fast heuristics over the HTML, not a full engine like axe-core, so a clean
+report means "no *detected* issues," not "fully conformant."
+
+📖 **Full reference — what each check catches, how it works (with the contrast math),
+where it runs, how to fix findings, and its limitations:
+[docs/accessibility.md](../../docs/accessibility.md).**
+
+---
+
 ## Ingest Workflow (Professors)
 
 Drop three files in an `ingest/` folder and ask your AI to build the page:
