@@ -235,3 +235,14 @@ func writeJSONServersHostConfig(path, nodeBin, ccServerJS string) error {
 	existing["servers"] = servers
 	return atomicWriteJSON(path, existing, 0o644)
 }
+
+func WriteHostConfigForPath(format ConfigFormat, path, nodeBin, ccServerJS string) error {
+	switch format {
+	case FormatJSONServers:
+		return writeJSONServersHostConfig(path, nodeBin, ccServerJS)
+	case FormatTOML:
+		return writeTOMLHostConfig(path, nodeBin, ccServerJS)
+	default:
+		return WriteHostConfig(path, nodeBin, ccServerJS)
+	}
+}

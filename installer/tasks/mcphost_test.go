@@ -198,3 +198,46 @@ func TestWriteTOML_ErrorOnMalformed(t *testing.T) {
 		t.Fatal("expected error on malformed TOML")
 	}
 }
+
+func TestWriteHostConfigForPath_DispatchesJSONServers(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "mcp.json")
+	if err := WriteHostConfigForPath(FormatJSONServers, path, "/node", "/app.js"); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	var parsed map[string]any
+	_ = json.Unmarshal(data, &parsed)
+	if _, ok := parsed["servers"]; !ok {
+		t.Errorf("expected servers key from JSONServers dispatch, got %v", parsed)
+	}
+}
+
+func TestWriteHostConfigForPath_DispatchesTOML(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.toml")
+	if err := WriteHostConfigForPath(FormatTOML, path, "/node", "/app.js"); err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]any
+	if _, err := toml.DecodeFile(path, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := parsed["mcp_servers"]; !ok {
+		t.Errorf("expected mcp_servers table from TOML dispatch, got %v", parsed)
+	}
+}
+
+func TestWriteHostConfigForPath_DispatchesMcpServers(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "claude.json")
+	if err := WriteHostConfigForPath(FormatJSONMcpServers, path, "/node", "/app.js"); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	var parsed map[string]any
+	_ = json.Unmarshal(data, &parsed)
+	if _, ok := parsed["mcpServers"]; !ok {
+		t.Errorf("expected mcpServers key, got %v", parsed)
+	}
+}
