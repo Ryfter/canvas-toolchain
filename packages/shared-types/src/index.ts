@@ -86,6 +86,10 @@ export interface BrandKit {
   };
 }
 
+// ── Accessibility (WCAG 2.2 canonical model) ─────────────────────────────────
+
+export * from './accessibility.js';
+
 // ── Update course materials report ───────────────────────────────────────────
 
 export interface ResourceVersionRef {
