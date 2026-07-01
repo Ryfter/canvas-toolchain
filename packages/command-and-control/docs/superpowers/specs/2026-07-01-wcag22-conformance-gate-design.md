@@ -155,7 +155,8 @@ axe + in-house run first, free, on everything. The gate **recommends** a deep ch
 The recommendation presents both routes side by side; nothing runs without an explicit yes:
 
 - **Automated — WAVE API** (paid, ~1–3 credits/page). **Hard constraint: the WAVE API fetches by public URL and cannot log into Canvas.** It is therefore only usable for publicly-visible pages. The adapter refuses URLs it detects as auth-gated (Canvas login redirect) and says why, so no credit is wasted.
-- **Manual (free):** for auth-gated pages — which is most Canvas content — the professor opens the page in their browser (already logged in) and runs either the **WAVE browser extension** (free, same WebAIM engine as the API) or **MS Accessibility Insights for Web** (free; Windows + Chromium-based browser; FastPass automation is axe-core plus guided manual assessments for the `needs-human-review` criteria). Link: <https://accessibilityinsights.io/downloads/>. The review queue (§5) is built to make this walkable.
+- **Manual (free):** for auth-gated pages — which is most Canvas content — the professor opens the page in their browser (already logged in) and runs either the **WAVE browser extension** (free, same WebAIM engine as the API; Chrome/Firefox; catches dynamically loaded content the online tool misses) or **MS Accessibility Insights for Web** (free; Windows + Chromium-based browser; FastPass automation is axe-core plus guided manual assessments for the `needs-human-review` criteria). Link: <https://accessibilityinsights.io/downloads/>. The review queue (§5) is built to make this walkable.
+- The WAVE route is not just a fallback: Boise State **officially recommends WAVE as the pre-publish accessibility check** (<https://www.boisestate.edu/webguide/publishing/wave-web-accessibility-evaluation-tool/>), citing the same WCAG AA 4.5:1 contrast bar this design gates on, and the same caveat this design encodes as `needs-human-review`: "a person must identify many accessibility issues manually." When an institution's policy URLs (§7) include a recommended checker, reports name it in the deep-check recommendation.
 
 Manual results don't flow back automatically; the professor either fixes, marks the page reviewed (§5), or acknowledges.
 
@@ -198,7 +199,8 @@ The institution config (written by `setup_institution`) gains:
 "accessibilityPolicy": {
   "urls": [
     "https://www.boisestate.edu/webguide/accessibility/title-ii-accessibility-requirements/",
-    "https://www.boisestate.edu/webguide/accessibility/accessibility-guides-and-resources/"
+    "https://www.boisestate.edu/webguide/accessibility/accessibility-guides-and-resources/",
+    "https://www.boisestate.edu/webguide/publishing/wave-web-accessibility-evaluation-tool/"
   ],
   "requiredConformance": { "version": "2.1", "level": "AA" },
   "recheckWeeks": 4,
