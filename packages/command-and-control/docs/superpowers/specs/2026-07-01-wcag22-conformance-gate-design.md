@@ -18,7 +18,7 @@ Today's accessibility system (see `docs/accessibility.md`) is three layers: six 
 ## Goals
 
 - Check content against **WCAG 2.2 AA** (the current ratified standard), reporting per-criterion status honestly: pass / fail / needs-human-review / not-applicable.
-- **Gate publishing at the institution's required conformance level** (Boise State: WCAG 2.1 AA), two-tier: borderline results need a light acknowledgment, clear failures need an explicit acknowledgment naming the criteria. Both are recorded.
+- **Gate publishing at the institution's required conformance level** (for most U.S. public institutions: WCAG 2.1 AA, per the ADA Title II rule), two-tier: borderline results need a light acknowledgment, clear failures need an explicit acknowledgment naming the criteria. Both are recorded.
 - Criteria beyond the required level report as **forward-looking advisories** (never gate).
 - **Deep-check escalation** offering an automated route (WAVE API, paid credits, explicit approval per spend) and free manual routes (WAVE browser extension, MS Accessibility Insights).
 - A per-course **borderline review queue**: live Canvas URLs of pages near the line, for human-eyes verification.
@@ -33,6 +33,7 @@ Today's accessibility system (see `docs/accessibility.md`) is three layers: six 
 - No WCAG 3 gating (working draft; not ratified; different conformance model).
 - The manual "generate HTML and paste into Canvas" path stays first-class and ungated — the gate guards tool-driven publishes only.
 - Existing FERPA and Canvas-RCE validation gates are untouched.
+- **No institution-specific data ships in this public repo.** Policy URLs, required conformance level, Canvas hosts, and all acknowledgment/queue records are per-professor runtime data: policy config lives in the local institution config written by `setup_institution`; acknowledgments and the review queue live in the professor's local course project directory. Spec and code examples use `example.edu` / `example.instructure.com` placeholders only.
 
 ---
 
@@ -141,7 +142,7 @@ Same semantics as single-page: files with clear failures need the array form nam
 **Acknowledgment record (audit trail):** every acknowledgment appends to `<course project>/.a11y/acknowledgments.json`:
 
 ```json
-{ "at": "2026-07-01T20:14:00Z", "page": "week-3-lab.html", "canvasUrl": "https://boisestate.instructure.com/courses/123/pages/week-3-lab", "tier": "fail", "scIds": ["1.4.3"], "requiredLevel": "WCAG 2.1 AA" }
+{ "at": "2026-07-01T20:14:00Z", "page": "week-3-lab.html", "canvasUrl": "https://example.instructure.com/courses/123/pages/week-3-lab", "tier": "fail", "scIds": ["1.4.3"], "requiredLevel": "WCAG 2.1 AA" }
 ```
 
 ## 4. Deep-check escalation (triage)
@@ -156,7 +157,7 @@ The recommendation presents both routes side by side; nothing runs without an ex
 
 - **Automated — WAVE API** (paid, ~1–3 credits/page). **Hard constraint: the WAVE API fetches by public URL and cannot log into Canvas.** It is therefore only usable for publicly-visible pages. The adapter refuses URLs it detects as auth-gated (Canvas login redirect) and says why, so no credit is wasted.
 - **Manual (free):** for auth-gated pages — which is most Canvas content — the professor opens the page in their browser (already logged in) and runs either the **WAVE browser extension** (free, same WebAIM engine as the API; Chrome/Firefox; catches dynamically loaded content the online tool misses) or **MS Accessibility Insights for Web** (free; Windows + Chromium-based browser; FastPass automation is axe-core plus guided manual assessments for the `needs-human-review` criteria). Link: <https://accessibilityinsights.io/downloads/>. The review queue (§5) is built to make this walkable.
-- The WAVE route is not just a fallback: Boise State **officially recommends WAVE as the pre-publish accessibility check** (<https://www.boisestate.edu/webguide/publishing/wave-web-accessibility-evaluation-tool/>), citing the same WCAG AA 4.5:1 contrast bar this design gates on, and the same caveat this design encodes as `needs-human-review`: "a person must identify many accessibility issues manually." When an institution's policy URLs (§7) include a recommended checker, reports name it in the deep-check recommendation.
+- The WAVE route is not just a fallback: many institutions **officially recommend WAVE as their pre-publish accessibility check** in their web publishing guides, citing the same WCAG AA 4.5:1 contrast bar this design gates on and the same caveat this design encodes as `needs-human-review` (automated tools cannot find everything; a person must identify many issues manually). When an institution's policy URLs (§7) include a recommended checker, reports name it in the deep-check recommendation — so the tool says "your institution recommends WAVE for this" rather than offering a generic menu.
 
 Manual results don't flow back automatically; the professor either fixes, marks the page reviewed (§5), or acknowledges.
 
@@ -171,7 +172,7 @@ Per-course, persisted at `<course project>/.a11y/review-queue.json`. An entry is
 Entry shape:
 
 ```json
-{ "page": "week-3-lab.html", "canvasUrl": "https://boisestate.instructure.com/courses/123/pages/week-3-lab", "reasons": [{ "sc": "1.4.3", "detail": "4.32:1 measured, 4.5:1 required" }], "lastCheckedAt": "2026-07-01", "status": "open" }
+{ "page": "week-3-lab.html", "canvasUrl": "https://example.instructure.com/courses/123/pages/week-3-lab", "reasons": [{ "sc": "1.4.3", "detail": "4.32:1 measured, 4.5:1 required" }], "lastCheckedAt": "2026-07-01", "status": "open" }
 ```
 
 New C&C MCP tool **`accessibility_review_queue`**:
@@ -198,9 +199,9 @@ The institution config (written by `setup_institution`) gains:
 ```json
 "accessibilityPolicy": {
   "urls": [
-    "https://www.boisestate.edu/webguide/accessibility/title-ii-accessibility-requirements/",
-    "https://www.boisestate.edu/webguide/accessibility/accessibility-guides-and-resources/",
-    "https://www.boisestate.edu/webguide/publishing/wave-web-accessibility-evaluation-tool/"
+    "https://www.example.edu/accessibility/title-ii-requirements/",
+    "https://www.example.edu/accessibility/guides-and-resources/",
+    "https://www.example.edu/publishing/wave-evaluation-tool/"
   ],
   "requiredConformance": { "version": "2.1", "level": "AA" },
   "recheckWeeks": 4,
