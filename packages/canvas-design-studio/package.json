@@ -31,6 +31,7 @@
   ],
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
+    "@canvas-toolchain/shared-types": "*",
     "@canvas-toolchain/shared-llm": "*",
     "@inquirer/prompts": "^7.0.0",
     "@modelcontextprotocol/sdk": "^1.10.0",

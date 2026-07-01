@@ -1,9 +1,16 @@
 import { wcagContrastRatio } from './contrast.js';
 
+/**
+ * @deprecated Prefer the canonical `AccessibilityFinding` model from
+ * `@canvas-toolchain/shared-types` via `runConformanceCheck` (src/tools/a11y/).
+ * Kept for command-and-control compatibility; removal tracked for Phase 2.
+ */
 export interface AccessibilityWarning {
   check: string;
   message: string;
   context?: string;
+  /** Present only for contrast findings: how close the measured value came. */
+  margin?: { measured: number; required: number; unit: string };
 }
 
 const VAGUE_LINK_TEXT = new Set([
@@ -43,6 +50,7 @@ function checkContrast(html: string): AccessibilityWarning[] {
         check: 'contrast-ratio',
         message: `${fgM[1]} on ${bgM[1]}: ${ratio.toFixed(2)}:1 — fails WCAG AA for ${label} (requires ${threshold}:1)`,
         context: ctx(style),
+        margin: { measured: ratio, required: threshold, unit: 'contrast ratio' },
       });
     }
   }
@@ -151,6 +159,11 @@ function checkPanoptoNoCaptions(html: string): AccessibilityWarning[] {
   return warnings;
 }
 
+/**
+ * @deprecated Prefer the canonical `AccessibilityFinding` model from
+ * `@canvas-toolchain/shared-types` via `runConformanceCheck` (src/tools/a11y/).
+ * Kept for command-and-control compatibility; removal tracked for Phase 2.
+ */
 export function auditAccessibility(html: string): AccessibilityWarning[] {
   const stripped = html.replace(/<!--[\s\S]*?-->/g, '');
   return [
