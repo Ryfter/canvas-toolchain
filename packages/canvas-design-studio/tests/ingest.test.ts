@@ -143,8 +143,8 @@ describe('findCourseConfig', () => {
 });
 
 describe('ingestAssignmentFolder', () => {
-  it('simple mode — brief only: returns html, courseInfo, sources', () => {
-    const result = ingestAssignmentFolder(
+  it('simple mode — brief only: returns html, courseInfo, sources', async () => {
+    const result = await ingestAssignmentFolder(
       { folderPath: join(FIXTURES, 'simple-brief-only') },
       TEST_CONFIG,
     );
@@ -160,8 +160,8 @@ describe('ingestAssignmentFolder', () => {
     expect(result.sources.sourceMap.courseConfig).toContain('simple-brief-only');
   });
 
-  it('advanced group — week-01 inherits rubric and shell from ai-challenge parent', () => {
-    const result = ingestAssignmentFolder(
+  it('advanced group — week-01 inherits rubric and shell from ai-challenge parent', async () => {
+    const result = await ingestAssignmentFolder(
       { folderPath: join(FIXTURES, 'advanced-group/ai-challenge/week-01') },
       TEST_CONFIG,
     );
@@ -173,8 +173,8 @@ describe('ingestAssignmentFolder', () => {
     expect(result.courseInfo.professor).toBe('Dr. Smith');       // from shared config
   });
 
-  it('simple-full — returns rubric and shell from same folder', () => {
-    const result = ingestAssignmentFolder(
+  it('simple-full — returns rubric and shell from same folder', async () => {
+    const result = await ingestAssignmentFolder(
       { folderPath: join(FIXTURES, 'simple-full') },
       TEST_CONFIG,
     );
@@ -183,26 +183,26 @@ describe('ingestAssignmentFolder', () => {
     expect(result.sources.styleNotes).toContain('two-column-dashboard');
   });
 
-  it('throws with helpful message when assignment-brief.md is missing', () => {
-    expect(() =>
+  it('throws with helpful message when assignment-brief.md is missing', async () => {
+    await expect(
       ingestAssignmentFolder(
         { folderPath: join(FIXTURES, 'error-no-brief') },
         TEST_CONFIG,
       )
-    ).toThrow('assignment-brief.md not found');
+    ).rejects.toThrow('assignment-brief.md not found');
   });
 
-  it('throws with field names when course config has placeholder values', () => {
-    expect(() =>
+  it('throws with field names when course config has placeholder values', async () => {
+    await expect(
       ingestAssignmentFolder(
         { folderPath: join(FIXTURES, 'error-placeholder-config') },
         TEST_CONFIG,
       )
-    ).toThrow('professor');
+    ).rejects.toThrow('professor');
   });
 
-  it('adds warning when assignment-brief.md contains placeholder text', () => {
-    const result = ingestAssignmentFolder(
+  it('adds warning when assignment-brief.md contains placeholder text', async () => {
+    const result = await ingestAssignmentFolder(
       { folderPath: join(FIXTURES, 'warn-placeholder-brief') },
       TEST_CONFIG,
     );

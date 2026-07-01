@@ -1,6 +1,7 @@
 import { resolveTokens } from '../design-engine.js';
 import { validateCanvasHtml } from './validate.js';
-import { auditAccessibility } from './accessibility.js';
+import { runConformanceCheck } from './a11y/conformance.js';
+import type { ConformanceReport } from '@canvas-toolchain/shared-types';
 import type { InstitutionConfig } from '../types.js';
 
 export interface GenerateInput {
@@ -18,6 +19,7 @@ export interface GenerateOutput {
   heroImagePrompt: string;
   filename: string;
   warnings: string[];
+  conformance: ConformanceReport;
 }
 
 function buildStatBadge(value: string, label: string): string {
@@ -50,7 +52,7 @@ function buildSidebarCard(title: string, content: string, bgColor: string, textC
   );
 }
 
-export function generateCanvasPage(input: GenerateInput, config: InstitutionConfig): GenerateOutput {
+export async function generateCanvasPage(input: GenerateInput, config: InstitutionConfig): Promise<GenerateOutput> {
   const { courseNumber, assignmentNumber, courseName, assignmentBrief, professorName, semester } = input;
 
   const lines = assignmentBrief.split('\n').filter(l => l.trim());
@@ -101,10 +103,11 @@ export function generateCanvasPage(input: GenerateInput, config: InstitutionConf
   }, config);
 
   const validation = validateCanvasHtml(html);
-  const a11y = auditAccessibility(html);
+  const conformance = await runConformanceCheck(html);
   const warnings = [
     ...validation.violations.map(v => v.rule),
-    ...a11y.map(w => `a11y: ${w.check} — ${w.message}`),
+    ...[...conformance.findings, ...conformance.advisories]
+      .map(f => `a11y: ${f.sc} ${f.scName} — ${f.message}`),
   ];
 
   const heroImagePrompt =
@@ -115,7 +118,7 @@ export function generateCanvasPage(input: GenerateInput, config: InstitutionConf
 
   const filename = `${courseNumber.toLowerCase().replace(/\s+/g, '-')}-${assignmentNumber}-page.html`;
 
-  return { html, heroImagePrompt, filename, warnings };
+  return { html, heroImagePrompt, filename, warnings, conformance };
 }
 
 interface PageTokens {

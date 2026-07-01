@@ -18,7 +18,7 @@ import { listCanvasCourses } from './tools/list-courses.js';
 import type { ListCanvasCoursesInput } from './tools/list-courses.js';
 import { publishToCanvas } from './tools/publish.js';
 import type { PublishToCanvasInput } from './tools/publish.js';
-import { auditAccessibility } from './tools/accessibility.js';
+import { runConformanceCheck, formatConformanceReport } from './tools/a11y/conformance.js';
 import { critiqueCanvasPage } from './tools/critique.js';
 import type { CritiqueInput } from './tools/critique.js';
 import { redesignCanvasPage } from './tools/redesign.js';
@@ -471,21 +471,16 @@ async function main() {
       if (name === 'validate_canvas_html') {
         const { html } = args as { html: string };
         const rce = validateCanvasHtml(html);
-        const a11y = auditAccessibility(html);
+        const conformance = await runConformanceCheck(html);
 
         const rceSummary = rce.valid
           ? '✓ Canvas RCE: HTML is Canvas-compliant. No violations found.'
           : `✗ Canvas RCE: ${rce.violations.length} violation(s) found:\n\n` +
             rce.violations.map((v, i) => `${i + 1}. ${v.rule}\n   Context: ${v.context}`).join('\n\n');
 
-        const a11ySummary = a11y.length === 0
-          ? '✓ Accessibility (WCAG 2.1 AA): No issues found.'
-          : `⚠ Accessibility (WCAG 2.1 AA — advisory): ${a11y.length} issue(s) found:\n\n` +
-            a11y.map((w, i) => `${i + 1}. ${w.check}: ${w.message}${w.context ? `\n   Context: ${w.context}` : ''}`).join('\n\n');
-
         return {
-          content: [{ type: 'text', text: `${rceSummary}\n\n${a11ySummary}` }],
-          isError: !rce.valid,
+          content: [{ type: 'text', text: `${rceSummary}\n\n${formatConformanceReport(conformance)}` }],
+          isError: !rce.valid,   // unchanged: accessibility remains advisory in Phase 1
         };
       }
 
@@ -509,7 +504,7 @@ async function main() {
           };
         }
         const config = loadConfig();
-        const result = generateCanvasPage(args as unknown as GenerateInput, config);
+        const result = await generateCanvasPage(args as unknown as GenerateInput, config);
         const response = [
           `✓ Page generated: ${result.filename}`,
           result.warnings.length > 0
@@ -640,7 +635,7 @@ async function main() {
         }
         const config = loadConfig();
         const { folderPath } = (args ?? {}) as IngestAssignmentFolderInput;
-        const result = ingestAssignmentFolder({ folderPath }, config);
+        const result = await ingestAssignmentFolder({ folderPath }, config);
 
         const lines: string[] = [
           `✓ Generated: ${result.filename}`,

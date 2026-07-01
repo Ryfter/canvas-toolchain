@@ -201,10 +201,10 @@ export function findCourseConfig(
 
 // ─── Main exported function ───────────────────────────────────────────────────
 
-export function ingestAssignmentFolder(
+export async function ingestAssignmentFolder(
   input: IngestAssignmentFolderInput,
   config: InstitutionConfig,
-): IngestAssignmentFolderResult {
+): Promise<IngestAssignmentFolderResult> {
   const raw = input.folderPath?.trim();
   const folderPath = resolveFolderPath(raw && raw.length > 0 ? raw : 'ingest');
 
@@ -262,7 +262,7 @@ export function ingestAssignmentFolder(
     styleNotes: combinedStyleNotes,
   };
 
-  const generated = generateCanvasPage(generateInput, config);
+  const generated = await generateCanvasPage(generateInput, config);
 
   // Carry forward generation warnings and add any brief-level warnings
   const warnings = [...generated.warnings];
