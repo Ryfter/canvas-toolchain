@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { axeEngine, AXE_COVERED_SC } from '../../src/tools/a11y/axe.js';
 import { DEFAULT_REQUIRED_LEVEL } from '@canvas-toolchain/shared-types';
 
@@ -43,6 +43,22 @@ describe('axeEngine', () => {
       expect(f.sc).toMatch(/^\d\.\d\.\d{1,2}$/);
       expect(f.scName.length).toBeGreaterThan(0);
       expect(['critical', 'serious', 'moderate', 'minor']).toContain(f.severity);
+    }
+  });
+
+  it('returns empty results instead of throwing when the axe run fails', async () => {
+    vi.resetModules();
+    vi.doMock('jsdom', () => ({ JSDOM: class { constructor() { throw new Error('boom'); } } }));
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { axeEngine: brokenEngine } = await import('../../src/tools/a11y/axe.js');
+      const result = await brokenEngine.check('<p>x</p>', OPTS);
+      expect(result).toEqual({ findings: [], criteriaCovered: [] });
+      expect(errSpy).toHaveBeenCalled();
+    } finally {
+      errSpy.mockRestore();
+      vi.doUnmock('jsdom');
+      vi.resetModules();
     }
   });
 });

@@ -5,7 +5,12 @@ import { scMeta, type AccessibilityFinding, type FindingSeverity } from '@canvas
 import type { AccessibilityEngine, EngineResult } from './engine.js';
 
 const require_ = createRequire(import.meta.url);
-const AXE_SOURCE = readFileSync(require_.resolve('axe-core/axe.min.js'), 'utf-8');
+let axeSource: string | undefined;
+
+function loadAxeSource(): string {
+  axeSource ??= readFileSync(require_.resolve('axe-core/axe.min.js'), 'utf-8');
+  return axeSource;
+}
 
 /**
  * SCs axe has jsdom-safe rules for. Layout-dependent rules (color-contrast,
@@ -49,7 +54,7 @@ export const axeEngine: AccessibilityEngine = {
     let violations: AxeViolation[];
     try {
       const dom = new JSDOM(doc, { runScripts: 'outside-only' });
-      dom.window.eval(AXE_SOURCE);
+      dom.window.eval(loadAxeSource());
       const axe = (dom.window as unknown as { axe: { run: Function } }).axe;
       const results = (await axe.run(dom.window.document.body, {
         runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
