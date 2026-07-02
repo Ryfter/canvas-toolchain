@@ -55,15 +55,19 @@ export const axeEngine: AccessibilityEngine = {
     try {
       const dom = new JSDOM(doc, { runScripts: 'outside-only' });
       dom.window.eval(loadAxeSource());
-      const axe = (dom.window as unknown as { axe: { run: Function } }).axe;
-      const results = (await axe.run(dom.window.document.body, {
-        runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
+      const axe = (
+        dom.window as unknown as {
+          axe: { run: (context: unknown, options: unknown) => Promise<{ violations: AxeViolation[] }> };
+        }
+      ).axe;
+      const results = await axe.run(dom.window.document.body, {
+        runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'] },
         rules: {
           'color-contrast': { enabled: false },  // no layout in jsdom; in-house owns 1.4.3
           'target-size': { enabled: false },     // no layout in jsdom
         },
         resultTypes: ['violations'],
-      })) as { violations: AxeViolation[] };
+      });
       violations = results.violations;
       dom.window.close();
     } catch (err) {

@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { runConformanceCheck, formatConformanceReport } from '../../src/tools/a11y/conformance.js';
+import type { AccessibilityFinding } from '@canvas-toolchain/shared-types';
+import { runConformanceCheck, formatConformanceReport, dedupe } from '../../src/tools/a11y/conformance.js';
+
+function mkFinding(overrides: Partial<AccessibilityFinding>): AccessibilityFinding {
+  return {
+    sc: '1.1.1',
+    scName: 'Non-text Content',
+    scVersion: '2.0',
+    level: 'A',
+    severity: 'moderate',
+    engine: 'inhouse',
+    message: 'missing alt',
+    context: '<img src="x.png">',
+    ...overrides,
+  };
+}
 
 describe('runConformanceCheck', () => {
   it('clean HTML → verdict pass, no findings, honest criteria statuses', async () => {
@@ -40,6 +55,25 @@ describe('runConformanceCheck', () => {
   it('respects a stricter required level (2.2 AA pulls 2.2 findings out of advisories)', async () => {
     const report = await runConformanceCheck('<p>x</p>', { requiredLevel: { version: '2.2', level: 'AA' } });
     expect(report.requiredLevel.version).toBe('2.2');
+  });
+});
+
+describe('dedupe', () => {
+  it('same sc + context, equal severity → first-inserted wins (in-house before axe)', () => {
+    const first = mkFinding({ engine: 'inhouse', severity: 'moderate' });
+    const second = mkFinding({ engine: 'axe', severity: 'moderate' });
+    const result = dedupe([first, second]);
+    expect(result.length).toBe(1);
+    expect(result[0].engine).toBe('inhouse');
+  });
+
+  it('same sc + context, higher severity second → second wins', () => {
+    const first = mkFinding({ engine: 'inhouse', severity: 'moderate' });
+    const second = mkFinding({ engine: 'axe', severity: 'critical' });
+    const result = dedupe([first, second]);
+    expect(result.length).toBe(1);
+    expect(result[0].engine).toBe('axe');
+    expect(result[0].severity).toBe('critical');
   });
 });
 

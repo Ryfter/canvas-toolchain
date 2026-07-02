@@ -8,5 +8,6 @@ export interface EngineResult {
 
 export interface AccessibilityEngine {
   readonly name: FindingEngine;
+  // requiredLevel is forward-looking (Phase 2): engines may narrow rule sets by level; today the runner partitions findings after the fact.
   check(html: string, opts: { requiredLevel: RequiredLevel }): Promise<EngineResult>;
 }

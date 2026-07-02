@@ -12,7 +12,7 @@ const SEVERITY_RANK = { critical: 3, serious: 2, moderate: 1, minor: 0 } as cons
 const ENGINES: AccessibilityEngine[] = [inhouseEngine, axeEngine];
 
 /** Dedupe by (sc, context|message): keep the highest-severity report of a defect. */
-function dedupe(findings: AccessibilityFinding[]): AccessibilityFinding[] {
+export function dedupe(findings: AccessibilityFinding[]): AccessibilityFinding[] {
   const byKey = new Map<string, AccessibilityFinding>();
   for (const f of findings) {
     const key = `${f.sc}|${f.context ?? f.message}`;
@@ -36,6 +36,7 @@ export async function runConformanceCheck(
 
   const findings = all.filter(f => isWithinRequiredLevel(f, requiredLevel));
   const advisories = all.filter(f => !isWithinRequiredLevel(f, requiredLevel));
+  // Criteria statuses reflect the full WCAG 2.2 picture (incl. advisories); the verdict is scoped to the required level — a 'fail' criterion can coexist with verdict 'pass'.
   const failedScs = new Set(all.map(f => f.sc));
 
   const criteria = WCAG22_CRITERIA.map(c => ({

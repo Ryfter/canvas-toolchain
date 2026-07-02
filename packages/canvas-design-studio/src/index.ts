@@ -511,6 +511,7 @@ async function main() {
             ? `\n⚠ Warnings:\n${result.warnings.map(w => `  • ${w}`).join('\n')}`
             : '',
           `\n📸 Hero image prompt (1200×400px):\n${result.heroImagePrompt}`,
+          result.conformance ? `\n\n${formatConformanceReport(result.conformance)}` : '',
           `\n\`\`\`html\n${result.html}\n\`\`\``,
         ].join('');
         return { content: [{ type: 'text', text: response }] };
