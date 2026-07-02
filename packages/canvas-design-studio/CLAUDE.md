@@ -73,6 +73,15 @@ These are non-negotiable constraints sourced from the Canvas RCE sanitizer. Viol
 
 ---
 
+## Accessibility checking
+
+Use `runConformanceCheck` (`src/tools/a11y/conformance.ts`) for all new
+accessibility checking — it runs the in-house + axe-core engines and returns a
+canonical WCAG 2.2 `ConformanceReport`. `auditAccessibility` is deprecated
+(kept for command-and-control compatibility). Full reference: `docs/accessibility.md`.
+
+---
+
 ## TL;DR Card (Content Priority Tiers, #66)
 
 `generate_page` checks each input markdown file's front matter for a `tiers:`

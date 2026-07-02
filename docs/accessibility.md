@@ -33,6 +33,32 @@ Source of truth (for developers):
 
 ---
 
+## Engine architecture (Phase 1, 2026-07)
+
+Checks now run through pluggable engines that all emit one canonical model
+(`AccessibilityFinding` in `@canvas-toolchain/shared-types`), normalized to
+WCAG 2.2 success criteria:
+
+| Engine | What it covers | Notes |
+|---|---|---|
+| `inhouse` | The six Canvas-aware heuristics (contrast with measured margin, empty alt, heading skips, vague links, table headers, Panopto captions) | Authoritative for 1.4.3 contrast |
+| `axe` | axe-core 4.x WCAG 2.0/2.1/2.2 A+AA rules in jsdom (ARIA, roles, structure, labels, and more) | `color-contrast` and `target-size` disabled — jsdom has no layout |
+
+Every check produces a `ConformanceReport`: a verdict (`pass` / `borderline` /
+`fail`) against the required conformance level (default **WCAG 2.1 AA**),
+findings with severity and margins, forward-looking advisories beyond the
+required level, and an honest per-criterion status — `pass`, `fail`,
+`needs-human-review` (automation cannot judge ~half of WCAG; use the WAVE
+browser extension or MS Accessibility Insights,
+https://accessibilityinsights.io/downloads/), or `not-applicable` (Canvas
+owns the page chrome and login).
+
+Phase 1 is fully advisory: nothing blocks publishing yet. The publish gate,
+acknowledgments, and the borderline review queue are Phase 2 of
+`packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md`.
+
+---
+
 ## Layer 1 — the WCAG content audit
 
 `auditAccessibility(html)` runs six independent checks and returns a list of warnings.
