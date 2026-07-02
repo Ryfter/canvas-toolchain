@@ -2,7 +2,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { auditAccessibility, type AccessibilityWarning } from './accessibility.js';
+import { runConformanceCheck } from './a11y/conformance.js';
 import type { CritiqueFinding } from './critique.js';
+import type { ConformanceReport } from '@canvas-toolchain/shared-types';
 
 export interface RedesignInput {
   html: string;
@@ -16,7 +18,9 @@ export interface RedesignResult {
   html: string;
   appliedFixes: string[];
   skippedFindings: string[];
+  /** @deprecated Use `conformance`. Kept for command-and-control until Phase 2. */
   accessibilityWarnings?: AccessibilityWarning[];
+  conformance?: ConformanceReport;
   kbContext?: string;
 }
 
@@ -48,7 +52,7 @@ function loadKb(): string {
   }
 }
 
-export function redesignCanvasPage(input: RedesignInput): RedesignResult {
+export async function redesignCanvasPage(input: RedesignInput): Promise<RedesignResult> {
   const { findings, mode = 'quick' } = input;
   let { html } = input;
   const appliedFixes: string[] = [];
@@ -74,12 +78,14 @@ export function redesignCanvasPage(input: RedesignInput): RedesignResult {
   }
 
   const a11y = auditAccessibility(html);
+  const conformance = await runConformanceCheck(html);
 
   const result: RedesignResult = {
     html,
     appliedFixes,
     skippedFindings,
     ...(a11y.length > 0 && { accessibilityWarnings: a11y }),
+    conformance,
   };
 
   if (mode === 'comprehensive') {

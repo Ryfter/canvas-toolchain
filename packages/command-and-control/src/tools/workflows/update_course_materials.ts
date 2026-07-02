@@ -161,7 +161,7 @@ export async function updateCourseMaterials(input: UpdateCourseMaterialsInput): 
       : resolved;
 
     try {
-      const page = renderPageWithA11y({
+      const page = await renderPageWithA11y({
         briefPath,
         assignmentName,
         verdict,

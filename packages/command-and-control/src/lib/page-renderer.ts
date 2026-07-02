@@ -24,7 +24,7 @@ export interface RenderPageInput {
  * validation violations are surfaced as needsReviewReasons with status
  * 'needs-review'. A page with zero issues gets status 'clean'.
  */
-export function renderPageWithA11y(input: RenderPageInput): UpdateCourseMaterialsPage {
+export async function renderPageWithA11y(input: RenderPageInput): Promise<UpdateCourseMaterialsPage> {
   const { briefPath, assignmentName, verdict, resolved, outputDir, courseDir } = input;
 
   const pageResult = generatePage({
@@ -37,7 +37,7 @@ export function renderPageWithA11y(input: RenderPageInput): UpdateCourseMaterial
   });
 
   // Apply mechanical CSS fixes (font floor below 13px, hero URL placeholder comment)
-  const redesignResult = redesignCanvasPage({ html: pageResult.html, findings: [], mode: 'quick' });
+  const redesignResult = await redesignCanvasPage({ html: pageResult.html, findings: [], mode: 'quick' });
   const autofixApplied = redesignResult.appliedFixes;
   const html = redesignResult.html;
 

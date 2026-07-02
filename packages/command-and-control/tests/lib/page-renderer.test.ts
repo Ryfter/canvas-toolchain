@@ -56,60 +56,60 @@ beforeEach(() => {
 });
 
 describe('renderPageWithA11y()', () => {
-  it('returns clean status when no warnings and no violations', () => {
-    const page = renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
+  it('returns clean status when no warnings and no violations', async () => {
+    const page = await renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
     expect(page.status).toBe('clean');
     expect(page.needsReviewReasons).toBeUndefined();
     expect(page.autofixApplied).toBeUndefined();
   });
 
-  it('returns needs-review when accessibility warnings are present', () => {
+  it('returns needs-review when accessibility warnings are present', async () => {
     mockAuditAccessibility.mockReturnValue([
       { check: 'empty-alt', message: 'Content image has alt=""', context: '<img>' },
     ]);
-    const page = renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
+    const page = await renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
     expect(page.status).toBe('needs-review');
     expect(page.needsReviewReasons).toHaveLength(1);
     expect(page.needsReviewReasons![0]).toContain('empty-alt');
   });
 
-  it('returns needs-review when validation violations are present', () => {
+  it('returns needs-review when validation violations are present', async () => {
     mockValidateCanvasHtml.mockReturnValue({
       valid: false,
       violations: [{ rule: 'No <style> blocks', context: '<style>' }],
     });
-    const page = renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'UPDATE', resolved: RESOLVED });
+    const page = await renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'UPDATE', resolved: RESOLVED });
     expect(page.status).toBe('needs-review');
     expect(page.needsReviewReasons!.some((r) => r.startsWith('validation:'))).toBe(true);
   });
 
-  it('records autofixApplied when redesign applies fixes', () => {
+  it('records autofixApplied when redesign applies fixes', async () => {
     mockRedesignCanvasPage.mockReturnValue({
       html: '<p>Fixed</p>',
       appliedFixes: ['Bumped all font sizes below 13px to 13px'],
       skippedFindings: [],
     });
-    const page = renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
+    const page = await renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
     expect(page.autofixApplied).toEqual(['Bumped all font sizes below 13px to 13px']);
   });
 
-  it('writes fixed HTML back to disk when autofix applied', () => {
+  it('writes fixed HTML back to disk when autofix applied', async () => {
     mockRedesignCanvasPage.mockReturnValue({
       html: '<p>Fixed</p>',
       appliedFixes: ['Bumped all font sizes below 13px to 13px'],
       skippedFindings: [],
     });
-    renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
+    await renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
     expect(mockWriteFileSync).toHaveBeenCalledWith(SAMPLE_PAGE_RESULT.savedTo, '<p>Fixed</p>', 'utf-8');
   });
 
-  it('does not write to disk when no autofix applied', () => {
-    renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
+  it('does not write to disk when no autofix applied', async () => {
+    await renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'KEEP', resolved: RESOLVED });
     expect(mockWriteFileSync).not.toHaveBeenCalled();
   });
 
-  it('passes templateId/themeId/promptSetId from resolved to generatePage', () => {
-    renderPageWithA11y({
+  it('passes templateId/themeId/promptSetId from resolved to generatePage', async () => {
+    await renderPageWithA11y({
       briefPath: '/brief.md',
       assignmentName: 'Assignment 1',
       verdict: 'KEEP',
@@ -122,14 +122,14 @@ describe('renderPageWithA11y()', () => {
     }));
   });
 
-  it('populates templateUsed/themeUsed/promptSetUsed from resolved', () => {
-    const page = renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'ADD', resolved: RESOLVED });
+  it('populates templateUsed/themeUsed/promptSetUsed from resolved', async () => {
+    const page = await renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'Assignment 1', verdict: 'ADD', resolved: RESOLVED });
     expect(page.templateUsed).toEqual({ id: 'assignment', version: '1.0.0' });
     expect(page.themeUsed).toEqual({ id: 'cds-default', version: '1.0.0' });
     expect(page.promptSetUsed).toEqual({ id: 'cds-default', version: '1.0.0' });
   });
 
-  it('includes both accessibility and validation issues in needsReviewReasons', () => {
+  it('includes both accessibility and validation issues in needsReviewReasons', async () => {
     mockAuditAccessibility.mockReturnValue([
       { check: 'vague-link', message: '"click here" is not descriptive', context: '<a>' },
     ]);
@@ -137,7 +137,7 @@ describe('renderPageWithA11y()', () => {
       valid: false,
       violations: [{ rule: 'No <script> tags', context: '<script>' }],
     });
-    const page = renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'A1', verdict: 'UPDATE', resolved: RESOLVED });
+    const page = await renderPageWithA11y({ briefPath: '/brief.md', assignmentName: 'A1', verdict: 'UPDATE', resolved: RESOLVED });
     expect(page.needsReviewReasons).toHaveLength(2);
     expect(page.needsReviewReasons![0]).toContain('vague-link');
     expect(page.needsReviewReasons![1]).toContain('validation:');

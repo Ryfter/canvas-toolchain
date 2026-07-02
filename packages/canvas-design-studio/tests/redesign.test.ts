@@ -24,45 +24,55 @@ const wallFinding: CritiqueFinding = {
 };
 
 describe('redesignCanvasPage', () => {
-  it('fixes font-size below 13px to 13px', () => {
+  it('fixes font-size below 13px to 13px', async () => {
     const html = '<h2>Title</h2><p style="font-size:11px;">Text.</p>';
-    const result = redesignCanvasPage({ html, findings: [fontFinding] });
+    const result = await redesignCanvasPage({ html, findings: [fontFinding] });
     expect(result.html).toContain('font-size:13px');
     expect(result.html).not.toContain('font-size:11px');
     expect(result.appliedFixes.length).toBeGreaterThan(0);
   });
 
-  it('adds hero URL comment before the HERO_IMAGE_URL img tag', () => {
+  it('adds hero URL comment before the HERO_IMAGE_URL img tag', async () => {
     const html = '<img src="HERO_IMAGE_URL" alt="hero"><h2>Title</h2>';
-    const result = redesignCanvasPage({ html, findings: [heroFinding] });
+    const result = await redesignCanvasPage({ html, findings: [heroFinding] });
     expect(result.html).toContain('<!-- Replace HERO_IMAGE_URL');
     expect(result.appliedFixes.length).toBeGreaterThan(0);
   });
 
-  it('puts non-mechanical findings in skippedFindings', () => {
+  it('puts non-mechanical findings in skippedFindings', async () => {
     const html = '<h2>Title</h2><p>Content.</p>';
-    const result = redesignCanvasPage({ html, findings: [wallFinding] });
+    const result = await redesignCanvasPage({ html, findings: [wallFinding] });
     expect(result.skippedFindings).toContain(wallFinding.suggestion);
     expect(result.appliedFixes).toHaveLength(0);
   });
 
-  it('puts typography finding in skippedFindings when no sub-13px font exists', () => {
+  it('puts typography finding in skippedFindings when no sub-13px font exists', async () => {
     const html = '<h2>Title</h2><p style="font-size:14px;">Normal size text.</p>';
-    const result = redesignCanvasPage({ html, findings: [fontFinding] });
+    const result = await redesignCanvasPage({ html, findings: [fontFinding] });
     expect(result.skippedFindings).toContain(fontFinding.suggestion);
     expect(result.appliedFixes).toHaveLength(0);
   });
 
-  it('runs accessibility check and populates accessibilityWarnings for low-contrast html', () => {
+  it('runs accessibility check and populates accessibilityWarnings for low-contrast html', async () => {
     const html = '<h2>Title</h2><div style="background:#cccccc;color:#ffffff;">Low contrast text.</div>';
-    const result = redesignCanvasPage({ html, findings: [] });
+    const result = await redesignCanvasPage({ html, findings: [] });
     expect(result.accessibilityWarnings).toBeDefined();
     expect(result.accessibilityWarnings!.length).toBeGreaterThan(0);
   });
 
-  it('returns kbContext in comprehensive mode', () => {
+  it('attaches a conformance report alongside deprecated accessibilityWarnings', async () => {
+    const result = await redesignCanvasPage({
+      html: '<p style="color:#999999;background:#ffffff">low</p>',
+      findings: [],
+    });
+    expect(result.accessibilityWarnings).toBeDefined();       // back-compat preserved
+    expect(result.conformance).toBeDefined();
+    expect(result.conformance!.verdict).toBe('fail');
+  });
+
+  it('returns kbContext in comprehensive mode', async () => {
     const html = '<h2>Title</h2><p>Content.</p>';
-    const result = redesignCanvasPage({ html, findings: [], mode: 'comprehensive' });
+    const result = await redesignCanvasPage({ html, findings: [], mode: 'comprehensive' });
     expect(typeof result.kbContext).toBe('string');
     expect(result.kbContext!.length).toBeGreaterThan(0);
   });

@@ -585,7 +585,7 @@ async function main() {
 
       if (name === 'redesign_canvas_page') {
         const input = args as unknown as RedesignInput;
-        const result = redesignCanvasPage(input);
+        const result = await redesignCanvasPage(input);
 
         const lines: string[] = [];
 
@@ -603,6 +603,10 @@ async function main() {
         if (result.accessibilityWarnings?.length) {
           lines.push(`\n\nAccessibility (WCAG 2.1 AA — advisory):\n` +
             result.accessibilityWarnings.map(w => `  ⚠ ${w.check}: ${w.message}`).join('\n'));
+        }
+
+        if (result.conformance) {
+          lines.push(`\n\n${formatConformanceReport(result.conformance)}`);
         }
 
         if (result.kbContext) {

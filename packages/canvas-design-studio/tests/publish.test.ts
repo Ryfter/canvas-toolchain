@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CanvasApiError } from '../src/canvas-api.js';
 import type { CanvasPage, InstitutionConfig } from '../src/types.js';
-import { publishToCanvas, scanFerpa, titleSimilarity, type PublishSuccess } from '../src/tools/publish.js';
+import { publishToCanvas, scanFerpa, titleSimilarity, type PublishSuccess, type PublishToCanvasInput } from '../src/tools/publish.js';
 
 const config: InstitutionConfig = {
   institution: 'Example University',
@@ -218,6 +218,17 @@ describe('publishToCanvas', () => {
 
     expect(result).toMatchObject({ action: 'created' });
     expect((result as PublishSuccess).accessibilityWarnings?.length).toBeGreaterThan(0);
+  });
+
+  it('publish success carries a conformance report and still publishes on failures (advisory)', async () => {
+    const api = apiMock({ createPage: vi.fn().mockResolvedValue(page) });
+    const result = await publishToCanvas(
+      { courseId: 1, pageTitle: 'T', html: '<p style="color:#999999;background:#ffffff">x</p>' } as PublishToCanvasInput,
+      config, api,
+    );
+    expect('url' in result).toBe(true);                        // STILL publishes — no gate in Phase 1
+    expect((result as { conformance?: unknown }).conformance).toBeDefined();
+    expect((result as { accessibilityWarnings?: unknown[] }).accessibilityWarnings).toBeDefined();
   });
 });
 
