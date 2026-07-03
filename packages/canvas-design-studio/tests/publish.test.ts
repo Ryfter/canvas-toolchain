@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { CanvasApiError } from '../src/canvas-api.js';
 import type { CanvasPage, InstitutionConfig } from '../src/types.js';
 import { publishToCanvas, scanFerpa, titleSimilarity, type PublishSuccess, type PublishToCanvasInput } from '../src/tools/publish.js';
+import { loadAcknowledgments } from '../src/tools/a11y/records.js';
 
 const config: InstitutionConfig = {
   institution: 'Example University',
@@ -210,25 +214,101 @@ describe('publishToCanvas', () => {
     expect('error' in result ? result.error : '').toContain('does not have permission');
   });
 
-  it('includes accessibilityWarnings in success response for low-contrast html', async () => {
+  it('includes conformance report in success response for clean html', async () => {
     const api = apiMock({ createPage: vi.fn().mockResolvedValue(page) });
-    const html = '<div style="background:#cccccc;color:#ffffff;"><h2>Test</h2></div>';
+    const html = '<p>Welcome to the course.</p>';
 
     const result = await publishToCanvas({ courseId: 42, html, pageTitle: 'Test Page' }, config, api);
 
     expect(result).toMatchObject({ action: 'created' });
-    expect((result as PublishSuccess).accessibilityWarnings?.length).toBeGreaterThan(0);
+    expect((result as PublishSuccess).conformance).toBeDefined();
   });
 
-  it('publish success carries a conformance report and still publishes on failures (advisory)', async () => {
-    const api = apiMock({ createPage: vi.fn().mockResolvedValue(page) });
-    const result = await publishToCanvas(
-      { courseId: 1, pageTitle: 'T', html: '<p style="color:#999999;background:#ffffff">x</p>' } as PublishToCanvasInput,
-      config, api,
-    );
-    expect('url' in result).toBe(true);                        // STILL publishes — no gate in Phase 1
-    expect((result as { conformance?: unknown }).conformance).toBeDefined();
-    expect((result as { accessibilityWarnings?: unknown[] }).accessibilityWarnings).toBeDefined();
+  // Deterministic in-house findings:
+  // vague link  -> 2.4.4 moderate  => borderline
+  // headerless table -> 1.3.1 serious => clear failure
+  const BORDERLINE_HTML = '<p>Course intro. <a href="https://example.edu/syllabus">click here</a></p>';
+  const FAIL_HTML = '<table><tr><td>Monday</td><td>Lab 1</td></tr></table>';
+  const CLEAN_HTML = '<p>Welcome to the course. Read the <a href="https://example.edu/syllabus">course syllabus</a> before week one.</p>';
+
+  describe('accessibility gate (two-tier, spec §3)', () => {
+    it('publishes a passing page without any acknowledgment', async () => {
+      const api = apiMock();
+      const result = await publishToCanvas(
+        { courseId: 1, html: CLEAN_HTML, pageTitle: 'Welcome' }, config, api);
+      expect('url' in result).toBe(true);
+      if ('url' in result) expect(result.acknowledgment).toBeUndefined();
+    });
+
+    it('blocks borderline without acknowledgment, with code ACCESSIBILITY_ACK_REQUIRED', async () => {
+      const api = apiMock();
+      const result = await publishToCanvas(
+        { courseId: 1, html: BORDERLINE_HTML, pageTitle: 'Intro' }, config, api);
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+        expect((result.details as { verdict: string }).verdict).toBe('borderline');
+      }
+    });
+
+    it('publishes borderline with acknowledgeAccessibility: true and records it', async () => {
+      const api = apiMock();
+      const courseDir = mkdtempSync(join(tmpdir(), 'pub-ack-'));
+      try {
+        const result = await publishToCanvas(
+          { courseId: 1, html: BORDERLINE_HTML, pageTitle: 'Intro', acknowledgeAccessibility: true, courseDir },
+          config, api);
+        expect('url' in result).toBe(true);
+        if ('url' in result) {
+          expect(result.acknowledgment?.tier).toBe('borderline');
+          expect(result.acknowledgment?.scIds).toEqual([]);
+        }
+        const records = loadAcknowledgments(courseDir);
+        expect(records).toHaveLength(1);
+        expect(records[0].requiredLevel).toBe('WCAG 2.1 AA');
+      } finally { rmSync(courseDir, { recursive: true, force: true }); }
+    });
+
+    it('rejects true for clear failures and lists the required SCs', async () => {
+      const api = apiMock();
+      const result = await publishToCanvas(
+        { courseId: 1, html: FAIL_HTML, pageTitle: 'Schedule', acknowledgeAccessibility: true }, config, api);
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+        expect((result.details as { requiredScs: string[] }).requiredScs.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('publishes clear failures only with the complete named-SC array (round-trip from details)', async () => {
+      const api = apiMock();
+      const blocked = await publishToCanvas(
+        { courseId: 1, html: FAIL_HTML, pageTitle: 'Schedule' }, config, api);
+      expect('error' in blocked).toBe(true);
+      const requiredScs = (blocked as { details: { requiredScs: string[] } }).details.requiredScs;
+
+      const incomplete = await publishToCanvas(
+        { courseId: 1, html: FAIL_HTML, pageTitle: 'Schedule', acknowledgeAccessibility: requiredScs.slice(1) },
+        config, api);
+      // With exactly one required SC, slice(1) is [] which is also incomplete.
+      expect('error' in incomplete).toBe(true);
+
+      const published = await publishToCanvas(
+        { courseId: 1, html: FAIL_HTML, pageTitle: 'Schedule', acknowledgeAccessibility: requiredScs },
+        config, api);
+      expect('url' in published).toBe(true);
+      if ('url' in published) expect(published.acknowledgment?.scIds).toEqual(requiredScs);
+    });
+
+    it('acknowledgment persistence failure does not fail the publish', async () => {
+      const api = apiMock();
+      const result = await publishToCanvas(
+        { courseId: 1, html: BORDERLINE_HTML, pageTitle: 'Intro', acknowledgeAccessibility: true,
+          courseDir: join(tmpdir(), 'pub-ack-missing', 'definitely', 'nested', '\0bad') },
+        config, api);
+      // Publish already happened; a record-write failure is warned, not surfaced as an error.
+      expect('url' in result).toBe(true);
+    });
   });
 });
 

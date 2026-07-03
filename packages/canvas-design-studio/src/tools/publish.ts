@@ -4,8 +4,9 @@ import { ferpaGotcha, titleCollisionGotcha, versionControlTip } from './gotchas.
 import { formatError } from '../utils/errors.js';
 import { validateCanvasHtml } from './validate.js';
 import { auditAccessibility, type AccessibilityWarning } from './accessibility.js';
-import { runConformanceCheck } from './a11y/conformance.js';
-import type { ConformanceReport } from '@canvas-toolchain/shared-types';
+import { runConformanceCheck, formatConformanceReport } from './a11y/conformance.js';
+import { evaluateAcknowledgment, type A11yAcknowledgment, type AckEvaluation, type ConformanceReport } from '@canvas-toolchain/shared-types';
+import { appendAcknowledgment, type AcknowledgmentRecord } from './a11y/records.js';
 
 const COLLISION_THRESHOLD = 0.8;
 
@@ -17,6 +18,11 @@ export interface PublishToCanvasInput {
   skipFerpaCheck?: boolean;
   collisionAction?: CollisionAction;
   relatedPageTitle?: string;
+  /** Two-tier accessibility override (spec §3): true acknowledges borderline findings;
+   *  an array naming every clear-failure SC acknowledges clear failures. Recorded. */
+  acknowledgeAccessibility?: A11yAcknowledgment;
+  /** Course project folder; when set, acknowledgments append to <courseDir>/.a11y/acknowledgments.json. */
+  courseDir?: string;
 }
 
 export interface PublishSuccess {
@@ -26,6 +32,8 @@ export interface PublishSuccess {
   tip: string;
   accessibilityWarnings?: AccessibilityWarning[];
   conformance?: ConformanceReport;
+  /** Present when this publish went through on an acknowledgment. */
+  acknowledgment?: AcknowledgmentRecord;
 }
 
 export interface PublishApi {
@@ -179,6 +187,45 @@ function collisionError(collision: CollisionMatch, pageTitle: string): ToolError
   };
 }
 
+/** Persistence is fail-soft: a record-write failure never fails a publish that already succeeded. */
+function recordAcknowledgment(record: AcknowledgmentRecord, courseDir?: string): void {
+  if (!courseDir) return;
+  try {
+    appendAcknowledgment(courseDir, record);
+  } catch (e) {
+    console.warn(`a11y acknowledgment record failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+function publishSuccess(
+  page: CanvasPage,
+  action: 'created' | 'updated',
+  a11yWarnings: AccessibilityWarning[],
+  conformance: ConformanceReport,
+  ackEval: AckEvaluation,
+  input: PublishToCanvasInput,
+): PublishSuccess {
+  const base: PublishSuccess = {
+    url: canvasPageUrl(page),
+    action,
+    pageTitle: page.title,
+    tip: versionControlTip(),
+    ...(a11yWarnings.length > 0 && { accessibilityWarnings: a11yWarnings }),
+    conformance,
+  };
+  if (ackEval.tier === 'none') return base;
+  const acknowledgment: AcknowledgmentRecord = {
+    at: new Date().toISOString(),
+    page: input.pageTitle,
+    canvasUrl: base.url,
+    tier: ackEval.tier,
+    scIds: ackEval.requiredScs,
+    requiredLevel: `WCAG ${conformance.requiredLevel.version} ${conformance.requiredLevel.level}`,
+  };
+  recordAcknowledgment(acknowledgment, input.courseDir);
+  return { ...base, acknowledgment };
+}
+
 function apiError(err: CanvasApiError, config: InstitutionConfig): ToolError {
   if (err.status === 401) {
     return {
@@ -303,6 +350,15 @@ export async function publishToCanvas(
   const a11yWarnings = auditAccessibility(input.html);
   const conformance = await runConformanceCheck(input.html);
 
+  const ackEval = evaluateAcknowledgment(conformance, input.acknowledgeAccessibility);
+  if (!ackEval.ok) {
+    return {
+      error: `${ackEval.reason}\n\n${formatConformanceReport(conformance)}\n\nThe professor is the final arbiter — fix what you can, or re-run with the acknowledgment to publish anyway. Acknowledgments are recorded to the course project's .a11y/ audit trail.`,
+      code: 'ACCESSIBILITY_ACK_REQUIRED',
+      details: { verdict: conformance.verdict, requiredScs: ackEval.requiredScs },
+    };
+  }
+
   try {
     const pages = await api.listPages(input.courseId);
     const collision = bestCollision(pages, input.pageTitle);
@@ -319,14 +375,7 @@ export async function publishToCanvas(
       }
 
       const updated = await api.updatePage(input.courseId, collision.page.url, input.html);
-      return {
-        url: canvasPageUrl(updated),
-        action: 'updated',
-        pageTitle: updated.title,
-        tip: versionControlTip(),
-        ...(a11yWarnings.length > 0 && { accessibilityWarnings: a11yWarnings }),
-        conformance,
-      };
+      return publishSuccess(updated, 'updated', a11yWarnings, conformance, ackEval, input);
     }
 
     const title = input.collisionAction === 'related' ? input.relatedPageTitle?.trim() : input.pageTitle;
@@ -338,14 +387,7 @@ export async function publishToCanvas(
     }
 
     const created = await api.createPage(input.courseId, title ?? input.pageTitle, input.html);
-    return {
-      url: canvasPageUrl(created),
-      action: 'created',
-      pageTitle: created.title,
-      tip: versionControlTip(),
-      ...(a11yWarnings.length > 0 && { accessibilityWarnings: a11yWarnings }),
-      conformance,
-    };
+    return publishSuccess(created, 'created', a11yWarnings, conformance, ackEval, input);
   } catch (err) {
     if (err instanceof CanvasApiError) return apiError(err, config);
 
