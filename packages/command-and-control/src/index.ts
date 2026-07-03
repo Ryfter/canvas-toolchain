@@ -81,6 +81,7 @@ import { reviewCanvasRubric, type ReviewCanvasRubricInput } from './tools/workfl
 import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
+import { auditCourseAccessibility } from './tools/workflows/audit_course_accessibility.js';
 import { loadModules } from './modules/registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
@@ -651,6 +652,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'audit_course_accessibility',
+      description:
+        'Run the full WCAG 2.2 engine stack (in-house + axe-core) across every generated page of a course project, report per-page verdicts against the required level, and refresh the borderline review queue. The regular between-semesters check.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseDir'],
+        properties: {
+          courseDir: { type: 'string', description: 'Course project folder.' },
+          outputDir: { type: 'string', description: 'Generated-HTML folder. Defaults to <courseDir>/output.' },
+        },
+      },
+    },
+    {
       name: 'brainstorm_interactive',
       description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via setup_anthropic.',
       inputSchema: {
@@ -923,6 +937,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'accessibility_review_queue':
         result = await accessibilityReviewQueue(args as unknown as Parameters<typeof accessibilityReviewQueue>[0]);
+        break;
+      case 'audit_course_accessibility':
+        result = await auditCourseAccessibility(args as unknown as Parameters<typeof auditCourseAccessibility>[0]);
         break;
       case 'brainstorm_interactive':
         result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
