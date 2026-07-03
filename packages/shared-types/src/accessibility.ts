@@ -151,3 +151,79 @@ export function computeVerdict(requiredFindings: AccessibilityFinding[]): Confor
   if (requiredFindings.length === 0) return 'pass';
   return requiredFindings.every(isBorderlineFinding) ? 'borderline' : 'fail';
 }
+
+/** Professor acknowledgment: `true` for borderline-only, a named-SC array for clear failures. */
+export type A11yAcknowledgment = true | string[];
+
+export interface AckEvaluation {
+  ok: boolean;
+  tier: 'none' | 'borderline' | 'fail';
+  /** Clear-failure SCs an array acknowledgment must name exactly (empty for none/borderline). */
+  requiredScs: string[];
+  reason?: string;
+}
+
+/** Unique, sorted SCs of clear (non-borderline) failures at the required level. */
+export function clearFailureScs(report: ConformanceReport): string[] {
+  return [...new Set(report.findings.filter(f => !isBorderlineFinding(f)).map(f => f.sc))].sort();
+}
+
+/**
+ * Two-tier gate evaluation (spec §3). Clear failures demand an array naming every
+ * failing SC — no more, no less; `true` covers borderline-only. `false` or any
+ * non-conforming runtime value (this arrives from JSON tool input) counts as absent.
+ */
+export function evaluateAckAgainst(
+  clearScs: string[],
+  hasBorderline: boolean,
+  ack: A11yAcknowledgment | boolean | undefined
+): AckEvaluation {
+  const given = ack === true || Array.isArray(ack) ? ack : undefined;
+
+  if (clearScs.length > 0) {
+    const required = [...new Set(clearScs)].sort();
+    if (!Array.isArray(given)) {
+      return {
+        ok: false, tier: 'fail', requiredScs: required,
+        reason: `Clear accessibility failures require a named acknowledgment listing every failing criterion: [${required.map(s => `"${s}"`).join(', ')}]. Passing true is not sufficient for clear failures.`,
+      };
+    }
+    const names = [...new Set(given)].sort();
+    const missing = required.filter(sc => !names.includes(sc));
+    const extra = names.filter(sc => !required.includes(sc));
+    if (missing.length > 0 || extra.length > 0) {
+      const parts: string[] = [];
+      if (missing.length > 0) parts.push(`missing: ${missing.join(', ')}`);
+      if (extra.length > 0) parts.push(`not failing here (remove): ${extra.join(', ')}`);
+      return {
+        ok: false, tier: 'fail', requiredScs: required,
+        reason: `The acknowledgment must name every clear-failure criterion and only those — ${parts.join('; ')}.`,
+      };
+    }
+    return { ok: true, tier: 'fail', requiredScs: required };
+  }
+
+  if (hasBorderline) {
+    if (given === undefined) {
+      return {
+        ok: false, tier: 'borderline', requiredScs: [],
+        reason: 'Borderline accessibility findings require acknowledgment. Review them, then pass acknowledgeAccessibility: true.',
+      };
+    }
+    return { ok: true, tier: 'borderline', requiredScs: [] };
+  }
+
+  return { ok: true, tier: 'none', requiredScs: [] };
+}
+
+/** Evaluate an acknowledgment against a conformance report's required-level findings. */
+export function evaluateAcknowledgment(
+  report: ConformanceReport,
+  ack: A11yAcknowledgment | boolean | undefined
+): AckEvaluation {
+  return evaluateAckAgainst(
+    clearFailureScs(report),
+    report.findings.some(isBorderlineFinding),
+    ack
+  );
+}

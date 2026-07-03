@@ -68,3 +68,105 @@ describe('computeVerdict', () => {
     ])).toBe('fail');
   });
 });
+
+import {
+  evaluateAckAgainst, evaluateAcknowledgment, clearFailureScs,
+  type AccessibilityFinding, type ConformanceReport, DEFAULT_REQUIRED_LEVEL,
+} from '../src/accessibility.js';
+
+function findingAck(over: Partial<AccessibilityFinding>): AccessibilityFinding {
+  return {
+    sc: '1.4.3', scName: 'Contrast (Minimum)', scVersion: '2.0', level: 'AA',
+    severity: 'serious', engine: 'inhouse', message: 'low contrast', ...over,
+  };
+}
+
+function report(findings: AccessibilityFinding[]): ConformanceReport {
+  return {
+    requiredLevel: DEFAULT_REQUIRED_LEVEL,
+    verdict: findings.length === 0 ? 'pass' : 'fail',
+    findings, advisories: [], criteria: [],
+  };
+}
+
+describe('evaluateAckAgainst', () => {
+  it('passes with tier none when nothing failed', () => {
+    expect(evaluateAckAgainst([], false, undefined))
+      .toEqual({ ok: true, tier: 'none', requiredScs: [] });
+  });
+
+  it('blocks borderline without acknowledgment', () => {
+    const r = evaluateAckAgainst([], true, undefined);
+    expect(r.ok).toBe(false);
+    expect(r.tier).toBe('borderline');
+    expect(r.reason).toContain('acknowledgeAccessibility: true');
+  });
+
+  it('passes borderline with true', () => {
+    expect(evaluateAckAgainst([], true, true)).toEqual({ ok: true, tier: 'borderline', requiredScs: [] });
+  });
+
+  it('passes borderline with an array too', () => {
+    expect(evaluateAckAgainst([], true, ['1.4.3']).ok).toBe(true);
+  });
+
+  it('rejects true for clear failures', () => {
+    const r = evaluateAckAgainst(['1.4.3'], false, true);
+    expect(r.ok).toBe(false);
+    expect(r.tier).toBe('fail');
+    expect(r.requiredScs).toEqual(['1.4.3']);
+    expect(r.reason).toContain('not sufficient');
+  });
+
+  it('rejects an incomplete array (missing SC named)', () => {
+    const r = evaluateAckAgainst(['1.3.1', '1.4.3'], false, ['1.4.3']);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toContain('missing: 1.3.1');
+  });
+
+  it('rejects extra SCs (must name only what fails)', () => {
+    const r = evaluateAckAgainst(['1.4.3'], false, ['1.4.3', '2.4.4']);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toContain('2.4.4');
+  });
+
+  it('passes a complete exact array, order- and duplicate-insensitive', () => {
+    const r = evaluateAckAgainst(['1.3.1', '1.4.3'], true, ['1.4.3', '1.3.1', '1.4.3']);
+    expect(r).toEqual({ ok: true, tier: 'fail', requiredScs: ['1.3.1', '1.4.3'] });
+  });
+
+  it('treats runtime false (from JSON input) as no acknowledgment', () => {
+    expect(evaluateAckAgainst([], true, false).ok).toBe(false);
+  });
+});
+
+describe('clearFailureScs / evaluateAcknowledgment', () => {
+  it('extracts unique sorted clear-failure SCs, excluding borderline findings', () => {
+    const rep = report([
+      findingAck({ sc: '1.4.3', severity: 'serious' }),
+      findingAck({ sc: '1.3.1', scName: 'Info and Relationships', severity: 'serious' }),
+      findingAck({ sc: '1.3.1', scName: 'Info and Relationships', severity: 'serious', message: 'second defect' }),
+      findingAck({ sc: '2.4.4', scName: 'Link Purpose (In Context)', severity: 'moderate' }), // borderline
+    ]);
+    expect(clearFailureScs(rep)).toEqual(['1.3.1', '1.4.3']);
+    const r = evaluateAcknowledgment(rep, ['1.3.1', '1.4.3']);
+    expect(r.ok).toBe(true);
+    expect(r.tier).toBe('fail');
+  });
+
+  it('a margin inside the 85% band makes a serious finding borderline, not clear', () => {
+    const rep = report([findingAck({
+      severity: 'serious',
+      margin: { measured: 4.32, required: 4.5, unit: 'contrast ratio' },
+    })]);
+    rep.verdict = 'borderline';
+    expect(clearFailureScs(rep)).toEqual([]);
+    expect(evaluateAcknowledgment(rep, true).ok).toBe(true);
+  });
+
+  it('passing report needs no acknowledgment and ignores a supplied one', () => {
+    const rep = report([]);
+    expect(evaluateAcknowledgment(rep, undefined)).toEqual({ ok: true, tier: 'none', requiredScs: [] });
+    expect(evaluateAcknowledgment(rep, true).ok).toBe(true);
+  });
+});
