@@ -8,6 +8,10 @@ export interface Warning {
   severity: WarningSeverity;
   message: string;
   line?: number;
+  /** a11y warnings only: WCAG success criterion id, e.g. "1.4.3". */
+  sc?: string;
+  /** a11y warnings only: clear failure (gates with a named-SC acknowledgment) vs borderline (gates with true). */
+  a11yTier?: 'clear' | 'borderline';
 }
 
 export interface DiffSummary {

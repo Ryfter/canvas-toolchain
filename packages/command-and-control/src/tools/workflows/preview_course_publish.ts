@@ -209,7 +209,7 @@ export async function previewCoursePublish(
     const unified = computeUnifiedDiff(priorHtml, p.html);
     writeFullDiff(dir, p.filename, unified);
     if (fullDiffSet.has(p.filename)) diff.fullDiff = unified;
-    const warnings = scanWarnings(p.html);
+    const warnings = await scanWarnings(p.html);
     if (priorFetchError) {
       warnings.push({
         kind: 'validation',
@@ -277,7 +277,7 @@ export async function previewCoursePublish(
       intendedTitle,
       canvasMatch: { assignmentId: match.a.id, name: match.a.name, similarity: match.score },
       diff,
-      warnings: scanWarnings(a.html),
+      warnings: await scanWarnings(a.html),
     });
   }
 
