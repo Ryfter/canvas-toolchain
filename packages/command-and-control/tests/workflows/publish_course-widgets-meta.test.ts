@@ -68,7 +68,7 @@ describe('publishCourse widgets-meta recording', () => {
     };
     writeManifest(dir, manifest);
     writePriorHtml(dir, 'assignment.html', '<p>old</p>');
-    writeNewHtml(dir, 'assignment.html', '<iframe src="assignment/widgets/sort.html"></iframe>');
+    writeNewHtml(dir, 'assignment.html', '<iframe src="assignment/widgets/sort.html" title="Sort Widget"></iframe>');
     writeState(dir, { phase: 'preview', published: [], lastUpdatedAt: '2026-06-04T12:00:00.000Z' });
 
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {

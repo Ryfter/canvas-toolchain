@@ -483,6 +483,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           gitCommit:  { type: 'boolean', description: 'Commit + tag in courseDir. Defaults to true when courseDir is a git repo.' },
           pushTag:    { type: 'boolean', description: 'If a git remote is configured, push the success tag.' },
           canvasBreadcrumbs: { type: 'boolean', description: 'Override the course default for this publish only. When omitted, uses setup_canvas\'s canvasBreadcrumbs setting (default enabled). Breadcrumbs create [ARCHIVED] page copies and /canvas-toolchain-archive/ widget file copies in Canvas, cleaned up at prune time.' },
+          a11yAcknowledgments: {
+            type: 'object' as const,
+            description:
+              'Per-file accessibility acknowledgments: { "<filename>": true } for borderline findings; { "<filename>": ["1.4.3"] } naming every clear-failure criterion. Recorded to the course project\'s .a11y/ audit trail.',
+            additionalProperties: {
+              oneOf: [
+                { type: 'boolean' as const },
+                { type: 'array' as const, items: { type: 'string' as const } },
+              ],
+            },
+          },
         },
       },
     },

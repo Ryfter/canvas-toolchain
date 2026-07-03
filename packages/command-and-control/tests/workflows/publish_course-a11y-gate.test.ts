@@ -1,0 +1,235 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+vi.mock('canvas-design-mcp/dist/tools/publish.js', () => ({
+  publishToCanvas: vi.fn(),
+  titleSimilarity: vi.fn(),
+}));
+vi.mock('canvas-design-mcp/dist/tools/update-assignment-description.js', () => ({
+  updateAssignmentDescription: vi.fn(),
+}));
+vi.mock('canvas-design-mcp/dist/canvas-api.js', () => ({
+  CanvasApiClient: vi.fn().mockImplementation(() => ({})),
+  CanvasApiError: class extends Error {
+    constructor(public status: number, public code: string, message: string, public details?: unknown) { super(message); }
+  },
+}));
+vi.mock('../../src/tools/publish/canvas_config_bridge.js', () => ({
+  loadInstitutionConfig: vi.fn().mockReturnValue({ canvasUrl: 'https://x', apiToken: 't' }),
+}));
+vi.mock('../../src/tools/publish/git_state.js', () => ({
+  detectGitState: vi.fn().mockReturnValue({ isRepo: false }),
+  gitCommitPrePublish: vi.fn(),
+  gitTagSuccess: vi.fn(),
+  gitPushTag: vi.fn(() => ({ ok: true })),
+}));
+
+import { publishToCanvas } from 'canvas-design-mcp/dist/tools/publish.js';
+import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
+import {
+  appendAcknowledgment, loadAcknowledgments, loadReviewQueue, upsertReviewEntry,
+  type AcknowledgmentRecord,
+} from 'canvas-design-mcp/dist/tools/a11y/records.js';
+import {
+  createSnapshotDir, writeManifest, writeState, writePriorHtml, writeNewHtml,
+} from '../../src/tools/publish/snapshot_store.js';
+import { publishCourse } from '../../src/tools/workflows/publish_course.js';
+import type { PreviewManifest, ManifestEntry, Warning } from '../../src/tools/publish/manifest_types.js';
+
+const CLEAR_WARNING: Warning = {
+  kind: 'a11y', severity: 'block',
+  message: '1.3.1 Info and Relationships — table has no header cells',
+  sc: '1.3.1', a11yTier: 'clear',
+};
+const BORDERLINE_WARNING: Warning = {
+  kind: 'a11y', severity: 'warn',
+  message: '2.4.4 Link Purpose — vague link text',
+  sc: '2.4.4', a11yTier: 'borderline',
+};
+const FERPA_BLOCK: Warning = { kind: 'ferpa', severity: 'block', message: 'possible student ID' };
+
+let cc: string;
+let courseDir: string;
+
+beforeEach(() => {
+  cc = mkdtempSync(join(tmpdir(), 'cc-a11y-'));
+  process.env.CC_HOME = cc;
+  courseDir = join(cc, 'course');
+
+  // Realistic-but-mocked CDS publishToCanvas: mirrors the real Task 3 behavior of
+  // appending an acknowledgment record when acknowledgeAccessibility + courseDir
+  // are supplied, so this suite can verify C&C's own wiring end-to-end without
+  // pulling in axe/jsdom.
+  vi.mocked(publishToCanvas).mockImplementation(async (input: any) => {
+    const result: any = {
+      url: `https://x/${input.pageTitle}`,
+      action: input.collisionAction === 'create' ? 'created' : 'updated',
+      pageTitle: input.pageTitle,
+      tip: '',
+    };
+    if (input.acknowledgeAccessibility !== undefined && input.courseDir) {
+      const tier: 'borderline' | 'fail' = input.acknowledgeAccessibility === true ? 'borderline' : 'fail';
+      const scIds: string[] = Array.isArray(input.acknowledgeAccessibility) ? input.acknowledgeAccessibility : [];
+      const record: AcknowledgmentRecord = {
+        at: new Date().toISOString(), page: input.pageTitle, canvasUrl: result.url,
+        tier, scIds, requiredLevel: 'WCAG 2.1 AA',
+      };
+      appendAcknowledgment(input.courseDir, record);
+      result.acknowledgment = record;
+    }
+    return result;
+  });
+  vi.mocked(updateAssignmentDescription).mockResolvedValue(undefined as any);
+});
+
+afterEach(() => {
+  rmSync(cc, { recursive: true, force: true });
+  delete process.env.CC_HOME;
+  vi.clearAllMocks();
+});
+
+function seedSnapshot(snapshotId: string, entries: PreviewManifest['entries']): void {
+  const dir = createSnapshotDir(snapshotId);
+  const m: PreviewManifest = {
+    snapshotId, courseId: 42, courseDir, generatedAt: '2026-07-03T00:00:00Z',
+    git: { isRepo: false }, entries,
+    summary: { total: entries.length, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
+  };
+  writeManifest(dir, m);
+  writeState(dir, { phase: 'preview', published: [], lastUpdatedAt: m.generatedAt });
+  for (const e of entries) {
+    if (e.type === 'skipped') continue;
+    writePriorHtml(dir, e.filename, '<p>old</p>');
+    writeNewHtml(dir, e.filename, '<p>new</p>');
+  }
+}
+
+const PAGE_ENTRY = (filename: string, title: string, warnings: Warning[]): ManifestEntry => ({
+  type: 'page', filename, pageType: 'overview', intendedTitle: title, collisionAction: 'update',
+  diff: { priorWords: 1, newWords: 1, delta: 0, sectionsChanged: 0, calloutsAdded: 0, calloutsRemoved: 0, imagesChanged: 0, hasFullDiff: true },
+  warnings, canvasMatch: { pageId: filename, url: 'https://x/' + filename, existingTitle: title, similarity: 1 },
+});
+
+const ASSIGNMENT_ENTRY = (filename: string, title: string, warnings: Warning[]): ManifestEntry => ({
+  type: 'assignment', filename, pageType: 'assignment', intendedTitle: title,
+  canvasMatch: { assignmentId: 55, name: title, similarity: 1 },
+  diff: { priorWords: 1, newWords: 1, delta: 0, sectionsChanged: 0, calloutsAdded: 0, calloutsRemoved: 0, imagesChanged: 0, hasFullDiff: true },
+  warnings,
+});
+
+describe('publishCourse — per-entry accessibility gate (Task 5)', () => {
+  it('blocks an approved file with clear a11y failures when no acknowledgment covers it', async () => {
+    seedSnapshot('snap-clear-noack', [PAGE_ENTRY('week-1.html', 'Week 1', [CLEAR_WARNING])]);
+
+    const result = await publishCourse(
+      { snapshotId: 'snap-clear-noack', approvals: { 'week-1.html': 'approve' }, canvasBreadcrumbs: false },
+    );
+
+    expect(result.failed?.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+    expect(result.phase).toBe('partial');
+    expect(result.fix?.[0]).toContain('a11yAcknowledgments');
+    expect(result.fix?.[0]).toContain('"1.3.1"');
+    expect(publishToCanvas).not.toHaveBeenCalled();
+  });
+
+  it('blocks borderline without ack; publishes with { file: true } and writes the record + queue entry', async () => {
+    seedSnapshot('snap-borderline-1', [PAGE_ENTRY('week-1.html', 'Week 1', [BORDERLINE_WARNING])]);
+    const blocked = await publishCourse(
+      { snapshotId: 'snap-borderline-1', approvals: { 'week-1.html': 'approve' }, canvasBreadcrumbs: false },
+    );
+    expect(blocked.failed?.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+    expect(publishToCanvas).not.toHaveBeenCalled();
+
+    seedSnapshot('snap-borderline-2', [PAGE_ENTRY('week-1.html', 'Week 1', [BORDERLINE_WARNING])]);
+    const ok = await publishCourse(
+      {
+        snapshotId: 'snap-borderline-2', approvals: { 'week-1.html': 'approve' },
+        a11yAcknowledgments: { 'week-1.html': true }, canvasBreadcrumbs: false,
+      },
+    );
+    expect(ok.phase).toBe('published');
+
+    const acks = loadAcknowledgments(courseDir);
+    expect(acks).toHaveLength(1);
+    expect(acks[0]!.tier).toBe('borderline');
+
+    const queue = loadReviewQueue(courseDir);
+    expect(queue.map(q => q.page)).toContain('week-1.html');
+  });
+
+  it('publishes clear failures with the named-SC array and keeps FERPA blocks absolute', async () => {
+    seedSnapshot('snap-mixed', [
+      PAGE_ENTRY('week-1.html', 'Week 1', [CLEAR_WARNING]),
+      PAGE_ENTRY('week-2.html', 'Week 2', [FERPA_BLOCK]),
+    ]);
+
+    const result = await publishCourse({
+      snapshotId: 'snap-mixed',
+      approvals: { 'week-1.html': 'approve', 'week-2.html': 'approve' },
+      a11yAcknowledgments: { 'week-1.html': ['1.3.1'], 'week-2.html': ['1.3.1'] },
+      canvasBreadcrumbs: false,
+    });
+
+    expect(result.published).toHaveLength(1);
+    expect(result.published[0]!.filename).toBe('week-1.html');
+    expect(result.failed?.filename).toBe('week-2.html');
+    expect(result.failed?.code).toBe('BLOCKING_WARNINGS');
+    expect(result.phase).toBe('partial');
+
+    const acks = loadAcknowledgments(courseDir);
+    expect(acks).toHaveLength(1);
+    expect(acks[0]!.tier).toBe('fail');
+    expect(acks[0]!.scIds).toEqual(['1.3.1']);
+  });
+
+  it('a clean published file clears its stale review-queue entry', async () => {
+    upsertReviewEntry(courseDir, {
+      page: 'week-1.html',
+      reasons: [{ sc: '2.4.4', detail: 'stale finding' }],
+      lastCheckedAt: '2026-01-01',
+    });
+    expect(loadReviewQueue(courseDir)).toHaveLength(1);
+
+    seedSnapshot('snap-clean', [PAGE_ENTRY('week-1.html', 'Week 1', [])]);
+    const result = await publishCourse(
+      { snapshotId: 'snap-clean', approvals: { 'week-1.html': 'approve' }, canvasBreadcrumbs: false },
+    );
+
+    expect(result.phase).toBe('published');
+    expect(loadReviewQueue(courseDir)).toEqual([]);
+  });
+
+  it('assignment branch appends the acknowledgment record directly (no CDS call needed)', async () => {
+    seedSnapshot('snap-assign', [ASSIGNMENT_ENTRY('hw1.html', 'HW1', [BORDERLINE_WARNING])]);
+
+    const result = await publishCourse({
+      snapshotId: 'snap-assign', approvals: { 'hw1.html': 'approve' },
+      a11yAcknowledgments: { 'hw1.html': true }, canvasBreadcrumbs: false,
+    });
+
+    expect(result.phase).toBe('published');
+    expect(publishToCanvas).not.toHaveBeenCalled();
+    expect(updateAssignmentDescription).toHaveBeenCalledOnce();
+
+    const acks = loadAcknowledgments(courseDir);
+    expect(acks).toHaveLength(1);
+    expect(acks[0]!.tier).toBe('borderline');
+
+    const queue = loadReviewQueue(courseDir);
+    expect(queue.map(q => q.page)).toContain('hw1.html');
+  });
+
+  it('legacy warnings without a11yTier do not gate (back-compat)', async () => {
+    const legacyWarning: Warning = { kind: 'a11y', severity: 'warn', message: 'old-format warning' };
+    seedSnapshot('snap-legacy', [PAGE_ENTRY('week-1.html', 'Week 1', [legacyWarning])]);
+
+    const result = await publishCourse(
+      { snapshotId: 'snap-legacy', approvals: { 'week-1.html': 'approve' }, canvasBreadcrumbs: false },
+    );
+
+    expect(result.phase).toBe('published');
+    expect(result.failed).toBeUndefined();
+  });
+});

@@ -246,7 +246,7 @@ function seedWidgetPageManifest(dir: string, snapshotId: string): void {
   };
   writeManifest(dir, manifest);
   writePriorHtml(dir, 'assignment.html', '<p>old</p>');
-  writeNewHtml(dir, 'assignment.html', '<iframe src="assignment/widgets/sort.html"></iframe>');
+  writeNewHtml(dir, 'assignment.html', '<iframe src="assignment/widgets/sort.html" title="Sort Widget"></iframe>');
   writeState(dir, { phase: 'preview', published: [], lastUpdatedAt: '2026-06-04T12:00:00.000Z' });
 
   // Course-dir widget files (HTML + spec)
