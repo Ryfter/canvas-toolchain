@@ -49,4 +49,15 @@ describe('audit_course_accessibility', () => {
       expect(result.fix?.[0]).toContain('generate_course');
     } finally { rmSync(empty, { recursive: true, force: true }); }
   });
+
+  it('errors when output dir exists but contains no HTML files', async () => {
+    const withoutHtml = mkdtempSync(join(tmpdir(), 'audit-no-html-'));
+    mkdirSync(join(withoutHtml, 'output'), { recursive: true });
+    writeFileSync(join(withoutHtml, 'output', 'notes.txt'), 'some notes', 'utf-8');
+    try {
+      const result = await auditCourseAccessibility({ courseDir: withoutHtml });
+      expect(result.error).toBe('NO_GENERATED_OUTPUT');
+      expect(result.fix?.[0]).toContain('generate_course');
+    } finally { rmSync(withoutHtml, { recursive: true, force: true }); }
+  });
 });

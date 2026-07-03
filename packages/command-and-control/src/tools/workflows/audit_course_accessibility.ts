@@ -56,6 +56,13 @@ export async function auditCourseAccessibility(
   }
 
   const files = walkHtmlFiles(outDir);
+  if (files.length === 0) {
+    return {
+      ...base, error: 'NO_GENERATED_OUTPUT',
+      text: `No generated HTML found at ${outDir}.`,
+      fix: ['Run generate_course first, or pass outputDir pointing at the generated HTML.'],
+    };
+  }
   const counts = { pass: 0, borderline: 0, fail: 0 };
   const perPage: Array<{ page: string; verdict: ConformanceReport['verdict']; findings: number }> = [];
 
