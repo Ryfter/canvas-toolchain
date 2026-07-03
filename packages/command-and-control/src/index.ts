@@ -80,6 +80,7 @@ import type { DraftStudentRubricInput } from './tools/rubric/types.js';
 import { reviewCanvasRubric, type ReviewCanvasRubricInput } from './tools/workflows/review_canvas_rubric.js';
 import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
+import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
 import { loadModules } from './modules/registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
@@ -635,6 +636,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'accessibility_review_queue',
+      description:
+        'The per-course "near the edge" accessibility worklist: pages with borderline findings, needs-human-review criteria, or acknowledged publishes. Lists open entries worst-margin first with live Canvas URLs for human-eyes verification; resolve marks a page reviewed. The professor is the final arbiter.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseDir'],
+        properties: {
+          courseDir: { type: 'string', description: 'Course project folder (contains .a11y/).' },
+          action: { type: 'string', enum: ['list', 'resolve'], description: 'Default list.' },
+          page: { type: 'string', description: 'Required for resolve — the page as listed.' },
+          note: { type: 'string', description: 'Optional note recorded with the resolution.' },
+        },
+      },
+    },
+    {
       name: 'brainstorm_interactive',
       description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via setup_anthropic.',
       inputSchema: {
@@ -904,6 +920,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'review_canvas_rubric':
         result = await reviewCanvasRubric(args as unknown as ReviewCanvasRubricInput);
+        break;
+      case 'accessibility_review_queue':
+        result = await accessibilityReviewQueue(args as unknown as Parameters<typeof accessibilityReviewQueue>[0]);
         break;
       case 'brainstorm_interactive':
         result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
