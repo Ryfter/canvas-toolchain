@@ -58,10 +58,10 @@ beforeEach(() => {
   process.env.CC_HOME = cc;
   courseDir = join(cc, 'course');
 
-  // Realistic-but-mocked CDS publishToCanvas: mirrors the real Task 3 behavior of
-  // appending an acknowledgment record when acknowledgeAccessibility + courseDir
-  // are supplied, so this suite can verify C&C's own wiring end-to-end without
-  // pulling in axe/jsdom.
+  // Realistic-but-mocked CDS publishToCanvas: appends an acknowledgment record
+  // when acknowledgeAccessibility + courseDir are supplied, accurately simulating
+  // CDS behavior. This suite verifies C&C's wiring by asserting on the mock's
+  // received arguments (the tier/scIds are derived by the mock to simulate CDS).
   vi.mocked(publishToCanvas).mockImplementation(async (input: any) => {
     const result: any = {
       url: `https://x/${input.pageTitle}`,
@@ -151,9 +151,16 @@ describe('publishCourse — per-entry accessibility gate (Task 5)', () => {
     );
     expect(ok.phase).toBe('published');
 
+    // Verify C&C passed the correct acknowledgeAccessibility argument to publishToCanvas
+    const borderlineCall = vi.mocked(publishToCanvas).mock.calls.find(
+      call => call[0].pageTitle === 'Week 1'
+    );
+    expect(borderlineCall).toBeDefined();
+    expect(borderlineCall![0].acknowledgeAccessibility).toBe(true);
+    expect(borderlineCall![0].courseDir).toBe(courseDir);
+
     const acks = loadAcknowledgments(courseDir);
     expect(acks).toHaveLength(1);
-    expect(acks[0]!.tier).toBe('borderline');
 
     const queue = loadReviewQueue(courseDir);
     expect(queue.map(q => q.page)).toContain('week-1.html');
@@ -178,10 +185,16 @@ describe('publishCourse — per-entry accessibility gate (Task 5)', () => {
     expect(result.failed?.code).toBe('BLOCKING_WARNINGS');
     expect(result.phase).toBe('partial');
 
+    // Verify C&C passed the correct acknowledgeAccessibility array argument to publishToCanvas
+    const failCall = vi.mocked(publishToCanvas).mock.calls.find(
+      call => call[0].pageTitle === 'Week 1'
+    );
+    expect(failCall).toBeDefined();
+    expect(failCall![0].acknowledgeAccessibility).toEqual(['1.3.1']);
+    expect(failCall![0].courseDir).toBe(courseDir);
+
     const acks = loadAcknowledgments(courseDir);
     expect(acks).toHaveLength(1);
-    expect(acks[0]!.tier).toBe('fail');
-    expect(acks[0]!.scIds).toEqual(['1.3.1']);
   });
 
   it('a clean published file clears its stale review-queue entry', async () => {
