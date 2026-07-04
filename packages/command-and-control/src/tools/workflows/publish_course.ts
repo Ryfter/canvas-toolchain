@@ -261,6 +261,10 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
     if (input.approvals[entry.filename] !== 'approve') continue;
     if (alreadyPublished.has(entry.filename)) continue;
     const entryWarnings = 'warnings' in entry ? entry.warnings : [];
+    // Canonical review-queue page key (#111): output-relative, forward-slashed path,
+    // matching audit_course_accessibility's derivation. Pre-#111 snapshots have no
+    // relPath and fall back to filename (legacy key, not unique across weeks).
+    const queuePage = entry.relPath ?? entry.filename;
     if (entryWarnings.some(w => w.severity === 'block' && w.kind !== 'a11y')) {
       const failed: FailedEntry = {
         filename: entry.filename, type: entry.type, reason: 'blocked by severity:block warning',
@@ -358,7 +362,7 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
         if (a11yGate.tier !== 'none') {
           try {
             appendAcknowledgment(manifest.courseDir, {
-              at: new Date().toISOString(), page: entry.filename,
+              at: new Date().toISOString(), page: queuePage,
               tier: a11yGate.tier, scIds: a11yGate.requiredScs,
               requiredLevel: `WCAG ${DEFAULT_REQUIRED_LEVEL.version} ${DEFAULT_REQUIRED_LEVEL.level}`,
             });
@@ -374,13 +378,16 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
         const a11yWarns = entryWarnings.filter(w => w.kind === 'a11y' && w.a11yTier);
         if (a11yWarns.length > 0) {
           upsertReviewEntry(manifest.courseDir, {
-            page: entry.filename,
+            page: queuePage,
             canvasUrl: published[published.length - 1]?.canvasUrl,
-            reasons: a11yWarns.map(w => ({ sc: w.sc ?? 'unknown', detail: w.message })),
+            reasons: a11yWarns.map(w => ({
+              sc: w.sc ?? 'unknown', detail: w.message,
+              ...(w.marginRatio !== undefined && { marginRatio: w.marginRatio }),
+            })),
             lastCheckedAt: new Date().toISOString().slice(0, 10),
           });
         } else {
-          clearReviewEntryIfClean(manifest.courseDir, entry.filename);
+          clearReviewEntryIfClean(manifest.courseDir, queuePage);
         }
       } catch (e) {
         console.warn(`a11y review queue update failed for ${entry.filename}: ${e instanceof Error ? e.message : String(e)}`);

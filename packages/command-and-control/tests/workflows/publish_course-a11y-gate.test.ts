@@ -29,7 +29,7 @@ vi.mock('../../src/tools/publish/git_state.js', () => ({
 import { publishToCanvas } from 'canvas-design-mcp/dist/tools/publish.js';
 import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
 import {
-  appendAcknowledgment, loadAcknowledgments, loadReviewQueue, upsertReviewEntry,
+  appendAcknowledgment, loadAcknowledgments, loadReviewQueue, upsertReviewEntry, sortWorstFirst,
   type AcknowledgmentRecord,
 } from 'canvas-design-mcp/dist/tools/a11y/records.js';
 import {
@@ -47,6 +47,11 @@ const BORDERLINE_WARNING: Warning = {
   kind: 'a11y', severity: 'warn',
   message: '2.4.4 Link Purpose — vague link text',
   sc: '2.4.4', a11yTier: 'borderline',
+};
+const BORDERLINE_WARNING_WITH_MARGIN: Warning = {
+  kind: 'a11y', severity: 'warn',
+  message: '1.4.3 Contrast (Minimum) — near-miss contrast',
+  sc: '1.4.3', a11yTier: 'borderline', marginRatio: 0.92,
 };
 const FERPA_BLOCK: Warning = { kind: 'ferpa', severity: 'block', message: 'possible student ID' };
 
@@ -106,8 +111,9 @@ function seedSnapshot(snapshotId: string, entries: PreviewManifest['entries']): 
   }
 }
 
-const PAGE_ENTRY = (filename: string, title: string, warnings: Warning[]): ManifestEntry => ({
-  type: 'page', filename, pageType: 'overview', intendedTitle: title, collisionAction: 'update',
+const PAGE_ENTRY = (filename: string, title: string, warnings: Warning[], relPath?: string): ManifestEntry => ({
+  type: 'page', filename, ...(relPath !== undefined && { relPath }),
+  pageType: 'overview', intendedTitle: title, collisionAction: 'update',
   diff: { priorWords: 1, newWords: 1, delta: 0, sectionsChanged: 0, calloutsAdded: 0, calloutsRemoved: 0, imagesChanged: 0, hasFullDiff: true },
   warnings, canvasMatch: { pageId: filename, url: 'https://x/' + filename, existingTitle: title, similarity: 1 },
 });
@@ -244,5 +250,112 @@ describe('publishCourse — per-entry accessibility gate (Task 5)', () => {
 
     expect(result.phase).toBe('published');
     expect(result.failed).toBeUndefined();
+  });
+});
+
+describe('publishCourse — review-queue page keys use the output-relative path (#111)', () => {
+  it('keys the queue entry by relPath when the manifest carries one', async () => {
+    seedSnapshot('snap-relpath', [
+      PAGE_ENTRY('overview.html', 'Week 1 Overview', [BORDERLINE_WARNING], 'week-01/overview.html'),
+    ]);
+
+    const result = await publishCourse({
+      snapshotId: 'snap-relpath', approvals: { 'overview.html': 'approve' },
+      a11yAcknowledgments: { 'overview.html': true }, canvasBreadcrumbs: false,
+    });
+
+    expect(result.phase).toBe('published');
+    const pages = loadReviewQueue(courseDir).map(q => q.page);
+    expect(pages).toContain('week-01/overview.html');
+    expect(pages).not.toContain('overview.html');
+  });
+
+  it('a clean publish clears an audit-created entry stored under the relPath key', async () => {
+    // Simulate audit_course_accessibility's keying (output-relative path) — same key
+    // format a real course audit would use for <outDir>/week-01/overview.html.
+    upsertReviewEntry(courseDir, {
+      page: 'week-01/overview.html',
+      reasons: [{ sc: '2.4.4', detail: 'stale audit finding' }],
+      lastCheckedAt: '2026-01-01',
+    });
+    expect(loadReviewQueue(courseDir)).toHaveLength(1);
+
+    seedSnapshot('snap-relpath-clean', [
+      PAGE_ENTRY('overview.html', 'Week 1 Overview', [], 'week-01/overview.html'),
+    ]);
+    const result = await publishCourse(
+      { snapshotId: 'snap-relpath-clean', approvals: { 'overview.html': 'approve' }, canvasBreadcrumbs: false },
+    );
+
+    expect(result.phase).toBe('published');
+    expect(loadReviewQueue(courseDir)).toEqual([]);
+  });
+
+  it('the direct assignment-branch acknowledgment record is keyed by relPath too', async () => {
+    seedSnapshot('snap-assign-relpath', [
+      { ...ASSIGNMENT_ENTRY('hw1.html', 'HW1', [BORDERLINE_WARNING]), relPath: 'week-02/hw1.html' } as ManifestEntry,
+    ]);
+
+    const result = await publishCourse({
+      snapshotId: 'snap-assign-relpath', approvals: { 'hw1.html': 'approve' },
+      a11yAcknowledgments: { 'hw1.html': true }, canvasBreadcrumbs: false,
+    });
+
+    expect(result.phase).toBe('published');
+    const acks = loadAcknowledgments(courseDir);
+    expect(acks.at(-1)?.page).toBe('week-02/hw1.html');
+
+    const pages = loadReviewQueue(courseDir).map(q => q.page);
+    expect(pages).toContain('week-02/hw1.html');
+  });
+
+  it('pre-#111 snapshots without relPath still key by filename (back-compat)', async () => {
+    seedSnapshot('snap-legacy-key', [PAGE_ENTRY('week-1.html', 'Week 1', [BORDERLINE_WARNING])]);
+
+    const result = await publishCourse({
+      snapshotId: 'snap-legacy-key', approvals: { 'week-1.html': 'approve' },
+      a11yAcknowledgments: { 'week-1.html': true }, canvasBreadcrumbs: false,
+    });
+
+    expect(result.phase).toBe('published');
+    expect(loadReviewQueue(courseDir).map(q => q.page)).toContain('week-1.html');
+  });
+});
+
+describe('publishCourse — margin flows from Warning into the review queue (#111)', () => {
+  it('carries marginRatio from the warning into the queue reason', async () => {
+    seedSnapshot('snap-margin', [
+      PAGE_ENTRY('week-1.html', 'Week 1', [BORDERLINE_WARNING_WITH_MARGIN], 'week-01/overview.html'),
+    ]);
+
+    const result = await publishCourse({
+      snapshotId: 'snap-margin', approvals: { 'week-1.html': 'approve' },
+      a11yAcknowledgments: { 'week-1.html': true }, canvasBreadcrumbs: false,
+    });
+
+    expect(result.phase).toBe('published');
+    const entry = loadReviewQueue(courseDir).find(q => q.page === 'week-01/overview.html');
+    expect(entry).toBeDefined();
+    expect(entry!.reasons[0]!.marginRatio).toBe(0.92);
+  });
+
+  it('sorts a publish-sourced margin entry ahead of a marginless entry (not marginless-last)', async () => {
+    // A marginless (e.g. legacy audit-sourced) entry already in the queue.
+    upsertReviewEntry(courseDir, {
+      page: 'week-02/other.html',
+      reasons: [{ sc: '1.3.1', detail: 'no margin data' }],
+      lastCheckedAt: '2026-01-01',
+    });
+
+    seedSnapshot('snap-margin-sort', [
+      PAGE_ENTRY('week-1.html', 'Week 1', [BORDERLINE_WARNING_WITH_MARGIN], 'week-01/overview.html'),
+    ]);
+    await publishCourse({
+      snapshotId: 'snap-margin-sort', approvals: { 'week-1.html': 'approve' },
+      a11yAcknowledgments: { 'week-1.html': true }, canvasBreadcrumbs: false,
+    });
+
+    const sorted = sortWorstFirst(loadReviewQueue(courseDir));
+    expect(sorted[0]!.page).toBe('week-01/overview.html');
   });
 });

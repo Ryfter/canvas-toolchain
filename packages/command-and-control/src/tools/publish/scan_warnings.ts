@@ -35,6 +35,8 @@ export async function scanWarnings(html: string): Promise<Warning[]> {
       message: `${f.sc} ${f.scName} — ${f.message}`,
       sc: f.sc,
       a11yTier: borderline ? 'borderline' : 'clear',
+      // Same formula audit_course_accessibility uses for review-queue sorting (#111).
+      ...(f.margin && { marginRatio: f.margin.measured / f.margin.required }),
     });
   }
 

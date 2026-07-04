@@ -12,6 +12,10 @@ export interface Warning {
   sc?: string;
   /** a11y warnings only: clear failure (gates with a named-SC acknowledgment) vs borderline (gates with true). */
   a11yTier?: 'clear' | 'borderline';
+  /** a11y warnings only: measured/required ratio for measurable criteria (e.g. contrast),
+   *  same formula as CDS's `records.ts` review-queue sort. Drives worst-first sorting once
+   *  it reaches the queue via publish_course (#111). Absent when the finding has no margin. */
+  marginRatio?: number;
 }
 
 export interface DiffSummary {
@@ -50,6 +54,11 @@ export interface WidgetPreviewStatus {
 
 export interface PageEntry {
   filename: string;
+  /** Output-relative path of the generated HTML (forward-slashed, e.g. "week-01/overview.html").
+   *  The canonical `.a11y/review-queue.json` page key — matches the key
+   *  audit_course_accessibility derives, so both writers de-duplicate (#111).
+   *  Absent on pre-#111 snapshots; consumers fall back to `filename`. */
+  relPath?: string;
   pageType: PageType;
   intendedTitle: string;
   /** Optional: pages may be newly created when no Canvas match exists (collisionAction:'create'). */
@@ -65,6 +74,8 @@ export interface PageEntry {
 
 export interface AssignmentEntry {
   filename: string;
+  /** Output-relative path of the generated HTML — same semantics as PageEntry.relPath (#111). */
+  relPath?: string;
   pageType: PageType;
   intendedTitle: string;
   /** Required: per spec C1, unmatched assignments are emitted as SkippedEntry instead — never as AssignmentEntry. */

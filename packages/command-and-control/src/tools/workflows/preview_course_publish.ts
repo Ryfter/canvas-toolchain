@@ -15,13 +15,19 @@ import {
 } from '../publish/snapshot_store.js';
 import { discoverWidgetRefs, resolveWidgetFiles, discoverPriorWidgetRefs } from '../publish/widget_discovery.js';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { sha256 } from '../publish/hash.js';
 import { updateWidgetMetaEntry, widgetMetaKey } from '../publish/widgets_meta.js';
 import { updatePageMetaEntry } from '../publish/pages_meta.js';
 import type { PreviewManifest, ManifestEntry, WidgetPreviewStatus, Warning } from '../publish/manifest_types.js';
 
 const MATCH_THRESHOLD = 0.8;
+
+/** Output-relative, forward-slashed page key — the canonical `.a11y/review-queue.json`
+ *  identity shared with audit_course_accessibility's `relative(outDir, file)` derivation (#111). */
+function outputRelPath(outputDir: string, savedTo: string): string {
+  return relative(outputDir, savedTo).split('\\').join('/');
+}
 
 export interface PreviewCoursePublishInput {
   courseDir: string;
@@ -238,6 +244,7 @@ export async function previewCoursePublish(
     entries.push({
       type: 'page',
       filename: p.filename,
+      relPath: outputRelPath(generated.outputDir, p.savedTo),
       pageType: p.pageType,
       intendedTitle,
       canvasMatch: match
@@ -273,6 +280,7 @@ export async function previewCoursePublish(
     entries.push({
       type: 'assignment',
       filename: a.filename,
+      relPath: outputRelPath(generated.outputDir, a.savedTo),
       pageType: a.pageType,
       intendedTitle,
       canvasMatch: { assignmentId: match.a.id, name: match.a.name, similarity: match.score },
