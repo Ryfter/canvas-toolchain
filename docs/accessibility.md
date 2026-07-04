@@ -83,7 +83,7 @@ per file; FERPA and Canvas-HTML validation blocks remain absolute and cannot be 
 
 **Two new Command & Control tools:**
 - `accessibility_review_queue` — list the queue worst-margin first (live Canvas URLs, criteria, margins) or mark a page `reviewed-by-human` with a note.
-- `audit_course_accessibility` — run the full engine stack over every generated page, get one course-level summary, and refresh the queue. The regular between-semesters check.
+- `audit_course_accessibility` — run the full engine stack over every generated page, get one course-level summary, and refresh the queue. The regular between-semesters check. It queues any non-pass page it finds — including clear failures, not just the borderline ones publish_course's gate queues — because a page a course audit flags as failing deserves human eyes too.
 
 The manual generate-and-paste workflow remains ungated. Institution policy anchoring
 (configured required level, re-verification cadence), the WCAG 3 advisory toggle, and the

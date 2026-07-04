@@ -10,6 +10,7 @@ vi.mock('canvas-design-mcp/dist/tools/validate.js', () => ({
     html.includes('<script>') ? { valid: false, violations: [{ message: 'script tag', line: 1 }] } : { valid: true, violations: [] },
   ),
 }));
+import { runConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/conformance.js';
 import { scanWarnings } from '../../../src/tools/publish/scan_warnings.js';
 
 describe('scanWarnings', () => {
@@ -51,5 +52,27 @@ describe('scanWarnings', () => {
   it('emits no a11y warnings for clean content', async () => {
     const warnings = await scanWarnings('<p>Read the <a href="https://example.edu/syllabus">course syllabus</a> first.</p>');
     expect(warnings.filter(w => w.kind === 'a11y')).toEqual([]);
+  });
+
+  it('sets marginRatio on a11y warnings using the same formula as the audit tool (#111)', async () => {
+    // Near-miss body-text contrast (#777 on #fff ~= 4.48:1, requires 4.5:1) — has margin data.
+    const html = '<p style="color:#777777; background-color:#ffffff;">text</p>';
+    const warnings = await scanWarnings(html);
+    const contrastWarning = warnings.find(w => w.kind === 'a11y' && w.sc === '1.4.3');
+    expect(contrastWarning).toBeDefined();
+    expect(contrastWarning!.marginRatio).toBeDefined();
+
+    const report = await runConformanceCheck(html);
+    const finding = report.findings.find(f => f.sc === '1.4.3');
+    expect(finding?.margin).toBeDefined();
+    expect(contrastWarning!.marginRatio).toBeCloseTo(finding!.margin!.measured / finding!.margin!.required, 10);
+  });
+
+  it('leaves marginRatio unset for a11y findings without margin data', async () => {
+    // Headerless table -> 1.3.1 -> no margin concept.
+    const warnings = await scanWarnings('<table><tr><td>Monday</td><td>Lab 1</td></tr></table>');
+    const clear = warnings.find(w => w.kind === 'a11y' && w.sc === '1.3.1');
+    expect(clear).toBeDefined();
+    expect(clear!.marginRatio).toBeUndefined();
   });
 });

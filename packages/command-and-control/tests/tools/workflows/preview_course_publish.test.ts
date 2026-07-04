@@ -68,6 +68,33 @@ describe('previewCoursePublish', () => {
     expect(asn).toBeDefined();
     if (asn?.type === 'assignment') expect(asn.canvasMatch.assignmentId).toBe(7);
     expect(r.snapshotId).toBeDefined();
+    // #111: page + assignment entries carry the output-relative queue key.
+    const page = r.manifest!.entries.find(e => e.type === 'page');
+    if (page?.type === 'page') expect(page.relPath).toBe('overview.html');
+    if (asn?.type === 'assignment') expect(asn.relPath).toBe('do-the-thing.html');
+  });
+
+  it('relPath is forward-slashed and week-subfolder-relative (#111)', async () => {
+    mkdirSync(join(course, 'output', 'week-01'), { recursive: true });
+    writeFileSync(join(course, 'output', 'week-01', 'overview.html'), '<h2>Week 1</h2>');
+    vi.mocked(generateCourse).mockReturnValue({
+      totalPages: 1, outputDir: join(course, 'output'), warnings: [],
+      weekResults: [{
+        weekNumber: 1, outputDir: join(course, 'output', 'week-01'), warnings: [],
+        pages: [{
+          html: '<h2>Week 1</h2>', filename: 'overview.html', weekNumber: 1,
+          pageType: 'overview', savedTo: join(course, 'output', 'week-01', 'overview.html'),
+        }],
+      }],
+    });
+    vi.mocked(listCanvasPages).mockResolvedValue([]);
+    vi.mocked(listCanvasAssignments).mockResolvedValue([]);
+
+    const r = await previewCoursePublish({ courseDir: course, courseId: 12345 });
+
+    const page = r.manifest!.entries.find(e => e.type === 'page');
+    expect(page).toBeDefined();
+    if (page?.type === 'page') expect(page.relPath).toBe('week-01/overview.html');
   });
 
   it('refuses with GENERATE_FAILED when generateCourse throws', async () => {
