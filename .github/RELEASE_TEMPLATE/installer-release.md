@@ -1,5 +1,30 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.10.0
+
+Accessibility moves from **advice** to a **gate** — with you as the final decision-maker. Since v1.9.0 the toolchain has run a full WCAG 2.2 conformance check on every page and reported the results. This release makes that check matter at publish time: it can now hold a page back until you've seen the problems and decided to proceed anyway.
+
+### The two-tier publishing gate
+
+When you publish to Canvas (`publish_to_canvas`, or a whole course with `publish_course`), each page's accessibility result decides what's required:
+
+- **Clean page** — publishes exactly as before.
+- **Near-miss (borderline)** — publishes once you acknowledge it, by passing `acknowledgeAccessibility: true`. A quick "yes, I've seen it."
+- **Clear failure** — publishes once you acknowledge **each failing criterion by name** (e.g. `["1.4.3", "1.3.1"]`). If the block message lists three failures, your acknowledgment has to name all three — so you can't wave past problems you haven't actually looked at.
+
+**You are always the final arbiter.** Nothing is ever permanently blocked: the gate exists to make sure a failure is a *decision*, not an accident. The blocked message spells out exactly what to acknowledge and how. The FERPA scan and the Canvas-HTML validation checks are unchanged and still absolute — those are not accessibility findings and cannot be acknowledged away. The manual generate-and-paste workflow is not gated at all.
+
+### A record of what you approved, and a worklist of what to revisit
+
+- **Acknowledgment trail.** Every acknowledgment is recorded in a per-course `.a11y/acknowledgments.json` — what page, which criteria, when, against which conformance level. An append-only log you can point to later.
+- **Review queue.** Pages that were borderline (or that a course audit flagged) land on a `.a11y/review-queue.json` worklist, sorted worst-first so the closest calls are at the top. Two new tools work it:
+  - **`accessibility_review_queue`** — list the pages that deserve a human look (with links to free checkers like the WAVE browser extension and Microsoft Accessibility Insights), and mark one reviewed when you've handled it.
+  - **`audit_course_accessibility`** — re-scan every generated page of a course in one pass and refresh the worklist, so you can sweep a whole course before publishing.
+
+No new credentials, no new setup — the gate and the queue are built into the publish tools you already use. The required conformance level is the ADA Title II baseline (WCAG 2.1 AA); making that configurable per institution is the next step (Phase 3).
+
+Full diff: [v1.9.0...v1.10.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.9.0...v1.10.0)
+
 ## What's new in v1.9.0
 
 The installer now connects Canvas Toolchain to **any** AI coding host you have — not just Claude.
