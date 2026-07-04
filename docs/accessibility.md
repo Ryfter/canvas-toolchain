@@ -9,9 +9,10 @@ This page documents **every check**: what it catches, how it works, where it run
 whether it blocks publishing, and its limitations.
 
 > **Standard:** [WCAG 2.1 Level AA](https://www.w3.org/WAI/WCAG21/quickref/?levels=aaa).
-> **Philosophy:** the content checks are **advisory** — they warn, they never block a
-> professor from publishing. The one exception is the missing-`alt` rule (see
-> [Layer 2](#layer-2--the-blocking-alt-rule)), which is a hard validation failure.
+> **Philosophy:** when publishing to Canvas, clear failures at the required level block until
+> the professor acknowledges each named criterion. Nothing is ever permanently blocked — the professor can always
+> acknowledge and proceed. The missing-`alt` validation rule (see [Layer 2](#layer-2--the-blocking-alt-rule)) is a separate hard validation failure.
+> For details on the acknowledgment workflow, see [The publishing gate (Phase 2)](#the-publishing-gate-phase-2-2026-07) below.
 
 ---
 
@@ -19,7 +20,7 @@ whether it blocks publishing, and its limitations.
 
 | Layer | What it is | Severity |
 |---|---|---|
-| [1. WCAG content audit](#layer-1--the-wcag-content-audit) | Six heuristic checks over the page HTML (contrast, alt, headings, links, tables, captions) | Advisory (warnings) |
+| [1. WCAG content audit](#layer-1--the-wcag-content-audit) | Six heuristic checks over the page HTML (contrast, alt, headings, links, tables, captions) | Gated on publish (acknowledgeable) / advisory elsewhere |
 | [2. Blocking `alt` rule](#layer-2--the-blocking-alt-rule) | Every `<img>` must have an `alt` attribute | **Blocking** (validation fails) |
 | [3. Widget scaffolding](#layer-3--interactive-widget-scaffolding) | Accessibility built into every interactive widget by construction | Always-on (not a check) |
 

@@ -327,6 +327,9 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
           breadcrumbsEnabled,
           manifest.generatedAt,
         );
+        // CDS re-runs the conformance check on the rewritten HTML and re-evaluates the acknowledgment
+        // independently — safe because the widget-src rewrite doesn't affect finding classification and the
+        // engine is deterministic (defense-in-depth, not a divergence risk).
         const out = await publishToCanvas(
           { courseId: manifest.courseId, html: rewrittenHtml, pageTitle: entry.intendedTitle,
             collisionAction: entry.canvasMatch ? 'update' : 'create',
