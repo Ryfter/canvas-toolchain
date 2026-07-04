@@ -1,22 +1,19 @@
 # Canvas Toolchain Roadmap
 
-_Last updated: 2026-07-02. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
+_Last updated: 2026-07-04. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
 
 ## Where we are
 
-**Current release: v1.9.0** (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
+**Current release: v1.10.0** (WCAG 2.2 Phase 2 — the two-tier accessibility publishing gate).
 
-Since v1.9.0, **WCAG 2.2 Phase 1** shipped to `main` (unreleased): a canonical accessibility conformance system — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. Phase 1 is **fully advisory**: it reports, it never blocks.
+The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
 - Design spec: [`packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md`](../packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md)
 - What the checks catch: [`docs/accessibility.md`](accessibility.md)
 
-## Now: WCAG 2.2 Phase 2 — the publishing gate
+## Shipped in v1.10.0: WCAG 2.2 Phase 2 — the publishing gate
 
-**Status: plan complete and committed; implementation is the next work item.**
-Plan: [`packages/command-and-control/docs/superpowers/plans/2026-07-02-wcag22-phase2-gate-and-queue.md`](../packages/command-and-control/docs/superpowers/plans/2026-07-02-wcag22-phase2-gate-and-queue.md) (8 TDD tasks, complete code). Branch: `feat/wcag22-phase2`.
-
-Phase 2 turns the advisory report into a **two-tier acknowledge-to-launch gate** on both publish paths (`publish_to_canvas` and `publish_course`):
+The advisory report became a **two-tier acknowledge-to-launch gate** on both publish paths (`publish_to_canvas` and `publish_course`):
 
 | Verdict | What publishing requires |
 |---|---|
@@ -26,15 +23,11 @@ Phase 2 turns the advisory report into a **two-tier acknowledge-to-launch gate**
 
 Guiding principle: **the professor is the final arbiter** — accessibility informs and gates but never permanently blocks; every gate has a recorded acknowledgment path. The FERPA and Canvas-HTML validation gates are untouched and remain absolute (they cannot be acknowledged away).
 
-Phase 2 also adds:
+It also added an **acknowledgment audit trail** (append-only `.a11y/acknowledgments.json`), a **borderline review queue** (`.a11y/review-queue.json`, worst-margin-first), and **two new tools** — `accessibility_review_queue` (list/resolve the queue) and `audit_course_accessibility` (re-scan a whole course and refresh the queue). Plan: [`packages/command-and-control/docs/superpowers/plans/2026-07-02-wcag22-phase2-gate-and-queue.md`](../packages/command-and-control/docs/superpowers/plans/2026-07-02-wcag22-phase2-gate-and-queue.md).
 
-- **Acknowledgment audit trail** — append-only `.a11y/acknowledgments.json` per course project recording who acknowledged what, when, and against which conformance level.
-- **Borderline review queue** — pages that passed only via acknowledgment or sit near a threshold land in `.a11y/review-queue.json`, sorted worst-margin-first.
-- **Two new tools:** `accessibility_review_queue` (list/resolve the queue, with links to free human-check tools) and `audit_course_accessibility` (re-scan all generated pages of a course and refresh the queue).
+Fast-follow polish tracked for a later patch: [#112](https://github.com/Ryfter/canvas-toolchain/issues/112) (course-path guidance when the single-page re-gate blocks) and [#113](https://github.com/Ryfter/canvas-toolchain/issues/113) (align acknowledgment-record keys on the CDS-delegated page path).
 
-**Release: v1.10.0** once Phase 2 merges. Releases are held until then — Phase 1 alone would ship a report that promises a gate that doesn't exist yet.
-
-## Next: WCAG 2.2 Phase 3 — institution policy + deeper checks
+## Now: WCAG 2.2 Phase 3 — institution policy + deeper checks
 
 Specced (same design doc, Phase 3 section) but **not yet planned**. Contents:
 
