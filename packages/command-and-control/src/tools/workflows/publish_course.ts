@@ -4,6 +4,9 @@ import { publishToCanvas } from 'canvas-design-mcp/dist/tools/publish.js';
 import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
 import { CanvasApiClient, CanvasApiError } from 'canvas-design-mcp/dist/canvas-api.js';
 import { publishWidget as publishWidgetReal } from 'canvas-design-mcp/dist/tools/publish-widget.js';
+import { appendAcknowledgment, upsertReviewEntry, clearReviewEntryIfClean } from 'canvas-design-mcp/dist/tools/a11y/records.js';
+import { DEFAULT_REQUIRED_LEVEL } from '@canvas-toolchain/shared-types';
+import { evaluateEntryA11yGate } from '../publish/a11y_gate.js';
 import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
 import {
   readManifest, readState, writeState, snapshotDir,
@@ -38,6 +41,9 @@ export interface PublishCourseInput {
   /** V&R Plan C — per-run override for Canvas breadcrumbs. When unset, falls back
    *  to setup_canvas.canvasBreadcrumbs (default enabled). */
   canvasBreadcrumbs?: boolean;
+  /** Per-file accessibility acknowledgments (spec §3): true = borderline-only;
+   *  string[] = named clear-failure SCs. Recorded to <courseDir>/.a11y/. */
+  a11yAcknowledgments?: { [filename: string]: true | string[] };
 }
 
 /** Optional dependency-injection hooks for tests. Production callers pass nothing. */
@@ -254,13 +260,31 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
     if (entry.type === 'skipped') continue;
     if (input.approvals[entry.filename] !== 'approve') continue;
     if (alreadyPublished.has(entry.filename)) continue;
-    if ('warnings' in entry && entry.warnings.some(w => w.severity === 'block')) {
+    const entryWarnings = 'warnings' in entry ? entry.warnings : [];
+    if (entryWarnings.some(w => w.severity === 'block' && w.kind !== 'a11y')) {
       const failed: FailedEntry = {
         filename: entry.filename, type: entry.type, reason: 'blocked by severity:block warning',
         code: 'BLOCKING_WARNINGS', failedAt: new Date().toISOString(),
       };
       writeState(dir, { phase: 'partial', published, failed, lastUpdatedAt: failed.failedAt });
       return { snapshotId: input.snapshotId, phase: 'partial', published, failed };
+    }
+    const a11yGate = evaluateEntryA11yGate(entryWarnings, input.a11yAcknowledgments?.[entry.filename]);
+    if (!a11yGate.ok) {
+      const failed: FailedEntry = {
+        filename: entry.filename, type: entry.type,
+        reason: a11yGate.reason ?? 'accessibility acknowledgment required',
+        code: 'ACCESSIBILITY_ACK_REQUIRED', failedAt: new Date().toISOString(),
+      };
+      writeState(dir, { phase: 'partial', published, failed, lastUpdatedAt: failed.failedAt });
+      return {
+        snapshotId: input.snapshotId, phase: 'partial', published, failed,
+        fix: [
+          a11yGate.tier === 'fail'
+            ? `Fix the findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${entry.filename}": [${a11yGate.requiredScs.map(s => `"${s}"`).join(', ')}] } to publish past the named failures. The professor is the final arbiter; acknowledgments are recorded.`
+            : `Fix the borderline findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${entry.filename}": true } after reviewing them.`,
+        ],
+      };
     }
     const newHtmlRaw = readNewHtml(dir, entry.filename);
     try {
@@ -303,9 +327,14 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
           breadcrumbsEnabled,
           manifest.generatedAt,
         );
+        // CDS re-runs the conformance check on the rewritten HTML and re-evaluates the acknowledgment
+        // independently — safe because the widget-src rewrite doesn't affect finding classification and the
+        // engine is deterministic (defense-in-depth, not a divergence risk).
         const out = await publishToCanvas(
           { courseId: manifest.courseId, html: rewrittenHtml, pageTitle: entry.intendedTitle,
-            collisionAction: entry.canvasMatch ? 'update' : 'create' },
+            collisionAction: entry.canvasMatch ? 'update' : 'create',
+            acknowledgeAccessibility: input.a11yAcknowledgments?.[entry.filename],
+            courseDir: manifest.courseDir },
           { canvasUrl: cfg.canvasUrl, apiToken: cfg.apiToken } as any, api as any,
         );
         if ('error' in out) throw new CanvasApiError(0, (out.code as string) ?? 'PUBLISH_FAILED', out.error ?? 'publish failed');
@@ -324,7 +353,39 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
           filename: entry.filename, type: 'assignment', action: 'updated',
           publishedAt: new Date().toISOString(),
         });
+        // Assignment pages don't run through CDS's publishToCanvas, so the
+        // acknowledgment record (when this entry required one) is appended here.
+        if (a11yGate.tier !== 'none') {
+          try {
+            appendAcknowledgment(manifest.courseDir, {
+              at: new Date().toISOString(), page: entry.filename,
+              tier: a11yGate.tier, scIds: a11yGate.requiredScs,
+              requiredLevel: `WCAG ${DEFAULT_REQUIRED_LEVEL.version} ${DEFAULT_REQUIRED_LEVEL.level}`,
+            });
+          } catch (e) {
+            console.warn(`a11y acknowledgment record failed for ${entry.filename}: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
       }
+
+      // Per-entry review-queue upkeep (both branches reach here). Fail-soft — a
+      // records-store error must never fail an otherwise-successful publish.
+      try {
+        const a11yWarns = entryWarnings.filter(w => w.kind === 'a11y' && w.a11yTier);
+        if (a11yWarns.length > 0) {
+          upsertReviewEntry(manifest.courseDir, {
+            page: entry.filename,
+            canvasUrl: published[published.length - 1]?.canvasUrl,
+            reasons: a11yWarns.map(w => ({ sc: w.sc ?? 'unknown', detail: w.message })),
+            lastCheckedAt: new Date().toISOString().slice(0, 10),
+          });
+        } else {
+          clearReviewEntryIfClean(manifest.courseDir, entry.filename);
+        }
+      } catch (e) {
+        console.warn(`a11y review queue update failed for ${entry.filename}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+
       writeState(dir, { phase: 'partial', published, lastUpdatedAt: new Date().toISOString() });
     } catch (e) {
       const code = e instanceof CanvasApiError ? e.code : 'PUBLISH_FAILED';

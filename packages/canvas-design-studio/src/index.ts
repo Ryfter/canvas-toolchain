@@ -152,7 +152,7 @@ async function main() {
       },
       {
         name: 'publish_to_canvas',
-        description: 'Validate and publish Canvas-safe HTML to a Canvas course page. Detects FERPA risks, validation issues, and similar existing page titles before writing.',
+        description: 'Validate and publish Canvas-safe HTML to a Canvas course page. Detects FERPA risks, validation issues, and similar existing page titles before writing. Accessibility gate: borderline findings need acknowledgeAccessibility: true; clear failures need an array naming every failing criterion.',
         inputSchema: {
           type: 'object' as const,
           required: ['courseId', 'html', 'pageTitle'],
@@ -170,6 +170,18 @@ async function main() {
             relatedPageTitle: {
               type: 'string',
               description: 'Required when collisionAction is related.',
+            },
+            acknowledgeAccessibility: {
+              description:
+                'Accessibility acknowledgment. Pass true after reviewing borderline findings; pass an array naming every clear-failure criterion (e.g. ["1.4.3"]) to publish past clear failures. The professor is the final arbiter — acknowledgments are recorded.',
+              oneOf: [
+                { type: 'boolean' as const },
+                { type: 'array' as const, items: { type: 'string' as const } },
+              ],
+            },
+            courseDir: {
+              type: 'string',
+              description: 'Optional course project folder; acknowledgments are recorded to <courseDir>/.a11y/acknowledgments.json.',
             },
           },
         },

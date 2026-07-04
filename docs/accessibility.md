@@ -9,9 +9,10 @@ This page documents **every check**: what it catches, how it works, where it run
 whether it blocks publishing, and its limitations.
 
 > **Standard:** [WCAG 2.1 Level AA](https://www.w3.org/WAI/WCAG21/quickref/?levels=aaa).
-> **Philosophy:** the content checks are **advisory** — they warn, they never block a
-> professor from publishing. The one exception is the missing-`alt` rule (see
-> [Layer 2](#layer-2--the-blocking-alt-rule)), which is a hard validation failure.
+> **Philosophy:** when publishing to Canvas, clear failures at the required level block until
+> the professor acknowledges each named criterion. Nothing is ever permanently blocked — the professor can always
+> acknowledge and proceed. The missing-`alt` validation rule (see [Layer 2](#layer-2--the-blocking-alt-rule)) is a separate hard validation failure.
+> For details on the acknowledgment workflow, see [The publishing gate (Phase 2)](#the-publishing-gate-phase-2-2026-07) below.
 
 ---
 
@@ -19,7 +20,7 @@ whether it blocks publishing, and its limitations.
 
 | Layer | What it is | Severity |
 |---|---|---|
-| [1. WCAG content audit](#layer-1--the-wcag-content-audit) | Six heuristic checks over the page HTML (contrast, alt, headings, links, tables, captions) | Advisory (warnings) |
+| [1. WCAG content audit](#layer-1--the-wcag-content-audit) | Six heuristic checks over the page HTML (contrast, alt, headings, links, tables, captions) | Gated on publish (acknowledgeable) / advisory elsewhere |
 | [2. Blocking `alt` rule](#layer-2--the-blocking-alt-rule) | Every `<img>` must have an `alt` attribute | **Blocking** (validation fails) |
 | [3. Widget scaffolding](#layer-3--interactive-widget-scaffolding) | Accessibility built into every interactive widget by construction | Always-on (not a check) |
 
@@ -56,6 +57,37 @@ owns the page chrome and login).
 Phase 1 is fully advisory: nothing blocks publishing yet. The publish gate,
 acknowledgments, and the borderline review queue are Phase 2 of
 `packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md`.
+
+---
+
+## The publishing gate (Phase 2, 2026-07)
+
+Accessibility now gates both publish paths — with the professor as final arbiter.
+Every gate has an acknowledgment path; every acknowledgment is recorded.
+
+**Two tiers (evaluated against the required level, default WCAG 2.1 AA):**
+
+| Verdict | What it takes to publish anyway |
+| --- | --- |
+| `pass` | Nothing — publishes normally. |
+| `borderline` (only moderate/minor findings, or contrast within 85% of the threshold) | `acknowledgeAccessibility: true` after reviewing the findings. |
+| `fail` (any serious/critical finding) | An array naming **every** clear-failure criterion, e.g. `acknowledgeAccessibility: ["1.4.3", "1.3.1"]`. `true` is rejected; missing or extra criteria are rejected. |
+
+Single pages: `publish_to_canvas` (blocked calls return `ACCESSIBILITY_ACK_REQUIRED` with the
+required criteria). Whole courses: `publish_course` takes `a11yAcknowledgments: { "<file>": true | ["<sc>", …] }`
+per file; FERPA and Canvas-HTML validation blocks remain absolute and cannot be acknowledged away.
+
+**The paper trail** lives in the course project under `.a11y/`:
+- `acknowledgments.json` — append-only record of every acknowledged publish (when, page, tier, criteria, level).
+- `review-queue.json` — the "near the edge" worklist of pages a human should verify with real eyes.
+
+**Two new Command & Control tools:**
+- `accessibility_review_queue` — list the queue worst-margin first (live Canvas URLs, criteria, margins) or mark a page `reviewed-by-human` with a note.
+- `audit_course_accessibility` — run the full engine stack over every generated page, get one course-level summary, and refresh the queue. The regular between-semesters check.
+
+The manual generate-and-paste workflow remains ungated. Institution policy anchoring
+(configured required level, re-verification cadence), the WCAG 3 advisory toggle, and the
+WAVE API deep-check adapter are Phase 3 (see the design spec).
 
 ---
 

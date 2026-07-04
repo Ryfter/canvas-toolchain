@@ -80,6 +80,12 @@ accessibility checking — it runs the in-house + axe-core engines and returns a
 canonical WCAG 2.2 `ConformanceReport`. `auditAccessibility` is deprecated
 (kept for command-and-control compatibility). Full reference: `docs/accessibility.md`.
 
+Publishing gates on the conformance verdict (Phase 2): `publish_to_canvas` blocks with
+`ACCESSIBILITY_ACK_REQUIRED` until the professor acknowledges — `acknowledgeAccessibility: true`
+for borderline, a named-SC array for clear failures. Acknowledgments append to
+`<courseDir>/.a11y/acknowledgments.json` (see `src/tools/a11y/records.ts`, which also owns the
+borderline review queue store). FERPA and RCE validation gates are unchanged and run first.
+
 ---
 
 ## TL;DR Card (Content Priority Tiers, #66)

@@ -1,9 +1,10 @@
 import { scanFerpa } from 'canvas-design-mcp/dist/tools/publish.js';
 import { validateCanvasHtml } from 'canvas-design-mcp/dist/tools/validate.js';
-import { auditAccessibility } from 'canvas-design-mcp/dist/tools/accessibility.js';
+import { runConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/conformance.js';
+import { isBorderlineFinding } from '@canvas-toolchain/shared-types';
 import type { Warning } from './manifest_types.js';
 
-export function scanWarnings(html: string): Warning[] {
+export async function scanWarnings(html: string): Promise<Warning[]> {
   const warnings: Warning[] = [];
 
   const ferpa = scanFerpa(html);
@@ -23,12 +24,17 @@ export function scanWarnings(html: string): Warning[] {
     }
   }
 
-  for (const a of auditAccessibility(html)) {
+  // Phase 2 (spec §3): findings at the required level gate publishing — clear
+  // failures block until acknowledged by named SC; borderline needs a light ack.
+  const conformance = await runConformanceCheck(html);
+  for (const f of conformance.findings) {
+    const borderline = isBorderlineFinding(f);
     warnings.push({
       kind: 'a11y',
-      severity: 'warn',
-      message: a.message,
-      line: (a as { line?: number }).line,
+      severity: borderline ? 'warn' : 'block',
+      message: `${f.sc} ${f.scName} — ${f.message}`,
+      sc: f.sc,
+      a11yTier: borderline ? 'borderline' : 'clear',
     });
   }
 

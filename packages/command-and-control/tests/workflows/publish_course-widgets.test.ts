@@ -177,7 +177,7 @@ describe('publishCourse widget integration', () => {
 
   it('per-widget fail-soft: a widget upload failure does not abort the page', async () => {
     stubCanvasConfig();
-    const pageHtml = '<iframe src="assignment/widgets/good.html">a</iframe><iframe src="assignment/widgets/bad.html">b</iframe>';
+    const pageHtml = '<iframe src="assignment/widgets/good.html" title="Good Widget">a</iframe><iframe src="assignment/widgets/bad.html" title="Bad Widget">b</iframe>';
     const { snapshotId } = setupCourseWithWidget({
       pageHtml,
       widgets: [
@@ -212,7 +212,7 @@ describe('publishCourse widget integration', () => {
 
   it('records widget HTML-not-found as a failure with helpful path', async () => {
     stubCanvasConfig();
-    const pageHtml = '<iframe src="assignment/widgets/missing.html">m</iframe>';
+    const pageHtml = '<iframe src="assignment/widgets/missing.html" title="Missing Widget">m</iframe>';
     const { snapshotId } = setupCourseWithWidget({
       pageHtml,
       widgets: [{ slug: 'assignment', id: 'missing', missingHtml: true }],

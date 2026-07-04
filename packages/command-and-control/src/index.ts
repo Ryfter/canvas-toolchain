@@ -80,6 +80,8 @@ import type { DraftStudentRubricInput } from './tools/rubric/types.js';
 import { reviewCanvasRubric, type ReviewCanvasRubricInput } from './tools/workflows/review_canvas_rubric.js';
 import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
+import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
+import { auditCourseAccessibility } from './tools/workflows/audit_course_accessibility.js';
 import { loadModules } from './modules/registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
@@ -483,6 +485,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           gitCommit:  { type: 'boolean', description: 'Commit + tag in courseDir. Defaults to true when courseDir is a git repo.' },
           pushTag:    { type: 'boolean', description: 'If a git remote is configured, push the success tag.' },
           canvasBreadcrumbs: { type: 'boolean', description: 'Override the course default for this publish only. When omitted, uses setup_canvas\'s canvasBreadcrumbs setting (default enabled). Breadcrumbs create [ARCHIVED] page copies and /canvas-toolchain-archive/ widget file copies in Canvas, cleaned up at prune time.' },
+          a11yAcknowledgments: {
+            type: 'object' as const,
+            description:
+              'Per-file accessibility acknowledgments: { "<filename>": true } for borderline findings; { "<filename>": ["1.4.3"] } naming every clear-failure criterion. Recorded to the course project\'s .a11y/ audit trail.',
+            additionalProperties: {
+              oneOf: [
+                { type: 'boolean' as const },
+                { type: 'array' as const, items: { type: 'string' as const } },
+              ],
+            },
+          },
         },
       },
     },
@@ -620,6 +633,34 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           rubricId:          { type: 'string', description: 'Specific course rubric id — use after a list fallback to fetch the chosen rubric, instead of assignmentId.' },
           priorRenderedPath: { type: 'string', description: 'Absolute path to the previously rendered rubric .md; used to detect what changed since the last student-facing rewrite.' },
           assignmentBrief:   { type: 'string', description: 'Overrides the pulled assignment description as the triage\'s assignment signal.' },
+        },
+      },
+    },
+    {
+      name: 'accessibility_review_queue',
+      description:
+        'The per-course "near the edge" accessibility worklist: pages with borderline findings, needs-human-review criteria, or acknowledged publishes. Lists open entries worst-margin first with live Canvas URLs for human-eyes verification; resolve marks a page reviewed. The professor is the final arbiter.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseDir'],
+        properties: {
+          courseDir: { type: 'string', description: 'Course project folder (contains .a11y/).' },
+          action: { type: 'string', enum: ['list', 'resolve'], description: 'Default list.' },
+          page: { type: 'string', description: 'Required for resolve — the page as listed.' },
+          note: { type: 'string', description: 'Optional note recorded with the resolution.' },
+        },
+      },
+    },
+    {
+      name: 'audit_course_accessibility',
+      description:
+        'Run the full WCAG 2.2 engine stack (in-house + axe-core) across every generated page of a course project, report per-page verdicts against the required level, and refresh the borderline review queue. The regular between-semesters check.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseDir'],
+        properties: {
+          courseDir: { type: 'string', description: 'Course project folder.' },
+          outputDir: { type: 'string', description: 'Generated-HTML folder. Defaults to <courseDir>/output.' },
         },
       },
     },
@@ -893,6 +934,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'review_canvas_rubric':
         result = await reviewCanvasRubric(args as unknown as ReviewCanvasRubricInput);
+        break;
+      case 'accessibility_review_queue':
+        result = await accessibilityReviewQueue(args as unknown as Parameters<typeof accessibilityReviewQueue>[0]);
+        break;
+      case 'audit_course_accessibility':
+        result = await auditCourseAccessibility(args as unknown as Parameters<typeof auditCourseAccessibility>[0]);
         break;
       case 'brainstorm_interactive':
         result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
