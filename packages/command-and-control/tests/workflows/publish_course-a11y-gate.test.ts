@@ -78,7 +78,8 @@ beforeEach(() => {
       const tier: 'borderline' | 'fail' = input.acknowledgeAccessibility === true ? 'borderline' : 'fail';
       const scIds: string[] = Array.isArray(input.acknowledgeAccessibility) ? input.acknowledgeAccessibility : [];
       const record: AcknowledgmentRecord = {
-        at: new Date().toISOString(), page: input.pageTitle, canvasUrl: result.url,
+        // #113: real CDS keys the record by a11yPageKey when supplied, else pageTitle.
+        at: new Date().toISOString(), page: input.a11yPageKey ?? input.pageTitle, canvasUrl: result.url,
         tier, scIds, requiredLevel: 'WCAG 2.1 AA',
       };
       appendAcknowledgment(input.courseDir, record);
@@ -289,6 +290,22 @@ describe('publishCourse — review-queue page keys use the output-relative path 
 
     expect(result.phase).toBe('published');
     expect(loadReviewQueue(courseDir)).toEqual([]);
+  });
+
+  it('the CDS-delegated page-branch acknowledgment record is keyed by relPath too (#113)', async () => {
+    seedSnapshot('snap-page-ack-relpath', [
+      PAGE_ENTRY('overview.html', 'Week 1 Overview', [BORDERLINE_WARNING], 'week-01/overview.html'),
+    ]);
+
+    const result = await publishCourse({
+      snapshotId: 'snap-page-ack-relpath', approvals: { 'overview.html': 'approve' },
+      a11yAcknowledgments: { 'overview.html': true }, canvasBreadcrumbs: false,
+    });
+
+    expect(result.phase).toBe('published');
+    const acks = loadAcknowledgments(courseDir);
+    expect(acks).toHaveLength(1);
+    expect(acks[0]!.page).toBe('week-01/overview.html');
   });
 
   it('the direct assignment-branch acknowledgment record is keyed by relPath too', async () => {

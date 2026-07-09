@@ -300,6 +300,38 @@ describe('publishToCanvas', () => {
       if ('url' in published) expect(published.acknowledgment?.scIds).toEqual(requiredScs);
     });
 
+    // #113: publish_course passes the canonical output-relative page key so the
+    // acknowledgment audit trail keys pages the same way as assignment-branch
+    // records and the review queue — not by the display-only Canvas title.
+    it('keys the acknowledgment record by a11yPageKey when supplied (#113)', async () => {
+      const api = apiMock();
+      const courseDir = mkdtempSync(join(tmpdir(), 'pub-ack-key-'));
+      try {
+        const result = await publishToCanvas(
+          { courseId: 1, html: BORDERLINE_HTML, pageTitle: 'Intro', acknowledgeAccessibility: true,
+            courseDir, a11yPageKey: 'week-01/intro.html' },
+          config, api);
+        expect('url' in result).toBe(true);
+        if ('url' in result) expect(result.acknowledgment?.page).toBe('week-01/intro.html');
+        const records = loadAcknowledgments(courseDir);
+        expect(records).toHaveLength(1);
+        expect(records[0].page).toBe('week-01/intro.html');
+      } finally { rmSync(courseDir, { recursive: true, force: true }); }
+    });
+
+    it('defaults the acknowledgment record key to pageTitle when a11yPageKey is absent', async () => {
+      const api = apiMock();
+      const courseDir = mkdtempSync(join(tmpdir(), 'pub-ack-default-'));
+      try {
+        const result = await publishToCanvas(
+          { courseId: 1, html: BORDERLINE_HTML, pageTitle: 'Intro', acknowledgeAccessibility: true, courseDir },
+          config, api);
+        expect('url' in result).toBe(true);
+        if ('url' in result) expect(result.acknowledgment?.page).toBe('Intro');
+        expect(loadAcknowledgments(courseDir)[0].page).toBe('Intro');
+      } finally { rmSync(courseDir, { recursive: true, force: true }); }
+    });
+
     it('acknowledgment persistence failure does not fail the publish', async () => {
       const api = apiMock();
       const result = await publishToCanvas(

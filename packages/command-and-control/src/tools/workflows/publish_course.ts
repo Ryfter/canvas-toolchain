@@ -338,6 +338,9 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
           { courseId: manifest.courseId, html: rewrittenHtml, pageTitle: entry.intendedTitle,
             collisionAction: entry.canvasMatch ? 'update' : 'create',
             acknowledgeAccessibility: input.a11yAcknowledgments?.[entry.filename],
+            // #113: canonical record key so page-branch acknowledgments match the
+            // assignment branch and the review queue (relPath, not Canvas title).
+            a11yPageKey: queuePage,
             courseDir: manifest.courseDir },
           { canvasUrl: cfg.canvasUrl, apiToken: cfg.apiToken } as any, api as any,
         );
