@@ -1,5 +1,19 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.10.1
+
+A small polish release for the v1.10.0 accessibility publishing gate — clearer guidance when a publish is held back, and tidier record-keeping. No new tools, no setup changes.
+
+### Clearer instructions when a course publish is held back
+
+- **The block message now tells you exactly what to do.** During a whole-course publish, a page can pass the up-front accessibility check but still get held at the final step — the page's HTML is re-checked after widget links are swapped for their Canvas URLs, and that final version is what students actually get. Previously the hold message pointed at an option that `publish_course` doesn't accept. Now it spells out the exact `a11yAcknowledgments` entry to pass for that file — naming each failing criterion when the failures are clear-cut, or a simple `true` for near-misses — plus `resume:true` so the publish continues right where it stopped. ([#112](https://github.com/Ryfter/canvas-toolchain/issues/112))
+
+### Consistent record-keeping in the acknowledgment trail
+
+- **Every entry in `.a11y/acknowledgments.json` now identifies its page the same way** — by the page's output file path. Previously, acknowledgments recorded for pages used the Canvas page title while those for assignments used the file path, so one course's audit trail mixed two labeling styles. Existing entries stay exactly as they are and remain valid; nothing to migrate. ([#113](https://github.com/Ryfter/canvas-toolchain/issues/113))
+
+Full diff: [v1.10.0...v1.10.1](https://github.com/Ryfter/canvas-toolchain/compare/v1.10.0...v1.10.1)
+
 ## What's new in v1.10.0
 
 Accessibility moves from **advice** to a **gate** — with you as the final decision-maker. Since v1.9.0 the toolchain has run a full WCAG 2.2 conformance check on every page and reported the results. This release makes that check matter at publish time: it can now hold a page back until you've seen the problems and decided to proceed anyway.
