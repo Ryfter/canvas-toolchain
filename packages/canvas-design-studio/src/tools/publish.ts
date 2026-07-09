@@ -23,6 +23,10 @@ export interface PublishToCanvasInput {
   acknowledgeAccessibility?: A11yAcknowledgment;
   /** Course project folder; when set, acknowledgments append to <courseDir>/.a11y/acknowledgments.json. */
   courseDir?: string;
+  /** Canonical page key for the acknowledgment record (#113) — the output-relative
+   *  path publish_course uses for queue/record keying. Defaults to pageTitle, which
+   *  is what the standalone publish_to_canvas tool (no courseDir context) uses. */
+  a11yPageKey?: string;
 }
 
 export interface PublishSuccess {
@@ -216,7 +220,7 @@ function publishSuccess(
   if (ackEval.tier === 'none') return base;
   const acknowledgment: AcknowledgmentRecord = {
     at: new Date().toISOString(),
-    page: input.pageTitle,
+    page: input.a11yPageKey ?? input.pageTitle,
     canvasUrl: base.url,
     tier: ackEval.tier,
     scIds: ackEval.requiredScs,
