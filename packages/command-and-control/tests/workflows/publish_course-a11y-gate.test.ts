@@ -322,6 +322,67 @@ describe('publishCourse — review-queue page keys use the output-relative path 
   });
 });
 
+describe('publishCourse — course-path fix guidance when the CDS re-gate blocks (#112)', () => {
+  // Divergence scenario: the pre-gate passed (no gating warnings in the manifest),
+  // but CDS re-runs conformance on the REWRITTEN HTML (widget iframes swapped for
+  // Canvas URLs) and blocks independently. The failure must carry publish_course's
+  // own a11yAcknowledgments syntax, not CDS's acknowledgeAccessibility parameter.
+  it('emits the named-SC a11yAcknowledgments fix when CDS blocks with clear failures', async () => {
+    vi.mocked(publishToCanvas).mockResolvedValue({
+      error: 'Clear accessibility failures require a named acknowledgment listing every failing criterion: ["1.1.1"]. Passing true is not sufficient for clear failures.\n\n(report)\n\nre-run with the acknowledgment — acknowledgeAccessibility.',
+      code: 'ACCESSIBILITY_ACK_REQUIRED',
+      details: { verdict: 'fails', requiredScs: ['1.1.1'] },
+    } as any);
+    seedSnapshot('snap-regate-fail', [PAGE_ENTRY('week-1.html', 'Week 1', [])]);
+
+    const result = await publishCourse(
+      { snapshotId: 'snap-regate-fail', approvals: { 'week-1.html': 'approve' }, canvasBreadcrumbs: false },
+    );
+
+    expect(result.phase).toBe('partial');
+    expect(result.failed?.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+    expect(result.fix).toBeDefined();
+    expect(result.fix![0]).toContain('a11yAcknowledgments: { "week-1.html": ["1.1.1"] }');
+    expect(result.fix![0]).toContain('resume:true');
+    expect(result.fix![0]).not.toContain('acknowledgeAccessibility');
+  });
+
+  it('emits the { file: true } fix when CDS blocks with borderline-only findings', async () => {
+    vi.mocked(publishToCanvas).mockResolvedValue({
+      error: 'Borderline accessibility findings require acknowledgment. Review them, then pass acknowledgeAccessibility: true.',
+      code: 'ACCESSIBILITY_ACK_REQUIRED',
+      details: { verdict: 'borderline', requiredScs: [] },
+    } as any);
+    seedSnapshot('snap-regate-borderline', [PAGE_ENTRY('week-1.html', 'Week 1', [])]);
+
+    const result = await publishCourse(
+      { snapshotId: 'snap-regate-borderline', approvals: { 'week-1.html': 'approve' }, canvasBreadcrumbs: false },
+    );
+
+    expect(result.phase).toBe('partial');
+    expect(result.failed?.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+    expect(result.fix).toBeDefined();
+    expect(result.fix![0]).toContain('a11yAcknowledgments: { "week-1.html": true }');
+    expect(result.fix![0]).toContain('resume:true');
+    expect(result.fix![0]).not.toContain('acknowledgeAccessibility');
+  });
+
+  it('other CDS error codes keep the generic no-fix failure path', async () => {
+    vi.mocked(publishToCanvas).mockResolvedValue({
+      error: 'boom', code: 'PUBLISH_FAILED',
+    } as any);
+    seedSnapshot('snap-regate-other', [PAGE_ENTRY('week-1.html', 'Week 1', [])]);
+
+    const result = await publishCourse(
+      { snapshotId: 'snap-regate-other', approvals: { 'week-1.html': 'approve' }, canvasBreadcrumbs: false },
+    );
+
+    expect(result.phase).toBe('partial');
+    expect(result.failed?.code).toBe('PUBLISH_FAILED');
+    expect(result.fix).toBeUndefined();
+  });
+});
+
 describe('publishCourse — margin flows from Warning into the review queue (#111)', () => {
   it('carries marginRatio from the warning into the queue reason', async () => {
     seedSnapshot('snap-margin', [
