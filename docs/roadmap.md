@@ -1,10 +1,17 @@
 # Canvas Toolchain Roadmap
 
-_Last updated: 2026-07-04. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
+_Last updated: 2026-07-09. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
 
 ## Where we are
 
 **Current release: v1.10.0** (WCAG 2.2 Phase 2 — the two-tier accessibility publishing gate).
+
+**Immediate next steps, in order:**
+
+1. **Merge the Phase 2 fast-follow PRs** — [#115](https://github.com/Ryfter/canvas-toolchain/pull/115) (fixes #112) first, then [#116](https://github.com/Ryfter/canvas-toolchain/pull/116) (fixes #113). Both are CI-green; they touch adjacent hunks of `publish_course.ts`, so keep that order.
+2. **Pick the release vehicle for the fast-follows** — a small v1.10.1 patch, or let them ride v1.11.0 with Phase 3.
+3. **Write the Phase 3 implementation plan** from the design spec (policy anchor + WCAG 3 toggle + external deep-check adapter) → build → **v1.11.0**, closing #108.
+4. **v2.0 (#78)** — design conversation to decompose the umbrella; nothing buildable until then.
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
@@ -25,7 +32,7 @@ Guiding principle: **the professor is the final arbiter** — accessibility info
 
 It also added an **acknowledgment audit trail** (append-only `.a11y/acknowledgments.json`), a **borderline review queue** (`.a11y/review-queue.json`, worst-margin-first), and **two new tools** — `accessibility_review_queue` (list/resolve the queue) and `audit_course_accessibility` (re-scan a whole course and refresh the queue). Plan: [`packages/command-and-control/docs/superpowers/plans/2026-07-02-wcag22-phase2-gate-and-queue.md`](../packages/command-and-control/docs/superpowers/plans/2026-07-02-wcag22-phase2-gate-and-queue.md).
 
-Fast-follow polish tracked for a later patch: [#112](https://github.com/Ryfter/canvas-toolchain/issues/112) (course-path guidance when the single-page re-gate blocks) and [#113](https://github.com/Ryfter/canvas-toolchain/issues/113) (align acknowledgment-record keys on the CDS-delegated page path).
+Fast-follow polish: [#112](https://github.com/Ryfter/canvas-toolchain/issues/112) (course-path guidance when the single-page re-gate blocks) and [#113](https://github.com/Ryfter/canvas-toolchain/issues/113) (align acknowledgment-record keys on the CDS-delegated page path) — **both fixed 2026-07-09** via PRs [#115](https://github.com/Ryfter/canvas-toolchain/pull/115) and [#116](https://github.com/Ryfter/canvas-toolchain/pull/116) (awaiting merge; see "Immediate next steps" above). The broader V&R-wide relative-path keying of `a11yAcknowledgments`/`approvals` maps stays with the Phase 3 spec.
 
 ## Now: WCAG 2.2 Phase 3 — institution policy + deeper checks
 
