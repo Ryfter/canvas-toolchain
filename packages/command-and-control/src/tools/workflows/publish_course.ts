@@ -341,6 +341,27 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
             courseDir: manifest.courseDir },
           { canvasUrl: cfg.canvasUrl, apiToken: cfg.apiToken } as any, api as any,
         );
+        // #112: CDS re-gates the rewritten HTML independently and its message names
+        // acknowledgeAccessibility — a publish_to_canvas parameter this tool doesn't
+        // accept. Translate to the course-path a11yAcknowledgments syntax; the run is
+        // already partial, so the retry needs resume:true.
+        if ('error' in out && out.code === 'ACCESSIBILITY_ACK_REQUIRED') {
+          const requiredScs = (out.details as { requiredScs?: string[] } | undefined)?.requiredScs ?? [];
+          const failed: FailedEntry = {
+            filename: entry.filename, type: entry.type,
+            reason: out.error ?? 'accessibility acknowledgment required',
+            code: 'ACCESSIBILITY_ACK_REQUIRED', failedAt: new Date().toISOString(),
+          };
+          writeState(dir, { phase: 'partial', published, failed, lastUpdatedAt: failed.failedAt });
+          return {
+            snapshotId: input.snapshotId, phase: 'partial', published, failed,
+            fix: [
+              requiredScs.length > 0
+                ? `The Canvas-ready HTML (widget URLs substituted) failed the accessibility re-check. Fix the findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${entry.filename}": [${requiredScs.map(s => `"${s}"`).join(', ')}] } with resume:true to publish past the named failures. The professor is the final arbiter; acknowledgments are recorded.`
+                : `The Canvas-ready HTML (widget URLs substituted) has borderline accessibility findings. Fix them and re-run preview_course_publish, or pass a11yAcknowledgments: { "${entry.filename}": true } with resume:true after reviewing them.`,
+            ],
+          };
+        }
         if ('error' in out) throw new CanvasApiError(0, (out.code as string) ?? 'PUBLISH_FAILED', out.error ?? 'publish failed');
         published.push({
           filename: entry.filename, type: 'page', canvasUrl: out.url, action: out.action,
