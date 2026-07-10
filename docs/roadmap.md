@@ -4,12 +4,11 @@ _Last updated: 2026-07-10. This is the planned order of work — what ships next
 
 ## Where we are
 
-**Current release: v1.10.1** (WCAG 2.2 Phase 2 fast-follows #112/#113).
+**Current release: v1.11.0** (WCAG 2.2 Phase 3 — institution policy anchor, WCAG 3 draft advisories, WAVE deep check; PR #117, closed #108, released 2026-07-10).
 
 **Immediate next steps, in order:**
 
-1. **Release v1.11.0** — WCAG 2.2 Phase 3 (institution policy anchor + WCAG 3 advisory toggle + WAVE deep-check adapter) is built on `feat/wcag22-phase3` and ready to ship; closes #108.
-2. **v2.0 (#78)** — design conversation to decompose the umbrella; nothing buildable until then.
+1. **v2.0 (#78)** — design conversation to decompose the umbrella; nothing buildable until then.
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
