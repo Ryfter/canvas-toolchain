@@ -87,7 +87,131 @@ per file; FERPA and Canvas-HTML validation blocks remain absolute and cannot be 
 
 The manual generate-and-paste workflow remains ungated. Institution policy anchoring
 (configured required level, re-verification cadence), the WCAG 3 advisory toggle, and the
-WAVE API deep-check adapter are Phase 3 (see the design spec).
+WAVE API deep-check adapter are **Phase 3** — see the next section.
+
+---
+
+## Phase 3 — institution policy, WCAG 3 advisories, WAVE deep check (2026-07)
+
+Phase 3 lets an institution's own accessibility policy drive the gate instead of the
+hard-coded default, adds an opt-in advisory layer for the still-draft WCAG 3, and adds an
+opt-in deep-check adapter for the paid WAVE API. None of this changes what the engines
+check: **every check still runs the full WCAG 2.2 audit every time.** Policy only moves
+where the pass/borderline/fail line falls, and WCAG 3 is advisory-only by construction — it
+can never gate. The professor remains the final arbiter throughout.
+
+### The institution accessibility policy
+
+An optional `accessibilityPolicy` block lives in the institution config (never in this
+repo — it's per-professor local data):
+
+| Field | Meaning | Default |
+|---|---|---|
+| `urls` | Institution accessibility policy / guidance URLs, re-read on cadence | `[]` |
+| `requiredConformance` | The gate level — `{ version, level }` | `{ version: '2.1', level: 'AA' }` (ADA Title II baseline) |
+| `recheckWeeks` | How often the professor should re-read the policy | `4` (fits back-to-back 5-week summer sessions) |
+| `lastVerifiedAt` | `YYYY-MM-DD` the professor last confirmed they'd re-read it | unset — no policy configured yet means no nudge |
+| `wcag3Advisory` | Turns on the WCAG 3 draft advisory section | `false` |
+
+With no policy configured, every conformance check behaves exactly as it did in Phase 1/2
+— required level WCAG 2.1 AA, no nudge, no WCAG 3 section. Configuring a policy is opt-in.
+
+### `review_accessibility_policy` — view / confirm / update
+
+One Command & Control tool covers the whole workflow:
+
+```text
+View only:               review_accessibility_policy({})
+Update fields:            review_accessibility_policy({ urls: ["https://example.edu/accessibility-policy"], recheckWeeks: 6 })
+Change the gate level:    review_accessibility_policy({ requiredConformance: { version: "2.1", level: "AA" } })
+Toggle WCAG 3 advisories: review_accessibility_policy({ wcag3Advisory: true })
+Confirm you re-read it:   review_accessibility_policy({ confirm: true })
+```
+
+`confirm: true` stamps `lastVerifiedAt` to today — that's the *only* way the cadence nudge
+ever gets armed (see below). Any call with no arguments just prints the current policy
+(or "not configured; defaults in effect" if none exists yet). `requiredConformance` is
+validated to a real WCAG 2.x version/level pair; `recheckWeeks` must be a whole number
+≥ 1. Requires `setup_institution` to have run first — the policy lives inside the
+institution config, so there's nowhere to save it before that.
+
+### How the required level moves the gate — engines always run full 2.2
+
+Every conformance run always executes the complete WCAG 2.2 A/AA check catalog, regardless
+of policy. What the policy's `requiredConformance` changes is only the **line that decides
+verdict**: findings at or below the required level count toward `pass`/`borderline`/`fail`
+and the publish gate; findings above it fall into `advisories` and never gate, exactly as
+before. Raising the bar (e.g. to WCAG 2.2 AA) pulls more findings into the gated set;
+lowering it does the opposite — but nothing is ever hidden, since the full report (findings
++ advisories) is always returned.
+
+### The cadence nudge
+
+`review_accessibility_policy` (and every conformance report run through the policy-aware
+path — `generate`, `redesign`, `publish`, `render`, `validate`, `scan_warnings`,
+`audit_course_accessibility`) surfaces a one-line reminder once `lastVerifiedAt` has aged
+past `recheckWeeks`:
+
+```text
+⏰ Institution accessibility policy last verified 2026-06-01 — re-read: https://example.edu/accessibility-policy
+```
+
+The nudge only exists once the professor has confirmed at least once — an institution with
+`lastVerifiedAt` unset (never confirmed) never nags, because there's no baseline date to
+measure a cadence against. Confirming re-arms the clock for another `recheckWeeks`.
+
+### WCAG 3 draft advisories — never gates
+
+W3C's WCAG 3.0 is still an early working draft (mapping built against the
+**2024-12-12** draft — revisit when the W3C advances the spec). When
+`wcag3Advisory: true`, every conformance report gains a `wcag3` section that maps the
+2.x findings with a clear draft-3.0 analogue to the corresponding draft outcome name (a
+small, honest table — only success criteria with an unambiguous WCAG 3 outcome are
+mapped; the rest are simply not surfaced here rather than guessed at):
+
+```text
+WCAG 3.0 draft advisories (2024-12-12 draft — informational only, never gates):
+1. Text and visual contrast (maps from 1.4.3): #777 on #fff: 4.48:1 — fails WCAG AA for body text (requires 4.5:1)
+```
+
+This section is purely informational. It is structurally incapable of affecting the
+publish verdict — it lives alongside `findings`/`advisories` on the `ConformanceReport`
+but is never consulted by the gate.
+
+### The WAVE routes
+
+Two ways to bring WebAIM's WAVE engine into the loop, for two different situations:
+
+| Route | Use for | Cost |
+|---|---|---|
+| **Free WAVE browser extension** ([wave.webaim.org/extension](https://wave.webaim.org/extension/)) or MS Accessibility Insights for Web ([accessibilityinsights.io](https://accessibilityinsights.io/downloads/)) | Login-gated Canvas pages — you're already logged in, so the extension sees the real rendered page | Free |
+| **`wave_deep_check` (C&C tool, paid WAVE API)** | Publicly reachable pages only — the API fetches by URL and cannot log into Canvas | ~2 WAVE credits per run |
+
+If the institution's policy `urls` include a link matching "wave", the conformance report
+adds a `recommendedChecker` line pointing at it — a nudge, not a requirement.
+
+**`wave_deep_check` is a two-call spend gate** — nothing runs, and no credit is spent,
+until the professor explicitly confirms:
+
+```text
+Preview (no spend):  wave_deep_check({ url: "https://example.edu/courses/101/pages/syllabus" })
+Run it (spends ~2 credits): wave_deep_check({ url: "...", confirm: true, apiKey: "<your WAVE key>" })
+```
+
+The API key is validated only by the WAVE API call itself; when supplied it's saved to the
+institution config so later calls don't need to repeat it.
+
+**Auth-gate refusal happens before any credit is spent.** Before calling the WAVE API,
+`wave_deep_check` probes the target URL itself. A `401`/`403` response, or a redirect to
+something that looks like a login page, returns `AUTH_GATED_URL` immediately — with a
+`fix` pointing at the free browser extension / Accessibility Insights instead — so a
+professor who accidentally points it at a gated Canvas page never burns credits on a run
+that could never have worked. Other failure modes: `WAVE_API_ERROR` (the WAVE API itself
+reported failure — bad key, out of credits) and `WAVE_UNREACHABLE` (network failure,
+retry). WAVE's own item ids are mapped to WCAG success criteria through a small, honest
+table (only unambiguous ids are mapped; the rest are returned as `unmapped` items with a
+prompt to check them in the extension) — `creditsRemaining` is echoed back when WAVE
+reports it.
 
 ---
 

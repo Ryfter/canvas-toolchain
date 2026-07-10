@@ -1,16 +1,15 @@
 # Canvas Toolchain Roadmap
 
-_Last updated: 2026-07-09. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
+_Last updated: 2026-07-10. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
 
 ## Where we are
 
-**Current release: v1.10.0** (WCAG 2.2 Phase 2 — the two-tier accessibility publishing gate).
+**Current release: v1.10.1** (WCAG 2.2 Phase 2 fast-follows #112/#113).
 
 **Immediate next steps, in order:**
 
-1. **Pick the release vehicle for the merged fast-follows** (#112/#113, merged 2026-07-09 and sitting unreleased on main) — a small v1.10.1 patch, or let them ride v1.11.0 with Phase 3.
-2. **Write the Phase 3 implementation plan** from the design spec (policy anchor + WCAG 3 toggle + external deep-check adapter) → build → **v1.11.0**, closing #108.
-3. **v2.0 (#78)** — design conversation to decompose the umbrella; nothing buildable until then.
+1. **Release v1.11.0** — WCAG 2.2 Phase 3 (institution policy anchor + WCAG 3 advisory toggle + WAVE deep-check adapter) is built on `feat/wcag22-phase3` and ready to ship; closes #108.
+2. **v2.0 (#78)** — design conversation to decompose the umbrella; nothing buildable until then.
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
@@ -33,15 +32,15 @@ It also added an **acknowledgment audit trail** (append-only `.a11y/acknowledgme
 
 Fast-follow polish: [#112](https://github.com/Ryfter/canvas-toolchain/issues/112) (course-path guidance when the single-page re-gate blocks) and [#113](https://github.com/Ryfter/canvas-toolchain/issues/113) (align acknowledgment-record keys on the CDS-delegated page path) — **both fixed and merged 2026-07-09** (PRs [#115](https://github.com/Ryfter/canvas-toolchain/pull/115)/[#116](https://github.com/Ryfter/canvas-toolchain/pull/116); on main, unreleased). The broader V&R-wide relative-path keying of `a11yAcknowledgments`/`approvals` maps stays with the Phase 3 spec.
 
-## Now: WCAG 2.2 Phase 3 — institution policy + deeper checks
+## Shipped in v1.11.0: WCAG 2.2 Phase 3 — institution policy + deeper checks
 
-Specced (same design doc, Phase 3 section) but **not yet planned**. Contents:
+Built on `feat/wcag22-phase3` per the Phase 3 implementation plan. Contents:
 
-1. **Institution policy anchor** — the required conformance level (currently the ADA Title II baseline, WCAG 2.1 AA) becomes configurable per institution via the institution config, including a pointer to the institution's published accessibility policy.
-2. **WCAG 3 opt-in advisory toggle** — early WCAG 3 guidance surfaced as advisories only, never gating.
-3. **External deep-check adapter** — an opt-in engine slot for external evaluation services (e.g. WAVE), closing out issue [#108](https://github.com/Ryfter/canvas-toolchain/issues/108).
+1. **Institution policy anchor** — an optional `accessibilityPolicy` block in the institution config (required conformance level, re-verification cadence, policy URLs). New tool `review_accessibility_policy` (view / confirm / update) reads and writes it; a cadence nudge fires once the professor has confirmed at least once and the recheck window has elapsed. The required level moves where the publish-gate line falls; every engine still runs the full WCAG 2.2 audit regardless of policy.
+2. **WCAG 3 opt-in advisory toggle** — early WCAG 3 draft guidance (mapped against the 2024-12-12 working draft) surfaced as a `wcag3` report section only when `wcag3Advisory: true`. Advisory-only by construction — never gates.
+3. **WAVE deep-check adapter** — new tool `wave_deep_check` runs the paid WAVE API against publicly reachable pages, gated behind an explicit two-call spend confirmation (no credits spent on preview) and a pre-flight auth-gate refusal so login-gated Canvas URLs are never sent to the API. The free WAVE browser extension remains the recommended route for gated pages. Closes issue [#108](https://github.com/Ryfter/canvas-toolchain/issues/108).
 
-**Release: v1.11.0.** Next step when picked up: write the Phase 3 implementation plan from the spec.
+Full detail: [`docs/accessibility.md`](accessibility.md#phase-3--institution-policy-wcag-3-advisories-wave-deep-check-2026-07). Design spec: [`packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md`](../packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md).
 
 ## Later: v2.0 — plug-in module architecture
 
@@ -64,5 +63,5 @@ Captured, not committed:
 
 ## Housekeeping riding the next releases
 
-- Close or update **#108** against the design spec when Phase 3 ships.
-- Keep `docs/accessibility.md`, `docs/tool-overview.md`, and the module view current as each phase lands (Phase 2's plan includes its own doc task).
+- Close **#108** on merge (Phase 3 PR body ends `Closes #108`).
+- Keep `docs/accessibility.md`, `docs/tool-overview.md`, and the module view current as each phase lands (Phase 3's plan includes its own doc task — this one).
