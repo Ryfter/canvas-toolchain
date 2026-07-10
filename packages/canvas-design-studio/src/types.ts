@@ -22,6 +22,10 @@ export interface InstitutionConfig {
   kbTipShown?: boolean;
   panopto?: PanoptoConfig;
   brandUrl?: string;
+  /** Phase 3 (spec §7): institution accessibility policy anchor. */
+  accessibilityPolicy?: import('@canvas-toolchain/shared-types').AccessibilityPolicy;
+  /** WAVE subscription API key for wave_deep_check (optional; per-professor). */
+  waveApiKey?: string;
 }
 
 export interface CanvasEnrollment {
