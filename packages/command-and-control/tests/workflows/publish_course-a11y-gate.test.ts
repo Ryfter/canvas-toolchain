@@ -464,4 +464,41 @@ describe('publishCourse — relPath-keyed approvals and acknowledgments (Phase 3
     expect(result.failed?.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
     expect(result.fix?.[0]).toContain('"week-01/overview.html"');
   });
+
+  it('an ambiguous filename ack must not apply to either same-named entry (review fix)', async () => {
+    // Two manifest entries share the bare filename "overview.html" but have distinct
+    // relPaths (different weeks). An a11yAcknowledgments map keyed by the bare filename
+    // is inherently ambiguous — publish_course.ts never validates a11yAcknowledgments
+    // (only validateApprovals runs on input.approvals), so the ack lookup itself MUST
+    // refuse the bare-filename fallback here. Both pages must stay gated.
+    seedSnapshot('snap-ambiguous-ack', [
+      PAGE_ENTRY('overview.html', 'Week 1 Overview', [CLEAR_WARNING], 'week-01/overview.html'),
+      PAGE_ENTRY('overview.html', 'Week 2 Overview', [CLEAR_WARNING], 'week-02/overview.html'),
+    ]);
+
+    const result1 = await publishCourse({
+      snapshotId: 'snap-ambiguous-ack',
+      approvals: { 'week-01/overview.html': 'approve', 'week-02/overview.html': 'approve' },
+      a11yAcknowledgments: { 'overview.html': ['1.3.1'] },
+      canvasBreadcrumbs: false,
+    });
+    expect(result1.phase).toBe('partial');
+    expect(result1.failed?.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+    expect(result1.failed?.filename).toBe('overview.html');
+    expect(result1.published).toHaveLength(0);
+
+    // Resume past the first (still-gated) entry with an explicit skip to reach the
+    // second entry and confirm IT is also still gated by the same ambiguous ack.
+    const result2 = await publishCourse({
+      snapshotId: 'snap-ambiguous-ack',
+      approvals: { 'week-01/overview.html': 'skip', 'week-02/overview.html': 'approve' },
+      a11yAcknowledgments: { 'overview.html': ['1.3.1'] },
+      resume: true,
+      canvasBreadcrumbs: false,
+    });
+    expect(result2.phase).toBe('partial');
+    expect(result2.failed?.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+    expect(result2.failed?.filename).toBe('overview.html');
+    expect(result2.published).toHaveLength(0);
+  });
 });

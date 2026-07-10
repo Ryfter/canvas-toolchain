@@ -17,7 +17,7 @@ import { pruneSnapshots, type PruneSnapshotsResult } from '../publish/pruning.js
 import { cleanupCanvasBreadcrumbsForSnapshot, createPageBreadcrumb, uploadWidgetBreadcrumb } from '../publish/breadcrumbs.js';
 import { loadCanvasConfig } from '../setup_canvas.js';
 import { updatePageMetaEntry } from '../publish/pages_meta.js';
-import { validateApprovals, entryKeyLookup } from '../publish/approvals.js';
+import { validateApprovals, makeEntryKeyLookup } from '../publish/approvals.js';
 import { detectGitState, gitCommitPrePublish, gitTagSuccess, gitPushTag } from '../publish/git_state.js';
 import { detectBackupState } from '../publish/backup_detection.js';
 import {
@@ -261,6 +261,12 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
 
   const alreadyPublished = new Set(state.published.map(p => p.filename));
   const published: PublishedEntry[] = input.resume ? [...state.published] : [];
+
+  // Built once from the non-skipped manifest entries (Phase 3 Task 8 review fix):
+  // the alias map inside is structurally safe for both `input.approvals` (always
+  // validated) and `input.a11yAcknowledgments` (never validated) — an ambiguous
+  // bare filename never resolves via either map.
+  const entryKeyLookup = makeEntryKeyLookup(manifest.entries.filter(e => e.type !== 'skipped'));
 
   for (const entry of manifest.entries) {
     if (entry.type === 'skipped') continue;
