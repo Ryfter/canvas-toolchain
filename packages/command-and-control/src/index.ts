@@ -83,6 +83,7 @@ import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
 import { auditCourseAccessibility } from './tools/workflows/audit_course_accessibility.js';
 import { reviewAccessibilityPolicy } from './tools/review_accessibility_policy.js';
+import { waveDeepCheckTool } from './tools/wave_deep_check.js';
 import { loadModules } from './modules/registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
@@ -686,6 +687,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'wave_deep_check',
+      description:
+        'Deep accessibility check of a PUBLICLY-visible page via the paid WAVE API (WebAIM). Two-call spend gate: first call previews the cost (~2 credits) and runs nothing; re-call with confirm: true to spend. Auth-gated Canvas URLs are refused before any spend — use the free WAVE browser extension or MS Accessibility Insights for those. Optional apiKey is saved to the institution config on first use.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['url'],
+        properties: {
+          url: { type: 'string', description: 'Publicly reachable page URL.' },
+          confirm: { type: 'boolean', description: 'Explicit approval to spend WAVE credits.' },
+          apiKey: { type: 'string', description: 'WAVE API key (https://wave.webaim.org/api/); persisted on first use.' },
+        },
+      },
+    },
+    {
       name: 'brainstorm_interactive',
       description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via setup_anthropic.',
       inputSchema: {
@@ -965,6 +980,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       case 'review_accessibility_policy':
         result = reviewAccessibilityPolicy(args as never);
         break;
+      case 'wave_deep_check': {
+        result = await waveDeepCheckTool(args as never);
+        break;
+      }
       case 'brainstorm_interactive':
         result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
         break;
