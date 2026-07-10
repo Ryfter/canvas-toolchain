@@ -1,5 +1,28 @@
 # Canvas Toolchain Installer
 
+## What's new in v1.11.0
+
+Accessibility Phase 3: your institution's policy becomes the anchor for every check, and two new tools join the kit — one to keep the policy current, one for optional deep checks via WAVE. Nothing changes until you opt in: with no policy configured, every check behaves exactly as it did in v1.10.x.
+
+### Your institution's accessibility policy, on file
+
+- **New tool `review_accessibility_policy`** — records your institution's accessibility policy links, the WCAG conformance level your courses must meet (default stays **WCAG 2.1 AA**, the ADA Title II baseline), and how often you want to be reminded to re-read the policy (default every 4 weeks). Call it with `confirm: true` after re-reading the policy and it stamps the date; when the reminder comes due, a gentle nudge appears at the end of accessibility reports — it never blocks anything.
+- **The required level moves the gate line, not the checks.** Every page is still checked against the full WCAG 2.2 catalog; the policy level only decides which findings can hold a publish back. Set it to 2.2 AA when your institution adopts it and the gate follows — no other changes needed.
+
+### A preview of WCAG 3 (optional, informational only)
+
+- Turn on `wcag3Advisory` in the policy and accessibility reports gain a short section mapping your findings to the corresponding **WCAG 3 draft outcomes** — a low-effort way to watch where the standard is heading. It is clearly labeled as draft material and **can never block a publish**.
+
+### Deep checks with WAVE (WebAIM)
+
+- **New tool `wave_deep_check`** — runs a publicly visible page through the paid WAVE API for a second opinion beyond the built-in engines. Spending is always deliberate: the first call only previews the cost (~2 credits) and runs nothing; call again with `confirm: true` to spend. Login-gated Canvas pages are refused **before** any credits are spent — for those, the report points you at the free WAVE browser extension instead.
+
+### Sturdier record-keeping at publish time
+
+- The per-page `approvals` and `a11yAcknowledgments` maps in `publish_course` are now keyed by each page's output file path. A bare filename still works as a convenience — but only when it matches exactly one page, so an acknowledgment can never silently apply to a page you didn't review. ([#108](https://github.com/Ryfter/canvas-toolchain/issues/108))
+
+Full diff: [v1.10.1...v1.11.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.10.1...v1.11.0)
+
 ## What's new in v1.10.1
 
 A small polish release for the v1.10.0 accessibility publishing gate — clearer guidance when a publish is held back, and tidier record-keeping. No new tools, no setup changes.
