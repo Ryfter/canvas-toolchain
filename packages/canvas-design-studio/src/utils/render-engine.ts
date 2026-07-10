@@ -1,7 +1,7 @@
 import { loadTemplate, loadTheme, loadPromptSet } from './registry.js';
 import { canvasSafeTransform } from './transform.js';
 import { auditAccessibility } from '../tools/accessibility.js';
-import { runConformanceCheck } from '../tools/a11y/conformance.js';
+import { runPolicyConformanceCheck } from '../tools/a11y/policy.js';
 import { markdownToHtml } from '../tools/course-templates.js';
 import type { CourseConfig, PageContent, LlmClient } from '../course-types.js';
 import type { ConformanceReport } from '@canvas-toolchain/shared-types';
@@ -263,7 +263,7 @@ export async function renderPageDecoupled(input: RenderEngineInput): Promise<Ren
 
   // 5. Run accessibility audits
   const a11yResult = auditAccessibility(transformResult.html);
-  const conformance = await runConformanceCheck(transformResult.html);
+  const conformance = await runPolicyConformanceCheck(transformResult.html);
 
   return {
     finalHtml: transformResult.html,

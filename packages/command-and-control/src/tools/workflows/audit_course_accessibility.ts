@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { runConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/conformance.js';
+import { runPolicyConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/policy.js';
 import { upsertReviewEntry, clearReviewEntryIfClean, loadReviewQueue } from 'canvas-design-mcp/dist/tools/a11y/records.js';
 import type { ConformanceReport } from '@canvas-toolchain/shared-types';
 
@@ -65,10 +65,15 @@ export async function auditCourseAccessibility(
   }
   const counts = { pass: 0, borderline: 0, fail: 0 };
   const perPage: Array<{ page: string; verdict: ConformanceReport['verdict']; findings: number }> = [];
+  // Track the level actually applied (all pages share one policy).
+  let requiredLevel = 'WCAG 2.1 AA';
+  let nudge: string | undefined;
 
   for (const file of files) {
     const page = relative(outDir, file).split('\\').join('/');
-    const report = await runConformanceCheck(readFileSync(file, 'utf-8'));
+    const report = await runPolicyConformanceCheck(readFileSync(file, 'utf-8'));
+    requiredLevel = `WCAG ${report.requiredLevel.version} ${report.requiredLevel.level}`;
+    if (report.policyNudge) nudge = report.policyNudge;
     counts[report.verdict] += 1;
     perPage.push({ page, verdict: report.verdict, findings: report.findings.length });
     if (report.verdict === 'pass') {
@@ -88,12 +93,13 @@ export async function auditCourseAccessibility(
     (a.verdict === b.verdict ? b.findings - a.findings : a.verdict === 'fail' ? -1 : b.verdict === 'fail' ? 1 : a.verdict === 'borderline' ? -1 : 1));
 
   const lines = [
-    `Course accessibility audit — ${files.length} page(s) against WCAG 2.1 AA (checked with WCAG 2.2 rules)`,
+    `Course accessibility audit — ${files.length} page(s) against ${requiredLevel} (checked with WCAG 2.2 rules)`,
     `✓ pass: ${counts.pass}   ⚠ borderline: ${counts.borderline}   ✗ fail: ${counts.fail}`,
     '',
     ...worstFirst.map(p => `${icon[p.verdict]} ${p.page} — ${p.verdict}${p.findings > 0 ? ` (${p.findings} finding(s))` : ''}`),
     '',
     `Review queue: ${queueOpen} open entr${queueOpen === 1 ? 'y' : 'ies'}. Walk it with accessibility_review_queue — the professor is the final arbiter.`,
+    ...(nudge ? ['', `⏰ ${nudge}`] : []),
   ];
 
   return {

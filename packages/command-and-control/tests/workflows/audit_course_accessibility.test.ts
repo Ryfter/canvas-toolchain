@@ -1,7 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+
+vi.mock('canvas-design-mcp/dist/tools/a11y/policy.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('canvas-design-mcp/dist/tools/a11y/policy.js')>();
+  return { ...actual, runPolicyConformanceCheck: vi.fn(actual.runPolicyConformanceCheck) };
+});
+
+import { runPolicyConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/policy.js';
 import { loadReviewQueue, upsertReviewEntry } from 'canvas-design-mcp/dist/tools/a11y/records.js';
 import { auditCourseAccessibility } from '../../src/tools/workflows/audit_course_accessibility.js';
 
@@ -59,5 +66,23 @@ describe('audit_course_accessibility', () => {
       expect(result.error).toBe('NO_GENERATED_OUTPUT');
       expect(result.fix?.[0]).toContain('generate_course');
     } finally { rmSync(withoutHtml, { recursive: true, force: true }); }
+  });
+
+  it('headers with the report required level and appends the policy nudge once (Phase 3)', async () => {
+    vi.mocked(runPolicyConformanceCheck).mockResolvedValue({
+      requiredLevel: { version: '2.2', level: 'AA' },
+      verdict: 'pass', findings: [], advisories: [], criteria: [],
+      policyNudge: 'Institution accessibility policy last verified 2026-05-01 — re-read: https://www.example.edu/accessibility/',
+    } as never);
+    const outDir = join(courseDir, 'policy-output');
+    mkdirSync(outDir, { recursive: true });
+    writeFileSync(join(outDir, 'a.html'), '<p>ok</p>');
+    writeFileSync(join(outDir, 'b.html'), '<p>ok</p>');
+
+    const result = await auditCourseAccessibility({ courseDir, outputDir: outDir });
+
+    expect(result.text).toContain('WCAG 2.2 AA');
+    const nudges = result.text.split('last verified 2026-05-01').length - 1;
+    expect(nudges).toBe(1);
   });
 });

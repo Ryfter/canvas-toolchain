@@ -1,6 +1,6 @@
 import { scanFerpa } from 'canvas-design-mcp/dist/tools/publish.js';
 import { validateCanvasHtml } from 'canvas-design-mcp/dist/tools/validate.js';
-import { runConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/conformance.js';
+import { runPolicyConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/policy.js';
 import { isBorderlineFinding } from '@canvas-toolchain/shared-types';
 import type { Warning } from './manifest_types.js';
 
@@ -26,7 +26,7 @@ export async function scanWarnings(html: string): Promise<Warning[]> {
 
   // Phase 2 (spec §3): findings at the required level gate publishing — clear
   // failures block until acknowledged by named SC; borderline needs a light ack.
-  const conformance = await runConformanceCheck(html);
+  const conformance = await runPolicyConformanceCheck(html);
   for (const f of conformance.findings) {
     const borderline = isBorderlineFinding(f);
     warnings.push({

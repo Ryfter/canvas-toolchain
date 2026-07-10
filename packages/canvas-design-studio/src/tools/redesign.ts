@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { auditAccessibility, type AccessibilityWarning } from './accessibility.js';
-import { runConformanceCheck } from './a11y/conformance.js';
+import { runPolicyConformanceCheck } from './a11y/policy.js';
 import type { CritiqueFinding } from './critique.js';
 import type { ConformanceReport } from '@canvas-toolchain/shared-types';
 
@@ -78,7 +78,7 @@ export async function redesignCanvasPage(input: RedesignInput): Promise<Redesign
   }
 
   const a11y = auditAccessibility(html);
-  const conformance = await runConformanceCheck(html);
+  const conformance = await runPolicyConformanceCheck(html);
 
   const result: RedesignResult = {
     html,
