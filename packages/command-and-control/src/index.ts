@@ -962,10 +962,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       case 'audit_course_accessibility':
         result = await auditCourseAccessibility(args as unknown as Parameters<typeof auditCourseAccessibility>[0]);
         break;
-      case 'review_accessibility_policy': {
-        const result = reviewAccessibilityPolicy(args as never);
-        return { content: [{ type: 'text', text: result.ok ? result.text! : JSON.stringify(result, null, 2) }] };
-      }
+      case 'review_accessibility_policy':
+        result = reviewAccessibilityPolicy(args as never);
+        break;
       case 'brainstorm_interactive':
         result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
         break;
