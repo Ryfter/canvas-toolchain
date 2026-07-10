@@ -18,7 +18,8 @@ import { listCanvasCourses } from './tools/list-courses.js';
 import type { ListCanvasCoursesInput } from './tools/list-courses.js';
 import { publishToCanvas } from './tools/publish.js';
 import type { PublishToCanvasInput } from './tools/publish.js';
-import { runConformanceCheck, formatConformanceReport } from './tools/a11y/conformance.js';
+import { formatConformanceReport } from './tools/a11y/conformance.js';
+import { runPolicyConformanceCheck } from './tools/a11y/policy.js';
 import { critiqueCanvasPage } from './tools/critique.js';
 import type { CritiqueInput } from './tools/critique.js';
 import { redesignCanvasPage } from './tools/redesign.js';
@@ -483,7 +484,7 @@ async function main() {
       if (name === 'validate_canvas_html') {
         const { html } = args as { html: string };
         const rce = validateCanvasHtml(html);
-        const conformance = await runConformanceCheck(html);
+        const conformance = await runPolicyConformanceCheck(html);
 
         const rceSummary = rce.valid
           ? '✓ Canvas RCE: HTML is Canvas-compliant. No violations found.'

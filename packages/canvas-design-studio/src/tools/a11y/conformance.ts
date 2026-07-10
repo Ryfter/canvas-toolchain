@@ -1,5 +1,5 @@
 import {
-  DEFAULT_REQUIRED_LEVEL, NOT_APPLICABLE_CANVAS, WCAG22_CRITERIA,
+  DEFAULT_REQUIRED_LEVEL, NOT_APPLICABLE_CANVAS, WCAG22_CRITERIA, WCAG3_DRAFT_DATE,
   computeVerdict, isBorderlineFinding, isWithinRequiredLevel,
   type AccessibilityFinding, type ConformanceReport, type RequiredLevel,
 } from '@canvas-toolchain/shared-types';
@@ -82,5 +82,18 @@ export function formatConformanceReport(report: ConformanceReport): string {
       review.slice(0, 6).map(c => c.sc).join(', ') + (review.length > 6 ? ', …' : ''),
       'Deep-check tools (free): WAVE browser extension, or MS Accessibility Insights — https://accessibilityinsights.io/downloads/');
   }
+
+  if (report.recommendedChecker) {
+    lines.push('', `${report.recommendedChecker} — the free browser extension covers login-gated Canvas pages; the paid WAVE API (wave_deep_check) works on public URLs only.`);
+  }
+  if (report.wcag3 && report.wcag3.length > 0) {
+    lines.push('', `WCAG 3 (pre-release draft ${WCAG3_DRAFT_DATE} — advisory only, never gates):`,
+      ...report.wcag3.map((w, i) => `${i + 1}. ${w.outcome} (maps from ${w.sc}): ${w.message}`),
+      'Draft outcomes with no 2.x analogue cannot be assessed automatically yet.');
+  }
+  if (report.policyNudge) {
+    lines.push('', `⏰ ${report.policyNudge}`);
+  }
+
   return lines.join('\n');
 }

@@ -242,6 +242,17 @@ Enable with `set_module_enabled` (module: `roster`).
 
 Enable with `set_module_enabled` (module: `peerassessment`).
 
+### 2.16 Command & Control — accessibility (WCAG conformance)
+
+| Tool | Key parameters | What it does |
+| --- | --- | --- |
+| `audit_course_accessibility` | **courseDir**, *outputDir* | Run the full WCAG 2.2 engine stack (in-house + axe-core) across every generated page, report per-page verdicts against the required conformance level, and refresh the borderline review queue. The regular between-semesters check. |
+| `accessibility_review_queue` | **courseDir**, *action* (list/resolve), *page*, *note* | The per-course "near the edge" worklist: borderline findings, needs-human-review criteria, and acknowledged publishes, worst-margin first with live Canvas URLs. `resolve` marks a page reviewed. The professor is the final arbiter. |
+| `review_accessibility_policy` | *confirm*, *urls*, *requiredConformance* (version + level), *recheckWeeks*, *wcag3Advisory* | View or update the institution accessibility-policy anchor: policy URLs, gate level (default WCAG 2.1 AA), re-verification cadence, and the WCAG 3 draft advisory toggle (never gates). `confirm: true` stamps today as last-verified after the professor re-reads the policy. |
+| `wave_deep_check` | **url**, *confirm*, *apiKey* | Deep check of a **publicly visible** page via the paid WAVE API (WebAIM). Two-call spend gate: first call previews the cost (~2 credits) and spends nothing; re-call with `confirm: true` to run. Auth-gated Canvas URLs are refused before any spend — use the free WAVE browser extension for those. |
+
+See [`accessibility.md`](accessibility.md) for how the publishing gate, acknowledgments, and review queue fit together.
+
 ---
 
 ## 3. API keys & secrets — what's asked for and why
@@ -259,6 +270,7 @@ All secrets are stored **locally** under `~/.command-and-control/` (override wit
 | **Panopto domain + client ID + client secret** | Panopto video API (OAuth2) | Lecture-video module: transcript download, video search, iframe embeds. Only when the Video module is enabled. | No | `panopto-config.json` | `setup_panopto` · installer screen 3 (secret masked, shown only if Panopto workflow selected) |
 | **Voyage API key** | Voyage AI embeddings | Optional cloud embeddings for the lecture-answers index (alternative to local Ollama / transformers.js). Only when `provider="voyage"`. | No | `lecture-answers-config.json` | `setup_lecture_answers` / `reembed_course_index` |
 | **Premium registry token** | Ryfter premium resource registry (`ryfter://`) | Authenticates premium template/theme downloads. The free GitHub registry always works without it. | No | `config.json` (`registry.token`, redacted in responses) | `setup_cc` |
+| **WAVE API key** | WebAIM WAVE API | Paid deep accessibility checks of publicly visible pages via `wave_deep_check`. Every call is preceded by a preview + explicit `confirm` (nothing spends credits silently). | No | `~/.canvas-design-mcp/institution.json` (`waveApiKey`) — CDS-owned config; a plain JSON write, not the atomic `0o600` store described above | `wave_deep_check` (*apiKey*, persisted on first use) |
 | **Ollama base URL + model** | Local Ollama server (not a secret) | Local LLM alternative to Anthropic for generation. No key — just an endpoint, usually `http://localhost:11434`. | No | `ollama-config.json` | `setup_ollama` |
 
 > Note: `Canvas API token` and `Voyage API key` are **config-file keys, not environment variables** — they are not read from `process.env`. (See §3.2 for the actual env-var list.)

@@ -4,7 +4,8 @@ import { ferpaGotcha, titleCollisionGotcha, versionControlTip } from './gotchas.
 import { formatError } from '../utils/errors.js';
 import { validateCanvasHtml } from './validate.js';
 import { auditAccessibility, type AccessibilityWarning } from './accessibility.js';
-import { runConformanceCheck, formatConformanceReport } from './a11y/conformance.js';
+import { formatConformanceReport } from './a11y/conformance.js';
+import { runPolicyConformanceCheck } from './a11y/policy.js';
 import { evaluateAcknowledgment, type A11yAcknowledgment, type AckEvaluation, type ConformanceReport } from '@canvas-toolchain/shared-types';
 import { appendAcknowledgment, type AcknowledgmentRecord } from './a11y/records.js';
 
@@ -352,7 +353,7 @@ export async function publishToCanvas(
   }
 
   const a11yWarnings = auditAccessibility(input.html);
-  const conformance = await runConformanceCheck(input.html);
+  const conformance = await runPolicyConformanceCheck(input.html);
 
   const ackEval = evaluateAcknowledgment(conformance, input.acknowledgeAccessibility);
   if (!ackEval.ok) {

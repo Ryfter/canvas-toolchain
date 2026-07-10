@@ -86,6 +86,18 @@ for borderline, a named-SC array for clear failures. Acknowledgments append to
 `<courseDir>/.a11y/acknowledgments.json` (see `src/tools/a11y/records.ts`, which also owns the
 borderline review queue store). FERPA and RCE validation gates are unchanged and run first.
 
+**Phase 3 (institution policy + WCAG 3 advisories + WAVE deep check):** new code should call
+`runPolicyConformanceCheck` (`src/tools/a11y/policy.ts`) instead of bare `runConformanceCheck`
+— it resolves the required conformance level from the stored `accessibilityPolicy`, decorates
+the report with the cadence nudge and the WCAG 3 draft advisory section, and is byte-identical
+to the bare check when no policy is configured. The same file owns `loadAccessibilityPolicy` /
+`saveAccessibilityPolicy` and `loadWaveApiKey` / `saveWaveApiKey`; both the policy block and the
+WAVE API key live in the institution config, never in this repo. The WAVE deep-check adapter
+(paid API, publicly-reachable pages only, with a pre-flight auth-gate refusal) lives in
+`src/tools/a11y/wave.ts` (`waveDeepCheck`). All seven conformance call sites (generate/redesign/
+publish/render-engine/validate here, plus C&C's `scan_warnings` and `audit_course_accessibility`)
+now go through `runPolicyConformanceCheck`.
+
 ---
 
 ## TL;DR Card (Content Priority Tiers, #66)

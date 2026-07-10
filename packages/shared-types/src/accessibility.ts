@@ -44,6 +44,12 @@ export interface ConformanceReport {
   findings: AccessibilityFinding[];               // at or below required level
   advisories: AccessibilityFinding[];             // beyond required level
   criteria: Array<{ sc: string; scName: string; status: CriterionStatus }>;
+  /** Phase 3 (spec §8): draft WCAG 3 advisories — present only when the policy toggle is on. */
+  wcag3?: Wcag3Advisory[];
+  /** Phase 3 (spec §7): cadence reminder — present only when re-verification is overdue. */
+  policyNudge?: string;
+  /** Phase 3 (spec §4): set when the institution's policy URLs name a recommended checker. */
+  recommendedChecker?: string;
 }
 
 export interface WcagCriterion {
@@ -226,4 +232,79 @@ export function evaluateAcknowledgment(
     report.findings.some(isBorderlineFinding),
     ack
   );
+}
+
+/** Institution accessibility policy (spec §7). Stored in the CDS institution config
+ *  (`accessibilityPolicy` block) — per-professor runtime data, never in this repo. */
+export interface AccessibilityPolicy {
+  /** Institution policy / guidance URLs the professor re-reads on cadence. */
+  urls: string[];
+  requiredConformance: RequiredLevel;
+  /** Re-verification cadence in weeks (default 4 — fits back-to-back 5-week summer sessions). */
+  recheckWeeks: number;
+  /** YYYY-MM-DD the professor last re-read the policy. Unset = never verified (no nudge). */
+  lastVerifiedAt?: string;
+  /** WCAG 3 draft advisory layer toggle (spec §8). Structurally incapable of gating. */
+  wcag3Advisory: boolean;
+}
+
+export const DEFAULT_ACCESSIBILITY_POLICY: AccessibilityPolicy = {
+  urls: [],
+  requiredConformance: DEFAULT_REQUIRED_LEVEL,
+  recheckWeeks: 4,
+  wcag3Advisory: false,
+};
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Cadence nudge (spec §7): due only when a verification date exists and has aged past
+ *  the cadence. Absent/never-verified policy never nags — the professor opted into
+ *  cadence tracking by stamping lastVerifiedAt via review_accessibility_policy. */
+export function policyNudge(policy: AccessibilityPolicy, now: Date = new Date()): string | undefined {
+  if (!policy.lastVerifiedAt) return undefined;
+  const verified = new Date(`${policy.lastVerifiedAt}T00:00:00Z`);
+  if (Number.isNaN(verified.getTime())) return undefined;
+  if (now.getTime() - verified.getTime() <= policy.recheckWeeks * WEEK_MS) return undefined;
+  const urls = policy.urls.length > 0 ? ` — re-read: ${policy.urls.join(' , ')}` : '';
+  return `Institution accessibility policy last verified ${policy.lastVerifiedAt}${urls}`;
+}
+
+/** W3C WCAG 3.0 Working Draft this mapping was built against. Revisit when W3C advances the spec. */
+export const WCAG3_DRAFT_DATE = '2024-12-12';
+
+/** 2.x SC → draft WCAG 3 outcome name (spec §8). Static, deliberately small: only
+ *  outcomes with a clear 2.x analogue; draft outcomes with no analogue can't be
+ *  automated and are noted in the report copy, not mapped. */
+export const WCAG3_OUTCOME_MAP: Record<string, string> = {
+  '1.1.1': 'Text alternatives',
+  '1.2.2': 'Captions',
+  '1.3.1': 'Structured content',
+  '1.4.3': 'Text and visual contrast',
+  '1.4.11': 'Non-text contrast',
+  '2.4.4': 'Link purpose',
+  '2.4.6': 'Section labels',
+  '2.5.8': 'Target size',
+  '3.1.1': 'Language',
+  '3.3.2': 'Form labels and instructions',
+  '4.1.2': 'Name, role, value',
+};
+
+export interface Wcag3Advisory {
+  sc: string;        // the 2.x SC the advisory maps from
+  outcome: string;   // draft WCAG 3 outcome name
+  message: string;   // the underlying finding's message
+}
+
+export function mapFindingsToWcag3(findings: AccessibilityFinding[]): Wcag3Advisory[] {
+  const out: Wcag3Advisory[] = [];
+  const seen = new Set<string>();
+  for (const f of findings) {
+    const outcome = WCAG3_OUTCOME_MAP[f.sc];
+    if (!outcome) continue;
+    const key = `${f.sc}|${f.message}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ sc: f.sc, outcome, message: f.message });
+  }
+  return out;
 }

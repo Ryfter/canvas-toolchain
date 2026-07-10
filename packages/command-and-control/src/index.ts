@@ -82,6 +82,8 @@ import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
 import { auditCourseAccessibility } from './tools/workflows/audit_course_accessibility.js';
+import { reviewAccessibilityPolicy } from './tools/review_accessibility_policy.js';
+import { waveDeepCheckTool } from './tools/wave_deep_check.js';
 import { loadModules } from './modules/registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
@@ -665,6 +667,40 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'review_accessibility_policy',
+      description:
+        "The institution accessibility policy anchor (spec §7): shows the policy URLs, required conformance level, cadence, and last-verified date; confirm: true stamps today's date after the professor re-reads the policy. Also accepts updates to urls / requiredConformance / recheckWeeks / wcag3Advisory so nobody edits JSON by hand. Default level: WCAG 2.1 AA (ADA Title II baseline).",
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          confirm: { type: 'boolean', description: 'The professor re-read the policy today — stamp lastVerifiedAt.' },
+          urls: { type: 'array', items: { type: 'string' }, description: 'Institution policy / guidance URLs.' },
+          requiredConformance: {
+            type: 'object',
+            properties: { version: { type: 'string', enum: ['2.0', '2.1', '2.2'] }, level: { type: 'string', enum: ['A', 'AA', 'AAA'] } },
+            required: ['version', 'level'],
+            description: 'Gate level. Default WCAG 2.1 AA.',
+          },
+          recheckWeeks: { type: 'number', description: 'Re-verification cadence in weeks (default 4).' },
+          wcag3Advisory: { type: 'boolean', description: 'Toggle the WCAG 3 draft advisory section (never gates).' },
+        },
+      },
+    },
+    {
+      name: 'wave_deep_check',
+      description:
+        'Deep accessibility check of a PUBLICLY-visible page via the paid WAVE API (WebAIM). Two-call spend gate: first call previews the cost (~2 credits) and runs nothing; re-call with confirm: true to spend. Auth-gated Canvas URLs are refused before any spend — use the free WAVE browser extension or MS Accessibility Insights for those. Optional apiKey is saved to the institution config on first use.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['url'],
+        properties: {
+          url: { type: 'string', description: 'Publicly reachable page URL.' },
+          confirm: { type: 'boolean', description: 'Explicit approval to spend WAVE credits.' },
+          apiKey: { type: 'string', description: 'WAVE API key (https://wave.webaim.org/api/); persisted on first use.' },
+        },
+      },
+    },
+    {
       name: 'brainstorm_interactive',
       description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via setup_anthropic.',
       inputSchema: {
@@ -941,6 +977,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       case 'audit_course_accessibility':
         result = await auditCourseAccessibility(args as unknown as Parameters<typeof auditCourseAccessibility>[0]);
         break;
+      case 'review_accessibility_policy':
+        result = reviewAccessibilityPolicy(args as never);
+        break;
+      case 'wave_deep_check': {
+        result = await waveDeepCheckTool(args as never);
+        break;
+      }
       case 'brainstorm_interactive':
         result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
         break;

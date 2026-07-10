@@ -8,7 +8,7 @@ Canvas Toolchain is an **instructor-led system for refreshing, improving, and sa
 
 **Canvas-safe page generation.** Turn course markdown, assignment briefs, and imported content into polished HTML designed for Canvas's editor restrictions, templates, brand colors, and reusable page patterns.
 
-**Accessibility and quality checks.** Validate generated pages for Canvas compatibility, accessibility, structure, and design issues before students see them.
+**Accessibility and quality checks.** Validate generated pages for Canvas compatibility, accessibility, structure, and design issues before students see them. An optional institution accessibility policy (required WCAG level, re-verification cadence, a WCAG 3 draft-advisory toggle) anchors the gate to your institution's own guidance, and an opt-in deep-check adapter runs the paid WAVE API against publicly reachable pages — the free WAVE browser extension remains the recommended route for login-gated Canvas pages.
 
 **Canvas management and safe publishing.** Use manual paste or the Canvas API path, with previews, page-by-page approvals, snapshots, rollback, publish history, course listing, and single-page or full-course publishing.
 

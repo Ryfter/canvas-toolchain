@@ -1,6 +1,6 @@
 import { resolveTokens } from '../design-engine.js';
 import { validateCanvasHtml } from './validate.js';
-import { runConformanceCheck } from './a11y/conformance.js';
+import { runPolicyConformanceCheck } from './a11y/policy.js';
 import type { ConformanceReport } from '@canvas-toolchain/shared-types';
 import type { InstitutionConfig } from '../types.js';
 
@@ -103,7 +103,7 @@ export async function generateCanvasPage(input: GenerateInput, config: Instituti
   }, config);
 
   const validation = validateCanvasHtml(html);
-  const conformance = await runConformanceCheck(html);
+  const conformance = await runPolicyConformanceCheck(html);
   const warnings = [
     ...validation.violations.map(v => v.rule),
     ...[...conformance.findings, ...conformance.advisories]
