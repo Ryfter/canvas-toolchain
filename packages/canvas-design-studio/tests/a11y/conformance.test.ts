@@ -92,3 +92,26 @@ describe('formatConformanceReport', () => {
     expect(text).toContain('PASS');
   });
 });
+
+describe('formatConformanceReport — Phase 3 sections', () => {
+  it('renders recommended checker, WCAG 3 draft section, and policy nudge when present', async () => {
+    const report = await runConformanceCheck('<p>Course intro. <a href="https://example.edu/syllabus">click here</a></p>');
+    report.recommendedChecker = "Your institution's published guidance recommends WAVE (https://www.example.edu/publishing/wave-evaluation-tool/)";
+    report.wcag3 = [{ sc: '2.4.4', outcome: 'Link purpose', message: 'vague link text' }];
+    report.policyNudge = 'Institution accessibility policy last verified 2026-05-01 — re-read: https://www.example.edu/accessibility/';
+
+    const text = formatConformanceReport(report);
+    expect(text).toContain('recommends WAVE');
+    expect(text).toContain('WCAG 3 (pre-release draft');
+    expect(text).toContain('advisory only');
+    expect(text).toContain('Link purpose (maps from 2.4.4)');
+    expect(text).toContain('last verified 2026-05-01');
+  });
+
+  it('renders none of the Phase 3 sections on a plain report', async () => {
+    const report = await runConformanceCheck('<p>hello</p>');
+    const text = formatConformanceReport(report);
+    expect(text).not.toContain('WCAG 3');
+    expect(text).not.toContain('last verified');
+  });
+});
