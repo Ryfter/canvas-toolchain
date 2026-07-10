@@ -17,7 +17,7 @@ import { pruneSnapshots, type PruneSnapshotsResult } from '../publish/pruning.js
 import { cleanupCanvasBreadcrumbsForSnapshot, createPageBreadcrumb, uploadWidgetBreadcrumb } from '../publish/breadcrumbs.js';
 import { loadCanvasConfig } from '../setup_canvas.js';
 import { updatePageMetaEntry } from '../publish/pages_meta.js';
-import { validateApprovals } from '../publish/approvals.js';
+import { validateApprovals, entryKeyLookup } from '../publish/approvals.js';
 import { detectGitState, gitCommitPrePublish, gitTagSuccess, gitPushTag } from '../publish/git_state.js';
 import { detectBackupState } from '../publish/backup_detection.js';
 import {
@@ -34,6 +34,9 @@ import type { ApprovalMap } from '../publish/approvals.js';
 
 export interface PublishCourseInput {
   snapshotId: string;
+  /** approve|skip per non-skipped manifest entry. Keys are the output-relative path
+   *  shown by preview_course_publish (#111); a bare filename is accepted for
+   *  pre-#111 snapshots and when unambiguous across the manifest (Phase 3 Task 8). */
   approvals: ApprovalMap;
   resume?: boolean;
   gitCommit?: boolean;
@@ -42,8 +45,11 @@ export interface PublishCourseInput {
    *  to setup_canvas.canvasBreadcrumbs (default enabled). */
   canvasBreadcrumbs?: boolean;
   /** Per-file accessibility acknowledgments (spec §3): true = borderline-only;
-   *  string[] = named clear-failure SCs. Recorded to <courseDir>/.a11y/. */
-  a11yAcknowledgments?: { [filename: string]: true | string[] };
+   *  string[] = named clear-failure SCs. Recorded to <courseDir>/.a11y/.
+   *  Keys are the output-relative path shown by preview_course_publish (#111);
+   *  a bare filename is accepted for pre-#111 snapshots and when unambiguous
+   *  across the manifest (Phase 3 Task 8). */
+  a11yAcknowledgments?: { [relPathOrFilename: string]: true | string[] };
 }
 
 /** Optional dependency-injection hooks for tests. Production callers pass nothing. */
@@ -258,7 +264,7 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
 
   for (const entry of manifest.entries) {
     if (entry.type === 'skipped') continue;
-    if (input.approvals[entry.filename] !== 'approve') continue;
+    if (entryKeyLookup(input.approvals, entry) !== 'approve') continue;
     if (alreadyPublished.has(entry.filename)) continue;
     const entryWarnings = 'warnings' in entry ? entry.warnings : [];
     // Canonical review-queue page key (#111): output-relative, forward-slashed path,
@@ -273,7 +279,7 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
       writeState(dir, { phase: 'partial', published, failed, lastUpdatedAt: failed.failedAt });
       return { snapshotId: input.snapshotId, phase: 'partial', published, failed };
     }
-    const a11yGate = evaluateEntryA11yGate(entryWarnings, input.a11yAcknowledgments?.[entry.filename]);
+    const a11yGate = evaluateEntryA11yGate(entryWarnings, entryKeyLookup(input.a11yAcknowledgments, entry));
     if (!a11yGate.ok) {
       const failed: FailedEntry = {
         filename: entry.filename, type: entry.type,
@@ -285,8 +291,8 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
         snapshotId: input.snapshotId, phase: 'partial', published, failed,
         fix: [
           a11yGate.tier === 'fail'
-            ? `Fix the findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${entry.filename}": [${a11yGate.requiredScs.map(s => `"${s}"`).join(', ')}] } to publish past the named failures. The professor is the final arbiter; acknowledgments are recorded.`
-            : `Fix the borderline findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${entry.filename}": true } after reviewing them.`,
+            ? `Fix the findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${queuePage}": [${a11yGate.requiredScs.map(s => `"${s}"`).join(', ')}] } to publish past the named failures. The professor is the final arbiter; acknowledgments are recorded.`
+            : `Fix the borderline findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${queuePage}": true } after reviewing them.`,
         ],
       };
     }
@@ -337,7 +343,7 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
         const out = await publishToCanvas(
           { courseId: manifest.courseId, html: rewrittenHtml, pageTitle: entry.intendedTitle,
             collisionAction: entry.canvasMatch ? 'update' : 'create',
-            acknowledgeAccessibility: input.a11yAcknowledgments?.[entry.filename],
+            acknowledgeAccessibility: entryKeyLookup(input.a11yAcknowledgments, entry),
             // #113: canonical record key so page-branch acknowledgments match the
             // assignment branch and the review queue (relPath, not Canvas title).
             a11yPageKey: queuePage,
@@ -360,8 +366,8 @@ export async function publishCourse(input: PublishCourseInput, hooks: PublishCou
             snapshotId: input.snapshotId, phase: 'partial', published, failed,
             fix: [
               requiredScs.length > 0
-                ? `The Canvas-ready HTML (widget URLs substituted) failed the accessibility re-check. Fix the findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${entry.filename}": [${requiredScs.map(s => `"${s}"`).join(', ')}] } with resume:true to publish past the named failures. The professor is the final arbiter; acknowledgments are recorded.`
-                : `The Canvas-ready HTML (widget URLs substituted) has borderline accessibility findings. Fix them and re-run preview_course_publish, or pass a11yAcknowledgments: { "${entry.filename}": true } with resume:true after reviewing them.`,
+                ? `The Canvas-ready HTML (widget URLs substituted) failed the accessibility re-check. Fix the findings and re-run preview_course_publish, or pass a11yAcknowledgments: { "${queuePage}": [${requiredScs.map(s => `"${s}"`).join(', ')}] } with resume:true to publish past the named failures. The professor is the final arbiter; acknowledgments are recorded.`
+                : `The Canvas-ready HTML (widget URLs substituted) has borderline accessibility findings. Fix them and re-run preview_course_publish, or pass a11yAcknowledgments: { "${queuePage}": true } with resume:true after reviewing them.`,
             ],
           };
         }

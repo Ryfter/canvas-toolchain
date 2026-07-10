@@ -437,3 +437,31 @@ describe('publishCourse — margin flows from Warning into the review queue (#11
     expect(sorted[0]!.page).toBe('week-01/overview.html');
   });
 });
+
+describe('publishCourse — relPath-keyed approvals and acknowledgments (Phase 3)', () => {
+  it('publishes with both maps keyed by relPath', async () => {
+    seedSnapshot('snap-relpath-maps', [
+      PAGE_ENTRY('overview.html', 'Week 1 Overview', [BORDERLINE_WARNING], 'week-01/overview.html'),
+    ]);
+    const result = await publishCourse({
+      snapshotId: 'snap-relpath-maps',
+      approvals: { 'week-01/overview.html': 'approve' },
+      a11yAcknowledgments: { 'week-01/overview.html': true },
+      canvasBreadcrumbs: false,
+    });
+    expect(result.phase).toBe('published');
+  });
+
+  it('gate fix text names the relPath key, not the bare filename', async () => {
+    seedSnapshot('snap-relpath-fix', [
+      PAGE_ENTRY('overview.html', 'Week 1 Overview', [CLEAR_WARNING], 'week-01/overview.html'),
+    ]);
+    const result = await publishCourse({
+      snapshotId: 'snap-relpath-fix',
+      approvals: { 'week-01/overview.html': 'approve' },
+      canvasBreadcrumbs: false,
+    });
+    expect(result.failed?.code).toBe('ACCESSIBILITY_ACK_REQUIRED');
+    expect(result.fix?.[0]).toContain('"week-01/overview.html"');
+  });
+});
