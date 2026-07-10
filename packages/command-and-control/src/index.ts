@@ -82,6 +82,7 @@ import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
 import { auditCourseAccessibility } from './tools/workflows/audit_course_accessibility.js';
+import { reviewAccessibilityPolicy } from './tools/review_accessibility_policy.js';
 import { loadModules } from './modules/registry.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
@@ -665,6 +666,26 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'review_accessibility_policy',
+      description:
+        "The institution accessibility policy anchor (spec §7): shows the policy URLs, required conformance level, cadence, and last-verified date; confirm: true stamps today's date after the professor re-reads the policy. Also accepts updates to urls / requiredConformance / recheckWeeks / wcag3Advisory so nobody edits JSON by hand. Default level: WCAG 2.1 AA (ADA Title II baseline).",
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          confirm: { type: 'boolean', description: 'The professor re-read the policy today — stamp lastVerifiedAt.' },
+          urls: { type: 'array', items: { type: 'string' }, description: 'Institution policy / guidance URLs.' },
+          requiredConformance: {
+            type: 'object',
+            properties: { version: { type: 'string', enum: ['2.0', '2.1', '2.2'] }, level: { type: 'string', enum: ['A', 'AA', 'AAA'] } },
+            required: ['version', 'level'],
+            description: 'Gate level. Default WCAG 2.1 AA.',
+          },
+          recheckWeeks: { type: 'number', description: 'Re-verification cadence in weeks (default 4).' },
+          wcag3Advisory: { type: 'boolean', description: 'Toggle the WCAG 3 draft advisory section (never gates).' },
+        },
+      },
+    },
+    {
       name: 'brainstorm_interactive',
       description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via setup_anthropic.',
       inputSchema: {
@@ -941,6 +962,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       case 'audit_course_accessibility':
         result = await auditCourseAccessibility(args as unknown as Parameters<typeof auditCourseAccessibility>[0]);
         break;
+      case 'review_accessibility_policy': {
+        const result = reviewAccessibilityPolicy(args as never);
+        return { content: [{ type: 'text', text: result.ok ? result.text! : JSON.stringify(result, null, 2) }] };
+      }
       case 'brainstorm_interactive':
         result = await brainstormInteractive(args as unknown as BrainstormInteractiveInput);
         break;
