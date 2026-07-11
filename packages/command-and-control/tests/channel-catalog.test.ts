@@ -1,0 +1,86 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { sha256File } from '../src/channel/hash.js';
+import {
+  validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION,
+} from '../src/channel/catalog.js';
+
+const GOOD_ENTRY = {
+  id: 'announcements', name: 'Announcements Auditor', description: 'Audit scheduled announcements.',
+  version: '1.0.0', minHostVersion: '2.0.0',
+  artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.0.0/module-announcements-1.0.0.mjs',
+  sha256: 'a'.repeat(64), sizeBytes: 1234,
+};
+const GOOD_CATALOG = { catalogVersion: SUPPORTED_CATALOG_VERSION, modules: [GOOD_ENTRY] };
+
+function fakeFetch(status: number, body: unknown): typeof fetch {
+  return (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
+}
+
+let dir: string;
+beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'cc-catalog-')); });
+afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+describe('sha256File', () => {
+  it('hashes file contents as lowercase hex', async () => {
+    const f = join(dir, 'x.bin');
+    writeFileSync(f, 'hello');
+    // echo -n hello | sha256sum
+    expect(await sha256File(f)).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
+  });
+});
+
+describe('validateCatalog', () => {
+  it('accepts a well-formed catalog', () => {
+    expect(validateCatalog(GOOD_CATALOG).modules[0].id).toBe('announcements');
+  });
+  it('refuses a newer catalogVersion with CATALOG_VERSION_UNSUPPORTED', () => {
+    expect(() => validateCatalog({ ...GOOD_CATALOG, catalogVersion: 2 }))
+      .toThrowError(expect.objectContaining({ code: 'CATALOG_VERSION_UNSUPPORTED' }));
+  });
+  it('refuses entries missing required fields or with a malformed sha256', () => {
+    const bad = { ...GOOD_ENTRY, sha256: 'nothex' };
+    expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+      .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    const missing = { ...GOOD_ENTRY } as Record<string, unknown>;
+    delete missing.artifactUrl;
+    expect(() => validateCatalog({ catalogVersion: 1, modules: [missing] }))
+      .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+  });
+  it('ignores unknown fields (forward compatibility)', () => {
+    const entry = { ...GOOD_ENTRY, futureField: 'ok' };
+    expect(validateCatalog({ catalogVersion: 1, modules: [entry], futureTop: true }).modules).toHaveLength(1);
+  });
+});
+
+describe('fetchCatalog', () => {
+  it('fetches, validates, and writes the cache', async () => {
+    const cachePath = join(dir, 'cache.json');
+    const cat = await fetchCatalog({ fetchImpl: fakeFetch(200, GOOD_CATALOG), cachePath });
+    expect(cat.modules[0].id).toBe('announcements');
+    expect(existsSync(cachePath)).toBe(true);
+  });
+  it('serves a fresh cache without fetching', async () => {
+    const cachePath = join(dir, 'cache.json');
+    writeFileSync(cachePath, JSON.stringify({ fetchedAt: new Date().toISOString(), catalog: GOOD_CATALOG }));
+    let called = false;
+    const spy: typeof fetch = (async () => { called = true; return new Response('{}'); }) as unknown as typeof fetch;
+    const cat = await fetchCatalog({ fetchImpl: spy, cachePath });
+    expect(cat.modules).toHaveLength(1);
+    expect(called).toBe(false);
+  });
+  it('falls back to a stale cache when the network fails', async () => {
+    const cachePath = join(dir, 'cache.json');
+    writeFileSync(cachePath, JSON.stringify({ fetchedAt: '2000-01-01T00:00:00Z', catalog: GOOD_CATALOG }));
+    const failing: typeof fetch = (async () => { throw new Error('offline'); }) as unknown as typeof fetch;
+    const cat = await fetchCatalog({ fetchImpl: failing, cachePath });
+    expect(cat.modules[0].id).toBe('announcements');
+  });
+  it('throws CATALOG_UNREACHABLE when the network fails and no cache exists', async () => {
+    const failing: typeof fetch = (async () => { throw new Error('offline'); }) as unknown as typeof fetch;
+    await expect(fetchCatalog({ fetchImpl: failing, cachePath: join(dir, 'none.json') }))
+      .rejects.toMatchObject({ code: 'CATALOG_UNREACHABLE' });
+  });
+});
