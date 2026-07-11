@@ -1,9 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { discoverTools } from '../../src/tools/discover_tools.js';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
+
+// discoverTools now also does a best-effort channel-catalog pass (matchCatalogSuggestions)
+// via the module-scoped `fetch`, independent of the per-test `deps.fetchFn` used for the
+// Canvas scan. Isolate CC_HOME and stub global fetch to keep these tests offline and away
+// from the real ~/.command-and-control directory.
+let ccHome: string;
+beforeEach(() => {
+  ccHome = mkdtempSync(join(tmpdir(), 'cc-discover-'));
+  process.env.CC_HOME = ccHome;
+  vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+});
+afterEach(() => {
+  delete process.env.CC_HOME;
+  rmSync(ccHome, { recursive: true, force: true });
+  vi.unstubAllGlobals();
+});
 
 describe('discoverTools', () => {
   it('reports matched modules + unmatched + pick-list from an account scan', async () => {

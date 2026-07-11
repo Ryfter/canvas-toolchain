@@ -3,6 +3,9 @@ import { listModules, type ModuleInfo } from './list_modules.js';
 import { loadCatalog } from '../discovery/catalog.js';
 import { scanCanvasTools, type InstitutionConfigLike } from '../discovery/canvas_scan.js';
 import { matchDetected, type ModuleStateLike } from '../discovery/match.js';
+import { fetchCatalog } from '../channel/catalog.js';
+import { loadInstalledModules } from '../channel/installed.js';
+import { matchCatalogSuggestions } from './module_channel_tools.js';
 
 // No inputs today (the scan auto-cascades). Kept as a named type for the tool signature.
 export type DiscoverToolsInput = Record<string, never>;
@@ -20,6 +23,7 @@ export interface DiscoverToolsReport {
   matchedModules: Array<{ tool: string; module: string; enabled: boolean }>;
   unmatched: string[];
   catalogPickList: Array<{ id: string; name: string; module: string | null; recommended?: boolean }>;
+  catalogSuggestions: Array<{ id: string; name: string; reason: string; install: string }>;
 }
 
 const defaultDeps: DiscoverToolsDeps = {
@@ -56,6 +60,20 @@ export async function discoverTools(
   }));
   const { matchedModules, unmatched } = matchDetected(catalog, mods, scan.tools);
 
+  let catalogSuggestions: Array<{ id: string; name: string; reason: string; install: string }> = [];
+  try {
+    const channelCatalog = await fetchCatalog();
+    const knownOrInstalled = new Set([
+      ...mods.map((m) => m.id),
+      ...Object.keys(loadInstalledModules().modules),
+    ]);
+    catalogSuggestions = matchCatalogSuggestions(
+      scan.tools.map((t) => t.rawName), channelCatalog, knownOrInstalled,
+    );
+  } catch {
+    // Offline / no catalog — discovery works exactly as before.
+  }
+
   return {
     scanTier: scan.tier,
     gaps: scan.gaps,
@@ -63,5 +81,6 @@ export async function discoverTools(
     matchedModules,
     unmatched,
     catalogPickList: pickList,
+    catalogSuggestions,
   };
 }
