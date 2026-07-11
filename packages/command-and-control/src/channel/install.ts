@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fetchCatalog, CatalogError, type ModuleCatalog, type CatalogEntry } from './catalog.js';
 import { sha256File } from './hash.js';
@@ -37,6 +37,26 @@ function previewOf(entry: CatalogEntry, action: 'install' | 'upgrade'): Record<s
     handles: entry.handles ?? [],
     note: 'Nothing has been downloaded. Call install_module again with confirm: true to install.',
   };
+}
+
+/**
+ * Removes the placed-but-not-yet-coherent version directory, then removes its parent
+ * module-id directory too, but ONLY if that leaves it empty — an upgrade's still-good
+ * previous version (a sibling version dir) must survive a failed upgrade attempt.
+ * Best-effort: a blocked/unreadable parent (e.g. a file occupying the id path) is left
+ * alone rather than raising, since this runs from inside an existing catch handler.
+ */
+function cleanupPlacementDir(dest: string): void {
+  const versionDir = dirname(dest);
+  rmSync(versionDir, { recursive: true, force: true });
+  try {
+    const idDir = dirname(versionDir);
+    if (existsSync(idDir) && readdirSync(idDir).length === 0) {
+      rmSync(idDir, { recursive: true, force: true });
+    }
+  } catch {
+    // best-effort cleanup only; leaving a blocked/empty parent behind is not fatal
+  }
 }
 
 /** Thrown when a download body exceeds the catalog-declared size (memory/tamper cap). */
@@ -143,12 +163,27 @@ export async function installModule(
       'check https://github.com/Ryfter/canvas-toolchain for a catalog correction.');
   }
 
-  // Place + record — still fail-closed: any failure deletes temp state and refuses.
+  // Place, record, and finish bookkeeping in three stages. Each stage's cleanup only
+  // undoes what isn't yet coherent — once artifact + record agree (end of Stage B),
+  // later failures must never delete a completed install (spec: staged cleanup).
   const dest = artifactPath(entry.id, entry.version);
+
+  // Stage A — placement. On failure, nothing is recorded yet: clean up everything.
   try {
     mkdirSync(dirname(dest), { recursive: true });
     renameSync(tmpFile, dest);
+  } catch (err) {
+    rmSync(tmpFile, { force: true });
+    cleanupPlacementDir(dest);
+    const msg = err instanceof Error ? err.message : String(err);
+    return refusal('INSTALL_FAILED',
+      `Could not place the verified artifact (${msg}). ` +
+      'Nothing was installed; retry after resolving the underlying issue.');
+  }
 
+  // Stage B — record. Artifact is placed but not yet recorded; on failure the artifact
+  // would be an orphan (the loader only loads recorded modules), so remove it.
+  try {
     installed.modules[entry.id] = {
       id: entry.id,
       version: entry.version,
@@ -157,19 +192,32 @@ export async function installModule(
       ...(existing ? { previous: { version: existing.version, sha256: existing.sha256 } } : {}),
     };
     saveInstalledModules(installed);
+  } catch (err) {
+    cleanupPlacementDir(dest);
+    const msg = err instanceof Error ? err.message : String(err);
+    return refusal('INSTALL_FAILED',
+      `Could not record the installed module (${msg}). ` +
+      'The artifact was removed; nothing is installed. Retry after resolving the underlying issue.');
+  }
 
+  // Stage C — post-install bookkeeping. The install IS complete and coherent (artifact +
+  // record agree). Failures here must never delete anything or report failure — at worst
+  // they degrade to a warning (manifest enable) or a logged, swallowed error (pending cleanup).
+  let warning: string | undefined;
+  try {
     const manifest = loadModuleManifest();
     manifest.modules[entry.id] = { ...manifest.modules[entry.id], enabled: true };
     saveModuleManifest(manifest);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    warning = `Installed, but could not enable the module (${msg}). ` +
+      `Enable it manually: set_module_enabled({ module: "${entry.id}", enabled: true }).`;
+  }
 
+  try {
     removePendingModule(entry.id);
   } catch (err) {
-    rmSync(tmpFile, { force: true });
-    rmSync(dirname(dest), { recursive: true, force: true });
-    const msg = err instanceof Error ? err.message : String(err);
-    return refusal('INSTALL_FAILED',
-      `Could not place or record the verified artifact (${msg}). ` +
-      'Nothing was installed; retry after resolving the underlying issue.');
+    console.error(`installModule: removePendingModule('${entry.id}') failed:`, err);
   }
 
   return {
@@ -177,6 +225,7 @@ export async function installModule(
     id: entry.id,
     version: entry.version,
     note: 'Takes effect on the next Claude reconnect/restart (modules load at startup).',
+    ...(warning ? { warning } : {}),
   };
 }
 

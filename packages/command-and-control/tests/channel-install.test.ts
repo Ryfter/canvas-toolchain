@@ -159,6 +159,39 @@ describe('installModule', () => {
       expect(parsed.modules?.announcements).toBeUndefined();
     }
   });
+
+  it('record-write failure rolls back placement (Stage B)', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const { mkdirSync } = await import('node:fs');
+    mkdirSync(join(home), { recursive: true });
+    mkdirSync(join(home, 'installed-modules.json.tmp'));
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith(), hostVersion: '2.0.0', fetchImpl: artifactFetch },
+    );
+    expect(res.error).toBe('INSTALL_FAILED');
+    expect(existsSync(join(home, 'modules', 'announcements'))).toBe(false);
+    expect(existsSync(join(home, 'installed-modules.json'))).toBe(false);
+    const tmpDir = join(home, 'modules', '.tmp');
+    if (existsSync(tmpDir)) {
+      expect(readdirSync(tmpDir)).toEqual([]);
+    }
+  });
+
+  it('manifest-enable failure preserves the install and warns (Stage C)', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const { artifactPath, loadInstalledModules } = await import('../src/channel/installed.js');
+    const { mkdirSync } = await import('node:fs');
+    mkdirSync(join(home, 'modules.json.tmp'));
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith(), hostVersion: '2.0.0', fetchImpl: artifactFetch },
+    );
+    expect(res.installed).toBe(true);
+    expect(String(res.warning)).toContain('set_module_enabled');
+    expect(existsSync(artifactPath('announcements', '1.0.0'))).toBe(true);
+    expect(loadInstalledModules().modules.announcements.version).toBe('1.0.0');
+  });
 });
 
 describe('uninstallModule', () => {
