@@ -30,12 +30,15 @@ type State struct {
 	PanoptoClientID string
 	PanoptoSecret   string
 
-	InstalledPython        bool
-	ConnectHosts           map[string]bool
-	WiredHosts             map[string]bool
-	ValidationAnthropic    StepResult
-	ValidationCanvas       StepResult
-	ValidationPanopto      StepResult
+	InstalledPython bool
+	ConnectHosts    map[string]bool
+	WiredHosts      map[string]bool
+	// RequestedModules holds catalog module ids the user asked to have
+	// installed via chat after setup (written as a pending-request file).
+	RequestedModules    map[string]bool
+	ValidationAnthropic StepResult
+	ValidationCanvas    StepResult
+	ValidationPanopto   StepResult
 
 	Version string
 }
@@ -59,11 +62,12 @@ func DefaultInstallDir() string {
 
 func NewState(version string) *State {
 	return &State{
-		Version:        version,
-		InstallDir:     DefaultInstallDir(),
-		Mode:           ModeFresh,
-		WorkflowCanvas: true,
-		ConnectHosts:   map[string]bool{},
-		WiredHosts:     map[string]bool{},
+		Version:          version,
+		InstallDir:       DefaultInstallDir(),
+		Mode:             ModeFresh,
+		WorkflowCanvas:   true,
+		ConnectHosts:     map[string]bool{},
+		WiredHosts:       map[string]bool{},
+		RequestedModules: map[string]bool{},
 	}
 }

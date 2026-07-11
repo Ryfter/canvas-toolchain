@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -185,6 +186,17 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 		{Name: "Write module manifest", Warn: true, Run: func(ctx context.Context) error {
 			return tasks.WriteModulesManifest(tasks.CcHomePath(), st.WorkflowPanopto)
 		}},
+		{Name: "Record requested modules", Run: func(ctx context.Context) error {
+			ids := make([]string, 0, len(st.RequestedModules))
+			for id, want := range st.RequestedModules {
+				if want {
+					ids = append(ids, id)
+				}
+			}
+			sort.Strings(ids)
+			_, err := tasks.WritePendingModuleRequests(tasks.CcHomePath(), ids)
+			return err
+		}},
 		{Name: "Python (optional)", Skip: func() bool { return !st.OptInPython }, Warn: true, Run: func(ctx context.Context) error {
 			err := tasks.InstallPython(ctx)
 			if err == nil {
@@ -231,6 +243,7 @@ func installRowLabels() []string {
 		"Build TypeScript packages",
 		"Write per-feature config files",
 		"Write module manifest",
+		"Record requested modules",
 		"Install optional Python 3",
 		"Connect MCP-capable apps",
 		"Install updater + shortcut",
