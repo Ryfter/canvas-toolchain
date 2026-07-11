@@ -47,8 +47,12 @@ function previewOf(entry: CatalogEntry, action: 'install' | 'upgrade'): Record<s
  * alone rather than raising.
  */
 function removeVersionDir(versionDir: string): void {
-  rmSync(versionDir, { recursive: true, force: true });
   try {
+    // On Node 20, rmSync throws ENOTDIR (not swallowed by force) when a path
+    // COMPONENT is a regular file — e.g. the placement-failure case where the
+    // module-id path itself is a file. Cleanup must never mask the structured
+    // refusal this runs under, so the whole body is best-effort.
+    rmSync(versionDir, { recursive: true, force: true });
     const idDir = dirname(versionDir);
     if (existsSync(idDir) && readdirSync(idDir).length === 0) {
       rmSync(idDir, { recursive: true, force: true });
