@@ -70,8 +70,9 @@ export async function discoverTools(
     catalogSuggestions = matchCatalogSuggestions(
       scan.tools.map((t) => t.rawName), channelCatalog, knownOrInstalled,
     );
-  } catch {
-    // Offline / no catalog — discovery works exactly as before.
+  } catch (err) {
+    // Best-effort only — discovery must never fail because of the catalog.
+    console.error(`[discovery] module-catalog suggestions unavailable: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   return {

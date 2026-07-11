@@ -4,9 +4,35 @@ import { loadPendingRequests, clearPendingRequests } from '../channel/pending.js
 import { loadModuleManifest } from '../modules/manifest.js';
 import { knownModuleIds } from '../modules/registry.js';
 import { compareVersions } from '../update/check.js';
+import { installModule, uninstallModule, type InstallDeps } from '../channel/install.js';
+import { checkChannelNotices } from '../channel/notices.js';
 
 export { installModule } from '../channel/install.js';
 export { uninstallModule } from '../channel/install.js';
+
+/** install_module handler: runs the engine, then refreshes the cached channel
+ *  notices on success so a fulfilled pending request stops nagging mid-session. */
+export async function installModuleTool(
+  args: { moduleId: string; confirm?: boolean },
+  deps: InstallDeps = {},
+): Promise<Record<string, unknown>> {
+  const res = await installModule(args, deps);
+  if (res.installed) {
+    await checkChannelNotices({ fetchImpl: deps.fetchImpl, catalog: deps.catalog }).catch(() => {});
+  }
+  return res;
+}
+
+export async function uninstallModuleTool(
+  args: { moduleId: string },
+  deps: { knownIds?: string[]; fetchImpl?: typeof fetch } = {},
+): Promise<Record<string, unknown>> {
+  const res = uninstallModule(args, { knownIds: deps.knownIds });
+  if (res.uninstalled) {
+    await checkChannelNotices({ fetchImpl: deps.fetchImpl }).catch(() => {});
+  }
+  return res;
+}
 
 export interface BrowseDeps { fetchImpl?: typeof fetch; catalog?: ModuleCatalog }
 

@@ -86,7 +86,7 @@ import { reviewAccessibilityPolicy } from './tools/review_accessibility_policy.j
 import { waveDeepCheckTool } from './tools/wave_deep_check.js';
 import { loadModules } from './modules/registry.js';
 import { checkChannelNotices, getChannelNotices } from './channel/notices.js';
-import { browseModuleCatalog, installModule, uninstallModule } from './tools/module_channel_tools.js';
+import { browseModuleCatalog, installModuleTool, uninstallModuleTool } from './tools/module_channel_tools.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -905,11 +905,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       }
       case 'install_module': {
-        result = await installModule(args as { moduleId: string; confirm?: boolean });
+        result = await installModuleTool(args as { moduleId: string; confirm?: boolean });
         break;
       }
       case 'uninstall_module': {
-        result = uninstallModule(args as { moduleId: string });
+        result = await uninstallModuleTool(args as { moduleId: string });
         break;
       }
       case 'discover_tools':

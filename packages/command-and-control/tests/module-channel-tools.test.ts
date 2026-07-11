@@ -2,15 +2,30 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 
 let home: string;
-beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'cc-tools-')); process.env.CC_HOME = home; });
+beforeEach(async () => {
+  home = mkdtempSync(join(tmpdir(), 'cc-tools-'));
+  process.env.CC_HOME = home;
+  const { resetChannelNotices } = await import('../src/channel/notices.js');
+  resetChannelNotices();
+});
 afterEach(() => { delete process.env.CC_HOME; rmSync(home, { recursive: true, force: true }); });
 
 const CATALOG = { catalogVersion: 1, modules: [{
   id: 'announcements', name: 'Announcements Auditor', description: 'd', version: '1.0.0',
   minHostVersion: '2.0.0', artifactUrl: 'https://example.invalid/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10,
 }] };
+
+const INSTALL_ARTIFACT = `export default { id: 'announcements', name: 'A', description: 'd', version: '1.0.0', tools: [] };\n`;
+const INSTALL_ARTIFACT_SHA = createHash('sha256').update(INSTALL_ARTIFACT).digest('hex');
+const INSTALL_CATALOG = { catalogVersion: 1, modules: [{
+  id: 'announcements', name: 'Announcements Auditor', description: 'd', version: '1.0.0',
+  minHostVersion: '2.0.0', artifactUrl: 'https://example.invalid/module-announcements-1.0.0.mjs',
+  sha256: INSTALL_ARTIFACT_SHA, sizeBytes: INSTALL_ARTIFACT.length,
+}] };
+const artifactFetch: typeof fetch = (async () => new Response(INSTALL_ARTIFACT, { status: 200 })) as unknown as typeof fetch;
 
 describe('browse_module_catalog handler', () => {
   it('reports per-module status and pending requests', async () => {
@@ -58,5 +73,24 @@ describe('matchCatalogSuggestions', () => {
       artifactUrl: 'https://example.invalid/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10, handles: ['announcements'],
     }] };
     expect(matchCatalogSuggestions(['announcements'], catalog, new Set(['announcements']))).toEqual([]);
+  });
+});
+
+describe('installModuleTool / uninstallModuleTool channel-notice refresh', () => {
+  it('a fulfilled pending request stops appearing in channel notices', async () => {
+    const { savePendingRequests } = await import('../src/channel/pending.js');
+    savePendingRequests({ modules: ['announcements'] });
+
+    const { checkChannelNotices, getChannelNotices } = await import('../src/channel/notices.js');
+    await checkChannelNotices({ catalog: INSTALL_CATALOG });
+    expect(getChannelNotices()).toContain('announcements');
+
+    const { installModuleTool } = await import('../src/tools/module_channel_tools.js');
+    const res = await installModuleTool(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: INSTALL_CATALOG, hostVersion: '2.0.0', fetchImpl: artifactFetch },
+    );
+    expect(res.installed).toBe(true);
+    expect(getChannelNotices()).toBeNull();
   });
 });
