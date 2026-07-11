@@ -47,7 +47,7 @@ function seedPageManifest(dir: string, snapshotId: string, opts: { withCanvasMat
       warnings: [],
     };
   const manifest: PreviewManifest = {
-    snapshotId, courseId: 48895, courseDir,
+    snapshotId, courseId: 20255, courseDir,
     generatedAt: '2026-06-04T12:00:00.000Z',
     git: { isRepo: false },
     entries: [entry],
@@ -89,14 +89,14 @@ describe('publishCourse — page breadcrumbs (V&R C4.1)', () => {
       if (u.includes('/pages') && method === 'GET') {
         return new Response(JSON.stringify([{
           page_id: 1, url: 'course-overview', title: 'Course Overview',
-          html_url: 'https://canvas.example/courses/48895/pages/course-overview',
+          html_url: 'https://canvas.example/courses/20255/pages/course-overview',
           body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       // Normal publish PUT/POST
       return new Response(JSON.stringify({
         page_id: 1, url: 'course-overview', title: 'Course Overview',
-        html_url: 'https://canvas.example/courses/48895/pages/course-overview',
+        html_url: 'https://canvas.example/courses/20255/pages/course-overview',
         body: '', published: true, updated_at: '',
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }));
@@ -137,7 +137,7 @@ describe('publishCourse — page breadcrumbs (V&R C4.1)', () => {
       if (u.includes('/pages') && method === 'GET') {
         return new Response(JSON.stringify([{
           page_id: 1, url: 'course-overview', title: 'Course Overview',
-          html_url: 'https://canvas.example/courses/48895/pages/course-overview',
+          html_url: 'https://canvas.example/courses/20255/pages/course-overview',
           body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }
@@ -174,7 +174,7 @@ describe('publishCourse — page breadcrumbs (V&R C4.1)', () => {
       if (u.includes('/pages') && method === 'GET') {
         return new Response(JSON.stringify([{
           page_id: 1, url: 'course-overview', title: 'Course Overview',
-          html_url: 'https://canvas.example/courses/48895/pages/course-overview',
+          html_url: 'https://canvas.example/courses/20255/pages/course-overview',
           body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }
@@ -206,7 +206,7 @@ describe('publishCourse — page breadcrumbs (V&R C4.1)', () => {
       if (u.includes('/pages') && method === 'GET') {
         return new Response(JSON.stringify([{
           page_id: 1, url: 'course-overview', title: 'Course Overview',
-          html_url: 'https://canvas.example/courses/48895/pages/course-overview',
+          html_url: 'https://canvas.example/courses/20255/pages/course-overview',
           body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }
@@ -233,7 +233,7 @@ describe('publishCourse — page breadcrumbs (V&R C4.1)', () => {
 function seedWidgetPageManifest(dir: string, snapshotId: string): void {
   // Page with one widget iframe; collisionAction 'create' so no page breadcrumb fires.
   const manifest: PreviewManifest = {
-    snapshotId, courseId: 48895, courseDir,
+    snapshotId, courseId: 20255, courseDir,
     generatedAt: '2026-06-04T12:00:00.000Z',
     git: { isRepo: false },
     entries: [{
@@ -313,7 +313,7 @@ function buildWidgetCanvasMock() {
     // Normal page publish
     return new Response(JSON.stringify({
       page_id: 1, url: 'assignment', title: 'Assignment 1',
-      html_url: 'https://canvas.example/courses/48895/pages/assignment',
+      html_url: 'https://canvas.example/courses/20255/pages/assignment',
       body: '', published: true, updated_at: '',
     }), { status: 200, headers: { 'content-type': 'application/json' } });
   });
@@ -335,8 +335,8 @@ describe('publishCourse — widget breadcrumbs (V&R C4.2)', () => {
 
     const publishWidgetFn = vi.fn().mockResolvedValue({
       canvasFileId: 1234,
-      embedSrc: 'https://canvas.example/courses/48895/files/1234/preview',
-      embedHtml: '<iframe src="https://canvas.example/courses/48895/files/1234/preview"></iframe>',
+      embedSrc: 'https://canvas.example/courses/20255/files/1234/preview',
+      embedHtml: '<iframe src="https://canvas.example/courses/20255/files/1234/preview"></iframe>',
     });
 
     const result = await publishCourse(
@@ -372,7 +372,7 @@ describe('publishCourse — widget breadcrumbs (V&R C4.2)', () => {
 
     const publishWidgetFn = vi.fn().mockResolvedValue({
       canvasFileId: 1234,
-      embedSrc: 'https://canvas.example/courses/48895/files/1234/preview',
+      embedSrc: 'https://canvas.example/courses/20255/files/1234/preview',
       embedHtml: '<iframe></iframe>',
     });
 
@@ -412,7 +412,7 @@ describe('publishCourse — widget breadcrumbs (V&R C4.2)', () => {
       if (u.includes('/pages') && method === 'GET') {
         return new Response(JSON.stringify([{
           page_id: 1, url: 'course-overview', title: 'Course Overview',
-          html_url: 'https://canvas.example/courses/48895/pages/course-overview',
+          html_url: 'https://canvas.example/courses/20255/pages/course-overview',
           body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }

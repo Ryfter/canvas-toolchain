@@ -439,7 +439,7 @@ describe('previewCoursePublish backup detection', () => {
     // existing preview_course_publish tests. Here we assert by reading the
     // result.manifest.backup field after a synthetic invocation.
     const result = await previewCoursePublish({
-      courseDir, courseId: 48895,
+      courseDir, courseId: 20255,
     }).catch(e => ({ error: String(e) }));
 
     // If preview succeeded, backup should be set. If it errored before reaching
@@ -599,7 +599,7 @@ afterEach(() => {
 function makeSnapshot(id: string, publishedAt: string, phase: PublishState['phase'], backup?: string) {
   const dir = createSnapshotDirFor(id, courseDir);
   const manifest: PreviewManifest = {
-    snapshotId: id, courseId: 48895, courseDir,
+    snapshotId: id, courseId: 20255, courseDir,
     generatedAt: publishedAt,
     git: { isRepo: false },
     entries: [{
@@ -617,7 +617,7 @@ function makeSnapshot(id: string, publishedAt: string, phase: PublishState['phas
 
 describe('listPublishSnapshots', () => {
   it('returns empty when no snapshots exist for the course', async () => {
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     expect(result.currentlyLiveSnapshotId).toBeNull();
     expect(result.snapshots).toEqual([]);
   });
@@ -627,7 +627,7 @@ describe('listPublishSnapshots', () => {
     makeSnapshot('snap-new', '2026-06-04T12:00:00.000Z', 'published');
 
     const meta: PublishStateMeta = {
-      courseId: 48895,
+      courseId: 20255,
       currentlyLiveSnapshotId: 'snap-new',
       currentlyLiveSince: '2026-06-04T12:00:00.000Z',
       history: [
@@ -637,7 +637,7 @@ describe('listPublishSnapshots', () => {
     };
     writePublishStateMeta(snapshotsRootFor(courseDir), meta);
 
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     expect(result.snapshots).toHaveLength(2);
     expect(result.snapshots[0]!.snapshotId).toBe('snap-old');
     expect(result.snapshots[1]!.snapshotId).toBe('snap-new');
@@ -648,11 +648,11 @@ describe('listPublishSnapshots', () => {
   it('marks canRollBackTo=false for currently-live snapshot', async () => {
     makeSnapshot('snap-live', '2026-06-04T12:00:00.000Z', 'published');
     writePublishStateMeta(snapshotsRootFor(courseDir), {
-      courseId: 48895, currentlyLiveSnapshotId: 'snap-live',
+      courseId: 20255, currentlyLiveSnapshotId: 'snap-live',
       currentlyLiveSince: '2026-06-04T12:00:00.000Z',
       history: [{ snapshotId: 'snap-live', becameLiveAt: '2026-06-04T12:00:00.000Z', becameLiveVia: 'publish' }],
     });
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     expect(result.snapshots[0]!.canRollBackTo).toBe(false);
     expect(result.snapshots[0]!.canRollForwardTo).toBe(false);
   });
@@ -661,21 +661,21 @@ describe('listPublishSnapshots', () => {
     makeSnapshot('snap-old', '2026-06-01T12:00:00.000Z', 'rolled-back');
     makeSnapshot('snap-new', '2026-06-04T12:00:00.000Z', 'restored');
     writePublishStateMeta(snapshotsRootFor(courseDir), {
-      courseId: 48895, currentlyLiveSnapshotId: 'snap-new',
+      courseId: 20255, currentlyLiveSnapshotId: 'snap-new',
       currentlyLiveSince: '2026-06-04T12:00:00.000Z',
       history: [
         { snapshotId: 'snap-old', becameLiveAt: '2026-06-01T12:00:00.000Z', becameStaleAt: '2026-06-04T12:00:00.000Z', becameLiveVia: 'publish' },
         { snapshotId: 'snap-new', becameLiveAt: '2026-06-04T12:00:00.000Z', becameLiveVia: 'rollback' },
       ],
     });
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     const old = result.snapshots.find(s => s.snapshotId === 'snap-old')!;
     expect(old.canRollForwardTo).toBe(true);
   });
 
   it('surfaces backupAtPublishTime when manifest.backup is set', async () => {
     makeSnapshot('snap-1', '2026-06-04T12:00:00.000Z', 'published', 'git-pushed');
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     expect(result.snapshots[0]!.backupAtPublishTime).toBe('git-pushed');
   });
 });
@@ -989,7 +989,7 @@ afterEach(() => {
 function makeSnap(id: string, publishedAt: string) {
   const dir = createSnapshotDirFor(id, courseDir);
   const manifest: PreviewManifest = {
-    snapshotId: id, courseId: 48895, courseDir,
+    snapshotId: id, courseId: 20255, courseDir,
     generatedAt: publishedAt, git: { isRepo: false },
     entries: [], summary: { total: 0, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
   };
@@ -999,7 +999,7 @@ function makeSnap(id: string, publishedAt: string) {
 
 function setLive(snapshotId: string) {
   const meta: PublishStateMeta = {
-    courseId: 48895, currentlyLiveSnapshotId: snapshotId,
+    courseId: 20255, currentlyLiveSnapshotId: snapshotId,
     currentlyLiveSince: '2026-06-04T00:00:00.000Z',
     history: [{ snapshotId, becameLiveAt: '2026-06-04T00:00:00.000Z', becameLiveVia: 'publish' }],
   };
@@ -1017,7 +1017,7 @@ describe('computePruneList', () => {
     setLive('s5');
     // All 5 are within 30 days — time-based wins; nothing gets pruned.
     const { pruned, kept } = computePruneList({
-      courseId: 48895, courseDir, retainCount: 3, retainDays: 30,
+      courseId: 20255, courseDir, retainCount: 3, retainDays: 30,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(pruned).toEqual([]);
@@ -1031,7 +1031,7 @@ describe('computePruneList', () => {
     makeSnap('s3', '2026-06-01T12:00:00.000Z');
     setLive('s3');
     const { pruned, kept } = computePruneList({
-      courseId: 48895, courseDir, retainCount: 3, retainDays: 30,
+      courseId: 20255, courseDir, retainCount: 3, retainDays: 30,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(pruned).toEqual(['old']);
@@ -1045,7 +1045,7 @@ describe('computePruneList', () => {
     makeSnap('s3', '2026-06-03T12:00:00.000Z');
     setLive('ancient-live');
     const { pruned, kept } = computePruneList({
-      courseId: 48895, courseDir, retainCount: 3, retainDays: 30,
+      courseId: 20255, courseDir, retainCount: 3, retainDays: 30,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(kept).toContain('ancient-live');
@@ -1059,7 +1059,7 @@ describe('pruneSnapshots', () => {
     makeSnap('s1', '2026-06-03T12:00:00.000Z');
     setLive('s1');
     const result = await pruneSnapshots({
-      courseId: 48895, courseDir, dryRun: true,
+      courseId: 20255, courseDir, dryRun: true,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(result.wouldPrune.map(p => p.snapshotId)).toEqual(['old']);
@@ -1071,7 +1071,7 @@ describe('pruneSnapshots', () => {
     makeSnap('s1', '2026-06-03T12:00:00.000Z');
     setLive('s1');
     const result = await pruneSnapshots({
-      courseId: 48895, courseDir, dryRun: false,
+      courseId: 20255, courseDir, dryRun: false,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(result.pruned?.map(p => p.snapshotId)).toEqual(['old']);
@@ -1349,7 +1349,7 @@ describe('prunePublishSnapshots', () => {
     ] as const) {
       const dir = createSnapshotDirFor(id, courseDir);
       const manifest: PreviewManifest = {
-        snapshotId: id, courseId: 48895, courseDir, generatedAt: ts,
+        snapshotId: id, courseId: 20255, courseDir, generatedAt: ts,
         git: { isRepo: false }, entries: [],
         summary: { total: 0, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
       };
@@ -1357,13 +1357,13 @@ describe('prunePublishSnapshots', () => {
       writeState(dir, { phase: 'published', published: [], lastUpdatedAt: ts });
     }
     const meta: PublishStateMeta = {
-      courseId: 48895, currentlyLiveSnapshotId: 's1',
+      courseId: 20255, currentlyLiveSnapshotId: 's1',
       currentlyLiveSince: '2026-06-03T12:00:00.000Z',
       history: [{ snapshotId: 's1', becameLiveAt: '2026-06-03T12:00:00.000Z', becameLiveVia: 'publish' }],
     };
     writePublishStateMeta(snapshotsRootFor(courseDir), meta);
 
-    const result = await prunePublishSnapshots({ courseId: 48895, courseDir, dryRun: true });
+    const result = await prunePublishSnapshots({ courseId: 20255, courseDir, dryRun: true });
     expect(result.wouldPrune.map(p => p.snapshotId)).toEqual(['old']);
     expect(existsSync(join(snapshotsRootFor(courseDir), 'old'))).toBe(true);
   });
@@ -2410,12 +2410,12 @@ Expected: existing cross-app contract verification still passes (Plan C is addit
 
 ### Task C7.2: Manual verification against University sandbox
 
-Walk through the full faculty workflow against sandbox course 48895.
+Walk through the full faculty workflow against sandbox course 20255.
 
 - [ ] **Step 1: List snapshots before any V&R Plan C run**
 
 ```
-list_publish_snapshots { courseId: 48895, courseDir: "<path>" }
+list_publish_snapshots { courseId: 20255, courseDir: "<path>" }
 ```
 
 Verify the response shape matches the spec — `currentlyLiveSnapshotId` and `snapshots[]` with all fields populated correctly.
@@ -2423,7 +2423,7 @@ Verify the response shape matches the spec — `currentlyLiveSnapshotId` and `sn
 - [ ] **Step 2: Preview a publish**
 
 ```
-preview_course_publish { courseDir: "<path>", courseId: 48895 }
+preview_course_publish { courseDir: "<path>", courseId: 20255 }
 ```
 
 Verify `manifest.backup` is set. Check the value matches what you'd expect for your dev box (likely `synced-folder:OneDrive` if running from OneDrive, otherwise `git-pushed` if courseDir is a clean git repo with a remote).
@@ -2472,7 +2472,7 @@ Verify:
 - [ ] **Step 6: Manual prune (dry run)**
 
 ```
-prune_publish_snapshots { courseId: 48895, courseDir: "<path>", dryRun: true }
+prune_publish_snapshots { courseId: 20255, courseDir: "<path>", dryRun: true }
 ```
 
 Verify the response lists what WOULD be pruned without taking action.
@@ -2480,7 +2480,7 @@ Verify the response lists what WOULD be pruned without taking action.
 - [ ] **Step 7: Manual prune (real)**
 
 ```
-prune_publish_snapshots { courseId: 48895, courseDir: "<path>" }
+prune_publish_snapshots { courseId: 20255, courseDir: "<path>" }
 ```
 
 Verify the prune executed; both local dirs and Canvas-side breadcrumbs cleaned.

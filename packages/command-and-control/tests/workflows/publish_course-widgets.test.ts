@@ -58,7 +58,7 @@ function setupCourseWithWidget(opts: {
   const dir = createSnapshotDir(snapshotId);
 
   const manifest: PreviewManifest = {
-    snapshotId, courseId: 48895, courseDir,
+    snapshotId, courseId: 20255, courseDir,
     generatedAt: '2026-06-03T12:00:00.000Z',
     git: { isRepo: false },
     entries: [
@@ -97,14 +97,14 @@ function mockCanvasApi() {
       // createPage
       return new Response(JSON.stringify({
         page_id: 1, url: 'assignment-1', title: 'Assignment 1',
-        html_url: 'https://canvas.example/courses/48895/pages/assignment-1',
+        html_url: 'https://canvas.example/courses/20255/pages/assignment-1',
         body: '', published: true, updated_at: '2026-06-03T12:00:00Z',
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     if (u.includes('/api/v1/courses/') && /\/pages\//.test(u) && method === 'PUT') {
       return new Response(JSON.stringify({
         page_id: 1, url: 'assignment-1', title: 'Assignment 1',
-        html_url: 'https://canvas.example/courses/48895/pages/assignment-1',
+        html_url: 'https://canvas.example/courses/20255/pages/assignment-1',
         body: '', published: true, updated_at: '2026-06-03T12:00:00Z',
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }
@@ -135,7 +135,7 @@ describe('publishCourse widget integration', () => {
     // Mock the publishWidget hook — return a successful upload
     const mockPublishWidget = vi.fn().mockResolvedValue({
       canvasFileId: 777,
-      embedSrc: 'https://canvas.example/courses/48895/files/777/preview',
+      embedSrc: 'https://canvas.example/courses/20255/files/777/preview',
       embedHtml: '<iframe ...>',
     });
 
@@ -156,7 +156,7 @@ describe('publishCourse widget integration', () => {
     // The Canvas Pages call should have received the rewritten HTML
     expect(mockPublishWidget).toHaveBeenCalledOnce();
     expect(mockPublishWidget).toHaveBeenCalledWith(expect.objectContaining({
-      courseId: 48895,
+      courseId: 20255,
       canvasConfig: { host: 'canvas.example', token: 'tk-test' },
     }));
 
@@ -171,7 +171,7 @@ describe('publishCourse widget integration', () => {
     expect(mutatingPagesCalls.length).toBeGreaterThan(0);
     const pagesBody = JSON.parse((mutatingPagesCalls[0]![1] as { body: string }).body);
     const submittedHtml = pagesBody.wiki_page?.body ?? pagesBody.body ?? '';
-    expect(submittedHtml).toContain('src="https://canvas.example/courses/48895/files/777/preview"');
+    expect(submittedHtml).toContain('src="https://canvas.example/courses/20255/files/777/preview"');
     expect(submittedHtml).not.toContain('src="assignment/widgets/foo.html"');
   });
 
@@ -190,7 +190,7 @@ describe('publishCourse widget integration', () => {
     const mockPublishWidget = vi.fn()
       .mockResolvedValueOnce({
         canvasFileId: 100,
-        embedSrc: 'https://canvas.example/courses/48895/files/100/preview',
+        embedSrc: 'https://canvas.example/courses/20255/files/100/preview',
         embedHtml: '<iframe ...>',
       })
       .mockRejectedValueOnce(new Error('CANVAS_UPLOAD_INIT_ERROR: {"status":403}'));

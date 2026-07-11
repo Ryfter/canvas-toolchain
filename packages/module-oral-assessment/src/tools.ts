@@ -28,7 +28,7 @@ const designTool: ModuleTool = {
         week: { type: 'number', description: 'Front matter: week number.' },
         title: { type: 'string', description: 'Front matter: page title override.' },
         outputPath: { type: 'string', description: 'Absolute path to write the page .md.' },
-        launchDomain: { type: 'string', description: 'Institution Rhetorix domain, e.g. rhetorixlab.boisestate.edu.' },
+        launchDomain: { type: 'string', description: 'Institution Rhetorix domain, e.g. rhetorixlab.example.edu.' },
         provider: { type: 'string', description: 'Provider id. Default "rhetorix".' },
       },
     },

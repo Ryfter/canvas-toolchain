@@ -14,7 +14,7 @@
 
 - **Advisory only.** Phase 1 must NOT block or gate any publish. `isError` behavior of every tool is unchanged.
 - **Back-compat:** `auditAccessibility` and `AccessibilityWarning` remain exported and functional (command-and-control imports them). Only additive changes to their shapes.
-- **No institution-specific data** in any file: before each commit run `git grep -iE "boisestate|BSU|Boise" -- <changed files>` and expect zero matches. Placeholders are `example.edu` / `example.instructure.com`.
+- **No institution-specific data** in any file: before each commit run `git grep -iE "exampleu|BSU|Boise" -- <changed files>` and expect zero matches. Placeholders are `example.edu` / `example.instructure.com`.
 - **Default required level:** `{ version: '2.1', level: 'AA' }` — exported constant `DEFAULT_REQUIRED_LEVEL`, single source of truth in shared-types.
 - **axe-core rules `color-contrast` and `target-size` are disabled** (jsdom has no layout). The in-house contrast check is the authoritative contrast source.
 - **Borderline rule (exact):** a finding with `margin` is borderline when `margin.measured >= 0.85 * margin.required`; a finding without `margin` is borderline when severity is `moderate` or `minor`. `serious`/`critical` without margin = clear failure.
@@ -1196,7 +1196,7 @@ Expected: all builds clean; all suites PASS (~1737+ tests, including command-and
 
 - [ ] **Step 4: Institution-data guard**
 
-Run: `git grep -iE "boisestate|bsu" -- packages/shared-types packages/canvas-design-studio/src/tools/a11y docs/accessibility.md`
+Run: `git grep -iE "exampleu|bsu" -- packages/shared-types packages/canvas-design-studio/src/tools/a11y docs/accessibility.md`
 Expected: no matches (the word "Boise" must not appear in any file touched by this plan).
 
 - [ ] **Step 5: Commit**

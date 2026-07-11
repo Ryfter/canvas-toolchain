@@ -55,7 +55,7 @@ describe('publishCourse widgets-meta recording', () => {
     });
 
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -84,8 +84,8 @@ describe('publishCourse widgets-meta recording', () => {
 
     const publishWidgetFn = vi.fn().mockResolvedValue({
       canvasFileId: 9999,
-      embedSrc: 'https://canvas.example/courses/48895/files/9999/preview',
-      embedHtml: '<iframe src="https://canvas.example/courses/48895/files/9999/preview"></iframe>',
+      embedSrc: 'https://canvas.example/courses/20255/files/9999/preview',
+      embedHtml: '<iframe src="https://canvas.example/courses/20255/files/9999/preview"></iframe>',
     });
 
     const result = await publishCourse(
@@ -116,7 +116,7 @@ describe('publishCourse widgets-meta recording', () => {
     });
 
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{

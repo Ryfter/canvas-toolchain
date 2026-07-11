@@ -6,13 +6,13 @@ import "strings"
 // into a bare, resolvable hostname.
 //
 // It is forgiving on purpose: people paste full URLs, leave trailing slashes,
-// or — most commonly — type only their school's subdomain (e.g. "boisestatecanvas")
+// or — most commonly — type only their school's subdomain (e.g. "exampleucanvas")
 // because the field's example text made the ".instructure.com" suffix look like it
 // was already there. In that bare-label case we append ".instructure.com" so the
 // value validates instead of failing DNS as "no such host".
 //
 // Vanity Canvas domains (anything that already contains a dot, e.g.
-// "canvas.boisestate.edu") are left untouched. The function is idempotent.
+// "canvas.exampleu.edu") are left untouched. The function is idempotent.
 func NormalizeCanvasHost(raw string) string {
 	host := strings.ToLower(strings.TrimSpace(raw))
 	if host == "" {

@@ -71,14 +71,14 @@ describe('cleanupCanvasBreadcrumbsForSnapshot (V&R C4.3)', () => {
     }));
 
     const result = await cleanupCanvasBreadcrumbsForSnapshot({
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
     });
 
     expect(result.canvasBreadcrumbsCleaned).toBe(true);
     expect(result.errors).toEqual([]);
 
     // Two page DELETEs
-    const pageDeletes = calls.filter(c => /\/courses\/48895\/pages\/archived-/.test(c.url) && c.method === 'DELETE');
+    const pageDeletes = calls.filter(c => /\/courses\/20255\/pages\/archived-/.test(c.url) && c.method === 'DELETE');
     expect(pageDeletes.length).toBe(2);
     expect(pageDeletes.some(c => c.url.includes('archived-overview-20260604-abc'))).toBe(true);
     expect(pageDeletes.some(c => c.url.includes('archived-syllabus-20260604-def'))).toBe(true);
@@ -111,7 +111,7 @@ describe('cleanupCanvasBreadcrumbsForSnapshot (V&R C4.3)', () => {
     }));
 
     const result = await cleanupCanvasBreadcrumbsForSnapshot({
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
     });
 
     // 1 error recorded, but processing continued
@@ -129,7 +129,7 @@ describe('cleanupCanvasBreadcrumbsForSnapshot (V&R C4.3)', () => {
     rmSync(join(ccHome, 'canvas-config.json'));
 
     const result = await cleanupCanvasBreadcrumbsForSnapshot({
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
     });
 
     expect(result.canvasBreadcrumbsCleaned).toBe(false);

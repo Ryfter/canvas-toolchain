@@ -33,7 +33,7 @@ afterEach(() => {
 function makeSnap(id: string, publishedAt: string) {
   const dir = createSnapshotDirFor(id, courseDir);
   const manifest: PreviewManifest = {
-    snapshotId: id, courseId: 48895, courseDir,
+    snapshotId: id, courseId: 20255, courseDir,
     generatedAt: publishedAt, git: { isRepo: false },
     entries: [], summary: { total: 0, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
   };
@@ -43,7 +43,7 @@ function makeSnap(id: string, publishedAt: string) {
 
 function setLive(snapshotId: string) {
   const meta: PublishStateMeta = {
-    courseId: 48895, currentlyLiveSnapshotId: snapshotId,
+    courseId: 20255, currentlyLiveSnapshotId: snapshotId,
     currentlyLiveSince: '2026-06-04T00:00:00.000Z',
     history: [{ snapshotId, becameLiveAt: '2026-06-04T00:00:00.000Z', becameLiveVia: 'publish' }],
   };
@@ -59,7 +59,7 @@ describe('computePruneList', () => {
     makeSnap('s5', '2026-06-03T12:00:00.000Z');
     setLive('s5');
     const { pruned, kept } = computePruneList({
-      courseId: 48895, courseDir, retainCount: 3, retainDays: 30,
+      courseId: 20255, courseDir, retainCount: 3, retainDays: 30,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(pruned).toEqual([]);
@@ -73,7 +73,7 @@ describe('computePruneList', () => {
     makeSnap('s3', '2026-06-01T12:00:00.000Z');
     setLive('s3');
     const { pruned, kept } = computePruneList({
-      courseId: 48895, courseDir, retainCount: 3, retainDays: 30,
+      courseId: 20255, courseDir, retainCount: 3, retainDays: 30,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(pruned).toEqual(['old']);
@@ -87,7 +87,7 @@ describe('computePruneList', () => {
     makeSnap('s3', '2026-06-03T12:00:00.000Z');
     setLive('ancient-live');
     const { pruned, kept } = computePruneList({
-      courseId: 48895, courseDir, retainCount: 3, retainDays: 30,
+      courseId: 20255, courseDir, retainCount: 3, retainDays: 30,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(kept).toContain('ancient-live');
@@ -103,7 +103,7 @@ describe('pruneSnapshots', () => {
     makeSnap('s3', '2026-06-03T12:00:00.000Z');
     setLive('s3');
     const result = await pruneSnapshots({
-      courseId: 48895, courseDir, dryRun: true,
+      courseId: 20255, courseDir, dryRun: true,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(result.wouldPrune.map(p => p.snapshotId)).toEqual(['old']);
@@ -117,7 +117,7 @@ describe('pruneSnapshots', () => {
     makeSnap('s3', '2026-06-03T12:00:00.000Z');
     setLive('s3');
     const result = await pruneSnapshots({
-      courseId: 48895, courseDir, dryRun: false,
+      courseId: 20255, courseDir, dryRun: false,
       now: Date.parse('2026-06-04T00:00:00.000Z'),
     });
     expect(result.pruned?.map(p => p.snapshotId)).toEqual(['old']);

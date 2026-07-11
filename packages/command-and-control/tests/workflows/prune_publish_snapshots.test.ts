@@ -33,7 +33,7 @@ afterEach(() => {
 function makeSnap(id: string, publishedAt: string) {
   const dir = createSnapshotDirFor(id, courseDir);
   const manifest: PreviewManifest = {
-    snapshotId: id, courseId: 48895, courseDir, generatedAt: publishedAt,
+    snapshotId: id, courseId: 20255, courseDir, generatedAt: publishedAt,
     git: { isRepo: false }, entries: [],
     summary: { total: 0, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
   };
@@ -50,13 +50,13 @@ describe('prunePublishSnapshots', () => {
     makeSnap('s3', '2026-06-03T12:00:00.000Z');
 
     const meta: PublishStateMeta = {
-      courseId: 48895, currentlyLiveSnapshotId: 's3',
+      courseId: 20255, currentlyLiveSnapshotId: 's3',
       currentlyLiveSince: '2026-06-03T12:00:00.000Z',
       history: [{ snapshotId: 's3', becameLiveAt: '2026-06-03T12:00:00.000Z', becameLiveVia: 'publish' }],
     };
     writePublishStateMeta(snapshotsRootFor(courseDir), meta);
 
-    const result = await prunePublishSnapshots({ courseId: 48895, courseDir, dryRun: true });
+    const result = await prunePublishSnapshots({ courseId: 20255, courseDir, dryRun: true });
     expect(result.wouldPrune.map(p => p.snapshotId)).toEqual(['old']);
     expect(existsSync(join(snapshotsRootFor(courseDir), 'old'))).toBe(true);
   });

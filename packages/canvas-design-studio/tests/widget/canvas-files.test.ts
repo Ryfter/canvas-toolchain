@@ -24,7 +24,7 @@ describe('uploadCanvasFile', () => {
     f.mockResolvedValueOnce(mockConfirm(123));
 
     const result = await uploadCanvasFile(cfg, {
-      courseId: 48895,
+      courseId: 20255,
       filename: 'widget.html',
       contentType: 'text/html',
       body: '<!DOCTYPE html>...',

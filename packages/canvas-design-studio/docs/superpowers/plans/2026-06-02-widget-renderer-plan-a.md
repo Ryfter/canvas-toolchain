@@ -130,11 +130,11 @@ process.exit(3);
 
 - [ ] **Step 2: Upload a test HTML file to University sandbox manually**
 
-Use Canvas UI: navigate to course 48895 (University sandbox), Files → upload `scripts/widget-iframe-probe.html` (a one-line `<p>iframe probe</p>`). Note the resulting file_id from the URL.
+Use Canvas UI: navigate to course 20255 (University sandbox), Files → upload `scripts/widget-iframe-probe.html` (a one-line `<p>iframe probe</p>`). Note the resulting file_id from the URL.
 
 - [ ] **Step 3: Run the verification script**
 
-Run: `npx tsx scripts/verify-88-canvas-files-iframe-headers.mts 48895 <fileId>`
+Run: `npx tsx scripts/verify-88-canvas-files-iframe-headers.mts 20255 <fileId>`
 Expected: exit 0 with `PASS: iframe embedding works from same-origin Canvas page.`
 
 - [ ] **Step 4: Commit the script + result note**
@@ -143,7 +143,7 @@ Expected: exit 0 with `PASS: iframe embedding works from same-origin Canvas page
 git add scripts/verify-88-canvas-files-iframe-headers.mts
 git commit -m "verify(#88): Canvas Files /preview iframe headers OK
 
-Probe script output against University sandbox course 48895:
+Probe script output against University sandbox course 20255:
   Status: 200
   x-frame-options: SAMEORIGIN
   content-security-policy: (none)
@@ -229,7 +229,7 @@ process.exit(2);
 
 - [ ] **Step 2: Run the verification script**
 
-Run: `npx tsx scripts/verify-88-canvas-files-overwrite.mts 48895`
+Run: `npx tsx scripts/verify-88-canvas-files-overwrite.mts 20255`
 Expected: exit 0 with `PASS: on_duplicate=overwrite preserves file_id. Update story valid.`
 
 - [ ] **Step 3: Commit the script + result note**
@@ -238,7 +238,7 @@ Expected: exit 0 with `PASS: on_duplicate=overwrite preserves file_id. Update st
 git add scripts/verify-88-canvas-files-overwrite.mts
 git commit -m "verify(#88): Canvas Files on_duplicate=overwrite preserves file_id
 
-Probe script output against University sandbox course 48895:
+Probe script output against University sandbox course 20255:
   First upload file_id: <N>
   Overwrite upload file_id: <N>  (same)
 Update story (re-render → re-publish without page-HTML rewrite) is valid."
@@ -309,7 +309,7 @@ process.exit(2);
 
 - [ ] **Step 2: Run the verification script**
 
-Run: `npx tsx scripts/verify-88-rce-iframe-sandbox.mts 48895`
+Run: `npx tsx scripts/verify-88-rce-iframe-sandbox.mts 20255`
 Expected: exit 0 with `PASS: Canvas RCE preserved sandbox attribute exactly.`
 
 - [ ] **Step 3: Commit the script + result note**
@@ -318,7 +318,7 @@ Expected: exit 0 with `PASS: Canvas RCE preserved sandbox attribute exactly.`
 git add scripts/verify-88-rce-iframe-sandbox.mts
 git commit -m "verify(#88): Canvas RCE preserves iframe sandbox attributes
 
-Probe script output against University sandbox course 48895:
+Probe script output against University sandbox course 20255:
   wrote sandbox=\"allow-scripts allow-same-origin allow-forms\"
   read   sandbox=\"allow-scripts allow-same-origin allow-forms\"
 Architecture's iframe embed shape is safe to ship."

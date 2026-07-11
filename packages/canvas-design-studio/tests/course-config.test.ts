@@ -79,11 +79,11 @@ describe('parseCourseConfig', () => {
 
   it('reads oral_assessment_launch_domain when present', () => {
     const { path, dir } = writeTmpConfig(
-      'institution: Example University\noral_assessment_launch_domain: rhetorixlab.boisestate.edu',
+      'institution: Example University\noral_assessment_launch_domain: rhetorixlab.example.edu',
     );
     try {
       const cfg = parseCourseConfig(path);
-      expect(cfg.oralAssessmentLaunchDomain).toBe('rhetorixlab.boisestate.edu');
+      expect(cfg.oralAssessmentLaunchDomain).toBe('rhetorixlab.example.edu');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

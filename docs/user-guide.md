@@ -120,7 +120,7 @@ This is the **golden path** — the workflow the whole toolchain is built around
 
 ### Step 1 — Get last semester onto disk
 
-> *"Download my Canvas course 48895 as the fall-2025 archive."*
+> *"Download my Canvas course 20255 as the fall-2025 archive."*
 > → `download_canvas_archive`
 
 This runs the Python Canvas Backup downloader and writes a structured archive (pages, assignments, quizzes, modules, files) to a local folder. **Why:** everything downstream reads from this local archive, not from Canvas live — so it's fast, repeatable, and offline-safe.
@@ -160,7 +160,7 @@ Optionally, sharpen the look:
 
 ### Step 6 — Preview the publish
 
-> *"Preview publishing this course folder to Canvas course 48895."*
+> *"Preview publishing this course folder to Canvas course 20255."*
 > → `preview_course_publish`
 
 You get a **per-page diff**, a list of warnings, and a manifest — and **nothing is written to Canvas yet.** **Why:** you see exactly what would change before a single page moves. This is your safety gate.

@@ -132,12 +132,12 @@ The two SQLite files are joinable by `chunk_id` at query time.
 
 ```json
 {
-  "courseId": 48894,
+  "courseId": 20244,
   "embeddingProvider": "ollama",
   "embeddingModel": "nomic-embed-text",
   "embeddingDimension": 768,
   "lastIndexedAt": "2026-06-04T22:30:00.000Z",
-  "transcriptSources": ["/Users/kev/.curriculum-intelligence/panopto/48894"],
+  "transcriptSources": ["/Users/kev/.curriculum-intelligence/panopto/20244"],
   "sourceFiles": {
     "<absolute path>": { "mtime": 1717550000000, "chunkCount": 14 }
   }
@@ -254,12 +254,12 @@ Calls `setup_lecture_answers` if provider differs, then `index_course_for_answer
 1. setup_lecture_answers
    → auto-detects Ollama. If found, configured. If not, fix: install Ollama OR re-call with provider='transformers-js'|'voyage'.
 
-2. index_course_for_answers { courseId: 48894, courseDir: "..." }
+2. index_course_for_answers { courseId: 20244, courseDir: "..." }
    → scans transcript sources + CDS markdown + slide PDFs + canonical.md
    → embeds and indexes
    → ~2 min for typical corpus (30 transcripts + 50 markdown files + 20 slide PDFs)
 
-3. ask_course { courseId: 48894, courseDir: "...", question: "where did I introduce VLOOKUP?" }
+3. ask_course { courseId: 20244, courseDir: "...", question: "where did I introduce VLOOKUP?" }
    → returns answer + Panopto deep link to the lecture moment
 ```
 
@@ -294,7 +294,7 @@ Calls `setup_lecture_answers` if provider differs, then `index_course_for_answer
 - 🔮 Mediasite / Echo360 / Kaltura downloader-adapters
 - 🔮 LibreOffice auto-PPTX ingestion via LiteParse pipeline
 - 🔮 Docling auto-PPTX ingestion via docling-serve sidecar
-- 🔮 Cross-course `ask_course { courseIds: [48894, 48895], ... }`
+- 🔮 Cross-course `ask_course { courseIds: [20244, 20255], ... }`
 - 🔮 Week-scoping (`weekScope: 3` → bias retrieval against material from weeks > 3)
 
 ## Dependencies

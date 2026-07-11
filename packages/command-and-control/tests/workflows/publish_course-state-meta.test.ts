@@ -32,7 +32,7 @@ describe('publishCourse pointer file', () => {
     const snapshotId = 'test-snap-1';
     const dir = createSnapshotDir(snapshotId);
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -56,7 +56,7 @@ describe('publishCourse pointer file', () => {
       }
       return new Response(JSON.stringify({
         page_id: 1, url: 'overview', title: 'Overview',
-        html_url: 'https://canvas.example/courses/48895/pages/overview',
+        html_url: 'https://canvas.example/courses/20255/pages/overview',
         body: '', published: true, updated_at: '',
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }));
@@ -66,10 +66,10 @@ describe('publishCourse pointer file', () => {
     expect(result.phase).toBe('published');
 
     // VERIFY: pointer file exists at snapshotsRootFor + courseId, points to this snapshot
-    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-48895.json');
+    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-20255.json');
     expect(existsSync(metaPath)).toBe(true);
     const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
-    expect(meta.courseId).toBe(48895);
+    expect(meta.courseId).toBe(20255);
     expect(meta.currentlyLiveSnapshotId).toBe(snapshotId);
     expect(meta.history).toHaveLength(1);
     expect(meta.history[0].becameLiveVia).toBe('publish');

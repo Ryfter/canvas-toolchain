@@ -160,36 +160,36 @@ describe('readPublishStateMeta', () => {
 
   it('reads existing meta file', () => {
     const meta: PublishStateMeta = {
-      courseId: 48895,
+      courseId: 20255,
       currentlyLiveSnapshotId: 'snap-1',
       currentlyLiveSince: '2026-06-04T12:00:00.000Z',
       history: [{ snapshotId: 'snap-1', becameLiveAt: '2026-06-04T12:00:00.000Z', becameLiveVia: 'publish' }],
     };
-    writeFileSync(join(snapshotsRoot, 'publish-state-48895.json'), JSON.stringify(meta), 'utf-8');
-    expect(readPublishStateMeta(snapshotsRoot, 48895)).toEqual(meta);
+    writeFileSync(join(snapshotsRoot, 'publish-state-20255.json'), JSON.stringify(meta), 'utf-8');
+    expect(readPublishStateMeta(snapshotsRoot, 20255)).toEqual(meta);
   });
 
   it('returns null when meta file is malformed JSON', () => {
-    writeFileSync(join(snapshotsRoot, 'publish-state-48895.json'), '{not json', 'utf-8');
-    expect(readPublishStateMeta(snapshotsRoot, 48895)).toBeNull();
+    writeFileSync(join(snapshotsRoot, 'publish-state-20255.json'), '{not json', 'utf-8');
+    expect(readPublishStateMeta(snapshotsRoot, 20255)).toBeNull();
   });
 });
 
 describe('writePublishStateMeta', () => {
   it('writes meta to the per-course file path', () => {
-    const meta = initialStateMeta(48895);
+    const meta = initialStateMeta(20255);
     writePublishStateMeta(snapshotsRoot, meta);
-    expect(existsSync(join(snapshotsRoot, 'publish-state-48895.json'))).toBe(true);
-    const read = JSON.parse(readFileSync(join(snapshotsRoot, 'publish-state-48895.json'), 'utf-8'));
-    expect(read.courseId).toBe(48895);
+    expect(existsSync(join(snapshotsRoot, 'publish-state-20255.json'))).toBe(true);
+    const read = JSON.parse(readFileSync(join(snapshotsRoot, 'publish-state-20255.json'), 'utf-8'));
+    expect(read.courseId).toBe(20255);
     expect(read.currentlyLiveSnapshotId).toBeNull();
   });
 });
 
 describe('initialStateMeta', () => {
   it('returns an empty meta with no currently-live snapshot', () => {
-    const meta = initialStateMeta(48895);
-    expect(meta.courseId).toBe(48895);
+    const meta = initialStateMeta(20255);
+    expect(meta.courseId).toBe(20255);
     expect(meta.currentlyLiveSnapshotId).toBeNull();
     expect(meta.history).toEqual([]);
   });
@@ -197,18 +197,18 @@ describe('initialStateMeta', () => {
 
 describe('updateCurrentlyLive', () => {
   it('records the new live snapshot and marks the previous one stale', () => {
-    const before = initialStateMeta(48895);
+    const before = initialStateMeta(20255);
     writePublishStateMeta(snapshotsRoot, before);
 
-    updateCurrentlyLive(snapshotsRoot, 48895, 'snap-1', 'publish', '2026-06-04T12:00:00.000Z');
-    const afterFirst = readPublishStateMeta(snapshotsRoot, 48895)!;
+    updateCurrentlyLive(snapshotsRoot, 20255, 'snap-1', 'publish', '2026-06-04T12:00:00.000Z');
+    const afterFirst = readPublishStateMeta(snapshotsRoot, 20255)!;
     expect(afterFirst.currentlyLiveSnapshotId).toBe('snap-1');
     expect(afterFirst.history).toHaveLength(1);
     expect(afterFirst.history[0]!.becameLiveVia).toBe('publish');
     expect(afterFirst.history[0]!.becameStaleAt).toBeUndefined();
 
-    updateCurrentlyLive(snapshotsRoot, 48895, 'snap-2', 'publish', '2026-06-04T13:00:00.000Z');
-    const afterSecond = readPublishStateMeta(snapshotsRoot, 48895)!;
+    updateCurrentlyLive(snapshotsRoot, 20255, 'snap-2', 'publish', '2026-06-04T13:00:00.000Z');
+    const afterSecond = readPublishStateMeta(snapshotsRoot, 20255)!;
     expect(afterSecond.currentlyLiveSnapshotId).toBe('snap-2');
     expect(afterSecond.history).toHaveLength(2);
     expect(afterSecond.history[0]!.snapshotId).toBe('snap-1');
@@ -218,18 +218,18 @@ describe('updateCurrentlyLive', () => {
   });
 
   it('initializes the meta file if it does not exist yet', () => {
-    updateCurrentlyLive(snapshotsRoot, 48895, 'snap-1', 'publish', '2026-06-04T12:00:00.000Z');
-    const meta = readPublishStateMeta(snapshotsRoot, 48895)!;
-    expect(meta.courseId).toBe(48895);
+    updateCurrentlyLive(snapshotsRoot, 20255, 'snap-1', 'publish', '2026-06-04T12:00:00.000Z');
+    const meta = readPublishStateMeta(snapshotsRoot, 20255)!;
+    expect(meta.courseId).toBe(20255);
     expect(meta.currentlyLiveSnapshotId).toBe('snap-1');
   });
 
   it('records via=rollback when a previously-stale snapshot is restored', () => {
-    updateCurrentlyLive(snapshotsRoot, 48895, 'snap-1', 'publish', '2026-06-04T12:00:00.000Z');
-    updateCurrentlyLive(snapshotsRoot, 48895, 'snap-2', 'publish', '2026-06-04T13:00:00.000Z');
-    updateCurrentlyLive(snapshotsRoot, 48895, 'snap-1', 'rollback', '2026-06-04T14:00:00.000Z');
+    updateCurrentlyLive(snapshotsRoot, 20255, 'snap-1', 'publish', '2026-06-04T12:00:00.000Z');
+    updateCurrentlyLive(snapshotsRoot, 20255, 'snap-2', 'publish', '2026-06-04T13:00:00.000Z');
+    updateCurrentlyLive(snapshotsRoot, 20255, 'snap-1', 'rollback', '2026-06-04T14:00:00.000Z');
 
-    const meta = readPublishStateMeta(snapshotsRoot, 48895)!;
+    const meta = readPublishStateMeta(snapshotsRoot, 20255)!;
     expect(meta.currentlyLiveSnapshotId).toBe('snap-1');
     expect(meta.history).toHaveLength(3);
     expect(meta.history[2]!.becameLiveVia).toBe('rollback');
@@ -898,7 +898,7 @@ describe('publishCourse pointer file', () => {
     const snapshotId = 'test-snap-1';
     const dir = createSnapshotDirFor(snapshotId, courseDir);
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -922,7 +922,7 @@ describe('publishCourse pointer file', () => {
         return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
       }
       return new Response(JSON.stringify({
-        page_id: 1, url: 'overview', title: 'Overview', html_url: 'https://canvas/courses/48895/pages/overview', body: '', published: true, updated_at: '',
+        page_id: 1, url: 'overview', title: 'Overview', html_url: 'https://canvas/courses/20255/pages/overview', body: '', published: true, updated_at: '',
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }));
 
@@ -931,7 +931,7 @@ describe('publishCourse pointer file', () => {
     expect(result.phase).toBe('published');
 
     // VERIFY: pointer file exists and points to this snapshot
-    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-48895.json');
+    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-20255.json');
     expect(existsSync(metaPath)).toBe(true);
     const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
     expect(meta.currentlyLiveSnapshotId).toBe(snapshotId);
@@ -1081,7 +1081,7 @@ function setupTwoSnapshots(): { snap1Id: string; snap2Id: string } {
   for (const id of [snap1Id, snap2Id]) {
     const dir = createSnapshotDirFor(id, courseDir);
     const manifest: PreviewManifest = {
-      snapshotId: id, courseId: 48895, courseDir,
+      snapshotId: id, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -1108,7 +1108,7 @@ function setupTwoSnapshots(): { snap1Id: string; snap2Id: string } {
 
   // Initialize meta with snap-1 → snap-2 history; snap-2 is currently-live.
   const meta: PublishStateMeta = {
-    courseId: 48895,
+    courseId: 20255,
     currentlyLiveSnapshotId: snap2Id,
     currentlyLiveSince: '2026-06-04T13:00:00.000Z',
     history: [
@@ -1133,7 +1133,7 @@ describe('rollbackCoursePublish Pattern B pointer behavior', () => {
     await rollbackCoursePublish({ snapshotId: snap2Id });
 
     // VERIFY: pointer file now points at snap-1
-    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-48895.json');
+    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-20255.json');
     const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
     expect(meta.currentlyLiveSnapshotId).toBe(snap1Id);
     expect(meta.history[meta.history.length - 1].becameLiveVia).toBe('rollback');
@@ -1148,7 +1148,7 @@ describe('rollbackCoursePublish Pattern B pointer behavior', () => {
 
     await rollbackCoursePublish({ snapshotId: snap2Id, targetSnapshotId: snap1Id });
 
-    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-48895.json');
+    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-20255.json');
     const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
     expect(meta.currentlyLiveSnapshotId).toBe(snap1Id);
   });
@@ -1211,7 +1211,7 @@ After Task A4.2 completes:
 - [ ] Run `npm run build`: all 5 packages build clean.
 - [ ] **Manual verification (with the professor, against University sandbox):**
   - Run `preview_course_publish` against a course; verify the snapshot lands at `<courseDir>/.canvas-toolchain/publish-snapshots/<id>/` (NOT in `~/.command-and-control/`).
-  - Run `publish_course`; verify `publish-state-48895.json` is created next to the snapshot dirs.
+  - Run `publish_course`; verify `publish-state-20255.json` is created next to the snapshot dirs.
   - Run a second publish; verify the pointer file updates to the new snapshot.
   - Run `rollback_course_publish { snapshotId: <second-publish-id> }`; verify pointer flips back to first snapshot.
 - [ ] Memory update: note that Pattern B refactor shipped, the V&R foundation is in place.

@@ -73,7 +73,7 @@ describe('previewCoursePublish backup detection', () => {
       vi.stubGlobal('fetch', vi.fn().mockImplementation(async () =>
         new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } })));
 
-      const result = await previewCoursePublish({ courseDir, courseId: 48895 });
+      const result = await previewCoursePublish({ courseDir, courseId: 20255 });
 
       expect(result.manifest).toBeDefined();
       expect(result.manifest!.backup).toBeDefined();

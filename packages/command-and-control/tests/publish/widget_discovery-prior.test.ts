@@ -4,7 +4,7 @@ import { discoverPriorWidgetRefs } from '../../src/tools/publish/widget_discover
 describe('discoverPriorWidgetRefs', () => {
   it('extracts file_id from Canvas Files preview iframe', () => {
     const html = `<p>before</p>
-<iframe src="/courses/48895/files/12345/preview" title="Sort the SDLC phases" width="100%" height="600"></iframe>
+<iframe src="/courses/20255/files/12345/preview" title="Sort the SDLC phases" width="100%" height="600"></iframe>
 <p>after</p>`;
     const refs = discoverPriorWidgetRefs(html);
     expect(refs).toHaveLength(1);

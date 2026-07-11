@@ -32,7 +32,7 @@ describe('designOralAssessment', () => {
     const outputPath = join(dir, 'oral-assessment.md');
     const llm = fakeLlm(RESP);
     const result = await designOralAssessment(
-      { assignmentBrief: 'Memo on pricing', week: 4, outputPath, launchDomain: 'rhetorixlab.boisestate.edu', aiasLevel: 3 },
+      { assignmentBrief: 'Memo on pricing', week: 4, outputPath, launchDomain: 'rhetorixlab.example.edu', aiasLevel: 3 },
       { llm },
     );
     expect(existsSync(result.pagePath)).toBe(true);
@@ -42,7 +42,7 @@ describe('designOralAssessment', () => {
     expect(result.recommendation.toLowerCase()).toContain('rhetorix');
 
     const page = readFileSync(result.pagePath, 'utf-8');
-    expect(page).toContain('launch_url: "https://rhetorixlab.boisestate.edu/lti/launch"');
+    expect(page).toContain('launch_url: "https://rhetorixlab.example.edu/lti/launch"');
     expect(page).toContain('aiasLevel: 3');
 
     const sidecar = readFileSync(result.specPath, 'utf-8');

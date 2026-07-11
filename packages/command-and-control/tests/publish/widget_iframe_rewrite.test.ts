@@ -3,7 +3,7 @@ import { rewriteIframeFileId } from '../../src/tools/publish/widget_iframe_rewri
 
 describe('rewriteIframeFileId', () => {
   it('swaps the file_id in a course-relative iframe src', () => {
-    const html = '<p>x</p><iframe src="/courses/48895/files/100/preview" title="W"></iframe>';
+    const html = '<p>x</p><iframe src="/courses/20255/files/100/preview" title="W"></iframe>';
     const out = rewriteIframeFileId(html, 100, 200);
     expect(out).toContain('/files/200/preview');
     expect(out).not.toContain('/files/100/preview');
