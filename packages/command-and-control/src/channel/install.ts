@@ -39,13 +39,42 @@ function previewOf(entry: CatalogEntry, action: 'install' | 'upgrade'): Record<s
   };
 }
 
-async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch): Promise<void> {
+/** Thrown when a download body exceeds the catalog-declared size (memory/tamper cap). */
+class DownloadTooLargeError extends Error {
+  constructor(maxBytes: number) {
+    super(`body exceeded the catalog-declared size of ${maxBytes} bytes`);
+    this.name = 'DownloadTooLargeError';
+  }
+}
+
+async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch, maxBytes: number): Promise<void> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
   try {
     const res = await fetchImpl(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const bytes = Buffer.from(await res.arrayBuffer());
+    let bytes: Buffer;
+    if (res.body) {
+      // Read incrementally so an oversized body is refused before it is fully buffered.
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel();
+          throw new DownloadTooLargeError(maxBytes);
+        }
+        chunks.push(value);
+      }
+      bytes = Buffer.concat(chunks);
+    } else {
+      // Some fetch fakes have no stream body — buffer, then enforce the cap.
+      bytes = Buffer.from(await res.arrayBuffer());
+      if (bytes.byteLength > maxBytes) throw new DownloadTooLargeError(maxBytes);
+    }
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, bytes, { mode: 0o600 });
   } finally {
@@ -93,9 +122,14 @@ export async function installModule(
   mkdirSync(tmpDir, { recursive: true });
   const tmpFile = join(tmpDir, `${entry.id}-${entry.version}.download`);
   try {
-    await downloadTo(entry.artifactUrl, tmpFile, deps.fetchImpl ?? fetch);
+    await downloadTo(entry.artifactUrl, tmpFile, deps.fetchImpl ?? fetch, entry.sizeBytes);
   } catch (err) {
     rmSync(tmpFile, { force: true });
+    if (err instanceof DownloadTooLargeError) {
+      return refusal('DOWNLOAD_TOO_LARGE',
+        `Artifact exceeded the catalog-declared size (${entry.sizeBytes} bytes); refusing. ` +
+        'This can indicate a tampered artifact.');
+    }
     const msg = err instanceof Error ? err.message : String(err);
     return refusal('DOWNLOAD_FAILED', `Could not download ${entry.artifactUrl} (${msg}).`);
   }
@@ -109,24 +143,34 @@ export async function installModule(
       'check https://github.com/Ryfter/canvas-toolchain for a catalog correction.');
   }
 
+  // Place + record — still fail-closed: any failure deletes temp state and refuses.
   const dest = artifactPath(entry.id, entry.version);
-  mkdirSync(dirname(dest), { recursive: true });
-  renameSync(tmpFile, dest);
+  try {
+    mkdirSync(dirname(dest), { recursive: true });
+    renameSync(tmpFile, dest);
 
-  installed.modules[entry.id] = {
-    id: entry.id,
-    version: entry.version,
-    sha256: entry.sha256,
-    installedAt: new Date().toISOString(),
-    ...(existing ? { previous: { version: existing.version, sha256: existing.sha256 } } : {}),
-  };
-  saveInstalledModules(installed);
+    installed.modules[entry.id] = {
+      id: entry.id,
+      version: entry.version,
+      sha256: entry.sha256,
+      installedAt: new Date().toISOString(),
+      ...(existing ? { previous: { version: existing.version, sha256: existing.sha256 } } : {}),
+    };
+    saveInstalledModules(installed);
 
-  const manifest = loadModuleManifest();
-  manifest.modules[entry.id] = { ...manifest.modules[entry.id], enabled: true };
-  saveModuleManifest(manifest);
+    const manifest = loadModuleManifest();
+    manifest.modules[entry.id] = { ...manifest.modules[entry.id], enabled: true };
+    saveModuleManifest(manifest);
 
-  removePendingModule(entry.id);
+    removePendingModule(entry.id);
+  } catch (err) {
+    rmSync(tmpFile, { force: true });
+    rmSync(dirname(dest), { recursive: true, force: true });
+    const msg = err instanceof Error ? err.message : String(err);
+    return refusal('INSTALL_FAILED',
+      `Could not place or record the verified artifact (${msg}). ` +
+      'Nothing was installed; retry after resolving the underlying issue.');
+  }
 
   return {
     installed: true,

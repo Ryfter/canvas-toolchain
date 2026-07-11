@@ -109,6 +109,56 @@ describe('installModule', () => {
     const res = await installModule({ moduleId: 'nope' }, { catalog: catalogWith(), hostVersion: '2.0.0' });
     expect(res.error).toBe('MODULE_NOT_IN_CATALOG');
   });
+
+  it('DOWNLOAD_FAILED on HTTP error leaves no temp state', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const notFoundFetch: typeof fetch = (async () => new Response('nope', { status: 404 })) as unknown as typeof fetch;
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith(), hostVersion: '2.0.0', fetchImpl: notFoundFetch },
+    );
+    expect(res.error).toBe('DOWNLOAD_FAILED');
+    const tmpDir = join(home, 'modules', '.tmp');
+    if (existsSync(tmpDir)) {
+      expect(readdirSync(tmpDir)).toEqual([]);
+    }
+    expect(existsSync(join(home, 'modules', 'announcements'))).toBe(false);
+  });
+
+  it('DOWNLOAD_TOO_LARGE when the body exceeds catalog sizeBytes', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith({ sizeBytes: 5 }), hostVersion: '2.0.0', fetchImpl: artifactFetch },
+    );
+    expect(res.error).toBe('DOWNLOAD_TOO_LARGE');
+    const tmpDir = join(home, 'modules', '.tmp');
+    if (existsSync(tmpDir)) {
+      expect(readdirSync(tmpDir)).toEqual([]);
+    }
+    expect(existsSync(join(home, 'modules', 'announcements'))).toBe(false);
+  });
+
+  it('INSTALL_FAILED (structured, cleaned up) when placement fails', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const { mkdirSync, writeFileSync } = await import('node:fs');
+    mkdirSync(join(home, 'modules'), { recursive: true });
+    writeFileSync(join(home, 'modules', 'announcements'), 'blocker');
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith(), hostVersion: '2.0.0', fetchImpl: artifactFetch },
+    );
+    expect(res.error).toBe('INSTALL_FAILED');
+    const tmpDir = join(home, 'modules', '.tmp');
+    if (existsSync(tmpDir)) {
+      expect(readdirSync(tmpDir)).toEqual([]);
+    }
+    const installedPath = join(home, 'installed-modules.json');
+    if (existsSync(installedPath)) {
+      const parsed = JSON.parse(readFileSync(installedPath, 'utf-8'));
+      expect(parsed.modules?.announcements).toBeUndefined();
+    }
+  });
 });
 
 describe('uninstallModule', () => {
