@@ -72,6 +72,43 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 		pythonCheck.SetChecked(true)
 	}()
 
+	modulesLabel := widget.NewLabelWithStyle("Additional modules", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	modulesHint := widget.NewLabel("These install later through Claude — checking one just queues the request. " +
+		"Next time you open Claude it will offer to install them, or just ask: \"install the <module> module\".")
+	modulesHint.Wrapping = fyne.TextWrapWord
+	modulesStatus := ui.NewStatusRow("Checking the module catalog…")
+	modulesStatus.SetStatus(ui.StatusRunning, "")
+	modulesBox := container.NewVBox()
+
+	// Widget calls below run directly from this goroutine (SetStatus, checkbox
+	// construction, modulesBox.Add/Refresh) — same precedent as the python-check
+	// goroutine above, permitted under Fyne v2.5's threading model. Fyne v2.5.2
+	// (this repo's pinned version) predates fyne.Do (added v2.6); revisit with
+	// fyne.Do when Fyne is upgraded to >=2.6. The RequestedModules map itself is
+	// mutex-guarded via State's requestedModule/SetRequestedModule so it's safe
+	// to read/write here even though the map is also read from the install step.
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		mods, err := tasks.FetchModuleCatalog(ctx, tasks.ModuleCatalogURL)
+		if err != nil {
+			modulesStatus.SetStatus(ui.StatusWarn, "Module catalog unavailable — you can install modules later by asking Claude.")
+			return
+		}
+		if len(mods) == 0 {
+			modulesStatus.SetStatus(ui.StatusOK, "No additional modules published yet.")
+			return
+		}
+		modulesStatus.SetStatus(ui.StatusOK, "Catalog loaded")
+		for _, m := range mods {
+			mod := m // capture
+			check := widget.NewCheck(mod.Name+" — "+mod.Description, func(b bool) { st.SetRequestedModule(mod.ID, b) })
+			check.SetChecked(st.requestedModule(mod.ID))
+			modulesBox.Add(check)
+		}
+		modulesBox.Refresh()
+	}()
+
 	form := container.NewVBox(
 		title,
 		hint,
@@ -82,6 +119,11 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 		registryCheck,
 		widget.NewSeparator(),
 		hostSection,
+		widget.NewSeparator(),
+		modulesLabel,
+		modulesHint,
+		modulesStatus,
+		modulesBox,
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Optional extras", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		pythonCheck,

@@ -1,6 +1,6 @@
 # Canvas Toolchain Roadmap
 
-_Last updated: 2026-07-10. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
+_Last updated: 2026-07-11. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
 
 ## Where we are
 
@@ -8,7 +8,7 @@ _Last updated: 2026-07-10. This is the planned order of work — what ships next
 
 **Immediate next steps, in order:**
 
-1. **v2.0 (#78)** — design conversation to decompose the umbrella; nothing buildable until then.
+1. **v2.0 plug-in module channel (#78)** — **built on `feat/module-channel`, pending release.** See "Now: v2.0 — plug-in module channel" below.
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
@@ -41,16 +41,24 @@ Built on `feat/wcag22-phase3` per the Phase 3 implementation plan. Contents:
 
 Full detail: [`docs/accessibility.md`](accessibility.md#phase-3--institution-policy-wcag-3-advisories-wave-deep-check-2026-07). Design spec: [`packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md`](../packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md).
 
-## Later: v2.0 — plug-in module architecture
+## Now: v2.0 — plug-in module channel
 
-Tracked as umbrella issue [#78](https://github.com/Ryfter/canvas-toolchain/issues/78) under the v2.0 milestone. The idea: the base install is Canvas page editing; everything else (course intelligence, group building, rosters, third-party integrations) becomes an opt-in module that can be added **without shipping a new installer release**. The installer's workflow-selector screen already prototypes the UX.
+Tracked as umbrella issue [#78](https://github.com/Ryfter/canvas-toolchain/issues/78) under the v2.0 milestone. **Built on `feat/module-channel`, pending release.** The 1.x plug-in system (the `CanvasToolchainModule` contract, workspace module packages, `modules.json` enablement, the fail-soft loader, `list_modules`/`set_module_enabled`) stays exactly as it is — what v2.0 adds is *distribution*: a module (or a fix to one) can now ship without a new installer release.
 
-Related platform items that ride with (or follow) the module architecture:
+- Modules build into single-file, hash-pinned artifacts attached to GitHub Releases; `module-catalog.json` on `main` is the single source of truth for what exists and what its bytes must hash to.
+- Three new C&C tools drive it conversationally: `browse_module_catalog` (read-only), `install_module` (two-call confirm gate — preview, then `confirm: true` to download/verify/install), and `uninstall_module`.
+- The installer GUI gains an "Additional modules" picker that only **requests** a module via a pending-request file — chat's confirmed `install_module` remains the only place code installation is authorized.
+- The hash is verified twice — once at install, again at every server startup — so a tampered, corrupted, or mismatched artifact is refused rather than loaded; every new failure mode stays fail-soft (the server always starts).
+- One channel-native proof module, **Announcements Auditor** (`packages/module-announcements`), ships only through the channel — present in the source tree, absent from `KNOWN_MODULES` — to exercise the whole path end to end.
 
-- **Institutional tool-discovery** — after install, detect/ask which LMS tools an institution uses and build a standardized institution profile.
-- **Usage feedback via GitHub** — an opt-in flow that submits anonymized institution profiles as GitHub issues/PRs, so module priorities follow real usage.
+Full design: [`docs/superpowers/specs/2026-07-11-plugin-module-channel-design.md`](superpowers/specs/2026-07-11-plugin-module-channel-design.md). Publishing/installing runbook: [`docs/module-channel.md`](module-channel.md).
 
-**Status: needs a design conversation first.** Nothing here is buildable until #78 is decomposed into sub-specs.
+Related platform items that ride with (or follow) the module channel:
+
+- **Institutional tool-discovery** — after install, detect/ask which LMS tools an institution uses and build a standardized institution profile. (Shipped as `discover_tools`/#76; the module channel extends its `handles[]` matching to catalog modules too.)
+- **Usage feedback via GitHub** — an opt-in flow that submits anonymized institution profiles as GitHub issues/PRs, so module priorities follow real usage. (Shipped as `submit_usage_feedback`/#77.)
+
+**Status: implementation complete on the feature branch, verification green, release not yet cut.** Release sequence: PR → CI green → squash-merge → tag `module-announcements-v1.0.0` → `release-module.yml` → commit the catalog entry to `main` → tag `v2.0.0` → `release-installer.yml` → close #78.
 
 ## Ideas backlog (unscheduled)
 

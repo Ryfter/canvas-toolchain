@@ -85,6 +85,8 @@ import { auditCourseAccessibility } from './tools/workflows/audit_course_accessi
 import { reviewAccessibilityPolicy } from './tools/review_accessibility_policy.js';
 import { waveDeepCheckTool } from './tools/wave_deep_check.js';
 import { loadModules } from './modules/registry.js';
+import { checkChannelNotices, getChannelNotices } from './channel/notices.js';
+import { browseModuleCatalog, installModuleTool, uninstallModuleTool } from './tools/module_channel_tools.js';
 
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
@@ -99,6 +101,7 @@ const loadedModules = await loadModules();
 
 // Fire-and-forget background check — never blocks startup.
 void checkForUpdates();
+void checkChannelNotices();
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
@@ -223,6 +226,35 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description:
         'List all known plug-in modules with their id, name, enabled state, active provider, and the provider/tool types they handle.',
       inputSchema: { type: 'object' as const, properties: {} },
+    },
+    {
+      name: 'browse_module_catalog',
+      description: 'List the module catalog: what exists, what is installed/enabled, which have updates, and any modules requested from the installer GUI. Read-only. Pass clearPending: true to discard stale installer requests.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: { clearPending: { type: 'boolean', description: 'Discard pending installer-GUI module requests.' } },
+      },
+    },
+    {
+      name: 'install_module',
+      description: 'Install (or upgrade) a module from the catalog. Two-call gate: first call previews name/version/size/source/sha256 with NO side effects; call again with confirm: true to download, verify the pinned sha256, and install. Takes effect on the next reconnect.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          moduleId: { type: 'string', description: 'Catalog module id, e.g. "announcements".' },
+          confirm: { type: 'boolean', description: 'Set true on the second call to actually install.' },
+        },
+        required: ['moduleId'],
+      },
+    },
+    {
+      name: 'uninstall_module',
+      description: 'Remove a channel-installed module (artifact + record) and disable it. Bundled modules cannot be uninstalled — disable those with set_module_enabled.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: { moduleId: { type: 'string', description: 'Installed module id.' } },
+        required: ['moduleId'],
+      },
     },
     {
       name: 'discover_tools',
@@ -832,9 +864,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   const { name, arguments: args } = request.params;
 
   // Module-provided tools take precedence; their handlers return a full CallToolResult.
+  // Wrapped so a throwing module tool (missing config, Canvas API failure, module bug)
+  // degrades to a readable structured error instead of a raw protocol error.
   const moduleHandler = loadedModules.handlers.get(name);
   if (moduleHandler) {
-    return await moduleHandler(args);
+    try {
+      return await moduleHandler(args);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text', text: JSON.stringify({ error: message }) }], isError: true };
+    }
   }
 
   try {
@@ -868,6 +907,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       case 'list_modules':
         result = await listModules();
         break;
+      case 'browse_module_catalog': {
+        result = await browseModuleCatalog(args as { clearPending?: boolean });
+        break;
+      }
+      case 'install_module': {
+        result = await installModuleTool(args as { moduleId: string; confirm?: boolean });
+        break;
+      }
+      case 'uninstall_module': {
+        result = await uninstallModuleTool(args as { moduleId: string });
+        break;
+      }
       case 'discover_tools':
         result = await discoverTools(args as unknown as Parameters<typeof discoverTools>[0]);
         break;
@@ -1037,8 +1088,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       }
     }
 
-    const notice = getUpdateNotice();
-    const text = JSON.stringify(result, null, 2) + (notice ?? '');
+    const notice = (getUpdateNotice() ?? '') + (getChannelNotices() ?? '');
+    const text = JSON.stringify(result, null, 2) + notice;
     return { content: [{ type: 'text', text }] };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

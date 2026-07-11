@@ -3,10 +3,10 @@
 A capability-by-capability breakdown of the toolchain. Each **module** below is a self-contained functional area: what it is, **why it was created** (the problem it solves), what it does, and the commands (MCP tools) that belong to it.
 
 > Two senses of "module" live here:
-> - **Plug-in modules** — true opt-in units enabled at config time via `~/.command-and-control/modules.json` (today: Lecture Video, Oral Assessment, Group Builder, Roster & Identity Manager, and PeerAssessment Export). These follow the `CanvasToolchainModule` contract.
+> - **Plug-in modules** — true opt-in units enabled at config time via `~/.command-and-control/modules.json` (today: Lecture Video, Oral Assessment, Group Builder, Roster & Identity Manager, PeerAssessment Export, and — installed through the module channel rather than bundled — Announcements Auditor). These follow the `CanvasToolchainModule` contract.
 > - **Functional modules** — the natural capability groupings inside the core packages (analysis, design, publishing, …). They aren't separately installable, but they're how the toolchain decomposes.
 >
-> For exact parameters of any command, see [`commands-and-credentials.md`](commands-and-credentials.md) §2. For the visual map, see [`visual-guide/`](visual-guide/README.md).
+> For exact parameters of any command, see [`commands-and-credentials.md`](commands-and-credentials.md) §2. For the visual map, see [`visual-guide/`](visual-guide/README.md). For how to publish or install a module through the channel, see the runbook: [`docs/module-channel.md`](module-channel.md).
 
 ---
 
@@ -34,6 +34,7 @@ A capability-by-capability breakdown of the toolchain. Each **module** below is 
 | 17 | [Roster & Identity Manager](#17-roster--identity-manager-plug-in-module) | Plug-in | PeopleSoft → de-identified roster + lifetime pseudonyms |
 | 18 | [PeerAssessment Export](#18-peerassessment-export-plug-in-module) | Plug-in | Canvas group set → PeerAssessment.com import CSV |
 | 19 | [Canvas Rubric Sync](#19-canvas-rubric-sync) | Functional | Pull a Canvas rubric, triage changes, rewrite for students |
+| 20 | [Announcements Auditor](#20-announcements-auditor-channel-native-plug-in-module) | Plug-in (channel) | Find stale scheduled announcements after a course copy; recreate them |
 
 ---
 
@@ -51,13 +52,23 @@ A capability-by-capability breakdown of the toolchain. Each **module** below is 
 
 ## 1. Plug-in module system
 
-**What it is.** The `CanvasToolchainModule` contract (`packages/module-contract`), a manifest loader, and a registry in C&C (`src/modules/`) that read `~/.command-and-control/modules.json` at startup to decide which capabilities to expose.
+**What it is.** The `CanvasToolchainModule` contract (`packages/module-contract`), a manifest loader, and a registry in C&C (`src/modules/registry.ts`) that read `~/.command-and-control/modules.json` at startup to decide which capabilities to expose — plus, since v2.0, **the module channel**: a way to ship a module (or a fix to one) *without a new installer release* at all.
 
-**Why it was created.** Every new integration (video platform, lab tool, …) used to mean editing core packages and shipping a new installer. The goal of #78 (module-architecture spec, 2026-06-07) was to *"make tool support truly pluggable — the base install edits Canvas pages (core); every other capability becomes an opt-in module that can be enabled without shipping a new installer release."* Enablement is decoupled from installation: all modules ship in the bundle, the manifest just gates them.
+**Why it was created.** Every new integration (video platform, lab tool, …) used to mean editing core packages and shipping a new installer. The goal of #78 (module-architecture spec, 2026-06-07) was to *"make tool support truly pluggable — the base install edits Canvas pages (core); every other capability becomes an opt-in module that can be enabled without shipping a new installer release."* The 2026-06-08 first cut decoupled *enablement* from installation (all modules shipped in the bundle; the manifest just gated them). v2.0 finishes the job by decoupling *distribution* too: modules are now built into single-file, hash-pinned `.mjs` artifacts attached to GitHub Releases, with `module-catalog.json` on `main` as the single source of truth for what exists and what its bytes must hash to.
 
-**What it does.** Loads enabled modules, exposes their tools, and lets you flip modules on/off post-install (takes effect on the next client reconnect). Each module is its own npm workspace package, so the contract is ready for true drop-in distribution later — only the *source* of a module changes, not the contract.
+**What it does.** Loading now happens in two phases (`loadModules()` in `src/modules/registry.ts`): phase 1 loads the static, bundled `KNOWN_MODULES` map exactly as before; phase 2 loads any **installed channel artifacts** — re-hashing each artifact file against its recorded sha256 immediately before every dynamic import, so a tampered or corrupted file is refused, never loaded (the same hash is also verified once at install time — see below). If a module id exists both bundled and installed, the **semver-newer version wins** (equal versions keep the bundled copy, since no download is needed), which is how a module fix ships between installer releases. Every failure mode — missing, corrupt, tampered, contract-violating, or throwing — is **fail-soft**: the module is skipped with a logged warning and the server always starts; only artifacts that pass the re-hash and the contract check ever load, which is the **fail-closed** half of the same guarantee. You flip any module on/off post-install with `set_module_enabled` (takes effect on the next client reconnect — no hot-reload).
 
-**Commands.** `list_modules`, `set_module_enabled`.
+Three tools drive the channel itself, all following the toolchain's confirm-gate idiom:
+
+- **`browse_module_catalog`** (read-only) — fetches `module-catalog.json` (5 s timeout, 24 h cache) and merges it with local state, reporting each catalog module as `bundled` / `not installed` / `installed (enabled)` / `installed (disabled)` / `update available (vX → vY)`, plus any pending installer-GUI requests. `clearPending: true` discards stale requests.
+- **`install_module`** — a **two-call confirm gate** (same idiom as `wave_deep_check`): call 1 previews name, version, description, size, source URL, sha256, and handles with no side effects (a host too old for the module gets a refusal with upgrade guidance instead of a preview); call 2 (`confirm: true`) downloads the artifact, **verifies its sha256 against the catalog entry, refusing on any mismatch**, then places it, records it in `installed-modules.json`, and enables it. On an upgrade, the previous version's artifact and hash are retained until the new version loads successfully once, so a bad release can be rolled back without a re-download.
+- **`uninstall_module`** — removes a channel-installed artifact and its record, and disables it in `modules.json`. **Bundled modules cannot be uninstalled** — only disabled via `set_module_enabled`.
+
+The Go + Fyne installer's "Additional modules" picker screen only *requests* a module — it fetches the catalog, lists what's not yet installed, and on finish writes chosen ids to `~/.command-and-control/pending-module-installs.json`. **No download or install logic exists in Go.** C&C surfaces a pending request as a one-line chat nudge, but fulfillment always goes through the same `install_module` confirm gate: the GUI checkbox is a request, never an authorization — chat's confirmed `install_module` call is the only place code installation is actually authorized.
+
+**Publishing** a module version (tag → `release-module.yml` CI → one reviewed `module-catalog.json` commit on `main`) is documented in full in the runbook: [`docs/module-channel.md`](module-channel.md).
+
+**Commands.** `list_modules`, `set_module_enabled`, `browse_module_catalog`, `install_module`, `uninstall_module`.
 
 ---
 
@@ -277,6 +288,18 @@ A capability-by-capability breakdown of the toolchain. Each **module** below is 
 
 ---
 
+## 20. Announcements Auditor (channel-native plug-in module)
+
+**What it is.** A deliberately small, real plug-in module (`packages/module-announcements`, module id `announcements`) that is **channel-only**: it lives in the source tree and ships as a normal `CanvasToolchainModule` workspace package, but it is **absent from `KNOWN_MODULES`** (`packages/command-and-control/src/modules/registry.ts`) — it is never bundled into the installer and is installable only through the module channel (`install_module({ moduleId: "announcements" })`).
+
+**Why it was created.** After a Canvas course copy, scheduled announcements silently keep the previous section's fire dates, so students get announcements timed for a term that already ended. This is a genuine, recurring problem, and the module doubles as the **reference implementation** — the proof that a module can be published and installed end to end without a new installer release (the whole point of #78's v2.0 channel).
+
+**What it does.** `audit_announcements` (read-only) lists a course's scheduled announcements and flags ones with stale fire dates — already past, or outside a given term window. `recreate_announcement` (propose → confirm) creates a corrected copy of a stale announcement with a new fire date; it never deletes the original — the professor removes the stale one in Canvas, keeping the toolchain's no-delete posture. Uses the existing Canvas token; no new credentials.
+
+**Commands.** `audit_announcements`, `recreate_announcement`. Install with `install_module({ moduleId: "announcements" })` (two-call confirm gate); uninstall with `uninstall_module({ moduleId: "announcements" })`.
+
+---
+
 ## How the modules connect
 
 ```text
@@ -290,8 +313,9 @@ A capability-by-capability breakdown of the toolchain. Each **module** below is 
                                               │                  ▲                        │
                           Lecture Answers (6) ┘        Layout adapter (11)        snapshots/rollback
                                                        Resource Registry (8)
-   cross-cutting: Shared LLM (10) · Discovery+Feedback (9) · Dashboard (12) · AIAS (13) · Installer (14)
+   cross-cutting: Shared LLM (10) · Discovery+Feedback (9) · Dashboard (12) · AIAS (13) · Installer (14) · Module channel (1)
    term management: Roster (17) ──► Group Builder (16) ──► PeerAssessment Export (18) · Oral Assessment (15) · Canvas Rubric Sync (19)
+   channel-native (never bundled): Announcements Auditor (20)
 ```
 
 See the rendered architecture diagram at [`visual-guide/images/03-architecture.png`](visual-guide/images/03-architecture.png).
