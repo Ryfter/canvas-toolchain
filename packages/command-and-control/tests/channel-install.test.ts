@@ -95,6 +95,35 @@ describe('installModule', () => {
     expect(existsSync(artifactPath('announcements', '1.0.0'))).toBe(true);
   });
 
+  it('chained upgrades keep the last-loaded version as rollback target and orphan nothing', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const { loadInstalledModules, artifactPath, getTmpDownloadDir } = await import('../src/channel/installed.js');
+    // v1 install (confirmed) — loader never runs in this test, so v1 never load-verifies.
+    await installModule({ moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith(), hostVersion: '2.0.0', fetchImpl: artifactFetch });
+    const v2 = ARTIFACT.replace("version: '1.0.0'", "version: '1.1.0'");
+    const v2sha = createHash('sha256').update(v2).digest('hex');
+    const v2fetch: typeof fetch = (async () => new Response(v2, { status: 200 })) as unknown as typeof fetch;
+    // v2 upgrade — record.previous becomes v1 (matches the single-upgrade test above).
+    await installModule({ moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith({ version: '1.1.0', sha256: v2sha, sizeBytes: v2.length }), hostVersion: '2.0.0', fetchImpl: v2fetch });
+    const v3 = ARTIFACT.replace("version: '1.0.0'", "version: '1.2.0'");
+    const v3sha = createHash('sha256').update(v3).digest('hex');
+    const v3fetch: typeof fetch = (async () => new Response(v3, { status: 200 })) as unknown as typeof fetch;
+    // v3 upgrade before any reconnect — v2 never loaded, so its directory is orphaned:
+    // previous must carry FORWARD as v1 (the last version that ever load-verified), not v2.
+    const res = await installModule({ moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith({ version: '1.2.0', sha256: v3sha, sizeBytes: v3.length }), hostVersion: '2.0.0', fetchImpl: v3fetch });
+    expect(res.installed).toBe(true);
+    const rec = loadInstalledModules().modules.announcements;
+    expect(rec.version).toBe('1.2.0');
+    expect(rec.previous).toEqual({ version: '1.0.0', sha256: ARTIFACT_SHA });
+    expect(existsSync(artifactPath('announcements', '1.0.0'))).toBe(true);
+    expect(existsSync(join(home, 'modules', 'announcements', '1.1.0'))).toBe(false);
+    expect(existsSync(artifactPath('announcements', '1.2.0'))).toBe(true);
+    expect(readdirSync(getTmpDownloadDir())).toEqual([]);
+  });
+
   it('reports ALREADY_INSTALLED for same-or-older catalog version', async () => {
     const { installModule } = await import('../src/channel/install.js');
     await installModule({ moduleId: 'announcements', confirm: true },

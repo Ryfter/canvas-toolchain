@@ -36,12 +36,13 @@ export class CatalogError extends Error {
 }
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
+const MODULE_ID = /^[a-z0-9][a-z0-9-]*$/;
 
 function isEntry(v: unknown): v is CatalogEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
   return (
-    typeof e.id === 'string' && e.id.length > 0 &&
+    typeof e.id === 'string' && MODULE_ID.test(e.id) &&
     typeof e.name === 'string' &&
     typeof e.description === 'string' &&
     typeof e.version === 'string' &&
@@ -70,10 +71,15 @@ export function validateCatalog(value: unknown): ModuleCatalog {
   if (!Array.isArray(c.modules)) {
     throw new CatalogError('CATALOG_INVALID', 'Catalog missing modules array.');
   }
+  const seenIds = new Set<string>();
   for (const entry of c.modules) {
     if (!isEntry(entry)) {
       throw new CatalogError('CATALOG_INVALID', `Malformed catalog entry: ${JSON.stringify(entry).slice(0, 200)}`);
     }
+    if (seenIds.has(entry.id)) {
+      throw new CatalogError('CATALOG_INVALID', `Duplicate module id in catalog: '${entry.id}'.`);
+    }
+    seenIds.add(entry.id);
   }
   return { catalogVersion: c.catalogVersion, modules: c.modules as CatalogEntry[] };
 }

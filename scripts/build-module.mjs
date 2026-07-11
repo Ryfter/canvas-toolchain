@@ -12,6 +12,11 @@ if (!id) {
   console.error('Usage: npm run build:module -- <id>');
   process.exit(1);
 }
+const MODULE_ID = /^[a-z0-9][a-z0-9-]*$/;
+if (!MODULE_ID.test(id)) {
+  console.error(`Invalid module id '${id}': must match ${MODULE_ID} (it flows into filesystem paths and release tags).`);
+  process.exit(1);
+}
 const pkgDir = join('packages', `module-${id}`);
 const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf-8'));
 const version = pkg.version;

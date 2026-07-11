@@ -53,6 +53,15 @@ describe('validateCatalog', () => {
     const entry = { ...GOOD_ENTRY, futureField: 'ok' };
     expect(validateCatalog({ catalogVersion: 1, modules: [entry], futureTop: true }).modules).toHaveLength(1);
   });
+  it('refuses an id that does not match the module-id format', () => {
+    const bad = { ...GOOD_ENTRY, id: 'Bad_ID' };
+    expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+      .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+  });
+  it('refuses duplicate ids across entries, naming the id', () => {
+    expect(() => validateCatalog({ catalogVersion: 1, modules: [GOOD_ENTRY, { ...GOOD_ENTRY }] }))
+      .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID', message: expect.stringContaining(GOOD_ENTRY.id) }));
+  });
 });
 
 describe('fetchCatalog', () => {

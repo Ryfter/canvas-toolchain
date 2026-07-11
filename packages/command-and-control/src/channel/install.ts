@@ -40,14 +40,13 @@ function previewOf(entry: CatalogEntry, action: 'install' | 'upgrade'): Record<s
 }
 
 /**
- * Removes the placed-but-not-yet-coherent version directory, then removes its parent
- * module-id directory too, but ONLY if that leaves it empty — an upgrade's still-good
- * previous version (a sibling version dir) must survive a failed upgrade attempt.
+ * Removes a module version's directory, then removes its parent module-id directory too,
+ * but ONLY if that leaves it empty — a sibling version dir (e.g. an upgrade's still-good
+ * previous version, or a just-placed current version) must survive.
  * Best-effort: a blocked/unreadable parent (e.g. a file occupying the id path) is left
- * alone rather than raising, since this runs from inside an existing catch handler.
+ * alone rather than raising.
  */
-function cleanupPlacementDir(dest: string): void {
-  const versionDir = dirname(dest);
+function removeVersionDir(versionDir: string): void {
   rmSync(versionDir, { recursive: true, force: true });
   try {
     const idDir = dirname(versionDir);
@@ -57,6 +56,14 @@ function cleanupPlacementDir(dest: string): void {
   } catch {
     // best-effort cleanup only; leaving a blocked/empty parent behind is not fatal
   }
+}
+
+/**
+ * Removes the placed-but-not-yet-coherent version directory (see removeVersionDir for the
+ * parent-cleanup rules). This runs from inside an existing catch handler, so it never raises.
+ */
+function cleanupPlacementDir(dest: string): void {
+  removeVersionDir(dirname(dest));
 }
 
 /** Thrown when a download body exceeds the catalog-declared size (memory/tamper cap). */
@@ -183,13 +190,23 @@ export async function installModule(
 
   // Stage B — record. Artifact is placed but not yet recorded; on failure the artifact
   // would be an orphan (the loader only loads recorded modules), so remove it.
+  //
+  // Rollback-target semantics: `previous` must always name the last version that
+  // load-verified successfully (the loader clears `previous` after a successful load —
+  // see registry.ts). If `existing.previous` is still set, `existing.version` itself never
+  // load-verified (e.g. chained upgrades within one session, no reconnect in between) — carry
+  // `previous` FORWARD unchanged rather than overwriting it with the never-loaded version.
+  const carryForward = existing?.previous;
+  const nextPrevious = existing
+    ? (carryForward ?? { version: existing.version, sha256: existing.sha256 })
+    : undefined;
   try {
     installed.modules[entry.id] = {
       id: entry.id,
       version: entry.version,
       sha256: entry.sha256,
       installedAt: new Date().toISOString(),
-      ...(existing ? { previous: { version: existing.version, sha256: existing.sha256 } } : {}),
+      ...(nextPrevious ? { previous: nextPrevious } : {}),
     };
     saveInstalledModules(installed);
   } catch (err) {
@@ -198,6 +215,18 @@ export async function installModule(
     return refusal('INSTALL_FAILED',
       `Could not record the installed module (${msg}). ` +
       'The artifact was removed; nothing is installed. Retry after resolving the underlying issue.');
+  }
+
+  // The record now agrees with the artifact (Stage B succeeded). If `existing` never
+  // load-verified, its version directory is now orphaned — the retained rollback target is
+  // `carryForward` (already carried into the record above), not `existing.version`. Best-effort:
+  // a cleanup failure here must not undo the otherwise-complete install.
+  if (carryForward) {
+    try {
+      removeVersionDir(dirname(artifactPath(entry.id, existing!.version)));
+    } catch (err) {
+      console.error(`installModule: cleanup of superseded never-loaded '${entry.id}' v${existing!.version} failed:`, err);
+    }
   }
 
   // Stage C — post-install bookkeeping. The install IS complete and coherent (artifact +
