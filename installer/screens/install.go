@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sort"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -187,13 +186,7 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			return tasks.WriteModulesManifest(tasks.CcHomePath(), st.WorkflowPanopto)
 		}},
 		{Name: "Record requested modules", Warn: true, Run: func(ctx context.Context) error {
-			ids := make([]string, 0, len(st.RequestedModules))
-			for id, want := range st.RequestedModules {
-				if want {
-					ids = append(ids, id)
-				}
-			}
-			sort.Strings(ids)
+			ids := st.RequestedModuleIDs()
 			_, err := tasks.WritePendingModuleRequests(tasks.CcHomePath(), ids)
 			return err
 		}},
