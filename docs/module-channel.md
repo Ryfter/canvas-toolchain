@@ -44,7 +44,7 @@ confirm gate (same idiom as `wave_deep_check`):
 - `browse_module_catalog` (read-only) lists catalog modules merged with local
   state: installed / enabled / update available / not installed / bundled.
 - `install_module` — call 1 previews (name, version, description, size,
-  source URL, sha256, requirements, fresh-install vs. upgrade); call 2 with
+  source URL, sha256, handles, fresh-install vs. upgrade); call 2 with
   `confirm: true` downloads, verifies the sha256 against the catalog entry
   (refusing on any mismatch), and installs.
 
