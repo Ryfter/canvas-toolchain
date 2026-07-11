@@ -1,0 +1,67 @@
+# .github/workflows/release-module.yml
+name: release-module
+
+on:
+  push:
+    tags:
+      - 'module-*-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Parse module id and version from tag
+        id: parse
+        run: |
+          TAG="${GITHUB_REF_NAME}"                 # module-announcements-v1.0.0
+          WITHOUT_PREFIX="${TAG#module-}"          # announcements-v1.0.0
+          MODULE_ID="${WITHOUT_PREFIX%-v*}"        # announcements
+          VERSION="${TAG##*-v}"                    # 1.0.0
+          echo "id=${MODULE_ID}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - run: npm ci
+      - run: npm run build
+      - name: Test the module workspace
+        run: npm test --workspace=packages/module-${{ steps.parse.outputs.id }}
+      - name: Verify tag version matches package version
+        run: |
+          PKG_VERSION=$(node -p "require('./packages/module-${{ steps.parse.outputs.id }}/package.json').version")
+          if [ "$PKG_VERSION" != "${{ steps.parse.outputs.version }}" ]; then
+            echo "Tag says ${{ steps.parse.outputs.version }} but package.json says $PKG_VERSION"; exit 1
+          fi
+      - name: Build the channel artifact
+        id: artifact
+        run: |
+          npm run build:module -- ${{ steps.parse.outputs.id }} | tee artifact.json
+          echo "sha256=$(node -p "JSON.parse(require('fs').readFileSync('artifact.json','utf8')).sha256")" >> "$GITHUB_OUTPUT"
+          echo "size=$(node -p "JSON.parse(require('fs').readFileSync('artifact.json','utf8')).sizeBytes")" >> "$GITHUB_OUTPUT"
+      - name: Create the GitHub Release with the artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "dist-channel/module-${{ steps.parse.outputs.id }}-${{ steps.parse.outputs.version }}.mjs" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "Module channel artifact. sha256: ${{ steps.artifact.outputs.sha256 }}"
+      - name: Print the catalog entry for the follow-up commit
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          Add this entry to module-catalog.json on main (fill name/description/minHostVersion/handles from the module):
+          \`\`\`json
+          {
+            "id": "${{ steps.parse.outputs.id }}",
+            "version": "${{ steps.parse.outputs.version }}",
+            "artifactUrl": "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/module-${{ steps.parse.outputs.id }}-${{ steps.parse.outputs.version }}.mjs",
+            "sha256": "${{ steps.artifact.outputs.sha256 }}",
+            "sizeBytes": ${{ steps.artifact.outputs.size }}
+          }
+          \`\`\`
+          EOF
