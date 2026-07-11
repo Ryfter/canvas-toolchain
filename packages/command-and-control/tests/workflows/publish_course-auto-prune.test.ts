@@ -34,7 +34,7 @@ afterEach(() => {
 function makeProjectLocalSnap(id: string, publishedAt: string) {
   const dir = createSnapshotDirFor(id, courseDir);
   const manifest: PreviewManifest = {
-    snapshotId: id, courseId: 48895, courseDir, generatedAt: publishedAt,
+    snapshotId: id, courseId: 20255, courseDir, generatedAt: publishedAt,
     git: { isRepo: false }, entries: [],
     summary: { total: 0, pages: 0, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
   };
@@ -53,7 +53,7 @@ describe('publishCourse auto-prune', () => {
 
     // Pointer file: 's3' is currently live (not the ancient one — guard preserves liveness).
     const meta: PublishStateMeta = {
-      courseId: 48895, currentlyLiveSnapshotId: 's3',
+      courseId: 20255, currentlyLiveSnapshotId: 's3',
       currentlyLiveSince: '2026-06-03T12:00:00.000Z',
       history: [{ snapshotId: 's3', becameLiveAt: '2026-06-03T12:00:00.000Z', becameLiveVia: 'publish' }],
     };
@@ -63,7 +63,7 @@ describe('publishCourse auto-prune', () => {
     const snapshotId = 'new-publish';
     const dir = createSnapshotDir(snapshotId);
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -86,7 +86,7 @@ describe('publishCourse auto-prune', () => {
       }
       return new Response(JSON.stringify({
         page_id: 1, url: 'overview', title: 'Overview',
-        html_url: 'https://canvas.example/courses/48895/pages/overview',
+        html_url: 'https://canvas.example/courses/20255/pages/overview',
         body: '', published: true, updated_at: '',
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }));

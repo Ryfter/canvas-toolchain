@@ -32,7 +32,7 @@ afterEach(() => {
 function makeSnapshot(id: string, publishedAt: string, phase: PublishState['phase'], backup?: string) {
   const dir = createSnapshotDirFor(id, courseDir);
   const manifest: PreviewManifest = {
-    snapshotId: id, courseId: 48895, courseDir,
+    snapshotId: id, courseId: 20255, courseDir,
     generatedAt: publishedAt,
     git: { isRepo: false },
     entries: [{
@@ -50,7 +50,7 @@ function makeSnapshot(id: string, publishedAt: string, phase: PublishState['phas
 
 describe('listPublishSnapshots', () => {
   it('returns empty when no snapshots exist for the course', async () => {
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     expect(result.currentlyLiveSnapshotId).toBeNull();
     expect(result.snapshots).toEqual([]);
   });
@@ -60,7 +60,7 @@ describe('listPublishSnapshots', () => {
     makeSnapshot('snap-new', '2026-06-04T12:00:00.000Z', 'published');
 
     const meta: PublishStateMeta = {
-      courseId: 48895,
+      courseId: 20255,
       currentlyLiveSnapshotId: 'snap-new',
       currentlyLiveSince: '2026-06-04T12:00:00.000Z',
       history: [
@@ -70,7 +70,7 @@ describe('listPublishSnapshots', () => {
     };
     writePublishStateMeta(snapshotsRootFor(courseDir), meta);
 
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     expect(result.snapshots).toHaveLength(2);
     expect(result.snapshots[0]!.snapshotId).toBe('snap-old');
     expect(result.snapshots[1]!.snapshotId).toBe('snap-new');
@@ -81,11 +81,11 @@ describe('listPublishSnapshots', () => {
   it('marks canRollBackTo=false for currently-live snapshot', async () => {
     makeSnapshot('snap-live', '2026-06-04T12:00:00.000Z', 'published');
     writePublishStateMeta(snapshotsRootFor(courseDir), {
-      courseId: 48895, currentlyLiveSnapshotId: 'snap-live',
+      courseId: 20255, currentlyLiveSnapshotId: 'snap-live',
       currentlyLiveSince: '2026-06-04T12:00:00.000Z',
       history: [{ snapshotId: 'snap-live', becameLiveAt: '2026-06-04T12:00:00.000Z', becameLiveVia: 'publish' }],
     });
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     expect(result.snapshots[0]!.canRollBackTo).toBe(false);
     expect(result.snapshots[0]!.canRollForwardTo).toBe(false);
   });
@@ -94,21 +94,21 @@ describe('listPublishSnapshots', () => {
     makeSnapshot('snap-old', '2026-06-01T12:00:00.000Z', 'rolled-back');
     makeSnapshot('snap-new', '2026-06-04T12:00:00.000Z', 'restored');
     writePublishStateMeta(snapshotsRootFor(courseDir), {
-      courseId: 48895, currentlyLiveSnapshotId: 'snap-new',
+      courseId: 20255, currentlyLiveSnapshotId: 'snap-new',
       currentlyLiveSince: '2026-06-04T12:00:00.000Z',
       history: [
         { snapshotId: 'snap-old', becameLiveAt: '2026-06-01T12:00:00.000Z', becameStaleAt: '2026-06-04T12:00:00.000Z', becameLiveVia: 'publish' },
         { snapshotId: 'snap-new', becameLiveAt: '2026-06-04T12:00:00.000Z', becameLiveVia: 'rollback' },
       ],
     });
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     const old = result.snapshots.find(s => s.snapshotId === 'snap-old')!;
     expect(old.canRollForwardTo).toBe(true);
   });
 
   it('surfaces backupAtPublishTime when manifest.backup is set', async () => {
     makeSnapshot('snap-1', '2026-06-04T12:00:00.000Z', 'published', 'git-pushed');
-    const result = await listPublishSnapshots({ courseId: 48895, courseDir });
+    const result = await listPublishSnapshots({ courseId: 20255, courseDir });
     expect(result.snapshots[0]!.backupAtPublishTime).toBe('git-pushed');
   });
 });

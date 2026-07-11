@@ -95,7 +95,7 @@ describe('widget content lifecycle round-trip', () => {
     const canvasFiles = new Map<number, string>();
     canvasFiles.set(100, priorWidgetBody);
     let nextFileId = 200;
-    let livePageBody = '<iframe src="/courses/48895/files/100/preview"></iframe>';
+    let livePageBody = '<iframe src="/courses/20255/files/100/preview"></iframe>';
 
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const u = String(url);
@@ -105,7 +105,7 @@ describe('widget content lifecycle round-trip', () => {
       if (u.match(/\/pages(\?|$)/) && method === 'GET') {
         return new Response(JSON.stringify([{
           page_id: 1, url: 'overview', title: 'Round Trip',
-          html_url: 'https://canvas.example/courses/48895/pages/overview',
+          html_url: 'https://canvas.example/courses/20255/pages/overview',
           body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }
@@ -157,13 +157,13 @@ describe('widget content lifecycle round-trip', () => {
       canvasFiles.set(fileId, content);
       return {
         canvasFileId: fileId,
-        embedSrc: `https://canvas.example/courses/48895/files/${fileId}/preview`,
-        embedHtml: `<iframe src="https://canvas.example/courses/48895/files/${fileId}/preview"></iframe>`,
+        embedSrc: `https://canvas.example/courses/20255/files/${fileId}/preview`,
+        embedHtml: `<iframe src="https://canvas.example/courses/20255/files/${fileId}/preview"></iframe>`,
       };
     });
 
     // --- 1. Preview ---
-    const preview = await previewCoursePublish({ courseDir: cd, courseId: 48895 });
+    const preview = await previewCoursePublish({ courseDir: cd, courseId: 20255 });
     expect(preview.manifest).toBeDefined();
     const page = preview.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('changed');

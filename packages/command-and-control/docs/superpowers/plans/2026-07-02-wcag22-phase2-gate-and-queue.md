@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Public repo — zero institution-specific data.** Examples and fixtures use `example.edu` / `example.instructure.com` only. Grep for `boisestate|BSU|Boise` before every commit; any match is a defect.
+- **Public repo — zero institution-specific data.** Examples and fixtures use `example.edu` / `example.instructure.com` only. Grep for `exampleu|BSU|Boise` before every commit; any match is a defect.
 - **Error code is exactly `ACCESSIBILITY_ACK_REQUIRED`** on both publish paths (spec §3).
 - **Two-tier acknowledgment semantics (spec §3, exact):** verdict `borderline` → `acknowledgeAccessibility: true` suffices. Verdict `fail` → the value must be an array naming **every** clear-failure SC; missing SCs are rejected, extra SCs are rejected, and `true` is rejected. Verdict `pass` → no acknowledgment needed (a supplied one is ignored, not an error).
 - **Borderline rule (spec §1, already implemented as `isBorderlineFinding`):** with margin → `measured >= 0.85 * required`; without margin → severity `moderate`/`minor`. `serious`/`critical` without a saving margin = clear failure.
@@ -1665,7 +1665,7 @@ borderline review queue store). FERPA and RCE validation gates are unchanged and
 
 - [ ] **Step 5: Verify and commit**
 
-Run: grep the diff for `boisestate|BSU|Boise` (must be zero matches); then in both packages `npx vitest run` one final time.
+Run: grep the diff for `exampleu|BSU|Boise` (must be zero matches); then in both packages `npx vitest run` one final time.
 
 ```bash
 git add docs/accessibility.md packages/canvas-design-studio/CLAUDE.md packages/command-and-control/CLAUDE.md AGENTS.md
@@ -1679,5 +1679,5 @@ git commit -m "docs: WCAG 2.2 Phase 2 — publishing gate, acknowledgments, revi
 1. `packages/shared-types`: `npx vitest run` + `npm run build`
 2. `packages/canvas-design-studio`: `npx vitest run` + `npx tsc --noEmit` + `npm run build`
 3. `packages/command-and-control`: `npx vitest run` + `npx tsc --noEmit` + `npm run build`
-4. Repo root: `git grep -iE 'boisestate|\bBSU\b|Boise'` over the branch diff — zero matches
+4. Repo root: `git grep -iE 'exampleu|\bBSU\b|Boise'` over the branch diff — zero matches
 5. Spec §9 gate matrix is covered: both paths × {pass, borderline+true, borderline without ack, fail+named array, fail with incomplete array, fail with `true` only} — see Tasks 3 and 5 test lists

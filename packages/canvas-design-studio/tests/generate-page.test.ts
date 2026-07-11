@@ -321,7 +321,7 @@ describe('generatePage — oral-assessment AIAS + launch (#76)', () => {
 
   it('builds the launch link from course-config domain when the page omits launch_url', () => {
     const courseDir = setupCourse('oa-domain-',
-      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\noral_assessment_launch_domain: rhetorixlab.boisestate.edu\n---\n');
+      '---\ntitle: Test Course\nshort_name: TC\nsemester: F26\ndomain_color: "#0033A0"\noral_assessment_launch_domain: rhetorixlab.example.edu\n---\n');
     try {
       const mdPath = join(courseDir, 'week-04', 'oral-assessment.md');
       writeFileSync(mdPath, [
@@ -332,7 +332,7 @@ describe('generatePage — oral-assessment AIAS + launch (#76)', () => {
       ].join('\n'));
       const result = generatePage({ mdPath, courseDir, outputDir: join(courseDir, 'out') });
       expect(result.pageType).toBe('oral-assessment');
-      expect(result.html).toContain('https://rhetorixlab.boisestate.edu/lti/launch');
+      expect(result.html).toContain('https://rhetorixlab.example.edu/lti/launch');
       expect(result.html).toContain('Launch the assessment');
     } finally { rmSync(courseDir, { recursive: true, force: true }); }
   });

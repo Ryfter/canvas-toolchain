@@ -29,7 +29,7 @@ describe('publishWidget', () => {
 
     const result = await publishWidget({
       htmlPath,
-      courseId: 48895,
+      courseId: 20255,
       canvasConfig: { host: 'canvas.example', token: 'tk' },
       widgetSpec: {
         id: 'flip', name: 'Flip', kind: 'card-flip-reveal', purpose: '',
@@ -40,9 +40,9 @@ describe('publishWidget', () => {
     });
 
     expect(result.canvasFileId).toBe(777);
-    expect(result.embedSrc).toBe('https://canvas.example/courses/48895/files/777/preview');
+    expect(result.embedSrc).toBe('https://canvas.example/courses/20255/files/777/preview');
     expect(result.embedHtml).toContain('<iframe');
-    expect(result.embedHtml).toContain('src="https://canvas.example/courses/48895/files/777/preview"');
+    expect(result.embedHtml).toContain('src="https://canvas.example/courses/20255/files/777/preview"');
     expect(result.embedHtml).toContain('sandbox="allow-scripts allow-same-origin allow-forms"');
     expect(result.embedHtml).toContain('title="Flip"');
     expect(result.embedHtml).toContain('height="400"');

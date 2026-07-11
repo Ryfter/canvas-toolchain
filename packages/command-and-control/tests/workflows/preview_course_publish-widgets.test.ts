@@ -113,7 +113,7 @@ describe('previewCoursePublish widget surfacing', () => {
       addWidgets: [{ slug: 'overview', id: 'foo' }],
     });
 
-    const result = await previewCoursePublish({ courseDir, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir, courseId: 20255 });
 
     expect(result.error).toBeUndefined();
     expect(result.manifest).toBeDefined();
@@ -136,7 +136,7 @@ describe('previewCoursePublish widget surfacing', () => {
       addWidgets: [{ slug: 'overview', id: 'gone', missingHtml: true }],
     });
 
-    const result = await previewCoursePublish({ courseDir, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir, courseId: 20255 });
 
     const pageEntry = result.manifest!.entries.find(e => e.type === 'page') as any;
     expect(pageEntry.widgets[0].status).toBe('missing-html');
@@ -151,7 +151,7 @@ describe('previewCoursePublish widget surfacing', () => {
       addWidgets: [{ slug: 'overview', id: 'spec-only-missing', missingSpec: true }],
     });
 
-    const result = await previewCoursePublish({ courseDir, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir, courseId: 20255 });
 
     const pageEntry = result.manifest!.entries.find(e => e.type === 'page') as any;
     expect(pageEntry.widgets[0].status).toBe('missing-spec');
@@ -166,7 +166,7 @@ describe('previewCoursePublish widget surfacing', () => {
       addWidgets: [],
     });
 
-    const result = await previewCoursePublish({ courseDir, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir, courseId: 20255 });
 
     const pageEntry = result.manifest!.entries.find(e => e.type === 'page') as any;
     expect(pageEntry.widgets).toBeUndefined();
@@ -183,7 +183,7 @@ describe('previewCoursePublish widget surfacing', () => {
       ],
     });
 
-    const result = await previewCoursePublish({ courseDir, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir, courseId: 20255 });
 
     const pageEntry = result.manifest!.entries.find(e => e.type === 'page') as any;
     expect(pageEntry.widgets).toHaveLength(2);

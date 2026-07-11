@@ -38,7 +38,7 @@ function setupTwoSnapshots(): { snap1Id: string; snap2Id: string } {
     // (via snapshotsRootFor / writePublishStateMeta below).
     const dir = createSnapshotDir(id);
     const manifest: PreviewManifest = {
-      snapshotId: id, courseId: 48895, courseDir,
+      snapshotId: id, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -64,7 +64,7 @@ function setupTwoSnapshots(): { snap1Id: string; snap2Id: string } {
   }
 
   const meta: PublishStateMeta = {
-    courseId: 48895,
+    courseId: 20255,
     currentlyLiveSnapshotId: snap2Id,
     currentlyLiveSince: '2026-06-04T13:00:00.000Z',
     history: [
@@ -87,7 +87,7 @@ describe('rollbackCoursePublish Pattern B pointer behavior', () => {
 
     await rollbackCoursePublish({ snapshotId: snap2Id });
 
-    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-48895.json');
+    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-20255.json');
     const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
     expect(meta.currentlyLiveSnapshotId).toBe(snap1Id);
     expect(meta.history[meta.history.length - 1].becameLiveVia).toBe('rollback');
@@ -102,7 +102,7 @@ describe('rollbackCoursePublish Pattern B pointer behavior', () => {
 
     await rollbackCoursePublish({ snapshotId: snap2Id, targetSnapshotId: snap1Id });
 
-    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-48895.json');
+    const metaPath = join(snapshotsRootFor(courseDir), 'publish-state-20255.json');
     const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
     expect(meta.currentlyLiveSnapshotId).toBe(snap1Id);
   });

@@ -32,7 +32,7 @@ describe('publishCourse backup field', () => {
     const snapshotId = 'backup-snap-1';
     const dir = createSnapshotDir(snapshotId);
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{

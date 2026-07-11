@@ -41,7 +41,7 @@ deepLinkTemplate: "https://x/{sourceId}?t={startSeconds}"
 
     const provider = new FakeProvider();
     const result = await ingestCourse({
-      courseId: 48894, courseDir, transcriptSources: [transcriptDir],
+      courseId: 20244, courseDir, transcriptSources: [transcriptDir],
       provider, rebuild: false,
     });
 

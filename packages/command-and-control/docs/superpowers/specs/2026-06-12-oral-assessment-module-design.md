@@ -12,18 +12,18 @@
 
 Issue #75 originally framed Rhetorix Lab integration as "scope intentionally open," blocked on a conversation with the tool's author, because the public marketing pages show no API/LTI/export. A thorough pass on **2026-06-12** changed that picture.
 
-**What Rhetorix Lab is.** An "AI-irrelevant by design" video-based assessment platform — asynchronous video capture with AI-enhanced grading, for oral exams, quizzes, journals, and short essays. It confirms genuine student understanding rather than detecting AI. Built by a Boise State professor; `rhetorixlab.boisestate.edu` is the BSU deployment, `rhetorixlab.io` is the productized public version (tiers: Foundations $0/student, Scholar $9.99/student, Campus custom).
+**What Rhetorix Lab is.** An "AI-irrelevant by design" video-based assessment platform — asynchronous video capture with AI-enhanced grading, for oral exams, quizzes, journals, and short essays. It confirms genuine student understanding rather than detecting AI. Built by a Boise State professor; `rhetorixlab.example.edu` is the BSU deployment, `rhetorixlab.io` is the productized public version (tiers: Foundations $0/student, Scholar $9.99/student, Campus custom).
 
 **The decisive finding (BSU instructor resources page).** Rhetorix Lab is **already an LTI tool with native Canvas integration**:
 
-- External Tool Link: `https://rhetorixlab.boisestate.edu/lti/launch` — a standard LTI launch endpoint.
+- External Tool Link: `https://rhetorixlab.example.edu/lti/launch` — a standard LTI launch endpoint.
 - Instructors can "create assignments in Canvas that are linked to Rhetorix Lab assessments" and "link existing Rhetorix Lab assessments to new Canvas assignments."
 - It already does **grade passback** ("how to sync grades with Canvas" — LTI AGS).
 - Students launch the assessment from inside the Canvas assignment.
 
 **Implication.** The two directions that looked author-dependent — *embedding* and *pulling results back* — are **already solved by Rhetorix's own LTI integration**. We must not reinvent launch or grade sync. The real, un-met value for canvas-toolchain is **authoring-side**, which is exactly the toolchain's strength and needs **nothing** from the Rhetorix author. **#75 is buildable now; the author conversation becomes a nice-to-have, not a blocker.**
 
-Sources: `rhetorixlab.io/product`, `rhetorixlab.io/pricing`, `rhetorixlab.boisestate.edu/instructorResources`, `rhetorixlab.boisestate.edu/useCases`.
+Sources: `rhetorixlab.io/product`, `rhetorixlab.io/pricing`, `rhetorixlab.example.edu/instructorResources`, `rhetorixlab.example.edu/useCases`.
 
 ---
 
@@ -90,7 +90,7 @@ Future providers (Yoodli, Bongo, GoReact) drop in as ~one-file adapters. Provide
 
 ### 4.3 No credentials
 
-There is no `setup_*` secret tool. The only configurable value is an optional **institution Rhetorix domain** (e.g. `rhetorixlab.boisestate.edu`) used to build the launch URL. It lives as an optional field in `course-config.md` (the same place brand/course config already lives), read at render time. When absent, the wrapper page renders a labeled launch-link placeholder instead of a live URL.
+There is no `setup_*` secret tool. The only configurable value is an optional **institution Rhetorix domain** (e.g. `rhetorixlab.example.edu`) used to build the launch URL. It lives as an optional field in `course-config.md` (the same place brand/course config already lives), read at render time. When absent, the wrapper page renders a labeled launch-link placeholder instead of a live URL.
 
 ---
 

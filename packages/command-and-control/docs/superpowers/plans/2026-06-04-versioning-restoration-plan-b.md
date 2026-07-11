@@ -831,7 +831,7 @@ import { discoverPriorWidgetRefs } from '../../src/tools/publish/widget_discover
 describe('discoverPriorWidgetRefs', () => {
   it('extracts file_id from Canvas Files preview iframe', () => {
     const html = `<p>before</p>
-<iframe src="/courses/48895/files/12345/preview" title="Sort the SDLC phases" width="100%" height="600"></iframe>
+<iframe src="/courses/20255/files/12345/preview" title="Sort the SDLC phases" width="100%" height="600"></iframe>
 <p>after</p>`;
     const refs = discoverPriorWidgetRefs(html);
     expect(refs).toHaveLength(1);
@@ -995,7 +995,7 @@ describe('previewCoursePublish widget content capture', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', {
       status: 200, headers: { 'content-type': 'application/json' } })));
 
-    const result = await previewCoursePublish({ courseDir: join(courseDir, 'course'), courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir: join(courseDir, 'course'), courseId: 20255 });
     expect(result.manifest).toBeDefined();
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('new');
@@ -1010,7 +1010,7 @@ describe('previewCoursePublish widget content capture', () => {
       if (u.includes('/pages') && !u.match(/\/pages\/[^/]+$/)) {
         // List pages
         return new Response(JSON.stringify([{
-          page_id: 1, url: 'assignment', title: 'Assignment', html_url: 'https://canvas.example/courses/48895/pages/assignment', body: '', published: true, updated_at: '',
+          page_id: 1, url: 'assignment', title: 'Assignment', html_url: 'https://canvas.example/courses/20255/pages/assignment', body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       if (u.includes('/assignments')) {
@@ -1018,7 +1018,7 @@ describe('previewCoursePublish widget content capture', () => {
       }
       if (u.match(/\/pages\/[^/]+$/)) {
         return new Response(JSON.stringify({
-          page_id: 1, url: 'assignment', title: 'Assignment', html_url: '', body: '<iframe src="/courses/48895/files/12345/preview" title="Sort"></iframe>', published: true, updated_at: '',
+          page_id: 1, url: 'assignment', title: 'Assignment', html_url: '', body: '<iframe src="/courses/20255/files/12345/preview" title="Sort"></iframe>', published: true, updated_at: '',
         }), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       if (u.includes('/files/12345') && !u.includes('/download')) {
@@ -1033,7 +1033,7 @@ describe('previewCoursePublish widget content capture', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await previewCoursePublish({ courseDir: join(courseDir, 'course'), courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir: join(courseDir, 'course'), courseId: 20255 });
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('unchanged');
 
@@ -1068,7 +1068,7 @@ describe('previewCoursePublish widget content capture', () => {
       }
       if (u.match(/\/pages\/[^/]+$/)) {
         return new Response(JSON.stringify({
-          page_id: 1, url: 'assignment', title: 'Assignment', html_url: '', body: '<iframe src="/courses/48895/files/12345/preview"></iframe>', published: true, updated_at: '',
+          page_id: 1, url: 'assignment', title: 'Assignment', html_url: '', body: '<iframe src="/courses/20255/files/12345/preview"></iframe>', published: true, updated_at: '',
         }), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       if (u.includes('/files/12345') && !u.includes('/download')) {
@@ -1080,7 +1080,7 @@ describe('previewCoursePublish widget content capture', () => {
       return new Response('404', { status: 404 });
     }));
 
-    const result = await previewCoursePublish({ courseDir: join(courseDir, 'course'), courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir: join(courseDir, 'course'), courseId: 20255 });
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('changed');
   });
@@ -1098,14 +1098,14 @@ describe('previewCoursePublish widget content capture', () => {
       if (u.includes('/assignments')) return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
       if (u.match(/\/pages\/[^/]+$/)) {
         return new Response(JSON.stringify({
-          page_id: 1, url: 'assignment', title: 'Assignment', html_url: '', body: '<iframe src="/courses/48895/files/12345/preview"></iframe>', published: true, updated_at: '',
+          page_id: 1, url: 'assignment', title: 'Assignment', html_url: '', body: '<iframe src="/courses/20255/files/12345/preview"></iframe>', published: true, updated_at: '',
         }), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       // getFileContent metadata 500
       return new Response('boom', { status: 500 });
     }));
 
-    const result = await previewCoursePublish({ courseDir: join(courseDir, 'course'), courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir: join(courseDir, 'course'), courseId: 20255 });
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('new');
     expect(page.warnings.some((w: any) => w.message.includes('WIDGET_FETCH_FAILED') || /fetch.*widget/i.test(w.message))).toBe(true);
@@ -1394,7 +1394,7 @@ describe('publishCourse widgets-meta recording', () => {
     });
 
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -1419,8 +1419,8 @@ describe('publishCourse widgets-meta recording', () => {
 
     const publishWidgetFn = vi.fn().mockResolvedValue({
       canvasFileId: 9999,
-      embedSrc: 'https://canvas.example/courses/48895/files/9999/preview',
-      embedHtml: '<iframe src="https://canvas.example/courses/48895/files/9999/preview"></iframe>',
+      embedSrc: 'https://canvas.example/courses/20255/files/9999/preview',
+      embedHtml: '<iframe src="https://canvas.example/courses/20255/files/9999/preview"></iframe>',
     });
 
     const result = await publishCourse(
@@ -1452,7 +1452,7 @@ describe('publishCourse widgets-meta recording', () => {
     });
 
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -1590,7 +1590,7 @@ import { rewriteIframeFileId } from '../../src/tools/publish/widget_iframe_rewri
 
 describe('rewriteIframeFileId', () => {
   it('swaps the file_id in a course-relative iframe src', () => {
-    const html = '<p>x</p><iframe src="/courses/48895/files/100/preview" title="W"></iframe>';
+    const html = '<p>x</p><iframe src="/courses/20255/files/100/preview" title="W"></iframe>';
     const out = rewriteIframeFileId(html, 100, 200);
     expect(out).toContain('/files/200/preview');
     expect(out).not.toContain('/files/100/preview');
@@ -1753,7 +1753,7 @@ describe('rollbackCoursePublish widget content restore', () => {
     });
 
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -1767,8 +1767,8 @@ describe('rollbackCoursePublish widget content restore', () => {
       summary: { total: 1, pages: 1, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
     };
     writeManifest(dir, manifest);
-    writePriorHtml(dir, 'assignment.html', '<iframe src="/courses/48895/files/100/preview"></iframe>');
-    writeNewHtml(dir, 'assignment.html', '<iframe src="/courses/48895/files/200/preview"></iframe>');
+    writePriorHtml(dir, 'assignment.html', '<iframe src="/courses/20255/files/100/preview"></iframe>');
+    writeNewHtml(dir, 'assignment.html', '<iframe src="/courses/20255/files/200/preview"></iframe>');
     writeState(dir, {
       phase: 'published',
       published: [{
@@ -1800,8 +1800,8 @@ describe('rollbackCoursePublish widget content restore', () => {
     // Stub publishWidget — returns a new file_id distinct from both 100 and 200.
     const publishWidgetFn = vi.fn().mockResolvedValue({
       canvasFileId: 333,
-      embedSrc: 'https://canvas.example/courses/48895/files/333/preview',
-      embedHtml: '<iframe src="https://canvas.example/courses/48895/files/333/preview"></iframe>',
+      embedSrc: 'https://canvas.example/courses/20255/files/333/preview',
+      embedHtml: '<iframe src="https://canvas.example/courses/20255/files/333/preview"></iframe>',
     });
 
     const result = await rollbackCoursePublish(
@@ -1847,7 +1847,7 @@ describe('rollbackCoursePublish widget content restore', () => {
     });
 
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -2171,7 +2171,7 @@ describe('widget content lifecycle round-trip', () => {
     const canvasFiles = new Map<number, string>();
     canvasFiles.set(100, priorWidgetBody);
     let nextFileId = 200;
-    let livePageBody = '<iframe src="/courses/48895/files/100/preview"></iframe>';
+    let livePageBody = '<iframe src="/courses/20255/files/100/preview"></iframe>';
 
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const u = String(url);
@@ -2179,7 +2179,7 @@ describe('widget content lifecycle round-trip', () => {
 
       if (u.endsWith('/pages') || u.includes('/pages?')) {
         return new Response(JSON.stringify([{
-          page_id: 1, url: 'assignment', title: 'Assignment', html_url: 'https://canvas.example/courses/48895/pages/assignment', body: '', published: true, updated_at: '',
+          page_id: 1, url: 'assignment', title: 'Assignment', html_url: 'https://canvas.example/courses/20255/pages/assignment', body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       if (u.includes('/assignments')) {
@@ -2229,13 +2229,13 @@ describe('widget content lifecycle round-trip', () => {
       canvasFiles.set(fileId, content);
       return {
         canvasFileId: fileId,
-        embedSrc: `https://canvas.example/courses/48895/files/${fileId}/preview`,
-        embedHtml: `<iframe src="https://canvas.example/courses/48895/files/${fileId}/preview"></iframe>`,
+        embedSrc: `https://canvas.example/courses/20255/files/${fileId}/preview`,
+        embedHtml: `<iframe src="https://canvas.example/courses/20255/files/${fileId}/preview"></iframe>`,
       };
     });
 
     // --- 1. Preview ---
-    const preview = await previewCoursePublish({ courseDir, courseId: 48895 });
+    const preview = await previewCoursePublish({ courseDir, courseId: 20255 });
     expect(preview.manifest).toBeDefined();
     const page = preview.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('changed');

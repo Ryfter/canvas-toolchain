@@ -49,6 +49,6 @@ tools:
     module: null
   - id: rhetorix
     name: Rhetorix Lab
-    identifiers: [rhetorix, rhetorix lab, rhetorixlab, rhetorixlab.io, rhetorixlab.boisestate.edu]
+    identifiers: [rhetorix, rhetorix lab, rhetorixlab, rhetorixlab.io]
     module: oral-assessment
     recommended: true

@@ -36,14 +36,14 @@ describe('end-to-end: index → ask → answer with citations', () => {
   it('indexes every source type and answers with citations spanning sources', async () => {
     const provider = new FakeProvider();
     const indexResult = await indexCourseForAnswers(
-      { courseId: 48894, courseDir, transcriptSources: [transcriptDir] },
+      { courseId: 20244, courseDir, transcriptSources: [transcriptDir] },
       { provider },
     );
     expect(indexResult.ok).toBe(true);
     expect(indexResult.chunksAdded).toBeGreaterThanOrEqual(3);
 
     const askResult = await askCourse(
-      { courseId: 48894, courseDir, transcriptSources: [transcriptDir], question: 'what is VLOOKUP and how is the final project graded?' },
+      { courseId: 20244, courseDir, transcriptSources: [transcriptDir], question: 'what is VLOOKUP and how is the final project graded?' },
       { provider, llm: fakeLlm('VLOOKUP looks up values [1]. The final project is 40% rubric, 60% peer eval [2].') },
     );
     expect(askResult.answer).toMatch(/VLOOKUP/);
@@ -55,7 +55,7 @@ describe('end-to-end: index → ask → answer with citations', () => {
   it('incremental re-index on second ask_course picks up canonical edits', async () => {
     const provider = new FakeProvider();
     await indexCourseForAnswers(
-      { courseId: 48894, courseDir, transcriptSources: [transcriptDir] }, { provider });
+      { courseId: 20244, courseDir, transcriptSources: [transcriptDir] }, { provider });
 
     // Mutate canonical FAQ
     const canonicalPath = join(courseDir, 'answers', 'canonical.md');
@@ -63,7 +63,7 @@ describe('end-to-end: index → ask → answer with citations', () => {
     writeFileSync(canonicalPath, `## What is the late policy?\n\n10% per day, max 3 days.`, 'utf-8');
 
     const r = await askCourse(
-      { courseId: 48894, courseDir, transcriptSources: [transcriptDir], question: 'late policy?' },
+      { courseId: 20244, courseDir, transcriptSources: [transcriptDir], question: 'late policy?' },
       { provider, llm: fakeLlm('Late policy: 10% per day [1].') },
     );
     // Should retrieve the new canonical chunk (it was indexed incrementally during the askCourse call).

@@ -30,7 +30,7 @@ describe('RhetorixProvider.formatAssessment', () => {
 
 describe('RhetorixProvider.buildLaunchUrl', () => {
   it('builds the lti/launch URL from a domain', () => {
-    expect(p.buildLaunchUrl('rhetorixlab.boisestate.edu')).toBe('https://rhetorixlab.boisestate.edu/lti/launch');
+    expect(p.buildLaunchUrl('rhetorixlab.example.edu')).toBe('https://rhetorixlab.example.edu/lti/launch');
   });
   it('returns null without a domain', () => {
     expect(p.buildLaunchUrl(undefined)).toBeNull();

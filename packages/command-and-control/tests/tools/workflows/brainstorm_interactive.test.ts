@@ -180,7 +180,7 @@ describe('brainstormInteractive — kb-bridge auto-load (#32)', () => {
       personas: 'PERSONAS: undergrad non-majors, need scaffolding.',
     });
     await brainstormInteractive(
-      { topic: 'T', learningGoal: 'G', courseId: '48895' },
+      { topic: 'T', learningGoal: 'G', courseId: '20255' },
       { llm, kb },
     );
     expect(llm.calls).toHaveLength(1);
@@ -203,7 +203,7 @@ describe('brainstormInteractive — kb-bridge auto-load (#32)', () => {
     const llm = makeFakeLlm({ concepts: [validConcept()] });
     const kb = makeFakeKb({ philosophy: 'SHOULD_NOT_APPEAR', personas: 'PERSONAS_OK' });
     await brainstormInteractive(
-      { topic: 'T', learningGoal: 'G', courseId: '48895', includePhilosophy: false },
+      { topic: 'T', learningGoal: 'G', courseId: '20255', includePhilosophy: false },
       { llm, kb },
     );
     expect(llm.calls[0].user).not.toContain('SHOULD_NOT_APPEAR');
@@ -215,7 +215,7 @@ describe('brainstormInteractive — kb-bridge auto-load (#32)', () => {
     const kb = makeFakeKb({ philosophy: 'PHIL_FROM_DISK', personas: 'PERSONAS_FROM_DISK' });
     await brainstormInteractive(
       {
-        topic: 'T', learningGoal: 'G', courseId: '48895',
+        topic: 'T', learningGoal: 'G', courseId: '20255',
         philosophyKb: 'CALLER_PROVIDED', includePhilosophy: true,
       },
       { llm, kb },
@@ -230,7 +230,7 @@ describe('brainstormInteractive — kb-bridge auto-load (#32)', () => {
     const llm = makeFakeLlm({ concepts: [validConcept()] });
     const kb = makeFakeKb({ philosophy: null, personas: null });
     await brainstormInteractive(
-      { topic: 'T', learningGoal: 'G', courseId: '48895', includePhilosophy: true, includePersonas: true },
+      { topic: 'T', learningGoal: 'G', courseId: '20255', includePhilosophy: true, includePersonas: true },
       { llm, kb },
     );
     // includePhilosophy: true + no text -> prompt records the gap.

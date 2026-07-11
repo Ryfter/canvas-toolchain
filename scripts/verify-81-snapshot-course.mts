@@ -4,7 +4,7 @@
  *
  * Usage:
  *   tsx scripts/verify-81-snapshot-course.mts <courseId> <outputPath>
- *   tsx scripts/verify-81-snapshot-course.mts 48894 D:/tmp/busapp-snapshot.md
+ *   tsx scripts/verify-81-snapshot-course.mts 20244 D:/tmp/course-snapshot.md
  */
 import { snapshotCourse } from '../packages/command-and-control/dist/tools/workflows/snapshot_course.js';
 

@@ -8,16 +8,16 @@ func TestNormalizeCanvasHost(t *testing.T) {
 		in   string
 		want string
 	}{
-		{"bare subdomain gets instructure suffix", "boisestatecanvas", "boisestatecanvas.instructure.com"},
-		{"full host unchanged", "boisestatecanvas.instructure.com", "boisestatecanvas.instructure.com"},
-		{"strips https scheme", "https://boisestatecanvas.instructure.com", "boisestatecanvas.instructure.com"},
+		{"bare subdomain gets instructure suffix", "exampleucanvas", "exampleucanvas.instructure.com"},
+		{"full host unchanged", "exampleucanvas.instructure.com", "exampleucanvas.instructure.com"},
+		{"strips https scheme", "https://exampleucanvas.instructure.com", "exampleucanvas.instructure.com"},
 		{"strips http scheme", "http://example.instructure.com", "example.instructure.com"},
-		{"strips path", "https://boisestatecanvas.instructure.com/courses/1", "boisestatecanvas.instructure.com"},
+		{"strips path", "https://exampleucanvas.instructure.com/courses/1", "exampleucanvas.instructure.com"},
 		{"strips trailing slash", "example.instructure.com/", "example.instructure.com"},
-		{"trims whitespace and lowercases", "  Boisestatecanvas  ", "boisestatecanvas.instructure.com"},
-		{"vanity domain left alone", "canvas.boisestate.edu", "canvas.boisestate.edu"},
-		{"strips trailing dot then suffixes bare label", "boisestatecanvas.", "boisestatecanvas.instructure.com"},
-		{"scheme plus bare label", "https://boisestatecanvas", "boisestatecanvas.instructure.com"},
+		{"trims whitespace and lowercases", "  Exampleucanvas  ", "exampleucanvas.instructure.com"},
+		{"vanity domain left alone", "canvas.exampleu.edu", "canvas.exampleu.edu"},
+		{"strips trailing dot then suffixes bare label", "exampleucanvas.", "exampleucanvas.instructure.com"},
+		{"scheme plus bare label", "https://exampleucanvas", "exampleucanvas.instructure.com"},
 		{"empty stays empty", "", ""},
 		{"whitespace-only stays empty", "   ", ""},
 	}
@@ -31,7 +31,7 @@ func TestNormalizeCanvasHost(t *testing.T) {
 }
 
 func TestNormalizeCanvasHostIsIdempotent(t *testing.T) {
-	for _, in := range []string{"boisestatecanvas", "https://example.instructure.com/x", "canvas.boisestate.edu", ""} {
+	for _, in := range []string{"exampleucanvas", "https://example.instructure.com/x", "canvas.exampleu.edu", ""} {
 		once := NormalizeCanvasHost(in)
 		twice := NormalizeCanvasHost(once)
 		if once != twice {

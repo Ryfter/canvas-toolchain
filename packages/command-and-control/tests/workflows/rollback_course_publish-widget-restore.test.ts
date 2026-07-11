@@ -62,7 +62,7 @@ describe('rollbackCoursePublish widget content restore', () => {
     });
 
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{
@@ -76,8 +76,8 @@ describe('rollbackCoursePublish widget content restore', () => {
       summary: { total: 1, pages: 1, assignments: 0, skipped: 0, warningsCount: 0, ferpaCount: 0, collisionsCount: 0 },
     };
     writeManifest(dir, manifest);
-    writePriorHtml(dir, 'assignment.html', '<iframe src="/courses/48895/files/100/preview"></iframe>');
-    writeNewHtml(dir, 'assignment.html', '<iframe src="/courses/48895/files/200/preview"></iframe>');
+    writePriorHtml(dir, 'assignment.html', '<iframe src="/courses/20255/files/100/preview"></iframe>');
+    writeNewHtml(dir, 'assignment.html', '<iframe src="/courses/20255/files/200/preview"></iframe>');
     writeState(dir, {
       phase: 'published',
       published: [{
@@ -101,7 +101,7 @@ describe('rollbackCoursePublish widget content restore', () => {
       }
       if (u.match(/\/pages\/assignment$/) && method === 'GET') {
         // getPageBody during widget restore returns the prior HTML (just restored above).
-        return new Response(JSON.stringify({ page_id: 1, url: 'assignment', title: 'A', html_url: '', body: '<iframe src="/courses/48895/files/100/preview"></iframe>', published: true, updated_at: '' }), { status: 200, headers: { 'content-type': 'application/json' } });
+        return new Response(JSON.stringify({ page_id: 1, url: 'assignment', title: 'A', html_url: '', body: '<iframe src="/courses/20255/files/100/preview"></iframe>', published: true, updated_at: '' }), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
     }));
@@ -109,8 +109,8 @@ describe('rollbackCoursePublish widget content restore', () => {
     // Stub publishWidget — returns a new file_id distinct from both 100 and 200.
     const publishWidgetFn = vi.fn().mockResolvedValue({
       canvasFileId: 333,
-      embedSrc: 'https://canvas.example/courses/48895/files/333/preview',
-      embedHtml: '<iframe src="https://canvas.example/courses/48895/files/333/preview"></iframe>',
+      embedSrc: 'https://canvas.example/courses/20255/files/333/preview',
+      embedHtml: '<iframe src="https://canvas.example/courses/20255/files/333/preview"></iframe>',
     });
 
     const result = await rollbackCoursePublish(
@@ -156,7 +156,7 @@ describe('rollbackCoursePublish widget content restore', () => {
     });
 
     const manifest: PreviewManifest = {
-      snapshotId, courseId: 48895, courseDir,
+      snapshotId, courseId: 20255, courseDir,
       generatedAt: '2026-06-04T12:00:00.000Z',
       git: { isRepo: false },
       entries: [{

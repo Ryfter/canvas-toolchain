@@ -94,7 +94,7 @@ describe('previewCoursePublish widget content capture', () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async () =>
       new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } })));
 
-    const result = await previewCoursePublish({ courseDir: cd, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir: cd, courseId: 20255 });
     expect(result.manifest).toBeDefined();
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('new');
@@ -108,7 +108,7 @@ describe('previewCoursePublish widget content capture', () => {
       const u = String(url);
       if (u.includes('/pages') && !u.match(/\/pages\/[^/]+$/)) {
         return new Response(JSON.stringify([{
-          page_id: 1, url: 'overview', title: 'Widget Demo', html_url: 'https://canvas.example/courses/48895/pages/overview', body: '', published: true, updated_at: '',
+          page_id: 1, url: 'overview', title: 'Widget Demo', html_url: 'https://canvas.example/courses/20255/pages/overview', body: '', published: true, updated_at: '',
         }]), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       if (u.includes('/assignments')) {
@@ -116,7 +116,7 @@ describe('previewCoursePublish widget content capture', () => {
       }
       if (u.match(/\/pages\/[^/]+$/)) {
         return new Response(JSON.stringify({
-          page_id: 1, url: 'overview', title: 'Widget Demo', html_url: '', body: '<iframe src="/courses/48895/files/12345/preview" title="Sort"></iframe>', published: true, updated_at: '',
+          page_id: 1, url: 'overview', title: 'Widget Demo', html_url: '', body: '<iframe src="/courses/20255/files/12345/preview" title="Sort"></iframe>', published: true, updated_at: '',
         }), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       if (u.includes('/files/12345') && !u.includes('/download')) {
@@ -130,7 +130,7 @@ describe('previewCoursePublish widget content capture', () => {
       return new Response('not found', { status: 404 });
     }));
 
-    const result = await previewCoursePublish({ courseDir: cd, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir: cd, courseId: 20255 });
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('unchanged');
 
@@ -164,7 +164,7 @@ describe('previewCoursePublish widget content capture', () => {
       }
       if (u.match(/\/pages\/[^/]+$/)) {
         return new Response(JSON.stringify({
-          page_id: 1, url: 'overview', title: 'Widget Demo', html_url: '', body: '<iframe src="/courses/48895/files/12345/preview"></iframe>', published: true, updated_at: '',
+          page_id: 1, url: 'overview', title: 'Widget Demo', html_url: '', body: '<iframe src="/courses/20255/files/12345/preview"></iframe>', published: true, updated_at: '',
         }), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       if (u.includes('/files/12345') && !u.includes('/download')) {
@@ -176,7 +176,7 @@ describe('previewCoursePublish widget content capture', () => {
       return new Response('404', { status: 404 });
     }));
 
-    const result = await previewCoursePublish({ courseDir: cd, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir: cd, courseId: 20255 });
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('changed');
   });
@@ -194,13 +194,13 @@ describe('previewCoursePublish widget content capture', () => {
       if (u.includes('/assignments')) return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
       if (u.match(/\/pages\/[^/]+$/)) {
         return new Response(JSON.stringify({
-          page_id: 1, url: 'overview', title: 'Widget Demo', html_url: '', body: '<iframe src="/courses/48895/files/12345/preview"></iframe>', published: true, updated_at: '',
+          page_id: 1, url: 'overview', title: 'Widget Demo', html_url: '', body: '<iframe src="/courses/20255/files/12345/preview"></iframe>', published: true, updated_at: '',
         }), { status: 200, headers: { 'content-type': 'application/json' } });
       }
       return new Response('boom', { status: 500 });
     }));
 
-    const result = await previewCoursePublish({ courseDir: cd, courseId: 48895 });
+    const result = await previewCoursePublish({ courseDir: cd, courseId: 20255 });
     const page = result.manifest!.entries.find(e => e.type === 'page')! as any;
     expect(page.widgets[0].status).toBe('new');
     expect(page.warnings.some((w: any) => w.message.includes('WIDGET_FETCH_FAILED') || /fetch.*widget/i.test(w.message))).toBe(true);

@@ -1457,7 +1457,7 @@ describe('uploadCanvasFile', () => {
     f.mockResolvedValueOnce(mockConfirm(123));
 
     const result = await uploadCanvasFile(cfg, {
-      courseId: 48895,
+      courseId: 20255,
       filename: 'widget.html',
       contentType: 'text/html',
       body: '<!DOCTYPE html>...',
@@ -1700,7 +1700,7 @@ describe('publishWidget', () => {
 
     const result = await publishWidget({
       htmlPath,
-      courseId: 48895,
+      courseId: 20255,
       canvasConfig: { host: 'canvas.example', token: 'tk' },
       widgetSpec: {
         id: 'flip', name: 'Flip', kind: 'card-flip-reveal', purpose: '',
@@ -1711,9 +1711,9 @@ describe('publishWidget', () => {
     });
 
     expect(result.canvasFileId).toBe(777);
-    expect(result.embedSrc).toBe('https://canvas.example/courses/48895/files/777/preview');
+    expect(result.embedSrc).toBe('https://canvas.example/courses/20255/files/777/preview');
     expect(result.embedHtml).toContain('<iframe');
-    expect(result.embedHtml).toContain('src="https://canvas.example/courses/48895/files/777/preview"');
+    expect(result.embedHtml).toContain('src="https://canvas.example/courses/20255/files/777/preview"');
     expect(result.embedHtml).toContain('sandbox="allow-scripts allow-same-origin allow-forms"');
     expect(result.embedHtml).toContain('title="Flip"');
     expect(result.embedHtml).toContain('height="400"');
@@ -2181,7 +2181,7 @@ After Task B4.4 completes:
 
 - [ ] Run `npm test` (full monorepo): roughly CDS 560+ (already had 496; +5 renderers ≈ +50 tests, +canvas-files 6, +publish-widget 3), C&C 280+ (was 273, +4 widget integration tests). Total ~1010+.
 - [ ] Run `npm run build`: all 5 packages clean.
-- [ ] Verify end-to-end with a 2-widget course folder against University sandbox course 48895 (manual, with the professor):
+- [ ] Verify end-to-end with a 2-widget course folder against University sandbox course 20255 (manual, with the professor):
   - Write a course folder with one page containing `{{ widget:sort-sdlc }}` and one containing `{{ widget:vocab-flip }}`.
   - Run `generate_course` → check that local HTML files have iframes pointing at relative paths.
   - Run `preview_course_publish` → check that the manifest shows widget diffs.

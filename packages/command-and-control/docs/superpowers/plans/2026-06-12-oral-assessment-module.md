@@ -350,7 +350,7 @@ describe('RhetorixProvider.formatAssessment', () => {
 
 describe('RhetorixProvider.buildLaunchUrl', () => {
   it('builds the lti/launch URL from a domain', () => {
-    expect(p.buildLaunchUrl('rhetorixlab.boisestate.edu')).toBe('https://rhetorixlab.boisestate.edu/lti/launch');
+    expect(p.buildLaunchUrl('rhetorixlab.example.edu')).toBe('https://rhetorixlab.example.edu/lti/launch');
   });
   it('returns null without a domain', () => {
     expect(p.buildLaunchUrl(undefined)).toBeNull();
@@ -807,7 +807,7 @@ describe('designOralAssessment', () => {
     const outputPath = join(dir, 'oral-assessment.md');
     const llm = fakeLlm(RESP);
     const result = await designOralAssessment(
-      { assignmentBrief: 'Memo on pricing', week: 4, outputPath, launchDomain: 'rhetorixlab.boisestate.edu', aiasLevel: 3 },
+      { assignmentBrief: 'Memo on pricing', week: 4, outputPath, launchDomain: 'rhetorixlab.example.edu', aiasLevel: 3 },
       { llm },
     );
     expect(existsSync(result.pagePath)).toBe(true);
@@ -817,7 +817,7 @@ describe('designOralAssessment', () => {
     expect(result.recommendation.toLowerCase()).toContain('rhetorix');
 
     const page = readFileSync(result.pagePath, 'utf-8');
-    expect(page).toContain('launch_url: "https://rhetorixlab.boisestate.edu/lti/launch"');
+    expect(page).toContain('launch_url: "https://rhetorixlab.example.edu/lti/launch"');
     expect(page).toContain('aiasLevel: 3');
 
     const sidecar = readFileSync(result.specPath, 'utf-8');
@@ -1046,7 +1046,7 @@ const designTool: ModuleTool = {
         week: { type: 'number', description: 'Front matter: week number.' },
         title: { type: 'string', description: 'Front matter: page title override.' },
         outputPath: { type: 'string', description: 'Absolute path to write the page .md.' },
-        launchDomain: { type: 'string', description: 'Institution Rhetorix domain, e.g. rhetorixlab.boisestate.edu.' },
+        launchDomain: { type: 'string', description: 'Institution Rhetorix domain, e.g. rhetorixlab.example.edu.' },
         provider: { type: 'string', description: 'Provider id. Default "rhetorix".' },
       },
     },
@@ -1244,7 +1244,7 @@ Append under `tools:`:
 ```yaml
   - id: rhetorix
     name: Rhetorix Lab
-    identifiers: [rhetorix, rhetorix lab, rhetorixlab, rhetorixlab.io, rhetorixlab.boisestate.edu]
+    identifiers: [rhetorix, rhetorix lab, rhetorixlab, rhetorixlab.io, rhetorixlab.example.edu]
     module: oral-assessment
 ```
 
@@ -1327,10 +1327,10 @@ git commit -m "feat(oral-assessment): register CDS oral-assessment page type"
 
 ```typescript
 it('reads oral_assessment_launch_domain when present', () => {
-  // Write a temp course-config.md with `oral_assessment_launch_domain: rhetorixlab.boisestate.edu`
+  // Write a temp course-config.md with `oral_assessment_launch_domain: rhetorixlab.example.edu`
   // in the front matter, then:
   const cfg = parseCourseConfig(tmpConfigPath);
-  expect(cfg.oralAssessmentLaunchDomain).toBe('rhetorixlab.boisestate.edu');
+  expect(cfg.oralAssessmentLaunchDomain).toBe('rhetorixlab.example.edu');
 });
 ```
 

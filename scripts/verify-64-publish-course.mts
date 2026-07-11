@@ -9,7 +9,7 @@
  *   tsx scripts/verify-64-publish-course.mts rollback <snapshotId>
  *
  * ENV
- *   COURSE_ID           Canvas course numeric ID. Default 48895 (the professor's BusApp 105 sandbox).
+ *   COURSE_ID           Canvas course numeric ID. Default 20255 (placeholder — set this to a real sandbox course you own).
  *   COURSE_DIR          Path to a CDS course folder. Default ./.test-course-64 (auto-created).
  *   CANVAS_CONFIG_PATH  Override location of canvas-config.json. Default ~/.command-and-control/canvas-config.json.
  *
@@ -31,7 +31,7 @@ import { previewCoursePublish } from '../packages/command-and-control/dist/tools
 import { publishCourse } from '../packages/command-and-control/dist/tools/workflows/publish_course.js';
 import { rollbackCoursePublish } from '../packages/command-and-control/dist/tools/workflows/rollback_course_publish.js';
 
-const COURSE_ID = Number(process.env.COURSE_ID ?? 48895);
+const COURSE_ID = Number(process.env.COURSE_ID ?? 20255);
 const COURSE_DIR = resolve(process.env.COURSE_DIR ?? '.test-course-64');
 const CANVAS_CONFIG_PATH =
   process.env.CANVAS_CONFIG_PATH ?? join(homedir(), '.command-and-control', 'canvas-config.json');

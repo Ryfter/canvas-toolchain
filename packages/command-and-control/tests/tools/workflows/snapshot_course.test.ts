@@ -18,7 +18,7 @@ import type { CourseSnapshot } from '../../../src/tools/snapshot/types.js';
 function fakeSnapshot(overrides: Partial<CourseSnapshot> = {}): CourseSnapshot {
   return {
     course: {
-      id: 48894,
+      id: 20244,
       title: 'BusApp 105 — Spreadsheet Topics',
       courseCode: 'BUSAPP-105-4001',
       workflowState: 'unpublished',
@@ -50,7 +50,7 @@ describe('snapshotCourse — first run', () => {
   it('writes a new file when none exists', async () => {
     const outPath = join(outDir, 'BusApp 105 instructions.md');
     const result = await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     expect(result.firstRun).toBe(true);
@@ -61,7 +61,7 @@ describe('snapshotCourse — first run', () => {
   it('includes all four auto-managed section markers', async () => {
     const outPath = join(outDir, 'doc.md');
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     const content = readFileSync(outPath, 'utf-8');
@@ -75,20 +75,20 @@ describe('snapshotCourse — first run', () => {
   it('renders the course identifiers table with current state', async () => {
     const outPath = join(outDir, 'doc.md');
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     const content = readFileSync(outPath, 'utf-8');
     expect(content).toContain('BusApp 105 — Spreadsheet Topics');
-    expect(content).toContain('48894');
+    expect(content).toContain('20244');
     expect(content).toContain('Summer 2026');
-    expect(content).toContain('https://example.instructure.com/courses/48894');
+    expect(content).toContain('https://example.instructure.com/courses/20244');
   });
 
   it('renders assignment-groups and modules tables', async () => {
     const outPath = join(outDir, 'doc.md');
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     const content = readFileSync(outPath, 'utf-8');
@@ -102,7 +102,7 @@ describe('snapshotCourse — first run', () => {
   it('seeds Update Log with the initial snapshot row', async () => {
     const outPath = join(outDir, 'doc.md');
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     const content = readFileSync(outPath, 'utf-8');
@@ -115,7 +115,7 @@ describe('snapshotCourse — re-run', () => {
     const outPath = join(outDir, 'doc.md');
     // First run
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     // Mutate the Canvas state — add a group
@@ -123,7 +123,7 @@ describe('snapshotCourse — re-run', () => {
     mutated.assignmentGroups.push({ id: 4, name: 'Learning Aids', position: 4, publishedCount: 8, unpublishedCount: 0 });
 
     const result = await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-02T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-02T01:00:00Z' },
       { fetchSnapshot: async () => mutated },
     );
     expect(result.firstRun).toBe(false);
@@ -135,11 +135,11 @@ describe('snapshotCourse — re-run', () => {
   it('prepends a new row to the Update Log (newest at top)', async () => {
     const outPath = join(outDir, 'doc.md');
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-02T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-02T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     const content = readFileSync(outPath, 'utf-8');
@@ -161,7 +161,7 @@ describe('snapshotCourse — re-run', () => {
     const outPath = join(outDir, 'doc.md');
     // First run, then hand-edit the prose around the modules section
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     const original = readFileSync(outPath, 'utf-8');
@@ -173,7 +173,7 @@ describe('snapshotCourse — re-run', () => {
 
     // Re-run
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-02T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-02T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     const after = readFileSync(outPath, 'utf-8');
@@ -184,7 +184,7 @@ describe('snapshotCourse — re-run', () => {
   it('appends a missing required section at the bottom (recovery from user-deletion)', async () => {
     const outPath = join(outDir, 'doc.md');
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-01T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     // Simulate the user deleting the modules section entirely
@@ -195,7 +195,7 @@ describe('snapshotCourse — re-run', () => {
     writeFileSync(outPath, stripped, 'utf-8');
 
     await snapshotCourse(
-      { courseId: 48894, outputPath: outPath, now: '2026-06-02T01:00:00Z' },
+      { courseId: 20244, outputPath: outPath, now: '2026-06-02T01:00:00Z' },
       { fetchSnapshot: async () => fakeSnapshot() },
     );
     const after = readFileSync(outPath, 'utf-8');

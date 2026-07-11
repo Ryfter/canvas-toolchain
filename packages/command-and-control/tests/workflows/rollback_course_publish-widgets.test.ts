@@ -36,14 +36,14 @@ function setupSnapshot(published: PublishedEntry[]): string {
   const snapshotId = `roll-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const dir = createSnapshotDir(snapshotId);
   const manifest: PreviewManifest = {
-    snapshotId, courseId: 48895, courseDir: join(ccHome, 'course'),
+    snapshotId, courseId: 20255, courseDir: join(ccHome, 'course'),
     generatedAt: '2026-06-03T12:00:00.000Z',
     git: { isRepo: false },
     entries: [
       {
         type: 'page', filename: 'overview.html', pageType: 'overview',
         intendedTitle: 'Overview', collisionAction: 'update',
-        canvasMatch: { pageId: 'overview', url: 'https://canvas/courses/48895/pages/overview', existingTitle: 'Overview', similarity: 1 },
+        canvasMatch: { pageId: 'overview', url: 'https://canvas/courses/20255/pages/overview', existingTitle: 'Overview', similarity: 1 },
         diff: { priorWords: 10, newWords: 20, delta: 10, sectionsChanged: 0, calloutsAdded: 0, calloutsRemoved: 0, imagesChanged: 0, hasFullDiff: false },
         warnings: [],
       },
