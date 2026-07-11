@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -126,5 +126,58 @@ describe('dynamic artifact loading', () => {
     expect(loaded.handlers.has('fixture_new')).toBe(true);
     expect(existsSync(artifactPath('fixture', '1.0.0'))).toBe(false);
     expect(loadInstalledModules().modules.fixture.previous).toBeUndefined();
+  });
+
+  it('leaves the module loaded and logs accurately when pruning the retained previous version fails', async () => {
+    const oldSrc = moduleSource('fixture', '1.0.0', 'fixture_old');
+    const newSrc = moduleSource('fixture', '1.1.0', 'fixture_new');
+    const { artifactPath, loadInstalledModules, saveInstalledModules } = await import('../src/channel/installed.js');
+    for (const [v, s] of [['1.0.0', oldSrc], ['1.1.0', newSrc]] as const) {
+      const p = artifactPath('fixture', v);
+      mkdirSync(dirname(p), { recursive: true });
+      writeFileSync(p, s);
+    }
+    saveInstalledModules({ modules: { fixture: {
+      id: 'fixture', version: '1.1.0', installedAt: '2026-07-11T00:00:00Z',
+      sha256: createHash('sha256').update(newSrc).digest('hex'),
+      previous: { version: '1.0.0', sha256: createHash('sha256').update(oldSrc).digest('hex') },
+    } } });
+    const { saveModuleManifest } = await import('../src/modules/manifest.js');
+    saveModuleManifest({ modules: { fixture: { enabled: true } } });
+    // Block the store's atomic write: saveInstalledModules writes to `${path}.tmp` then renames.
+    // A directory at that tmp path makes the write throw during the prune step.
+    mkdirSync(join(home, 'installed-modules.json.tmp'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { loadModules } = await import('../src/modules/registry.js');
+      const loaded = await loadModules({});
+      expect(loaded.handlers.has('fixture_new')).toBe(true);
+      expect(loadInstalledModules().modules.fixture.previous).toBeDefined();
+      const messages = errorSpy.mock.calls.map((call) => call.join(' ')).join('\n');
+      expect(messages).not.toMatch(/skipping/);
+      expect(messages).toMatch(/pruning/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('freshly imports changed artifact bytes on a second loadModules call in the same process (cache-bust)', async () => {
+    await placeArtifact('cachebust', '1.0.0', moduleSource('cachebust', '1.0.0', 'cb_tool_v1'));
+    const { saveModuleManifest } = await import('../src/modules/manifest.js');
+    saveModuleManifest({ modules: { cachebust: { enabled: true } } });
+    const { loadModules } = await import('../src/modules/registry.js');
+    const first = await loadModules({});
+    expect(first.handlers.has('cb_tool_v1')).toBe(true);
+
+    const { artifactPath, loadInstalledModules, saveInstalledModules } = await import('../src/channel/installed.js');
+    const newSrc = moduleSource('cachebust', '1.0.0', 'cb_tool_v2');
+    writeFileSync(artifactPath('cachebust', '1.0.0'), newSrc);
+    const file = loadInstalledModules();
+    file.modules.cachebust.sha256 = createHash('sha256').update(newSrc).digest('hex');
+    saveInstalledModules(file);
+
+    const second = await loadModules({});
+    expect(second.handlers.has('cb_tool_v2')).toBe(true);
+    expect(second.handlers.has('cb_tool_v1')).toBe(false);
   });
 });

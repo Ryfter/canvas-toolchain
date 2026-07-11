@@ -56,23 +56,36 @@ export async function loadInstalledArtifacts(
         );
         continue;
       }
-      const mod = (await import(pathToFileURL(path).href)).default as unknown;
+      // Cache-bust: Node caches ESM by URL for the process lifetime, so append the
+      // verified hash as a query string — same bytes → same URL → cache hit is correct;
+      // changed bytes → new record hash → new URL → a re-loadModules() picks up fresh code.
+      const mod = (await import(`${pathToFileURL(path).href}?sha256=${rec.sha256}`)).default as unknown;
       if (!isCanvasToolchainModule(mod)) {
         console.error(`[modules] installed '${id}' did not satisfy the module contract; skipping.`);
         continue;
       }
       out.set(id, mod);
-      // Successful load of the current version → prune the retained previous version (spec §9).
-      if (rec.previous) {
+    } catch (err) {
+      console.error(`[modules] failed to load installed '${id}'; skipping. ${err instanceof Error ? err.message : String(err)}`);
+      continue;
+    }
+    // Successful load of the current version → prune the retained previous version (spec §9).
+    // This runs in its own try/catch: a prune failure must NOT be reported as a load
+    // failure — the module above already loaded and is active in `out`.
+    if (rec.previous) {
+      try {
         rmSync(dirname(artifactPath(id, rec.previous.version)), { recursive: true, force: true });
         const file = loadInstalledModules();
         if (file.modules[id]) {
           delete file.modules[id].previous;
           saveInstalledModules(file);
         }
+      } catch (err) {
+        console.error(
+          `[modules] '${id}' loaded, but pruning the retained previous version failed ` +
+          `(${err instanceof Error ? err.message : String(err)}); it will be retried on next startup.`,
+        );
       }
-    } catch (err) {
-      console.error(`[modules] failed to load installed '${id}'; skipping. ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   return out;
@@ -108,15 +121,19 @@ export async function loadModules(
   // Phase 2: installed channel artifacts. Semver-newer wins on id collision (spec §8).
   const dynamic = await loadInstalledArtifacts(manifest);
   for (const [id, mod] of dynamic) {
-    const bundled = active.get(id);
-    if (bundled && compareVersions(mod.version, bundled.version) <= 0) {
-      console.error(`[modules] '${id}': bundled v${bundled.version} >= installed v${mod.version}; using bundled.`);
-      continue;
+    try {
+      const bundled = active.get(id);
+      if (bundled && compareVersions(mod.version, bundled.version) <= 0) {
+        console.error(`[modules] '${id}': bundled v${bundled.version} >= installed v${mod.version}; using bundled.`);
+        continue;
+      }
+      if (bundled) {
+        console.error(`[modules] '${id}': installed v${mod.version} > bundled v${bundled.version}; using installed.`);
+      }
+      active.set(id, mod);
+    } catch (err) {
+      console.error(`[modules] precedence check failed for '${id}' (${err instanceof Error ? err.message : String(err)}); using bundled.`);
     }
-    if (bundled) {
-      console.error(`[modules] '${id}': installed v${mod.version} > bundled v${bundled.version}; using installed.`);
-    }
-    active.set(id, mod);
   }
 
   const tools: Tool[] = [];
