@@ -2493,7 +2493,9 @@ git add installer/tasks/modulecatalog.go installer/tasks/modulecatalog_test.go i
 git commit -m "feat(installer): Additional-modules picker — catalog fetch + pending-request file, no install logic in Go (Task 9)"
 ```
 
----### Task 10: Docs sweep + final verification
+---
+
+### Task 10: Docs sweep + final verification
 
 **Files:**
 - Modify: `docs/modules.md` (§1 "Plug-in module system": add the channel — drop-in installs, the three new tools, the Announcements Auditor as module #20 with its own section)
