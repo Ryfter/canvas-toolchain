@@ -864,9 +864,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   const { name, arguments: args } = request.params;
 
   // Module-provided tools take precedence; their handlers return a full CallToolResult.
+  // Wrapped so a throwing module tool (missing config, Canvas API failure, module bug)
+  // degrades to a readable structured error instead of a raw protocol error.
   const moduleHandler = loadedModules.handlers.get(name);
   if (moduleHandler) {
-    return await moduleHandler(args);
+    try {
+      return await moduleHandler(args);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text', text: JSON.stringify({ error: message }) }], isError: true };
+    }
   }
 
   try {

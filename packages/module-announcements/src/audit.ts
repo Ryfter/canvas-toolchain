@@ -37,7 +37,9 @@ export function classifyAnnouncements(
     }
     const fire = Date.parse(row.delayed_post_at);
     let reason: string | null = null;
-    if (!Number.isNaN(fire) && fire < nowMs) {
+    if (Number.isNaN(fire)) {
+      reason = `fire date "${row.delayed_post_at}" could not be parsed`;
+    } else if (fire < nowMs) {
       reason = `fire date ${row.delayed_post_at} has already passed`;
     } else if (term.termStart && fire < Date.parse(term.termStart)) {
       reason = `fire date ${row.delayed_post_at} is outside the term (before ${term.termStart})`;

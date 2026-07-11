@@ -30,4 +30,10 @@ describe('classifyAnnouncements', () => {
     const res = classifyAnnouncements(rows, NOW);
     expect(res.stale).toHaveLength(0);
   });
+  it('flags an unparseable delayed_post_at as stale instead of silently passing', () => {
+    const rows = [ann({ id: 14, delayed_post_at: 'not-a-date' })];
+    const res = classifyAnnouncements(rows, NOW);
+    expect(res.stale).toHaveLength(1);
+    expect(res.stale[0].reason).toContain('could not be parsed');
+  });
 });
