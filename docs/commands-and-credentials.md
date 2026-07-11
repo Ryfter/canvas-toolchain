@@ -71,7 +71,21 @@ Legend: **R** = required parameter, *italic* = optional.
 | `save_institution_profile` | **tools**, *identifiers*, *perClass* | Write/merge the institution tool library + per-class deltas (accretive). |
 | `submit_usage_feedback` | *named*, *confirm* | Opt-in: turn the institution profile into an **anonymized** GitHub issue so the author can prioritize integrations. Two-call confirm gate; never transmits tokens or student data. |
 
-### 2.3 Command & Control — high-level workflows
+### 2.3 Command & Control — module channel
+
+Ships a module (or a fix to one) without a new installer release: modules are single-file, hash-pinned artifacts attached to GitHub Releases, cataloged in `module-catalog.json` on `main`. See [`module-channel.md`](module-channel.md) for the full publish/install runbook.
+
+| Tool | Key parameters | What it does |
+| --- | --- | --- |
+| `browse_module_catalog` | *clearPending* | Read-only: list catalog modules merged with local state (bundled / not installed / installed enabled or disabled / update available) and any pending installer-GUI requests. `clearPending: true` discards stale requests. |
+| `install_module` | **moduleId**, *confirm* | Install or upgrade a module from the catalog. Two-call gate: call 1 previews name/version/size/source/sha256 with no side effects; call 2 with `confirm: true` downloads, **verifies the pinned sha256 (refusing on any mismatch)**, and installs. Takes effect on the next client reconnect. |
+| `uninstall_module` | **moduleId** | Remove a channel-installed module (artifact + record) and disable it. Bundled modules cannot be uninstalled — disable those with `set_module_enabled`. |
+| `audit_announcements` | **courseId**, *termStart*, *termEnd* | Read-only: list a course's scheduled announcements and flag ones with stale fire dates (past, or outside the term window). From the channel-only Announcements Auditor module. |
+| `recreate_announcement` | **courseId**, **announcementId**, **newDelayedPostAt**, *confirm* | Two-call gate: create a corrected copy of a stale scheduled announcement with a new fire date. Never deletes the original — remove it in Canvas yourself. From the channel-only Announcements Auditor module. |
+
+The installer GUI's "Additional modules" picker only *requests* a module (writes a pending-request file); it never downloads or installs code — chat's confirmed `install_module` call is the only place code installation is actually authorized.
+
+### 2.4 Command & Control — high-level workflows
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -80,7 +94,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `update_course_materials` | **courseId**, **semesterId**, *outputPath*, *sections* | Draft updated briefs for every assignment, run an examples-update pass, export to CDS format. |
 | `full_pipeline` | (union of the three above) | Run analyze → plan → update end-to-end. |
 
-### 2.4 Command & Control — course publishing (Canvas)
+### 2.5 Command & Control — course publishing (Canvas)
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -90,7 +104,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `list_publish_snapshots` | **courseId**, **courseDir** | List publish snapshots (which is live, which can roll back/forward). |
 | `prune_publish_snapshots` | **courseId**, **courseDir**, *dryRun* | Retention policy (default: keep 3 most recent, ≤30 days). |
 
-### 2.5 Command & Control — lecture transcripts (Panopto / Whisper)
+### 2.6 Command & Control — lecture transcripts (Panopto / Whisper)
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -99,7 +113,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `setup_transcript_source` | **action** (get/set), *source* (panopto/whisper), *engine*, *model*, *audioMode* | Configure the transcript source + Whisper engine/model. |
 | `compare_transcripts` | **transcriptsPath**, *sessionIds*, *model*, *keepAudio* | Transcribe audio locally with Whisper and diff against Panopto VTT; suggests vocab corrections. |
 
-### 2.6 Command & Control — lecture answers (course Q&A)
+### 2.7 Command & Control — lecture answers (course Q&A)
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -108,7 +122,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `ask_course` | **courseId**, **courseDir**, **question**, *k*, *transcriptSources* | Faculty Q&A against the per-course index; returns an answer plus deep-linked citations. |
 | `reembed_course_index` | **courseId**, **courseDir**, *provider*, *voyageApiKey*, *ollamaBaseUrl*, *transcriptSources* | Switch embedding providers and rebuild the index in one call. |
 
-### 2.7 Command & Control — content, design & registry
+### 2.8 Command & Control — content, design & registry
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -127,7 +141,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `paste_layout` | **html**, *css*, *sourceTool*, *intent*, *desiredSlots* | Adapt raw HTML/CSS (Stitch/Figma) into a Canvas-safe slot layout + accessibility audit. |
 | `save_layout_as_template` | **layout**, **templateId**, **templateVersion** | Save an adapted layout as a reusable template. |
 
-### 2.8 Pass-through tools (re-exported through C&C)
+### 2.9 Pass-through tools (re-exported through C&C)
 
 These run through C&C but are owned by other packages.
 
@@ -138,11 +152,11 @@ These run through C&C but are owned by other packages.
 | `download_canvas_archive` | **courseId**, *configPath*, *year*, *semester*, *root*, *shellName*, *downloadWorkers* | Archive a Canvas course shell locally via the Python Canvas Backup CLI. |
 | `download_transcripts` | — | Placeholder for future bulk Panopto download. |
 
-**From Curriculum Intelligence (28 tools).** Course setup/state (`setup_course`, `get_course_state`), archive ingestion (`ingest_canvas_archive`), content analysis (`list_assignments`, `list_pages`, `list_modules`, `list_resources`, `diff_semesters`), transcript processing (`ingest_transcripts`, `map_transcripts_to_weeks`, `extract_lecture_topics`, `find_off_syllabus_topics`, `build_quote_bank`), topic currency (`fetch_news_feed`, `scan_recent_developments`, `suggest_topics`, `score_topic_currency`, `recommend_for_topic`), planning (`generate_ideas_file`, `import_previous_shell`, `fetch_academic_calendar`, `shift_dates`, `generate_recommended_outline`, `draft_assignment_brief`, `update_examples`, `export_course_folder`), and full analysis (`analyze_course`, `get_course_trajectory`). See §2.9 for the CI-direct detail.
+**From Curriculum Intelligence (28 tools).** Course setup/state (`setup_course`, `get_course_state`), archive ingestion (`ingest_canvas_archive`), content analysis (`list_assignments`, `list_pages`, `list_modules`, `list_resources`, `diff_semesters`), transcript processing (`ingest_transcripts`, `map_transcripts_to_weeks`, `extract_lecture_topics`, `find_off_syllabus_topics`, `build_quote_bank`), topic currency (`fetch_news_feed`, `scan_recent_developments`, `suggest_topics`, `score_topic_currency`, `recommend_for_topic`), planning (`generate_ideas_file`, `import_previous_shell`, `fetch_academic_calendar`, `shift_dates`, `generate_recommended_outline`, `draft_assignment_brief`, `update_examples`, `export_course_folder`), and full analysis (`analyze_course`, `get_course_trajectory`). See §2.10 for the CI-direct detail.
 
-**From Canvas Design Studio:** `import_course`, `generate_course` (full set in §2.10).
+**From Canvas Design Studio:** `import_course`, `generate_course` (full set in §2.11).
 
-### 2.9 Curriculum Intelligence (when run standalone)
+### 2.10 Curriculum Intelligence (when run standalone)
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -172,7 +186,7 @@ These run through C&C but are owned by other packages.
 | `analyze_course` | **courseId**, **semesterId**, **archivePath**, *semanticVerify*, *extractConcepts* | Full pipeline: ingest → diff → score → verdicts → trajectory log. |
 | `get_course_trajectory` | **courseId**, *granularity*, *lookback* | Read the trajectory log: churn rate, unstable topics, true evergreens. |
 
-### 2.10 Canvas Design Studio (when run standalone)
+### 2.11 Canvas Design Studio (when run standalone)
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -198,7 +212,7 @@ These run through C&C but are owned by other packages.
 | `render_widget` | **specPath**, *allowExperimental* | Render an InteractiveSpec to a self-contained embeddable widget. |
 | `publish_widget` | **htmlPath**, **courseId**, **canvasConfig**, **widgetSpec** | Upload a rendered widget to Canvas Files; return iframe embed code. |
 
-### 2.11 Module Video (Panopto) — when the module is enabled
+### 2.12 Module Video (Panopto) — when the module is enabled
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -206,7 +220,7 @@ These run through C&C but are owned by other packages.
 
 (Video embed/transcript tools route through the module's `VideoProvider` adapter; Panopto is provider #1.)
 
-### 2.12 Module Oral Assessment — when the module is enabled
+### 2.13 Module Oral Assessment — when the module is enabled
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -214,7 +228,7 @@ These run through C&C but are owned by other packages.
 
 Enable with `set_module_enabled` (module: `oral-assessment`).
 
-### 2.13 Module Group Builder — when the module is enabled
+### 2.14 Module Group Builder — when the module is enabled
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -224,7 +238,7 @@ Enable with `set_module_enabled` (module: `oral-assessment`).
 
 Enable with `set_module_enabled` (module: `group-builder`). Uses Canvas (roster source) + a thin `canvas_id,pseudonym,major` CSV; never reads names/emails.
 
-### 2.14 Module Roster & Identity Manager — when the module is enabled
+### 2.15 Module Roster & Identity Manager — when the module is enabled
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -234,7 +248,7 @@ Enable with `set_module_enabled` (module: `group-builder`). Uses Canvas (roster 
 
 Enable with `set_module_enabled` (module: `roster`).
 
-### 2.15 Module PeerAssessment Export — when the module is enabled
+### 2.16 Module PeerAssessment Export — when the module is enabled
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -242,7 +256,7 @@ Enable with `set_module_enabled` (module: `roster`).
 
 Enable with `set_module_enabled` (module: `peerassessment`).
 
-### 2.16 Command & Control — accessibility (WCAG conformance)
+### 2.17 Command & Control — accessibility (WCAG conformance)
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -258,6 +272,8 @@ See [`accessibility.md`](accessibility.md) for how the publishing gate, acknowle
 ## 3. API keys & secrets — what's asked for and why
 
 **Bottom line: every credential is optional.** With zero credentials you can still import a Canvas archive, analyze/plan a course, generate Canvas-safe HTML, and **paste it into Canvas by hand**. Each credential unlocks one optional enhancement.
+
+**The module channel adds no new credentials.** `browse_module_catalog`, `install_module`, and `uninstall_module` talk to the public `module-catalog.json` on GitHub and GitHub Release asset URLs — no auth. The one channel-only module, Announcements Auditor, uses the existing Canvas token (§3.1) for its Canvas calls; it does not introduce a credential of its own.
 
 All secrets are stored **locally** under `~/.command-and-control/` (override with the `CC_HOME` env var). Every credential file is written **atomically (temp + rename) with `0o600` permissions** (owner read/write only). Keys are **validated against the live service before being saved**, are **never echoed back** in tool responses (the registry token is explicitly redacted), and are **never transmitted** to analytics — `submit_usage_feedback` is opt-in and anonymized and refuses to send tokens or student data.
 
