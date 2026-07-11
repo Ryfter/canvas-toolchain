@@ -5,11 +5,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 )
+
+// maxCatalogBytes caps the module catalog response we'll decode. Catalogs
+// are tiny (a handful of module entries); anything past this is refused
+// rather than decoded.
+const maxCatalogBytes = 1 << 20 // 1 MiB
 
 // ModuleCatalogURL is the raw-GitHub location of the module catalog on main.
 const ModuleCatalogURL = "https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/module-catalog.json"
@@ -47,7 +53,7 @@ func FetchModuleCatalog(ctx context.Context, url string) ([]CatalogModule, error
 		return nil, fmt.Errorf("module catalog fetch: HTTP %d", res.StatusCode)
 	}
 	var cat moduleCatalog
-	if err := json.NewDecoder(res.Body).Decode(&cat); err != nil {
+	if err := json.NewDecoder(io.LimitReader(res.Body, maxCatalogBytes)).Decode(&cat); err != nil {
 		return nil, fmt.Errorf("module catalog parse: %w", err)
 	}
 	if cat.CatalogVersion != supportedCatalogVersion {

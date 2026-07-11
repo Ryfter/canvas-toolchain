@@ -186,7 +186,7 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 		{Name: "Write module manifest", Warn: true, Run: func(ctx context.Context) error {
 			return tasks.WriteModulesManifest(tasks.CcHomePath(), st.WorkflowPanopto)
 		}},
-		{Name: "Record requested modules", Run: func(ctx context.Context) error {
+		{Name: "Record requested modules", Warn: true, Run: func(ctx context.Context) error {
 			ids := make([]string, 0, len(st.RequestedModules))
 			for id, want := range st.RequestedModules {
 				if want {
