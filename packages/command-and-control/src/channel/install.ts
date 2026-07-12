@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync }
 import { dirname, join } from 'node:path';
 import {
   fetchCatalog, CatalogError, MAX_ARTIFACT_BYTES,
-  ALLOWED_ARTIFACT_URL_PREFIX, ALLOWED_REDIRECT_HOST,
+  ALLOWED_ARTIFACT_URL_PREFIX, ALLOWED_REDIRECT_DOMAIN, isAllowedRedirectHost,
   type ModuleCatalog, type CatalogEntry,
 } from './catalog.js';
 import { sha256File } from './hash.js';
@@ -86,7 +86,7 @@ class DownloadTooLargeError extends Error {
 class OffOriginDownloadError extends Error {
   constructor(url: string) {
     super(`refusing to download from ${url}; artifacts may only come from ` +
-      `${ALLOWED_ARTIFACT_URL_PREFIX} (redirecting only to ${ALLOWED_REDIRECT_HOST})`);
+      `${ALLOWED_ARTIFACT_URL_PREFIX} (redirecting only within ${ALLOWED_REDIRECT_DOMAIN})`);
     this.name = 'OffOriginDownloadError';
   }
 }
@@ -97,7 +97,7 @@ function isAllowedDownloadUrl(url: string): boolean {
   if (url.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) return true;
   try {
     const u = new URL(url);
-    return u.protocol === 'https:' && u.host === ALLOWED_REDIRECT_HOST;
+    return u.protocol === 'https:' && isAllowedRedirectHost(u.host);
   } catch {
     return false;
   }

@@ -78,7 +78,8 @@ describe('installModule download-origin allowlist (#121)', () => {
 
   it('follows a redirect to the GitHub release-asset host and installs', async () => {
     const { installModule } = await import('../src/channel/install.js');
-    const assetUrl = 'https://objects.githubusercontent.com/some/signed/path';
+    // The host GitHub actually 302s to today (see isAllowedRedirectHost tests).
+    const assetUrl = 'https://release-assets.githubusercontent.com/github-production-release-asset/1245052104/abc?sig=x';
     const calls: string[] = [];
     const spy: typeof fetch = (async (url: string) => {
       calls.push(url);

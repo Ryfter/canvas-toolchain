@@ -5,6 +5,7 @@ import { tmpdir, platform } from 'node:os';
 import { sha256File } from '../src/channel/hash.js';
 import {
   validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION, MAX_ARTIFACT_BYTES,
+  isAllowedRedirectHost,
 } from '../src/channel/catalog.js';
 
 const GOOD_ENTRY = {
@@ -82,6 +83,29 @@ describe('validateCatalog', () => {
   it('refuses duplicate ids across entries, naming the id', () => {
     expect(() => validateCatalog({ catalogVersion: 1, modules: [GOOD_ENTRY, { ...GOOD_ENTRY }] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID', message: expect.stringContaining(GOOD_ENTRY.id) }));
+  });
+});
+
+describe('isAllowedRedirectHost (#121)', () => {
+  it('accepts the GitHub asset hosts that actually serve release downloads', () => {
+    // GitHub rotates this host without notice: it was objects.githubusercontent.com,
+    // and as of 2026-07 release downloads 302 to release-assets.githubusercontent.com.
+    // Pinning one exact hostname refused every install — hence the domain allowlist.
+    expect(isAllowedRedirectHost('release-assets.githubusercontent.com')).toBe(true);
+    expect(isAllowedRedirectHost('objects.githubusercontent.com')).toBe(true);
+    expect(isAllowedRedirectHost('githubusercontent.com')).toBe(true);
+  });
+
+  it('refuses lookalike domains that merely contain the allowed one', () => {
+    for (const host of [
+      'evil.example',
+      'evil-githubusercontent.com',
+      'githubusercontent.com.evil.example',
+      'notgithubusercontent.com',
+      'githubusercontent.evil.com',
+    ]) {
+      expect(isAllowedRedirectHost(host)).toBe(false);
+    }
   });
 });
 

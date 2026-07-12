@@ -51,9 +51,21 @@ export const MAX_ARTIFACT_BYTES = 50 * 1024 * 1024;
 export const ALLOWED_ARTIFACT_URL_PREFIX =
   'https://github.com/Ryfter/canvas-toolchain/releases/download/';
 
-/** GitHub serves release-asset bodies via a 302 to this host; it is the only
- *  redirect target the downloader will follow (#121). */
-export const ALLOWED_REDIRECT_HOST = 'objects.githubusercontent.com';
+/** GitHub serves release-asset bodies via a 302 off github.com to a signed URL on
+ *  its own user-content domain — historically `objects.githubusercontent.com`, today
+ *  `release-assets.githubusercontent.com`. GitHub rotates that hostname without notice,
+ *  so the downloader allowlists the *domain* rather than one host: pinning a single
+ *  exact hostname refuses every install the day GitHub changes it (it already had —
+ *  see isAllowedRedirectHost's tests). Every `*.githubusercontent.com` host is
+ *  GitHub-operated, and the sha256 pin remains the guarantee about the bytes; this
+ *  allowlist only constrains who may serve them (#121). */
+export const ALLOWED_REDIRECT_DOMAIN = 'githubusercontent.com';
+
+/** True only for `githubusercontent.com` and its subdomains — never for lookalikes
+ *  such as `evil-githubusercontent.com` or `githubusercontent.com.evil.example`. */
+export function isAllowedRedirectHost(host: string): boolean {
+  return host === ALLOWED_REDIRECT_DOMAIN || host.endsWith(`.${ALLOWED_REDIRECT_DOMAIN}`);
+}
 
 function isEntry(v: unknown): v is CatalogEntry {
   if (typeof v !== 'object' || v === null) return false;
