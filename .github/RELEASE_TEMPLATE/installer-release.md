@@ -1,5 +1,26 @@
 # Canvas Toolchain Installer
 
+## What's new in v2.0.0
+
+The 2.0 headline: **modules are now drop-in**. New capabilities can be published and installed **without waiting for an installer release** — and the first one ships today.
+
+### The module channel
+
+- **Browse and install modules by asking.** Two new tools do the work: `browse_module_catalog` shows what's available, installed, or updatable; `install_module` installs one. Installing is always deliberate — the first call only previews what would be downloaded (name, version, size, source, checksum); call again with `confirm: true` to proceed. Modules take effect on your next Claude reconnect, and `uninstall_module` removes them cleanly.
+- **Security is the centerpiece.** Every module is a single self-contained file whose checksum is pinned in a catalog only this repository can publish. The checksum is verified when you install **and re-verified every time the toolchain starts** — a tampered download, a corrupted file, or a hand-edited artifact simply never runs. And nothing a module does can crash the toolchain: a broken module is skipped with a clear warning, never loaded.
+- **The installer shows what's out there.** A new "Additional modules" section lists catalog modules with checkboxes — but checking one only *queues a request*. Next time you open Claude it offers to install them, and your chat confirmation remains the only thing that authorizes code. The installer itself never downloads modules.
+- **Updates announce themselves.** When an installed module has a newer version, the same gentle one-line notice that announces toolchain updates tells you — upgrading is one confirmed `install_module` call, and the previous version is kept until the new one proves it loads, so a bad update can be rolled back.
+
+### First channel module: Announcements Auditor
+
+- **`audit_announcements`** finds the classic course-copy gotcha: scheduled announcements that silently kept last term's fire dates. It lists a course's announcements and flags stale ones (dates already passed, or outside your term window if you give one).
+- **`recreate_announcement`** makes a corrected copy with the right fire date — preview first, create on `confirm: true`, and it **never deletes anything** (you remove the stale original in Canvas yourself).
+- Uses your existing Canvas token; nothing new to set up. Install it by asking: *"install the announcements module."*
+
+Nothing changes if you ignore all of this: every existing tool and workflow behaves exactly as it did in v1.11.x, and the five bundled modules still ship in the installer.
+
+Full diff: [v1.11.1...v2.0.0](https://github.com/Ryfter/canvas-toolchain/compare/v1.11.1...v2.0.0)
+
 ## What's new in v1.11.1
 
 A small hardening release — no new tools, no setup changes, nothing to migrate.
