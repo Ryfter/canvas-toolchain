@@ -1,6 +1,10 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fetchCatalog, CatalogError, MAX_ARTIFACT_BYTES, type ModuleCatalog, type CatalogEntry } from './catalog.js';
+import {
+  fetchCatalog, CatalogError, MAX_ARTIFACT_BYTES,
+  ALLOWED_ARTIFACT_URL_PREFIX, ALLOWED_REDIRECT_HOST,
+  type ModuleCatalog, type CatalogEntry,
+} from './catalog.js';
 import { sha256File } from './hash.js';
 import {
   artifactPath, getModulesRoot, getTmpDownloadDir,
@@ -78,6 +82,27 @@ class DownloadTooLargeError extends Error {
   }
 }
 
+/** Thrown when a download URL (or a redirect hop) leaves the allowed origins (#121). */
+class OffOriginDownloadError extends Error {
+  constructor(url: string) {
+    super(`refusing to download from ${url}; artifacts may only come from ` +
+      `${ALLOWED_ARTIFACT_URL_PREFIX} (redirecting only to ${ALLOWED_REDIRECT_HOST})`);
+    this.name = 'OffOriginDownloadError';
+  }
+}
+
+const MAX_REDIRECTS = 5;
+
+function isAllowedDownloadUrl(url: string): boolean {
+  if (url.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) return true;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.host === ALLOWED_REDIRECT_HOST;
+  } catch {
+    return false;
+  }
+}
+
 /** #125 belt-and-suspenders: bound download memory even when the declared size
  *  is garbage (NaN/Infinity/non-integer/absurd) — validateCatalog refuses those
  *  upstream, but injected deps.catalog and pre-fix caches never pass through it. */
@@ -92,7 +117,23 @@ async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch, ma
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
   try {
-    const res = await fetchImpl(url, { signal: controller.signal });
+    // #121: handle redirects manually so every hop is re-checked against the
+    // allowlist — GitHub serves release assets via a 302 to its asset host, and
+    // fetch's default follow would accept a 302 to anywhere.
+    let currentUrl = url;
+    let res: Response;
+    for (let hop = 0; ; hop++) {
+      if (!isAllowedDownloadUrl(currentUrl)) throw new OffOriginDownloadError(currentUrl);
+      res = await fetchImpl(currentUrl, { signal: controller.signal, redirect: 'manual' });
+      if (res.status >= 300 && res.status < 400) {
+        if (hop >= MAX_REDIRECTS) throw new Error('too many redirects');
+        const location = res.headers.get('location');
+        if (!location) throw new Error(`redirect (HTTP ${res.status}) had no Location header`);
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+      break;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     let bytes: Buffer;
     if (res.body) {
@@ -142,6 +183,14 @@ export async function installModule(
       'Run browse_module_catalog to see what is available.');
   }
 
+  // #121 belt-and-suspenders: validateCatalog already pins the URL for fetched
+  // catalogs, but injected deps.catalog and pre-fix caches never pass through it.
+  if (!entry.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) {
+    return refusal('ARTIFACT_URL_NOT_ALLOWED',
+      `Module '${entry.id}' artifactUrl (${entry.artifactUrl}) is not under ${ALLOWED_ARTIFACT_URL_PREFIX}; refusing.`,
+      'The catalog entry is malformed or tampered — check https://github.com/Ryfter/canvas-toolchain for a catalog correction.');
+  }
+
   const installed = loadInstalledModules();
   const existing = installed.modules[entry.id];
   if (existing && compareVersions(existing.version, entry.version) >= 0) {
@@ -170,6 +219,9 @@ export async function installModule(
       return refusal('DOWNLOAD_TOO_LARGE',
         `Artifact exceeded the catalog-declared size (${entry.sizeBytes} bytes); refusing. ` +
         'This can indicate a tampered artifact.');
+    }
+    if (err instanceof OffOriginDownloadError) {
+      return refusal('ARTIFACT_URL_NOT_ALLOWED', `${err.message}. Nothing was downloaded from the disallowed origin.`);
     }
     const msg = err instanceof Error ? err.message : String(err);
     return refusal('DOWNLOAD_FAILED', `Could not download ${entry.artifactUrl} (${msg}).`);

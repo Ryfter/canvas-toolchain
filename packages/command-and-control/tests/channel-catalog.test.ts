@@ -58,6 +58,18 @@ describe('validateCatalog', () => {
     expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
   });
+  it('refuses an artifactUrl outside this repo\'s GitHub Releases (#121)', () => {
+    for (const artifactUrl of [
+      'https://evil.example/m.mjs',
+      'http://github.com/Ryfter/canvas-toolchain/releases/download/x/m.mjs',
+      'https://github.com/SomeoneElse/canvas-toolchain/releases/download/x/m.mjs',
+      'https://github.com/Ryfter/other-repo/releases/download/x/m.mjs',
+    ]) {
+      const bad = { ...GOOD_ENTRY, artifactUrl };
+      expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    }
+  });
   it('refuses non-finite, non-integer, non-positive, or oversized sizeBytes (#125)', () => {
     for (const sizeBytes of [NaN, Infinity, -Infinity, 0, -1, 1.5, 1e15, MAX_ARTIFACT_BYTES + 1]) {
       const bad = { ...GOOD_ENTRY, sizeBytes };

@@ -44,6 +44,17 @@ const MODULE_ID = /^[a-z0-9][a-z0-9-]*$/;
  *  turn the size guard into an unbounded buffer. */
 export const MAX_ARTIFACT_BYTES = 50 * 1024 * 1024;
 
+/** #121: catalog artifacts may only come from this repo's GitHub Releases —
+ *  hash pinning guarantees the bytes, this pin guarantees where they were
+ *  supposed to come from (a bad catalog can pair an evil URL with its own
+ *  matching hash). */
+export const ALLOWED_ARTIFACT_URL_PREFIX =
+  'https://github.com/Ryfter/canvas-toolchain/releases/download/';
+
+/** GitHub serves release-asset bodies via a 302 to this host; it is the only
+ *  redirect target the downloader will follow (#121). */
+export const ALLOWED_REDIRECT_HOST = 'objects.githubusercontent.com';
+
 function isEntry(v: unknown): v is CatalogEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
@@ -53,7 +64,7 @@ function isEntry(v: unknown): v is CatalogEntry {
     typeof e.description === 'string' &&
     typeof e.version === 'string' &&
     typeof e.minHostVersion === 'string' &&
-    typeof e.artifactUrl === 'string' && e.artifactUrl.startsWith('https://') &&
+    typeof e.artifactUrl === 'string' && e.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX) &&
     typeof e.sha256 === 'string' && SHA256_HEX.test(e.sha256) &&
     typeof e.sizeBytes === 'number' && Number.isInteger(e.sizeBytes) &&
     e.sizeBytes > 0 && e.sizeBytes <= MAX_ARTIFACT_BYTES

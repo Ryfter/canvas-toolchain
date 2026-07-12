@@ -15,14 +15,14 @@ afterEach(() => { delete process.env.CC_HOME; rmSync(home, { recursive: true, fo
 
 const CATALOG = { catalogVersion: 1, modules: [{
   id: 'announcements', name: 'Announcements Auditor', description: 'd', version: '1.0.0',
-  minHostVersion: '2.0.0', artifactUrl: 'https://example.invalid/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10,
+  minHostVersion: '2.0.0', artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-a-v1.0.0/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10,
 }] };
 
 const INSTALL_ARTIFACT = `export default { id: 'announcements', name: 'A', description: 'd', version: '1.0.0', tools: [] };\n`;
 const INSTALL_ARTIFACT_SHA = createHash('sha256').update(INSTALL_ARTIFACT).digest('hex');
 const INSTALL_CATALOG = { catalogVersion: 1, modules: [{
   id: 'announcements', name: 'Announcements Auditor', description: 'd', version: '1.0.0',
-  minHostVersion: '2.0.0', artifactUrl: 'https://example.invalid/module-announcements-1.0.0.mjs',
+  minHostVersion: '2.0.0', artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.0.0/module-announcements-1.0.0.mjs',
   sha256: INSTALL_ARTIFACT_SHA, sizeBytes: INSTALL_ARTIFACT.length,
 }] };
 const artifactFetch: typeof fetch = (async () => new Response(INSTALL_ARTIFACT, { status: 200 })) as unknown as typeof fetch;
@@ -56,7 +56,7 @@ describe('matchCatalogSuggestions', () => {
     const { matchCatalogSuggestions } = await import('../src/tools/module_channel_tools.js');
     const catalog = { catalogVersion: 1, modules: [{
       id: 'announcements', name: 'Announcements Auditor', description: 'd', version: '1.0.0',
-      minHostVersion: '2.0.0', artifactUrl: 'https://example.invalid/a.mjs',
+      minHostVersion: '2.0.0', artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-a-v1.0.0/a.mjs',
       sha256: 'a'.repeat(64), sizeBytes: 10, handles: ['announcements'],
     }] };
     const out = matchCatalogSuggestions(['Course Announcements Feed'], catalog, new Set());
@@ -70,7 +70,7 @@ describe('matchCatalogSuggestions', () => {
     const { matchCatalogSuggestions } = await import('../src/tools/module_channel_tools.js');
     const catalog = { catalogVersion: 1, modules: [{
       id: 'announcements', name: 'A', description: 'd', version: '1.0.0', minHostVersion: '2.0.0',
-      artifactUrl: 'https://example.invalid/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10, handles: ['announcements'],
+      artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-a-v1.0.0/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10, handles: ['announcements'],
     }] };
     expect(matchCatalogSuggestions(['announcements'], catalog, new Set(['announcements']))).toEqual([]);
   });
