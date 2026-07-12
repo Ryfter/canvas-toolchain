@@ -85,6 +85,17 @@ describe('CanvasApiClient', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('refuses off-origin Link pagination and never sends credentials there (#124)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(
+      [{ id: 1, name: 'Page 1' }],
+      { link: '<https://evil.example/api/v1/courses?page=2>; rel="next"' }
+    ));
+
+    const client = new CanvasApiClient(config);
+    await expect(client.listCourses()).rejects.toMatchObject({ code: 'CANVAS_PAGINATION_OFF_HOST' });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('lists Canvas pages for a course', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(mockResponse([{ title: 'Assignment', url: 'assignment' }]));
 

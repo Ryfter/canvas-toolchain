@@ -44,6 +44,7 @@ async function fetchArrayPaged(
   firstUrl: string,
   token: string,
 ): Promise<{ ok: boolean; status: number; items: unknown[] }> {
+  const expectedOrigin = new URL(firstUrl).origin;
   const items: unknown[] = [];
   let url: string | undefined = firstUrl;
   let status = 0;
@@ -59,7 +60,18 @@ async function fetchArrayPaged(
     }
     if (!Array.isArray(body)) return { ok: false, status, items };
     items.push(...body);
-    url = parseNextLink(res.headers.get('link'));
+    const rawNext = parseNextLink(res.headers.get('link'));
+    if (rawNext !== undefined) {
+      // #124: never send the token off the origin we started on. This scan is
+      // best-effort by contract (never throws), so an off-origin or unparseable
+      // Link fails the tier instead of following the URL.
+      let next: URL | undefined;
+      try { next = new URL(rawNext); } catch { next = undefined; }
+      if (!next || next.origin !== expectedOrigin) return { ok: false, status, items };
+      url = next.toString();
+    } else {
+      url = undefined;
+    }
   }
   return { ok: true, status, items };
 }

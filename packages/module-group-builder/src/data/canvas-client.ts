@@ -33,6 +33,21 @@ function parseNextLink(link: string | null): string | undefined {
   return undefined;
 }
 
+/** #124: the Authorization header must only ever be sent to the configured
+ *  Canvas host — refuse any Link "next" URL that points anywhere else. */
+function assertSameCanvasOrigin(nextUrl: string, host: string): string {
+  const expectedOrigin = new URL(`https://${host}`).origin;
+  let next: URL;
+  try { next = new URL(nextUrl); }
+  catch {
+    throw new Error('CANVAS_PAGINATION_OFF_HOST: Canvas returned an unparseable Link "next" URL; refusing to continue pagination.');
+  }
+  if (next.origin !== expectedOrigin) {
+    throw new Error(`CANVAS_PAGINATION_OFF_HOST: refusing to follow a Link header to ${next.origin}; credentials are only sent to ${expectedOrigin}.`);
+  }
+  return next.toString();
+}
+
 export class CanvasClient {
   private readonly fetchImpl: typeof fetch;
   constructor(private readonly creds: CanvasCreds, opts: CanvasClientOptions = {}) {
@@ -49,7 +64,8 @@ export class CanvasClient {
       const res = await this.fetchImpl(next, { method: 'GET', headers: this.headers() });
       if (!res.ok) throw new Error(`Canvas GET ${next} failed: ${res.status}`);
       out.push(...((await res.json()) as T[]));
-      next = parseNextLink(res.headers.get('link'));
+      const rawNext = parseNextLink(res.headers.get('link'));
+      next = rawNext === undefined ? undefined : assertSameCanvasOrigin(rawNext, this.creds.host);
     }
     return out;
   }

@@ -60,13 +60,28 @@ async function fetchJson<T>(url: string, token: string): Promise<PaginatedRes<T>
   return { body, nextLink: parseNextLink(res.headers.get('link')) };
 }
 
+/** #124: the Bearer token must only ever be sent to the origin we started on —
+ *  refuse any Link "next" URL that points anywhere else. */
+function assertSameOrigin(nextUrl: string, expectedOrigin: string): string {
+  let next: URL;
+  try { next = new URL(nextUrl); }
+  catch {
+    throw new Error('CANVAS_PAGINATION_OFF_HOST: Canvas returned an unparseable Link "next" URL; refusing to continue pagination.');
+  }
+  if (next.origin !== expectedOrigin) {
+    throw new Error(`CANVAS_PAGINATION_OFF_HOST: refusing to follow a Link header to ${next.origin}; credentials are only sent to ${expectedOrigin}.`);
+  }
+  return next.toString();
+}
+
 async function paginated<T>(initialUrl: string, token: string): Promise<T[]> {
+  const expectedOrigin = new URL(initialUrl).origin;
   const out: T[] = [];
   let url: string | undefined = initialUrl;
   while (url) {
     const r: PaginatedRes<T[]> = await fetchJson<T[]>(url, token);
     out.push(...r.body);
-    url = r.nextLink;
+    url = r.nextLink === undefined ? undefined : assertSameOrigin(r.nextLink, expectedOrigin);
   }
   return out;
 }

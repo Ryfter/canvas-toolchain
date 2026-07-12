@@ -49,6 +49,23 @@ function parseNextLink(linkHeader: string | null): string | undefined {
   return match?.[1];
 }
 
+/** #124: the Authorization header must only ever be sent to the configured
+ *  Canvas origin — refuse any Link "next" URL that points anywhere else. */
+function assertSameCanvasOrigin(nextUrl: string, expectedOrigin: string): string {
+  let next: URL;
+  try {
+    next = new URL(nextUrl);
+  } catch {
+    throw new CanvasApiError(0, 'CANVAS_PAGINATION_OFF_HOST',
+      'Canvas returned an unparseable Link "next" URL; refusing to continue pagination.');
+  }
+  if (next.origin !== expectedOrigin) {
+    throw new CanvasApiError(0, 'CANVAS_PAGINATION_OFF_HOST',
+      `Refusing to follow a Link header to ${next.origin}; credentials are only sent to ${expectedOrigin}.`);
+  }
+  return next.toString();
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -175,13 +192,15 @@ export class CanvasApiClient {
 
   private async paginatedGet<T>(path: string, params?: Record<string, QueryValue>): Promise<T[]> {
     let nextUrl: string | undefined = joinApiUrl(this.config.canvasUrl, path, params);
+    const expectedOrigin = new URL(nextUrl).origin;
     const all: T[] = [];
 
     while (nextUrl) {
       const response = await this.fetchWithRetry(nextUrl, { method: 'GET', headers: this.headers() });
       const body = await response.json() as T[];
       all.push(...body);
-      nextUrl = parseNextLink(response.headers.get('link'));
+      const rawNext = parseNextLink(response.headers.get('link'));
+      nextUrl = rawNext === undefined ? undefined : assertSameCanvasOrigin(rawNext, expectedOrigin);
     }
 
     return all;
