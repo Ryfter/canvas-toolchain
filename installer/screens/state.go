@@ -35,13 +35,13 @@ type State struct {
 	InstalledPython bool
 	ConnectHosts    map[string]bool
 	WiredHosts      map[string]bool
-	// RequestedModules holds catalog module ids the user asked to have
+	// requestedModules holds catalog module ids the user asked to have
 	// installed via chat after setup (written as a pending-request file).
-	// Access only through SetRequestedModule / RequestedModuleIDs /
-	// requestedModule — the catalog goroutine in workflows.go and the
-	// install step in install.go both touch this map from different
-	// goroutines, so it needs requestedModulesMu.
-	RequestedModules    map[string]bool
+	// Unexported (#122) so access goes only through SetRequestedModule /
+	// RequestedModuleIDs / requestedModule — the catalog goroutine in
+	// workflows.go and the install step in install.go both touch this map
+	// from different goroutines, so it needs requestedModulesMu.
+	requestedModules    map[string]bool
 	requestedModulesMu  sync.Mutex
 	ValidationAnthropic StepResult
 	ValidationCanvas    StepResult
@@ -54,15 +54,15 @@ type State struct {
 func (s *State) SetRequestedModule(id string, want bool) {
 	s.requestedModulesMu.Lock()
 	defer s.requestedModulesMu.Unlock()
-	s.RequestedModules[id] = want
+	s.requestedModules[id] = want
 }
 
 // RequestedModuleIDs returns the sorted ids currently checked. Safe from any goroutine.
 func (s *State) RequestedModuleIDs() []string {
 	s.requestedModulesMu.Lock()
 	defer s.requestedModulesMu.Unlock()
-	ids := make([]string, 0, len(s.RequestedModules))
-	for id, want := range s.RequestedModules {
+	ids := make([]string, 0, len(s.requestedModules))
+	for id, want := range s.requestedModules {
 		if want {
 			ids = append(ids, id)
 		}
@@ -75,7 +75,7 @@ func (s *State) RequestedModuleIDs() []string {
 func (s *State) requestedModule(id string) bool {
 	s.requestedModulesMu.Lock()
 	defer s.requestedModulesMu.Unlock()
-	return s.RequestedModules[id]
+	return s.requestedModules[id]
 }
 
 type StepResult struct {
@@ -103,6 +103,6 @@ func NewState(version string) *State {
 		WorkflowCanvas:   true,
 		ConnectHosts:     map[string]bool{},
 		WiredHosts:       map[string]bool{},
-		RequestedModules: map[string]bool{},
+		requestedModules: map[string]bool{},
 	}
 }

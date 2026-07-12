@@ -38,25 +38,31 @@ func main() {
 		installed := readInstalledVersion(installDir)
 
 		release, err := update.LatestRelease(ctx)
-		if err != nil || release == nil {
-			statusLabel.SetText("Couldn't check for updates — try again later.")
-			return
-		}
-		latest := strings.TrimPrefix(release.TagName, "v")
-		if compareVersions(installed, latest) >= 0 {
-			statusLabel.SetText(fmt.Sprintf("Canvas Toolchain is up to date (v%s).", installed))
-			return
-		}
-		statusLabel.SetText(fmt.Sprintf("Update available: v%s → v%s.", installed, latest))
-		updateBtn := widget.NewButton("Update now", func() {
-			if err := downloadAndRun(ctx, release); err != nil {
-				dialog.ShowError(err, w)
+		// Widget work is marshalled onto the UI thread per Fyne v2.6's threading model (#122).
+		fyne.Do(func() {
+			if err != nil || release == nil {
+				statusLabel.SetText("Couldn't check for updates — try again later.")
 				return
 			}
-			w.Close()
+			latest := strings.TrimPrefix(release.TagName, "v")
+			if compareVersions(installed, latest) >= 0 {
+				statusLabel.SetText(fmt.Sprintf("Canvas Toolchain is up to date (v%s).", installed))
+				return
+			}
+			statusLabel.SetText(fmt.Sprintf("Update available: v%s → v%s.", installed, latest))
+			updateBtn := widget.NewButton("Update now", func() {
+				// Fresh context: the check goroutine's 10s ctx is cancelled (defer)
+				// long before the user taps, so reusing it failed every download
+				// with "context canceled". The http client caps the download at 5m.
+				if err := downloadAndRun(context.Background(), release); err != nil {
+					dialog.ShowError(err, w)
+					return
+				}
+				w.Close()
+			})
+			skipBtn := widget.NewButton("Skip", w.Close)
+			content.Add(container.NewHBox(updateBtn, skipBtn))
 		})
-		skipBtn := widget.NewButton("Skip", w.Close)
-		content.Add(container.NewHBox(updateBtn, skipBtn))
 	}()
 
 	w.ShowAndRun()
