@@ -4,11 +4,11 @@ _Last updated: 2026-07-11. This is the planned order of work — what ships next
 
 ## Where we are
 
-**Current release: v1.11.0** (WCAG 2.2 Phase 3 — institution policy anchor, WCAG 3 draft advisories, WAVE deep check; PR #117, closed #108, released 2026-07-10).
+**Current release: v2.0.0** (plug-in module channel — hash-pinned drop-in modules, `browse_module_catalog`/`install_module`/`uninstall_module`, Announcements Auditor as the first channel module; PR #120, closed #78, released 2026-07-11). Prior: v1.11.x (WCAG 2.2 Phase 3 + hardening).
 
 **Immediate next steps, in order:**
 
-1. **v2.0 plug-in module channel (#78)** — **built on `feat/module-channel`, pending release.** See "Now: v2.0 — plug-in module channel" below.
+1. **v2.0 plug-in module channel (#78)** — **SHIPPED as v2.0.0 (2026-07-11).** Announcements Auditor 1.0.0 published to the catalog same day (first live `release-module.yml` run). Open follow-ups: #121 (artifactUrl host pin), #122 (Fyne ≥2.6 / fyne.Do), #123 (dispatch testability).
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
@@ -43,7 +43,7 @@ Full detail: [`docs/accessibility.md`](accessibility.md#phase-3--institution-pol
 
 ## Now: v2.0 — plug-in module channel
 
-Tracked as umbrella issue [#78](https://github.com/Ryfter/canvas-toolchain/issues/78) under the v2.0 milestone. **Built on `feat/module-channel`, pending release.** The 1.x plug-in system (the `CanvasToolchainModule` contract, workspace module packages, `modules.json` enablement, the fail-soft loader, `list_modules`/`set_module_enabled`) stays exactly as it is — what v2.0 adds is *distribution*: a module (or a fix to one) can now ship without a new installer release.
+Tracked as umbrella issue [#78](https://github.com/Ryfter/canvas-toolchain/issues/78) under the v2.0 milestone. **Shipped as v2.0.0 (2026-07-11; PR #120 squash `09c63c1`).** The 1.x plug-in system (the `CanvasToolchainModule` contract, workspace module packages, `modules.json` enablement, the fail-soft loader, `list_modules`/`set_module_enabled`) stays exactly as it is — what v2.0 adds is *distribution*: a module (or a fix to one) can now ship without a new installer release.
 
 - Modules build into single-file, hash-pinned artifacts attached to GitHub Releases; `module-catalog.json` on `main` is the single source of truth for what exists and what its bytes must hash to.
 - Three new C&C tools drive it conversationally: `browse_module_catalog` (read-only), `install_module` (two-call confirm gate — preview, then `confirm: true` to download/verify/install), and `uninstall_module`.
