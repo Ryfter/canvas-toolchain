@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { tmpdir, platform } from 'node:os';
 import { sha256File } from '../src/channel/hash.js';
 import {
   validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION, MAX_ARTIFACT_BYTES,
@@ -91,6 +91,12 @@ describe('fetchCatalog', () => {
     const cat = await fetchCatalog({ fetchImpl: fakeFetch(200, GOOD_CATALOG), cachePath });
     expect(cat.modules[0].id).toBe('announcements');
     expect(existsSync(cachePath)).toBe(true);
+  });
+  it('writes the cache atomically with owner-only permissions (#127)', async () => {
+    const cachePath = join(dir, 'cache.json');
+    await fetchCatalog({ fetchImpl: fakeFetch(200, GOOD_CATALOG), cachePath });
+    if (platform() !== 'win32') expect(statSync(cachePath).mode & 0o777).toBe(0o600);
+    expect(existsSync(`${cachePath}.tmp`)).toBe(false);
   });
   it('serves a fresh cache without fetching', async () => {
     const cachePath = join(dir, 'cache.json');

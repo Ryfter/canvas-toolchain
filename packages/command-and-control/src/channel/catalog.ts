@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
 
@@ -145,7 +145,11 @@ export async function fetchCatalog(opts: FetchCatalogOptions = {}): Promise<Modu
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const catalog = validateCatalog(await res.json());
     try {
-      writeFileSync(cachePath, JSON.stringify({ fetchedAt: new Date(now()).toISOString(), catalog }, null, 2), 'utf-8');
+      // #127: same atomic tmp+rename+0o600 idiom as every other C&C state file —
+      // the cache is a trust input to install, so keep it owner-only.
+      const tmp = `${cachePath}.tmp`;
+      writeFileSync(tmp, JSON.stringify({ fetchedAt: new Date(now()).toISOString(), catalog }, null, 2), { encoding: 'utf-8', mode: 0o600 });
+      renameSync(tmp, cachePath);
     } catch {
       // Cache write is best-effort.
     }
