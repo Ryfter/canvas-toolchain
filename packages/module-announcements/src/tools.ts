@@ -5,7 +5,24 @@ import { AnnouncementsClient, loadCanvasCreds, type CanvasClientOptions } from '
 export interface AuditArgs { courseId: number; termStart?: string; termEnd?: string }
 export interface RecreateArgs { courseId: number; announcementId: number; newDelayedPostAt: string; confirm?: boolean }
 
+/** #128: refuse garbage before any Canvas call — the two-call gate is only
+ *  meaningful when it previews a valid change. */
+function isCanvasId(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v > 0;
+}
+function isParseableDate(v: unknown): v is string {
+  return typeof v === 'string' && !Number.isNaN(Date.parse(v));
+}
+
 export async function handleAudit(args: AuditArgs, opts: CanvasClientOptions = {}): Promise<Record<string, unknown>> {
+  if (!isCanvasId(args.courseId)) {
+    return { error: 'INVALID_COURSE_ID', message: `courseId must be a positive integer Canvas id (got ${JSON.stringify(args.courseId)}).` };
+  }
+  for (const [name, value] of [['termStart', args.termStart], ['termEnd', args.termEnd]] as const) {
+    if (value !== undefined && !isParseableDate(value)) {
+      return { error: 'INVALID_TERM_WINDOW', message: `${name} is not a parseable ISO date: ${JSON.stringify(value)}.` };
+    }
+  }
   const client = new AnnouncementsClient(loadCanvasCreds(), opts);
   const rows = await client.listAnnouncements(args.courseId);
   const term: TermWindow = { termStart: args.termStart, termEnd: args.termEnd };
@@ -21,6 +38,19 @@ export async function handleAudit(args: AuditArgs, opts: CanvasClientOptions = {
 }
 
 export async function handleRecreate(args: RecreateArgs, opts: CanvasClientOptions = {}): Promise<Record<string, unknown>> {
+  if (!isCanvasId(args.courseId)) {
+    return { error: 'INVALID_COURSE_ID', message: `courseId must be a positive integer Canvas id (got ${JSON.stringify(args.courseId)}).` };
+  }
+  if (!isCanvasId(args.announcementId)) {
+    return { error: 'INVALID_ANNOUNCEMENT_ID', message: `announcementId must be a positive integer Canvas id (got ${JSON.stringify(args.announcementId)}).` };
+  }
+  if (!isParseableDate(args.newDelayedPostAt)) {
+    return {
+      error: 'INVALID_DATE',
+      message: `newDelayedPostAt is not a parseable ISO date/time: ${JSON.stringify(args.newDelayedPostAt)}. ` +
+        'Use e.g. "2026-08-25T09:00:00Z". Nothing was created.',
+    };
+  }
   const client = new AnnouncementsClient(loadCanvasCreds(), opts);
   const rows = await client.listAnnouncements(args.courseId);
   const original = rows.find((r) => r.id === args.announcementId);
