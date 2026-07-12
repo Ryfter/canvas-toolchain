@@ -3,6 +3,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
+import { dispatchCallTool } from './lib/call_tool_dispatch.js';
 import { CI_TOOLS } from './passthrough/ci_tools.js';
 import { DOWNLOADER_TOOLS, downloadCanvasArchive, type DownloadCanvasArchiveInput } from './passthrough/downloader_tools.js';
 import { DESIGN_TOOLS } from './passthrough/design_tools.js';
@@ -861,22 +862,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
-  const { name, arguments: args } = request.params;
-
-  // Module-provided tools take precedence; their handlers return a full CallToolResult.
-  // Wrapped so a throwing module tool (missing config, Canvas API failure, module bug)
-  // degrades to a readable structured error instead of a raw protocol error.
-  const moduleHandler = loadedModules.handlers.get(name);
-  if (moduleHandler) {
-    try {
-      return await moduleHandler(args);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: 'text', text: JSON.stringify({ error: message }) }], isError: true };
-    }
-  }
-
-  try {
+  // Module-handler precedence, the module-tool error net, the notice append, and
+  // the bottom catch live in dispatchCallTool (src/lib/call_tool_dispatch.ts) so
+  // they are unit-testable without a stdio transport (#123). Only the core tool
+  // switch stays here; its cases keep their original indentation.
+  return dispatchCallTool(request.params.name, request.params.arguments, {
+    moduleHandlers: loadedModules.handlers,
+    getNotice: () => (getUpdateNotice() ?? '') + (getChannelNotices() ?? ''),
+    runCoreTool: async (name, args) => {
     let result: unknown;
 
     switch (name) {
@@ -1081,20 +1074,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       }
       default: {
         const tool = ALL_PASSTHROUGH.find((t) => t.name === name);
-        if (!tool) {
-          return { content: [{ type: 'text', text: JSON.stringify({ error: `Unknown tool: ${name}` }) }], isError: true };
-        }
+        if (!tool) return { handled: false };
         result = await Promise.resolve(tool.handler(args));
       }
     }
 
-    const notice = (getUpdateNotice() ?? '') + (getChannelNotices() ?? '');
-    const text = JSON.stringify(result, null, 2) + notice;
-    return { content: [{ type: 'text', text }] };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { content: [{ type: 'text', text: JSON.stringify({ error: message }) }], isError: true };
-  }
+    return { handled: true, result };
+    },
+  });
 });
 
 const transport = new StdioServerTransport();
