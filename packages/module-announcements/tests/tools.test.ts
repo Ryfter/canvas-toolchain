@@ -47,6 +47,42 @@ describe('audit_announcements', () => {
   });
 });
 
+describe('input validation (#128)', () => {
+  const neverFetch: typeof fetch = (async (url: string) => {
+    throw new Error(`Canvas was called with invalid input: ${url}`);
+  }) as unknown as typeof fetch;
+
+  it('audit refuses a non-positive-integer courseId without calling Canvas', async () => {
+    for (const courseId of [NaN, Infinity, 0, -1, 1.5] as number[]) {
+      const res = await handleAudit({ courseId }, { fetchImpl: neverFetch });
+      expect(res.error).toBe('INVALID_COURSE_ID');
+    }
+  });
+
+  it('audit refuses an unparseable term window without calling Canvas', async () => {
+    const res = await handleAudit({ courseId: 20244, termStart: 'not a date' }, { fetchImpl: neverFetch });
+    expect(res.error).toBe('INVALID_TERM_WINDOW');
+  });
+
+  it('recreate refuses invalid ids without calling Canvas', async () => {
+    const good = { courseId: 20244, announcementId: 10, newDelayedPostAt: '2099-02-01T09:00:00Z' };
+    expect((await handleRecreate({ ...good, courseId: 1.5 }, { fetchImpl: neverFetch })).error).toBe('INVALID_COURSE_ID');
+    expect((await handleRecreate({ ...good, announcementId: -2 }, { fetchImpl: neverFetch })).error).toBe('INVALID_ANNOUNCEMENT_ID');
+  });
+
+  it('recreate refuses an unparseable newDelayedPostAt before preview AND before create — no Canvas POST', async () => {
+    for (const confirm of [undefined, true]) {
+      const res = await handleRecreate(
+        { courseId: 20244, announcementId: 10, newDelayedPostAt: 'soonish', ...(confirm ? { confirm } : {}) },
+        { fetchImpl: neverFetch },
+      );
+      expect(res.error).toBe('INVALID_DATE');
+      expect(res.preview).toBeUndefined();
+      expect(res.created).toBeUndefined();
+    }
+  });
+});
+
 describe('recreate_announcement', () => {
   it('previews without posting when confirm is absent', async () => {
     let posted = false;

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { tmpdir, platform } from 'node:os';
 import { sha256File } from '../src/channel/hash.js';
 import {
-  validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION,
+  validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION, MAX_ARTIFACT_BYTES,
 } from '../src/channel/catalog.js';
 
 const GOOD_ENTRY = {
@@ -58,6 +58,27 @@ describe('validateCatalog', () => {
     expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
   });
+  it('refuses an artifactUrl outside this repo\'s GitHub Releases (#121)', () => {
+    for (const artifactUrl of [
+      'https://evil.example/m.mjs',
+      'http://github.com/Ryfter/canvas-toolchain/releases/download/x/m.mjs',
+      'https://github.com/SomeoneElse/canvas-toolchain/releases/download/x/m.mjs',
+      'https://github.com/Ryfter/other-repo/releases/download/x/m.mjs',
+    ]) {
+      const bad = { ...GOOD_ENTRY, artifactUrl };
+      expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    }
+  });
+  it('refuses non-finite, non-integer, non-positive, or oversized sizeBytes (#125)', () => {
+    for (const sizeBytes of [NaN, Infinity, -Infinity, 0, -1, 1.5, 1e15, MAX_ARTIFACT_BYTES + 1]) {
+      const bad = { ...GOOD_ENTRY, sizeBytes };
+      expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    }
+    const atCeiling = { ...GOOD_ENTRY, sizeBytes: MAX_ARTIFACT_BYTES };
+    expect(validateCatalog({ catalogVersion: 1, modules: [atCeiling] }).modules).toHaveLength(1);
+  });
   it('refuses duplicate ids across entries, naming the id', () => {
     expect(() => validateCatalog({ catalogVersion: 1, modules: [GOOD_ENTRY, { ...GOOD_ENTRY }] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID', message: expect.stringContaining(GOOD_ENTRY.id) }));
@@ -70,6 +91,12 @@ describe('fetchCatalog', () => {
     const cat = await fetchCatalog({ fetchImpl: fakeFetch(200, GOOD_CATALOG), cachePath });
     expect(cat.modules[0].id).toBe('announcements');
     expect(existsSync(cachePath)).toBe(true);
+  });
+  it('writes the cache atomically with owner-only permissions (#127)', async () => {
+    const cachePath = join(dir, 'cache.json');
+    await fetchCatalog({ fetchImpl: fakeFetch(200, GOOD_CATALOG), cachePath });
+    if (platform() !== 'win32') expect(statSync(cachePath).mode & 0o777).toBe(0o600);
+    expect(existsSync(`${cachePath}.tmp`)).toBe(false);
   });
   it('serves a fresh cache without fetching', async () => {
     const cachePath = join(dir, 'cache.json');

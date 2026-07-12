@@ -17,7 +17,7 @@ afterEach(() => {
 
 const CATALOG = { catalogVersion: 1, modules: [{
   id: 'announcements', name: 'Announcements Auditor', description: 'd', version: '1.1.0',
-  minHostVersion: '2.0.0', artifactUrl: 'https://example.invalid/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10,
+  minHostVersion: '2.0.0', artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-a-v1.0.0/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10,
 }] };
 
 describe('channel notices', () => {

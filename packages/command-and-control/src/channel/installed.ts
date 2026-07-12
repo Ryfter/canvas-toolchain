@@ -31,6 +31,20 @@ export function artifactPath(id: string, version: string): string {
   return join(getModulesRoot(), id, version, 'module.mjs');
 }
 
+/** Same shape validateCatalog enforces on module ids. */
+export const MODULE_ID_SEGMENT = /^[a-z0-9][a-z0-9-]*$/;
+/** Tight semver — cannot contain path separators or dot-only segments. */
+export const VERSION_SEGMENT = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?$/;
+
+/** #126: ledger id/version become filesystem path segments under the modules
+ *  root — refuse anything that isn't the exact shape install_module writes, so
+ *  a hand-edited or tampered ledger skips loudly instead of walking (or
+ *  rmSync-ing) surprising paths. */
+export function isSafeArtifactRef(id: unknown, version: unknown): boolean {
+  return typeof id === 'string' && MODULE_ID_SEGMENT.test(id) &&
+    typeof version === 'string' && VERSION_SEGMENT.test(version);
+}
+
 /** Tolerant load — missing/corrupt returns empty (the server must always start). */
 export function loadInstalledModules(): InstalledModulesFile {
   const path = getInstalledModulesPath();

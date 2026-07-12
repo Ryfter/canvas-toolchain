@@ -9,7 +9,10 @@ import {
 } from '@canvas-toolchain/module-contract';
 import { loadModuleManifest } from './manifest.js';
 import { sha256File } from '../channel/hash.js';
-import { artifactPath, loadInstalledModules, saveInstalledModules } from '../channel/installed.js';
+import {
+  artifactPath, isSafeArtifactRef, VERSION_SEGMENT,
+  loadInstalledModules, saveInstalledModules,
+} from '../channel/installed.js';
 import { compareVersions } from '../update/check.js';
 
 /** Static registry of known modules. Future runtime-loading swaps this map for dynamic import. */
@@ -42,6 +45,10 @@ export async function loadInstalledArtifacts(
   const installed = loadInstalledModules();
   for (const [id, rec] of Object.entries(installed.modules)) {
     if (!manifest.modules[id]?.enabled) continue;
+    if (!isSafeArtifactRef(id, rec?.version)) {
+      console.error(`[modules] installed-modules.json entry '${id}' has an invalid id/version shape; skipping (never imported).`);
+      continue;
+    }
     const path = artifactPath(id, rec.version);
     try {
       if (!existsSync(path)) {
@@ -74,7 +81,14 @@ export async function loadInstalledArtifacts(
     // failure — the module above already loaded and is active in `out`.
     if (rec.previous) {
       try {
-        rmSync(dirname(artifactPath(id, rec.previous.version)), { recursive: true, force: true });
+        // #126: previous.version becomes an rmSync target — a tampered value
+        // like '../..' would resolve to CC_HOME itself. Clear the garbage
+        // record without touching the filesystem.
+        if (typeof rec.previous.version === 'string' && VERSION_SEGMENT.test(rec.previous.version)) {
+          rmSync(dirname(artifactPath(id, rec.previous.version)), { recursive: true, force: true });
+        } else {
+          console.error(`[modules] '${id}' loaded, but its retained previous version has an invalid shape; clearing the record without deleting anything.`);
+        }
         const file = loadInstalledModules();
         if (file.modules[id]) {
           delete file.modules[id].previous;

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
 
@@ -38,6 +38,23 @@ export class CatalogError extends Error {
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 const MODULE_ID = /^[a-z0-9][a-z0-9-]*$/;
 
+/** Hard ceiling for a single-file module artifact (#125). v2.0 artifacts are a
+ *  few KiB; 50 MiB leaves generous headroom while bounding install-time RAM —
+ *  sizeBytes is the download memory cap, so NaN/Infinity/absurd values would
+ *  turn the size guard into an unbounded buffer. */
+export const MAX_ARTIFACT_BYTES = 50 * 1024 * 1024;
+
+/** #121: catalog artifacts may only come from this repo's GitHub Releases —
+ *  hash pinning guarantees the bytes, this pin guarantees where they were
+ *  supposed to come from (a bad catalog can pair an evil URL with its own
+ *  matching hash). */
+export const ALLOWED_ARTIFACT_URL_PREFIX =
+  'https://github.com/Ryfter/canvas-toolchain/releases/download/';
+
+/** GitHub serves release-asset bodies via a 302 to this host; it is the only
+ *  redirect target the downloader will follow (#121). */
+export const ALLOWED_REDIRECT_HOST = 'objects.githubusercontent.com';
+
 function isEntry(v: unknown): v is CatalogEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
@@ -47,9 +64,10 @@ function isEntry(v: unknown): v is CatalogEntry {
     typeof e.description === 'string' &&
     typeof e.version === 'string' &&
     typeof e.minHostVersion === 'string' &&
-    typeof e.artifactUrl === 'string' && e.artifactUrl.startsWith('https://') &&
+    typeof e.artifactUrl === 'string' && e.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX) &&
     typeof e.sha256 === 'string' && SHA256_HEX.test(e.sha256) &&
-    typeof e.sizeBytes === 'number'
+    typeof e.sizeBytes === 'number' && Number.isInteger(e.sizeBytes) &&
+    e.sizeBytes > 0 && e.sizeBytes <= MAX_ARTIFACT_BYTES
   );
 }
 
@@ -127,7 +145,11 @@ export async function fetchCatalog(opts: FetchCatalogOptions = {}): Promise<Modu
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const catalog = validateCatalog(await res.json());
     try {
-      writeFileSync(cachePath, JSON.stringify({ fetchedAt: new Date(now()).toISOString(), catalog }, null, 2), 'utf-8');
+      // #127: same atomic tmp+rename+0o600 idiom as every other C&C state file —
+      // the cache is a trust input to install, so keep it owner-only.
+      const tmp = `${cachePath}.tmp`;
+      writeFileSync(tmp, JSON.stringify({ fetchedAt: new Date(now()).toISOString(), catalog }, null, 2), { encoding: 'utf-8', mode: 0o600 });
+      renameSync(tmp, cachePath);
     } catch {
       // Cache write is best-effort.
     }

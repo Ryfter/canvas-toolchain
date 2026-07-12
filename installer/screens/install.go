@@ -58,41 +58,48 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 		_ = openInBrowser("https://github.com/Ryfter/canvas-toolchain/issues/new?template=installer-bug.md")
 	})
 
+	// Called from the runner goroutine (npm output streaming) — marshal onto the
+	// UI thread. fyne.Do is async queueing, so calling it from a callback that is
+	// itself inside fyne.Do (OnUpdate's StepError branch) just queues in order.
 	logFn := func(line string) {
-		logArea.SetText(logArea.Text + line)
+		fyne.Do(func() { logArea.SetText(logArea.Text + line) })
 	}
 
 	steps := buildSteps(st, logFn)
 	runner := &tasks.Runner{
 		Steps: steps,
+		// Invoked from the runner goroutine — all widget mutations marshalled via
+		// fyne.Do per Fyne v2.6's threading model (#122).
 		OnUpdate: func(i int, name string, res tasks.StepResult) {
 			if i >= len(rows) {
 				return
 			}
-			switch res.Status {
-			case tasks.StepRunning:
-				rows[i].SetStatus(ui.StatusRunning, "")
-			case tasks.StepOK:
-				rows[i].SetStatus(ui.StatusOK, "")
-			case tasks.StepWarn:
-				msg := ""
-				if res.Err != nil {
-					msg = res.Err.Error()
+			fyne.Do(func() {
+				switch res.Status {
+				case tasks.StepRunning:
+					rows[i].SetStatus(ui.StatusRunning, "")
+				case tasks.StepOK:
+					rows[i].SetStatus(ui.StatusOK, "")
+				case tasks.StepWarn:
+					msg := ""
+					if res.Err != nil {
+						msg = res.Err.Error()
+					}
+					rows[i].SetStatus(ui.StatusWarn, msg)
+				case tasks.StepError:
+					msg := ""
+					if res.Err != nil {
+						msg = res.Err.Error()
+					}
+					rows[i].SetStatus(ui.StatusError, msg)
+					retryBtn.Enable()
+					backBtn.Enable()
+					if res.Err != nil {
+						logFn("\n[" + name + " failed] " + res.Err.Error() + "\n")
+					}
+					dialog.ShowError(fmt.Errorf("%s failed: %v", name, res.Err), parent)
 				}
-				rows[i].SetStatus(ui.StatusWarn, msg)
-			case tasks.StepError:
-				msg := ""
-				if res.Err != nil {
-					msg = res.Err.Error()
-				}
-				rows[i].SetStatus(ui.StatusError, msg)
-				retryBtn.Enable()
-				backBtn.Enable()
-				if res.Err != nil {
-					logFn("\n[" + name + " failed] " + res.Err.Error() + "\n")
-				}
-				dialog.ShowError(fmt.Errorf("%s failed: %v", name, res.Err), parent)
-			}
+			})
 		},
 	}
 
@@ -106,7 +113,7 @@ func NewInstallScreen(parent fyne.Window, st *State, onNext, onBack func()) fyne
 			}
 		}
 		if allOK {
-			nextBtn.Enable()
+			fyne.Do(nextBtn.Enable)
 		}
 	}()
 

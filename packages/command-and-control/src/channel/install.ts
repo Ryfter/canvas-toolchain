@@ -1,9 +1,13 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fetchCatalog, CatalogError, type ModuleCatalog, type CatalogEntry } from './catalog.js';
+import {
+  fetchCatalog, CatalogError, MAX_ARTIFACT_BYTES,
+  ALLOWED_ARTIFACT_URL_PREFIX, ALLOWED_REDIRECT_HOST,
+  type ModuleCatalog, type CatalogEntry,
+} from './catalog.js';
 import { sha256File } from './hash.js';
 import {
-  artifactPath, getModulesRoot, getTmpDownloadDir,
+  artifactPath, getModulesRoot, getTmpDownloadDir, MODULE_ID_SEGMENT,
   loadInstalledModules, saveInstalledModules,
 } from './installed.js';
 import { removePendingModule } from './pending.js';
@@ -78,11 +82,58 @@ class DownloadTooLargeError extends Error {
   }
 }
 
+/** Thrown when a download URL (or a redirect hop) leaves the allowed origins (#121). */
+class OffOriginDownloadError extends Error {
+  constructor(url: string) {
+    super(`refusing to download from ${url}; artifacts may only come from ` +
+      `${ALLOWED_ARTIFACT_URL_PREFIX} (redirecting only to ${ALLOWED_REDIRECT_HOST})`);
+    this.name = 'OffOriginDownloadError';
+  }
+}
+
+const MAX_REDIRECTS = 5;
+
+function isAllowedDownloadUrl(url: string): boolean {
+  if (url.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) return true;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.host === ALLOWED_REDIRECT_HOST;
+  } catch {
+    return false;
+  }
+}
+
+/** #125 belt-and-suspenders: bound download memory even when the declared size
+ *  is garbage (NaN/Infinity/non-integer/absurd) — validateCatalog refuses those
+ *  upstream, but injected deps.catalog and pre-fix caches never pass through it. */
+export function resolveDownloadCap(declaredBytes: number): number {
+  return Number.isInteger(declaredBytes) && declaredBytes > 0 && declaredBytes <= MAX_ARTIFACT_BYTES
+    ? declaredBytes
+    : MAX_ARTIFACT_BYTES;
+}
+
 async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch, maxBytes: number): Promise<void> {
+  const cap = resolveDownloadCap(maxBytes);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
   try {
-    const res = await fetchImpl(url, { signal: controller.signal });
+    // #121: handle redirects manually so every hop is re-checked against the
+    // allowlist — GitHub serves release assets via a 302 to its asset host, and
+    // fetch's default follow would accept a 302 to anywhere.
+    let currentUrl = url;
+    let res: Response;
+    for (let hop = 0; ; hop++) {
+      if (!isAllowedDownloadUrl(currentUrl)) throw new OffOriginDownloadError(currentUrl);
+      res = await fetchImpl(currentUrl, { signal: controller.signal, redirect: 'manual' });
+      if (res.status >= 300 && res.status < 400) {
+        if (hop >= MAX_REDIRECTS) throw new Error('too many redirects');
+        const location = res.headers.get('location');
+        if (!location) throw new Error(`redirect (HTTP ${res.status}) had no Location header`);
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+      break;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     let bytes: Buffer;
     if (res.body) {
@@ -94,9 +145,9 @@ async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch, ma
         const { done, value } = await reader.read();
         if (done) break;
         total += value.byteLength;
-        if (total > maxBytes) {
+        if (total > cap) {
           await reader.cancel();
-          throw new DownloadTooLargeError(maxBytes);
+          throw new DownloadTooLargeError(cap);
         }
         chunks.push(value);
       }
@@ -104,7 +155,7 @@ async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch, ma
     } else {
       // Some fetch fakes have no stream body — buffer, then enforce the cap.
       bytes = Buffer.from(await res.arrayBuffer());
-      if (bytes.byteLength > maxBytes) throw new DownloadTooLargeError(maxBytes);
+      if (bytes.byteLength > cap) throw new DownloadTooLargeError(cap);
     }
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, bytes, { mode: 0o600 });
@@ -130,6 +181,14 @@ export async function installModule(
   if (!entry) {
     return refusal('MODULE_NOT_IN_CATALOG', `No module '${args.moduleId}' in the catalog.`,
       'Run browse_module_catalog to see what is available.');
+  }
+
+  // #121 belt-and-suspenders: validateCatalog already pins the URL for fetched
+  // catalogs, but injected deps.catalog and pre-fix caches never pass through it.
+  if (!entry.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) {
+    return refusal('ARTIFACT_URL_NOT_ALLOWED',
+      `Module '${entry.id}' artifactUrl (${entry.artifactUrl}) is not under ${ALLOWED_ARTIFACT_URL_PREFIX}; refusing.`,
+      'The catalog entry is malformed or tampered — check https://github.com/Ryfter/canvas-toolchain for a catalog correction.');
   }
 
   const installed = loadInstalledModules();
@@ -160,6 +219,9 @@ export async function installModule(
       return refusal('DOWNLOAD_TOO_LARGE',
         `Artifact exceeded the catalog-declared size (${entry.sizeBytes} bytes); refusing. ` +
         'This can indicate a tampered artifact.');
+    }
+    if (err instanceof OffOriginDownloadError) {
+      return refusal('ARTIFACT_URL_NOT_ALLOWED', `${err.message}. Nothing was downloaded from the disallowed origin.`);
     }
     const msg = err instanceof Error ? err.message : String(err);
     return refusal('DOWNLOAD_FAILED', `Could not download ${entry.artifactUrl} (${msg}).`);
@@ -271,6 +333,11 @@ export function uninstallModule(
     return refusal('BUNDLED_MODULE',
       `'${args.moduleId}' is a bundled module and cannot be uninstalled.`,
       `Disable it instead: set_module_enabled({ module: '${args.moduleId}', enabled: false }).`);
+  }
+  // #126: moduleId becomes an rmSync target under the modules root — a validly
+  // installed module can never have an id outside this shape.
+  if (!MODULE_ID_SEGMENT.test(args.moduleId)) {
+    return refusal('NOT_INSTALLED', `Module '${args.moduleId}' is not installed.`);
   }
   const installed = loadInstalledModules();
   if (!installed.modules[args.moduleId]) {

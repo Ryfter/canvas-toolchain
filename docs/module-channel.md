@@ -77,3 +77,12 @@ published" means in 2.0. The hash is **verified twice**: once by
 reaches its final location), and again by the loader at **every** server
 startup — so a tampered release asset, a MITM'd download, and post-install
 local disk corruption all fail identically, closed.
+
+Two origin/size pins back the hash (v2.0.1 hardening pass, #121/#125/#126):
+a catalog entry's `artifactUrl` must live under
+`https://github.com/Ryfter/canvas-toolchain/releases/download/`, and the
+downloader handles redirects manually, refusing any hop that isn't GitHub's
+`objects.githubusercontent.com` asset host (`ARTIFACT_URL_NOT_ALLOWED`);
+`sizeBytes` must be a positive integer at or below 50 MiB and independently
+caps download memory. On load, ledger `id`/`version` values are re-validated
+as safe path segments before any filesystem path is built from them.

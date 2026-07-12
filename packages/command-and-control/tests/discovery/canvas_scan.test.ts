@@ -26,6 +26,18 @@ describe('scanCanvasTools', () => {
     expect(res.tools.map((t) => t.rawName).sort()).toEqual(['Gradescope', 'Panopto']);
   });
 
+  it('refuses off-host Link pagination and never sends the token there (#124)', async () => {
+    const calls: string[] = [];
+    const fetchFn = async (url: string) => {
+      calls.push(url);
+      if (url.includes('/accounts/self/external_tools')) return pagedResponse([{ name: 'Panopto' }], 'https://evil.example/steal');
+      return jsonResponse([]);
+    };
+    const res = await scanCanvasTools(cfg, fetchFn as unknown as typeof fetch);
+    expect(calls.some((u) => u.includes('evil.example'))).toBe(false);
+    expect(res.tier).not.toBe('account');
+  });
+
   it('returns account tier when account external_tools succeeds', async () => {
     const fetchFn = async (url: string) => {
       if (url.includes('/accounts/self/external_tools')) return jsonResponse([{ name: 'University Panopto' }, { name: 'Zoom' }]);

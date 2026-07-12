@@ -13,7 +13,7 @@ function catalogWith(overrides: Record<string, unknown> = {}) {
     modules: [{
       id: 'announcements', name: 'Announcements Auditor', description: 'Audit scheduled announcements.',
       version: '1.0.0', minHostVersion: '2.0.0',
-      artifactUrl: 'https://example.invalid/module-announcements-1.0.0.mjs',
+      artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.0.0/module-announcements-1.0.0.mjs',
       sha256: ARTIFACT_SHA, sizeBytes: ARTIFACT.length, ...overrides,
     }],
   };
@@ -28,6 +28,90 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.CC_HOME;
   rmSync(home, { recursive: true, force: true });
+});
+
+describe('resolveDownloadCap (#125 belt-and-suspenders)', () => {
+  it('bounds download memory even when the declared size is garbage', async () => {
+    const { resolveDownloadCap } = await import('../src/channel/install.js');
+    const { MAX_ARTIFACT_BYTES } = await import('../src/channel/catalog.js');
+    expect(resolveDownloadCap(10)).toBe(10);
+    expect(resolveDownloadCap(MAX_ARTIFACT_BYTES)).toBe(MAX_ARTIFACT_BYTES);
+    for (const garbage of [NaN, Infinity, -Infinity, 0, -1, 1.5, MAX_ARTIFACT_BYTES + 1]) {
+      expect(resolveDownloadCap(garbage)).toBe(MAX_ARTIFACT_BYTES);
+    }
+  });
+});
+
+describe('uninstallModule path hygiene (#126)', () => {
+  it('refuses a path-escaping moduleId even when a tampered ledger contains it', async () => {
+    const { saveInstalledModules } = await import('../src/channel/installed.js');
+    const { uninstallModule } = await import('../src/channel/install.js');
+    const { mkdirSync, writeFileSync } = await import('node:fs');
+    mkdirSync(join(home, 'victim'), { recursive: true });
+    writeFileSync(join(home, 'victim', 'keep.txt'), 'x');
+    saveInstalledModules({ modules: { '../victim': {
+      id: '../victim', version: '1.0.0', installedAt: '2026-07-11T00:00:00Z', sha256: 'a'.repeat(64),
+    } } });
+    const res = uninstallModule({ moduleId: '../victim' }, { knownIds: [] });
+    expect(res.uninstalled).toBeUndefined();
+    expect(res.error).toBeTruthy();
+    // rmSync(join(modulesRoot, '../victim')) would have deleted this.
+    expect(existsSync(join(home, 'victim', 'keep.txt'))).toBe(true);
+  });
+});
+
+describe('installModule download-origin allowlist (#121)', () => {
+  it('refuses an off-allowlist artifactUrl without downloading anything', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const calls: string[] = [];
+    const spy: typeof fetch = (async (url: string) => {
+      calls.push(url);
+      return new Response(ARTIFACT, { status: 200 });
+    }) as unknown as typeof fetch;
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith({ artifactUrl: 'https://evil.example/m.mjs' }), hostVersion: '2.0.0', fetchImpl: spy },
+    );
+    expect(res.error).toBe('ARTIFACT_URL_NOT_ALLOWED');
+    expect(calls).toEqual([]);
+  });
+
+  it('follows a redirect to the GitHub release-asset host and installs', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const assetUrl = 'https://objects.githubusercontent.com/some/signed/path';
+    const calls: string[] = [];
+    const spy: typeof fetch = (async (url: string) => {
+      calls.push(url);
+      if (url.startsWith('https://github.com/')) {
+        return new Response(null, { status: 302, headers: { location: assetUrl } });
+      }
+      if (url === assetUrl) return new Response(ARTIFACT, { status: 200 });
+      throw new Error(`unexpected url: ${url}`);
+    }) as unknown as typeof fetch;
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith(), hostVersion: '2.0.0', fetchImpl: spy },
+    );
+    expect(res.installed).toBe(true);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('refuses a redirect off the allowlist and never fetches the target', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const calls: string[] = [];
+    const spy: typeof fetch = (async (url: string) => {
+      calls.push(url);
+      if (url.includes('evil.example')) throw new Error(`download escaped to ${url}`);
+      return new Response(null, { status: 302, headers: { location: 'https://evil.example/payload' } });
+    }) as unknown as typeof fetch;
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith(), hostVersion: '2.0.0', fetchImpl: spy },
+    );
+    expect(res.error).toBe('ARTIFACT_URL_NOT_ALLOWED');
+    expect(calls).toHaveLength(1);
+    expect(existsSync(join(home, 'modules', 'announcements'))).toBe(false);
+  });
 });
 
 describe('installModule', () => {
