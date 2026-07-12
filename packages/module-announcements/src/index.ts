@@ -10,7 +10,7 @@ const announcementsModule: CanvasToolchainModule = {
     'Find scheduled Canvas announcements whose fire dates are stale (typically after a course copy keeps ' +
     'last term\'s dates) and recreate them with corrected dates. Read-first; creation is confirm-gated; ' +
     'never deletes anything.',
-  version: '1.0.0',
+  version: '1.1.0',
   handles: ['announcements'],
   tools: announcementTools,
 };
