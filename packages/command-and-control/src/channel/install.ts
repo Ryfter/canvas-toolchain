@@ -7,7 +7,7 @@ import {
 } from './catalog.js';
 import { sha256File } from './hash.js';
 import {
-  artifactPath, getModulesRoot, getTmpDownloadDir,
+  artifactPath, getModulesRoot, getTmpDownloadDir, MODULE_ID_SEGMENT,
   loadInstalledModules, saveInstalledModules,
 } from './installed.js';
 import { removePendingModule } from './pending.js';
@@ -333,6 +333,11 @@ export function uninstallModule(
     return refusal('BUNDLED_MODULE',
       `'${args.moduleId}' is a bundled module and cannot be uninstalled.`,
       `Disable it instead: set_module_enabled({ module: '${args.moduleId}', enabled: false }).`);
+  }
+  // #126: moduleId becomes an rmSync target under the modules root — a validly
+  // installed module can never have an id outside this shape.
+  if (!MODULE_ID_SEGMENT.test(args.moduleId)) {
+    return refusal('NOT_INSTALLED', `Module '${args.moduleId}' is not installed.`);
   }
   const installed = loadInstalledModules();
   if (!installed.modules[args.moduleId]) {

@@ -42,6 +42,24 @@ describe('resolveDownloadCap (#125 belt-and-suspenders)', () => {
   });
 });
 
+describe('uninstallModule path hygiene (#126)', () => {
+  it('refuses a path-escaping moduleId even when a tampered ledger contains it', async () => {
+    const { saveInstalledModules } = await import('../src/channel/installed.js');
+    const { uninstallModule } = await import('../src/channel/install.js');
+    const { mkdirSync, writeFileSync } = await import('node:fs');
+    mkdirSync(join(home, 'victim'), { recursive: true });
+    writeFileSync(join(home, 'victim', 'keep.txt'), 'x');
+    saveInstalledModules({ modules: { '../victim': {
+      id: '../victim', version: '1.0.0', installedAt: '2026-07-11T00:00:00Z', sha256: 'a'.repeat(64),
+    } } });
+    const res = uninstallModule({ moduleId: '../victim' }, { knownIds: [] });
+    expect(res.uninstalled).toBeUndefined();
+    expect(res.error).toBeTruthy();
+    // rmSync(join(modulesRoot, '../victim')) would have deleted this.
+    expect(existsSync(join(home, 'victim', 'keep.txt'))).toBe(true);
+  });
+});
+
 describe('installModule download-origin allowlist (#121)', () => {
   it('refuses an off-allowlist artifactUrl without downloading anything', async () => {
     const { installModule } = await import('../src/channel/install.js');

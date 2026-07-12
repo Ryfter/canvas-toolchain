@@ -161,6 +161,72 @@ describe('dynamic artifact loading', () => {
     }
   });
 
+  it('skips (never imports) a ledger entry whose id is not a safe path segment (#126)', async () => {
+    const { saveInstalledModules } = await import('../src/channel/installed.js');
+    // install_module can never write this shape — only a hand-edited/tampered ledger can.
+    saveInstalledModules({ modules: { '../escape': {
+      id: '../escape', version: '1.0.0', installedAt: '2026-07-11T00:00:00Z', sha256: 'a'.repeat(64),
+    } } });
+    const { saveModuleManifest } = await import('../src/modules/manifest.js');
+    saveModuleManifest({ modules: { '../escape': { enabled: true } } });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { loadModules } = await import('../src/modules/registry.js');
+      const loaded = await loadModules({});
+      expect(loaded.tools).toHaveLength(0);
+      expect(errorSpy.mock.calls.map((c) => c.join(' ')).join('\n')).toMatch(/invalid id\/version/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('skips a ledger entry whose version is not a safe path segment (#126)', async () => {
+    const src = moduleSource('fixture', '1.0.0', 'fixture_tool');
+    await placeArtifact('fixture', '1.0.0', src);
+    const { loadInstalledModules, saveInstalledModules } = await import('../src/channel/installed.js');
+    const file = loadInstalledModules();
+    file.modules.fixture.version = '../1.0.0';
+    saveInstalledModules(file);
+    const { saveModuleManifest } = await import('../src/modules/manifest.js');
+    saveModuleManifest({ modules: { fixture: { enabled: true } } });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { loadModules } = await import('../src/modules/registry.js');
+      expect((await loadModules({})).handlers.has('fixture_tool')).toBe(false);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('never prunes a previous version whose version string is not a safe segment (#126)', async () => {
+    const newSrc = moduleSource('fixture', '1.1.0', 'fixture_new');
+    const { artifactPath, loadInstalledModules, saveInstalledModules } = await import('../src/channel/installed.js');
+    const p = artifactPath('fixture', '1.1.0');
+    mkdirSync(dirname(p), { recursive: true });
+    writeFileSync(p, newSrc);
+    saveInstalledModules({ modules: { fixture: {
+      id: 'fixture', version: '1.1.0', installedAt: '2026-07-11T00:00:00Z',
+      sha256: createHash('sha256').update(newSrc).digest('hex'),
+      // A naive rmSync(dirname(artifactPath('fixture', '../..'))) resolves to CC_HOME itself.
+      previous: { version: '../..', sha256: 'a'.repeat(64) },
+    } } });
+    const { saveModuleManifest } = await import('../src/modules/manifest.js');
+    saveModuleManifest({ modules: { fixture: { enabled: true } } });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { loadModules } = await import('../src/modules/registry.js');
+      const loaded = await loadModules({});
+      expect(loaded.handlers.has('fixture_new')).toBe(true);
+      // CC_HOME must survive: the tampered prune target resolved to it.
+      expect(existsSync(join(home, 'installed-modules.json'))).toBe(true);
+      expect(existsSync(artifactPath('fixture', '1.1.0'))).toBe(true);
+      // The garbage previous record is cleared without touching the filesystem.
+      expect(loadInstalledModules().modules.fixture.previous).toBeUndefined();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it('freshly imports changed artifact bytes on a second loadModules call in the same process (cache-bust)', async () => {
     await placeArtifact('cachebust', '1.0.0', moduleSource('cachebust', '1.0.0', 'cb_tool_v1'));
     const { saveModuleManifest } = await import('../src/modules/manifest.js');
