@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fetchCatalog, CatalogError, type ModuleCatalog, type CatalogEntry } from './catalog.js';
+import { fetchCatalog, CatalogError, MAX_ARTIFACT_BYTES, type ModuleCatalog, type CatalogEntry } from './catalog.js';
 import { sha256File } from './hash.js';
 import {
   artifactPath, getModulesRoot, getTmpDownloadDir,
@@ -78,7 +78,17 @@ class DownloadTooLargeError extends Error {
   }
 }
 
+/** #125 belt-and-suspenders: bound download memory even when the declared size
+ *  is garbage (NaN/Infinity/non-integer/absurd) — validateCatalog refuses those
+ *  upstream, but injected deps.catalog and pre-fix caches never pass through it. */
+export function resolveDownloadCap(declaredBytes: number): number {
+  return Number.isInteger(declaredBytes) && declaredBytes > 0 && declaredBytes <= MAX_ARTIFACT_BYTES
+    ? declaredBytes
+    : MAX_ARTIFACT_BYTES;
+}
+
 async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch, maxBytes: number): Promise<void> {
+  const cap = resolveDownloadCap(maxBytes);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
   try {
@@ -94,9 +104,9 @@ async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch, ma
         const { done, value } = await reader.read();
         if (done) break;
         total += value.byteLength;
-        if (total > maxBytes) {
+        if (total > cap) {
           await reader.cancel();
-          throw new DownloadTooLargeError(maxBytes);
+          throw new DownloadTooLargeError(cap);
         }
         chunks.push(value);
       }
@@ -104,7 +114,7 @@ async function downloadTo(url: string, dest: string, fetchImpl: typeof fetch, ma
     } else {
       // Some fetch fakes have no stream body — buffer, then enforce the cap.
       bytes = Buffer.from(await res.arrayBuffer());
-      if (bytes.byteLength > maxBytes) throw new DownloadTooLargeError(maxBytes);
+      if (bytes.byteLength > cap) throw new DownloadTooLargeError(cap);
     }
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, bytes, { mode: 0o600 });

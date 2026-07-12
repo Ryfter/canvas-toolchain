@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { sha256File } from '../src/channel/hash.js';
 import {
-  validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION,
+  validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION, MAX_ARTIFACT_BYTES,
 } from '../src/channel/catalog.js';
 
 const GOOD_ENTRY = {
@@ -57,6 +57,15 @@ describe('validateCatalog', () => {
     const bad = { ...GOOD_ENTRY, id: 'Bad_ID' };
     expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+  });
+  it('refuses non-finite, non-integer, non-positive, or oversized sizeBytes (#125)', () => {
+    for (const sizeBytes of [NaN, Infinity, -Infinity, 0, -1, 1.5, 1e15, MAX_ARTIFACT_BYTES + 1]) {
+      const bad = { ...GOOD_ENTRY, sizeBytes };
+      expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    }
+    const atCeiling = { ...GOOD_ENTRY, sizeBytes: MAX_ARTIFACT_BYTES };
+    expect(validateCatalog({ catalogVersion: 1, modules: [atCeiling] }).modules).toHaveLength(1);
   });
   it('refuses duplicate ids across entries, naming the id', () => {
     expect(() => validateCatalog({ catalogVersion: 1, modules: [GOOD_ENTRY, { ...GOOD_ENTRY }] }))

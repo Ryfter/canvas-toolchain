@@ -38,6 +38,12 @@ export class CatalogError extends Error {
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 const MODULE_ID = /^[a-z0-9][a-z0-9-]*$/;
 
+/** Hard ceiling for a single-file module artifact (#125). v2.0 artifacts are a
+ *  few KiB; 50 MiB leaves generous headroom while bounding install-time RAM —
+ *  sizeBytes is the download memory cap, so NaN/Infinity/absurd values would
+ *  turn the size guard into an unbounded buffer. */
+export const MAX_ARTIFACT_BYTES = 50 * 1024 * 1024;
+
 function isEntry(v: unknown): v is CatalogEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
@@ -49,7 +55,8 @@ function isEntry(v: unknown): v is CatalogEntry {
     typeof e.minHostVersion === 'string' &&
     typeof e.artifactUrl === 'string' && e.artifactUrl.startsWith('https://') &&
     typeof e.sha256 === 'string' && SHA256_HEX.test(e.sha256) &&
-    typeof e.sizeBytes === 'number'
+    typeof e.sizeBytes === 'number' && Number.isInteger(e.sizeBytes) &&
+    e.sizeBytes > 0 && e.sizeBytes <= MAX_ARTIFACT_BYTES
   );
 }
 

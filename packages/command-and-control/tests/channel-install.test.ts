@@ -30,6 +30,18 @@ afterEach(() => {
   rmSync(home, { recursive: true, force: true });
 });
 
+describe('resolveDownloadCap (#125 belt-and-suspenders)', () => {
+  it('bounds download memory even when the declared size is garbage', async () => {
+    const { resolveDownloadCap } = await import('../src/channel/install.js');
+    const { MAX_ARTIFACT_BYTES } = await import('../src/channel/catalog.js');
+    expect(resolveDownloadCap(10)).toBe(10);
+    expect(resolveDownloadCap(MAX_ARTIFACT_BYTES)).toBe(MAX_ARTIFACT_BYTES);
+    for (const garbage of [NaN, Infinity, -Infinity, 0, -1, 1.5, MAX_ARTIFACT_BYTES + 1]) {
+      expect(resolveDownloadCap(garbage)).toBe(MAX_ARTIFACT_BYTES);
+    }
+  });
+});
+
 describe('installModule', () => {
   it('previews without side effects when confirm is absent', async () => {
     const { installModule } = await import('../src/channel/install.js');
