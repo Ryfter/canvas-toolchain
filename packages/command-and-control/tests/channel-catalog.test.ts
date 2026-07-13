@@ -5,7 +5,7 @@ import { tmpdir, platform } from 'node:os';
 import { sha256File } from '../src/channel/hash.js';
 import {
   validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION, MAX_ARTIFACT_BYTES,
-  isAllowedRedirectHost,
+  isAllowedRedirectHost, isAllowedArtifactUrl, isAllowedCompanionUrl, ALLOWED_ARTIFACT_URL_PREFIX,
 } from '../src/channel/catalog.js';
 
 const GOOD_ENTRY = {
@@ -90,10 +90,70 @@ describe('validateCatalog — artifact host (v2)', () => {
       'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/scripts/evil.mjs',
       // The v2.0 hosting scheme is no longer accepted:
       'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.1.0/module-announcements-1.1.0.mjs',
+      // Dot-segment traversal: passes a raw startsWith(prefix) check but the WHATWG
+      // URL parser collapses the '..' segments to a different owner entirely.
+      'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/../../../../AttackerOwner/evil-repo/main/payload.mjs',
     ]) {
       expect(() => validateCatalog({ ...GOOD_CATALOG, modules: [{ ...GOOD_ENTRY, artifactUrl }] }))
         .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
     }
+  });
+});
+
+describe('isAllowedArtifactUrl — normalized-URL comparison, not raw-string prefix', () => {
+  it('refuses a dot-segment traversal that a raw prefix check would miss', () => {
+    // startsWith(ALLOWED_ARTIFACT_URL_PREFIX) on the RAW string passes (the text
+    // literally begins with the prefix); new URL(...).href collapses the '..'
+    // segments and lands on a completely different owner/repo. Verified:
+    //   new URL('.../main/modules/../../../../AttackerOwner/evil-repo/main/payload.mjs').href
+    //   === 'https://raw.githubusercontent.com/AttackerOwner/evil-repo/main/payload.mjs'
+    const evil = 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/../../../../AttackerOwner/evil-repo/main/payload.mjs';
+    expect(evil.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)).toBe(true); // the raw-string trap
+    expect(isAllowedArtifactUrl(evil)).toBe(false);
+  });
+
+  it('accepts the legitimate artifact URL', () => {
+    expect(isAllowedArtifactUrl(GOOD_ENTRY.artifactUrl)).toBe(true);
+  });
+
+  it('refuses a non-string', () => {
+    expect(isAllowedArtifactUrl(undefined)).toBe(false);
+    expect(isAllowedArtifactUrl(123)).toBe(false);
+    expect(isAllowedArtifactUrl(null)).toBe(false);
+  });
+
+  it('refuses a value new URL() cannot parse', () => {
+    expect(isAllowedArtifactUrl('not a url at all')).toBe(false);
+  });
+
+  it('refuses a non-https scheme even under the right host/path', () => {
+    expect(isAllowedArtifactUrl(
+      'http://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/a/1.0.0/a-1.0.0.mjs',
+    )).toBe(false);
+  });
+
+  it('refuses a lookalike host that merely contains the real one', () => {
+    expect(isAllowedArtifactUrl(
+      'https://raw.githubusercontent.com.evil.example/Ryfter/canvas-toolchain/main/modules/a/1.0.0/a-1.0.0.mjs',
+    )).toBe(false);
+  });
+
+  it('refuses a URL that merely contains the prefix later in the string (query trick)', () => {
+    expect(isAllowedArtifactUrl(
+      'https://evil.example/?x=https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/a/1.0.0/a-1.0.0.mjs',
+    )).toBe(false);
+  });
+
+  it('percent-encoded traversal does not survive URL normalization as a real ".." — stays a literal segment', () => {
+    // %2f is NOT decoded to '/' by the WHATWG URL parser, so '..%2f' never becomes a
+    // real path separator and is never collapsed the way a literal '..' segment is.
+    // Verified: new URL(payload).href === the input, unchanged — it does NOT escape
+    // the modules/ directory. Documenting the actual (safe) behavior rather than
+    // assuming it behaves like the unencoded case.
+    const payload = 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/..%2f..%2f..%2f..%2fAttackerOwner/evil-repo/main/payload.mjs';
+    const normalized = new URL(payload).href;
+    expect(normalized.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)).toBe(true); // never escapes modules/
+    expect(isAllowedArtifactUrl(payload)).toBe(true); // harmlessly literal, not a bypass
   });
 });
 
@@ -122,6 +182,12 @@ describe('validateCatalog — companions', () => {
       'https://evil.example/Canvas-Download',
       'https://github.com.evil.example/x',
       'file:///etc/passwd',
+      // Dot-segment traversal: 'https://github.com/Ryfter/Canvas-Download/../../evil-owner/evil-repo'
+      // passes a raw startsWith('https://github.com/') check but normalizes to a
+      // different owner/repo entirely. Browsers apply the same collapse, so a crafted
+      // companion entry displays as one repo and navigates to another.
+      // Verified: new URL(url).href === 'https://github.com/evil-owner/evil-repo'
+      'https://github.com/Ryfter/Canvas-Download/../../evil-owner/evil-repo',
     ]) {
       expect(() => validateCatalog({ ...GOOD_CATALOG, companions: [{ ...GOOD_COMPANION, url }] }))
         .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
@@ -139,6 +205,22 @@ describe('validateCatalog — companions', () => {
     const clash = { ...GOOD_COMPANION, id: 'announcements' };
     expect(() => validateCatalog({ ...GOOD_CATALOG, companions: [clash] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID', message: expect.stringContaining('announcements') }));
+  });
+});
+
+describe('isAllowedCompanionUrl — normalized-URL comparison, not raw-string prefix', () => {
+  it('refuses the dot-segment traversal that defeats a raw prefix check', () => {
+    const evil = 'https://github.com/Ryfter/Canvas-Download/../../evil-owner/evil-repo';
+    expect(evil.startsWith('https://github.com/')).toBe(true); // the raw-string trap
+    expect(isAllowedCompanionUrl(evil)).toBe(false);
+  });
+  it('accepts the legitimate companion URL', () => {
+    expect(isAllowedCompanionUrl(GOOD_COMPANION.url)).toBe(true);
+  });
+  it('refuses a non-string, an unparseable value, and a non-https scheme', () => {
+    expect(isAllowedCompanionUrl(undefined)).toBe(false);
+    expect(isAllowedCompanionUrl('not a url')).toBe(false);
+    expect(isAllowedCompanionUrl('http://github.com/Ryfter/Canvas-Download')).toBe(false);
   });
 });
 

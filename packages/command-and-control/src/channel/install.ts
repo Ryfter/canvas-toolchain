@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync }
 import { dirname, join } from 'node:path';
 import {
   fetchCatalog, CatalogError, MAX_ARTIFACT_BYTES,
-  ALLOWED_ARTIFACT_URL_PREFIX, ALLOWED_REDIRECT_DOMAIN, isAllowedRedirectHost,
+  ALLOWED_ARTIFACT_URL_PREFIX, ALLOWED_REDIRECT_DOMAIN, isAllowedRedirectHost, isAllowedArtifactUrl,
   type ModuleCatalog, type CatalogEntry,
 } from './catalog.js';
 import { sha256File } from './hash.js';
@@ -94,7 +94,7 @@ class OffOriginDownloadError extends Error {
 const MAX_REDIRECTS = 5;
 
 function isAllowedDownloadUrl(url: string): boolean {
-  if (url.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) return true;
+  if (isAllowedArtifactUrl(url)) return true;
   try {
     const u = new URL(url);
     return u.protocol === 'https:' && isAllowedRedirectHost(u.host);
@@ -185,8 +185,10 @@ export async function installModule(
 
   // #121 belt-and-suspenders: validateCatalog already pins the URL for fetched
   // catalogs, but injected deps.catalog and pre-fix caches never pass through it.
-  // Artifacts may only come from this repo's `modules/` directory on `main`.
-  if (!entry.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) {
+  // Artifacts may only come from this repo's `modules/` directory on `main`. Compare
+  // the normalized URL, not the raw string — see isAllowedArtifactUrl's doc comment
+  // for the dot-segment collapse this guards against.
+  if (!isAllowedArtifactUrl(entry.artifactUrl)) {
     return refusal('ARTIFACT_URL_NOT_ALLOWED',
       `Module '${entry.id}' artifactUrl (${entry.artifactUrl}) is not under ${ALLOWED_ARTIFACT_URL_PREFIX}; refusing.`,
       'The catalog entry is malformed or tampered — check https://github.com/Ryfter/canvas-toolchain for a catalog correction.');

@@ -105,6 +105,27 @@ describe('installModule download-origin allowlist (#121)', () => {
     expect(calls).toHaveLength(2);
   });
 
+  it('refuses a dot-segment traversal artifactUrl injected via deps.catalog (raw prefix check bypass)', async () => {
+    // deps.catalog skips validateCatalog entirely — this is exactly what the
+    // belt-and-suspenders recheck inside installModule exists to catch. The raw
+    // string passes startsWith(ALLOWED_ARTIFACT_URL_PREFIX); new URL(...).href
+    // collapses the '..' segments onto a different owner/repo.
+    const { installModule } = await import('../src/channel/install.js');
+    const calls: string[] = [];
+    const spy: typeof fetch = (async (url: string) => {
+      calls.push(url);
+      return new Response(ARTIFACT, { status: 200 });
+    }) as unknown as typeof fetch;
+    const evilArtifactUrl = 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/../../../../AttackerOwner/evil-repo/main/payload.mjs';
+    expect(evilArtifactUrl.startsWith('https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/')).toBe(true);
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith({ artifactUrl: evilArtifactUrl }), hostVersion: '2.0.0', fetchImpl: spy },
+    );
+    expect(res.error).toBe('ARTIFACT_URL_NOT_ALLOWED');
+    expect(calls).toEqual([]);
+  });
+
   it('refuses a redirect off the allowlist and never fetches the target', async () => {
     const { installModule } = await import('../src/channel/install.js');
     const calls: string[] = [];

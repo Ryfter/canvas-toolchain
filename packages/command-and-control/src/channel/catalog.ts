@@ -81,6 +81,34 @@ export function isAllowedRedirectHost(host: string): boolean {
   return host === ALLOWED_REDIRECT_DOMAIN || host.endsWith(`.${ALLOWED_REDIRECT_DOMAIN}`);
 }
 
+/** A literal `.` or `..` path segment always means dot-segment navigation, which the
+ *  WHATWG URL algorithm silently resolves during parsing. Refuse it outright, before
+ *  normalization ever runs: comparing only the *normalized* result against a prefix is
+ *  not sufficient on its own when that prefix is domain-wide rather than path-scoped
+ *  (see isAllowedCompanionUrl) — the collapsed target can still satisfy a broad prefix
+ *  even though the raw string encoded a completely different destination. */
+function hasLiteralDotSegment(url: string): boolean {
+  const pathAndBeyond = url.split(/[?#]/, 1)[0];
+  return pathAndBeyond.split('/').some((seg) => seg === '.' || seg === '..');
+}
+
+/** True only when the parsed, normalized URL is https and lives under this repo's
+ *  modules/ directory. Comparing the RAW string with startsWith is not enough: the
+ *  WHATWG URL parser collapses `..` segments, so
+ *  `…/main/modules/../../../../Other/repo/x.mjs` passes a raw prefix test and then
+ *  fetches from `Other/repo`. Normalize, then compare — and refuse any literal
+ *  dot-segment outright rather than trust the collapse landed somewhere allowed. */
+export function isAllowedArtifactUrl(url: unknown): boolean {
+  if (typeof url !== 'string') return false;
+  if (hasLiteralDotSegment(url)) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.href.startsWith(ALLOWED_ARTIFACT_URL_PREFIX);
+  } catch {
+    return false;
+  }
+}
+
 function isEntry(v: unknown): v is CatalogEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
@@ -90,7 +118,7 @@ function isEntry(v: unknown): v is CatalogEntry {
     typeof e.description === 'string' &&
     typeof e.version === 'string' &&
     typeof e.minHostVersion === 'string' &&
-    typeof e.artifactUrl === 'string' && e.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX) &&
+    typeof e.artifactUrl === 'string' && isAllowedArtifactUrl(e.artifactUrl) &&
     typeof e.sha256 === 'string' && SHA256_HEX.test(e.sha256) &&
     typeof e.sizeBytes === 'number' && Number.isInteger(e.sizeBytes) &&
     e.sizeBytes > 0 && e.sizeBytes <= MAX_ARTIFACT_BYTES
@@ -105,6 +133,23 @@ const COMPANION_FIELDS = new Set([
 ]);
 const ALLOWED_COMPANION_URL_PREFIX = 'https://github.com/';
 
+/** Same normalization trap as isAllowedArtifactUrl — a companion url is never fetched
+ *  by the toolchain, but a professor clicks it, and browsers collapse `..` too. Unlike
+ *  the artifact prefix, ALLOWED_COMPANION_URL_PREFIX is domain-wide (any github.com
+ *  repo is a legitimate companion), so a collapsed target can still satisfy the prefix
+ *  test while the raw string displayed a different repo entirely — the literal
+ *  dot-segment refusal is what actually catches that case. */
+export function isAllowedCompanionUrl(url: unknown): boolean {
+  if (typeof url !== 'string') return false;
+  if (hasLiteralDotSegment(url)) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.href.startsWith(ALLOWED_COMPANION_URL_PREFIX);
+  } catch {
+    return false;
+  }
+}
+
 function isCompanion(v: unknown): v is CompanionEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
@@ -116,7 +161,7 @@ function isCompanion(v: unknown): v is CompanionEntry {
     typeof e.name === 'string' && e.name.length > 0 &&
     typeof e.summary === 'string' && e.summary.length > 0 &&
     typeof e.whyYouWantIt === 'string' && e.whyYouWantIt.length > 0 &&
-    typeof e.url === 'string' && e.url.startsWith(ALLOWED_COMPANION_URL_PREFIX) &&
+    typeof e.url === 'string' && isAllowedCompanionUrl(e.url) &&
     (e.worksWithoutToolchain === undefined || typeof e.worksWithoutToolchain === 'boolean')
   );
 }
