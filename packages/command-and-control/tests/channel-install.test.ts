@@ -9,13 +9,14 @@ const ARTIFACT_SHA = createHash('sha256').update(ARTIFACT).digest('hex');
 
 function catalogWith(overrides: Record<string, unknown> = {}) {
   return {
-    catalogVersion: 1,
+    catalogVersion: 2,
     modules: [{
       id: 'announcements', name: 'Announcements Auditor', description: 'Audit scheduled announcements.',
       version: '1.0.0', minHostVersion: '2.0.0',
-      artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.0.0/module-announcements-1.0.0.mjs',
+      artifactUrl: 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.0.0/announcements-1.0.0.mjs',
       sha256: ARTIFACT_SHA, sizeBytes: ARTIFACT.length, ...overrides,
     }],
+    companions: [],
   };
 }
 const artifactFetch: typeof fetch = (async () => new Response(ARTIFACT, { status: 200 })) as unknown as typeof fetch;
@@ -70,20 +71,27 @@ describe('installModule download-origin allowlist (#121)', () => {
     }) as unknown as typeof fetch;
     const res = await installModule(
       { moduleId: 'announcements', confirm: true },
-      { catalog: catalogWith({ artifactUrl: 'https://evil.example/m.mjs' }), hostVersion: '2.0.0', fetchImpl: spy },
+      {
+        // The v2.0 hosting scheme (GitHub Releases) is no longer accepted: proves
+        // the previous scheme is refused, not just an arbitrary evil host.
+        catalog: catalogWith({ artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.0.0/module-announcements-1.0.0.mjs' }),
+        hostVersion: '2.0.0', fetchImpl: spy,
+      },
     );
     expect(res.error).toBe('ARTIFACT_URL_NOT_ALLOWED');
     expect(calls).toEqual([]);
   });
 
-  it('follows a redirect to the GitHub release-asset host and installs', async () => {
+  it('follows a redirect to another githubusercontent.com host and installs', async () => {
     const { installModule } = await import('../src/channel/install.js');
-    // The host GitHub actually 302s to today (see isAllowedRedirectHost tests).
+    // raw.githubusercontent.com is not expected to redirect in practice, but the
+    // downloader must still re-check every hop against the allowlist rather than
+    // trusting the first URL — see isAllowedRedirectHost's tests.
     const assetUrl = 'https://release-assets.githubusercontent.com/github-production-release-asset/1245052104/abc?sig=x';
     const calls: string[] = [];
     const spy: typeof fetch = (async (url: string) => {
       calls.push(url);
-      if (url.startsWith('https://github.com/')) {
+      if (url.startsWith('https://raw.githubusercontent.com/')) {
         return new Response(null, { status: 302, headers: { location: assetUrl } });
       }
       if (url === assetUrl) return new Response(ARTIFACT, { status: 200 });

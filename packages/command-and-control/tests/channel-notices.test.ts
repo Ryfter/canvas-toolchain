@@ -15,10 +15,10 @@ afterEach(() => {
   rmSync(home, { recursive: true, force: true });
 });
 
-const CATALOG = { catalogVersion: 1, modules: [{
+const CATALOG = { catalogVersion: 2, modules: [{
   id: 'announcements', name: 'Announcements Auditor', description: 'd', version: '1.1.0',
-  minHostVersion: '2.0.0', artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-a-v1.0.0/a.mjs', sha256: 'a'.repeat(64), sizeBytes: 10,
-}] };
+  minHostVersion: '2.0.0', artifactUrl: 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.1.0/announcements-1.1.0.mjs', sha256: 'a'.repeat(64), sizeBytes: 10,
+}], companions: [] };
 
 describe('channel notices', () => {
   it('null when nothing is pending and nothing is outdated', async () => {

