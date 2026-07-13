@@ -28,6 +28,25 @@ const INSTALL_CATALOG = { catalogVersion: 2, modules: [{
 const artifactFetch: typeof fetch = (async () => new Response(INSTALL_ARTIFACT, { status: 200 })) as unknown as typeof fetch;
 
 describe('browse_module_catalog handler', () => {
+  it('reports companions as install-separately entries and never offers to install them', async () => {
+    const catalog = {
+      catalogVersion: 2,
+      modules: [],
+      companions: [{
+        id: 'canvas-backup', name: 'Canvas Backup',
+        summary: 'Downloads a complete local archive of a Canvas course.',
+        whyYouWantIt: 'The toolchain reads its archive as the start of the pipeline.',
+        url: 'https://github.com/Ryfter/Canvas-Download',
+        worksWithoutToolchain: true,
+      }],
+    };
+    const { browseModuleCatalog } = await import('../src/tools/module_channel_tools.js');
+    const res = await browseModuleCatalog({}, { catalog });
+    const companions = res.companions as Array<Record<string, unknown>>;
+    expect(companions).toHaveLength(1);
+    expect(companions[0].url).toBe('https://github.com/Ryfter/Canvas-Download');
+    expect(JSON.stringify(res)).not.toContain('install_module({ moduleId: "canvas-backup"');
+  });
   it('reports per-module status and pending requests', async () => {
     const { savePendingRequests } = await import('../src/channel/pending.js');
     savePendingRequests({ modules: ['announcements'] });

@@ -72,9 +72,19 @@ export async function browseModuleCatalog(
     };
   });
 
+  const companions = catalog.companions.map((c) => ({
+    id: c.id,
+    name: c.name,
+    summary: c.summary,
+    whyYouWantIt: c.whyYouWantIt,
+    url: c.url,
+    worksWithoutToolchain: c.worksWithoutToolchain ?? false,
+  }));
+
   return {
     modules,
-    note: 'Install with install_module({ moduleId }) — it previews first and only acts on confirm: true.',
+    companions,
+    note: 'Install a module with install_module({ moduleId }) — it previews first and only acts on confirm: true. Companions are separate programs: read the description and install them yourself from their own page.',
   };
 }
 
