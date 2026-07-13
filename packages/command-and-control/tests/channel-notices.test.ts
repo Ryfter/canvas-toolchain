@@ -69,6 +69,15 @@ describe('notice state', () => {
     if (platform() !== 'win32') expect(statSync(p).mode & 0o777).toBe(0o600);
     expect(existsSync(`${p}.tmp`)).toBe(false);
   });
+
+  it('creates the state directory when it does not exist yet (fresh install)', () => {
+    // The notice check runs at startup, possibly before any other C&C write has
+    // created CC_HOME. If the save silently fails there, state never persists and
+    // the throttled notice nags every startup — what the throttle exists to prevent.
+    const p = join(home, 'not-created-yet', 'state.json');
+    saveNoticeState({ lastDiscoveryIds: ['announcements'] }, p);
+    expect(loadNoticeState(p)).toEqual({ lastDiscoveryIds: ['announcements'] });
+  });
 });
 
 const DISCOVERY_CATALOG = {

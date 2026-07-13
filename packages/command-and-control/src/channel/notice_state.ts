@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
 
 /** What the discovery notice last told the professor about. Persisted so a
@@ -26,7 +26,12 @@ export function loadNoticeState(path: string = noticeStatePath()): NoticeState {
   }
 }
 
+/** Atomic write (tmp + rename, 0o600) — mirrors saveInstalledModules. The mkdirSync
+ *  matters: this runs at startup, potentially before any other C&C write has created
+ *  CC_HOME. Without it the first save fails, state never persists, and the throttled
+ *  notice nags on every single startup — the exact behaviour the throttle exists to prevent. */
 export function saveNoticeState(state: NoticeState, path: string = noticeStatePath()): void {
+  mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, JSON.stringify(state, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmp, path);
