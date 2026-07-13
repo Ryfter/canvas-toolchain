@@ -53,10 +53,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Verify committed module artifacts match the source and the catalog
-        run: npm run verify:modules
-
+      # Runs BEFORE verify:modules on purpose. Actions halts a job at its first failed
+      # step, and verify:modules is deliberately red until the post-release catalog
+      # cutover — so ordering it first would leave this drift gate unreachable, and
+      # silently unprotecting docs/modules.md, for the whole interim.
       - name: Verify docs/modules.md is regenerated from the catalog
         run: |
           npm run docs:modules
           git diff --exit-code docs/modules.md
+
+      - name: Verify committed module artifacts match the source and the catalog
+        run: npm run verify:modules
