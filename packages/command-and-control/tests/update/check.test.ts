@@ -30,7 +30,12 @@ import {
   compareVersions,
   getInstalledVersion,
   resetUpdateState,
+  parseToolchainTag,
 } from '../../src/update/check.js';
+
+let dir: string;
+beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'cc-update-')); });
+afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
 
 describe('compareVersions', () => {
   it('returns 0 for equal versions', () => {
@@ -83,7 +88,7 @@ describe('checkForUpdates', () => {
     writeFileSync(join(tmpInstallDir, '.canvas-toolchain-version'), '0.9.0');
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ tag_name: 'v0.9.1', html_url: 'https://example/release' }),
+      json: async () => [{ tag_name: 'v0.9.1', draft: false, prerelease: false }],
     } as Response);
 
     await checkForUpdates();
@@ -96,7 +101,7 @@ describe('checkForUpdates', () => {
     writeFileSync(join(tmpInstallDir, '.canvas-toolchain-version'), '0.9.1');
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ tag_name: 'v0.9.1' }),
+      json: async () => [{ tag_name: 'v0.9.1', draft: false, prerelease: false }],
     } as Response);
 
     await checkForUpdates();
@@ -108,7 +113,7 @@ describe('checkForUpdates', () => {
     writeFileSync(join(tmpInstallDir, '.canvas-toolchain-version'), '0.9.5');
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ tag_name: 'v0.9.4' }),
+      json: async () => [{ tag_name: 'v0.9.4', draft: false, prerelease: false }],
     } as Response);
 
     await checkForUpdates();
@@ -139,7 +144,7 @@ describe('checkForUpdates', () => {
     writeFileSync(join(tmpInstallDir, '.canvas-toolchain-version'), '0.9.0');
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ tag_name: 'v0.9.1' }),
+      json: async () => [{ tag_name: 'v0.9.1', draft: false, prerelease: false }],
     } as Response);
 
     await checkForUpdates();
@@ -172,7 +177,7 @@ describe('checkForUpdates', () => {
     writeFileSync(join(tmpInstallDir, '.canvas-toolchain-update-cache.json'), JSON.stringify(cache));
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ tag_name: 'v0.9.2' }),
+      json: async () => [{ tag_name: 'v0.9.2', draft: false, prerelease: false }],
     } as Response);
 
     await checkForUpdates();
@@ -198,4 +203,48 @@ describe('checkForUpdates', () => {
     expect(elapsed).toBeLessThan(7000);
     expect(getUpdateNotice()).toBeNull();
   }, 10000);
+});
+
+describe('parseToolchainTag', () => {
+  it('accepts only strict toolchain tags', () => {
+    expect(parseToolchainTag('v2.1.0')).toBe('2.1.0');
+    expect(parseToolchainTag('v10.0.3')).toBe('10.0.3');
+  });
+
+  it('rejects module tags, prerelease tags, and partial versions', () => {
+    // The live defect: this tag held GitHub's "Latest" badge and the old parser
+    // read it as 0.1.0, so the update notice went silent.
+    expect(parseToolchainTag('module-announcements-v1.1.0')).toBeNull();
+    expect(parseToolchainTag('nightly')).toBeNull();
+    expect(parseToolchainTag('v2.1')).toBeNull();
+    expect(parseToolchainTag('v2.1.0-rc1')).toBeNull();
+    expect(parseToolchainTag('2.1.0')).toBeNull();
+  });
+});
+
+describe('checkForUpdates release selection', () => {
+  const releases = [
+    { tag_name: 'module-announcements-v1.1.0', draft: false, prerelease: false },
+    { tag_name: 'v2.2.0-rc1', draft: false, prerelease: true },
+    { tag_name: 'v2.3.0', draft: true, prerelease: false },
+    { tag_name: 'v2.1.0', draft: false, prerelease: false },
+    { tag_name: 'v2.0.1', draft: false, prerelease: false },
+  ];
+
+  it('picks the newest strict toolchain release, ignoring module/draft/prerelease tags', async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify(releases), { status: 200 })) as unknown as typeof fetch;
+    resetUpdateState();
+    await checkForUpdates({ fetchImpl, installedVersion: '2.0.1', cachePath: join(dir, 'u.json') });
+    expect(getUpdateNotice()).toContain('v2.1.0');
+  });
+
+  it('reports no update when only non-toolchain tags exist', async () => {
+    const onlyModules = [{ tag_name: 'module-announcements-v1.1.0', draft: false, prerelease: false }];
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify(onlyModules), { status: 200 })) as unknown as typeof fetch;
+    resetUpdateState();
+    await checkForUpdates({ fetchImpl, installedVersion: '2.0.1', cachePath: join(dir, 'u2.json') });
+    expect(getUpdateNotice()).toBeNull();
+  });
 });
