@@ -81,43 +81,37 @@ export function isAllowedRedirectHost(host: string): boolean {
   return host === ALLOWED_REDIRECT_DOMAIN || host.endsWith(`.${ALLOWED_REDIRECT_DOMAIN}`);
 }
 
-/** A literal `.` or `..` path segment always means dot-segment navigation, which the
- *  WHATWG URL algorithm silently resolves during parsing. Refuse it outright, before
- *  normalization ever runs: comparing only the *normalized* result against a prefix is
- *  not sufficient on its own when that prefix is domain-wide rather than path-scoped
- *  (see isAllowedCompanionUrl) — the collapsed target can still satisfy a broad prefix
- *  even though the raw string encoded a completely different destination.
+/** True only when `url` is already canonical: parsing it and re-serializing it via
+ *  `URL#href` changes nothing at all, byte for byte.
  *
- *  Segments are split on BOTH `/` and `\`. For "special" schemes — which https is —
- *  the WHATWG URL parser treats `\` as a path separator exactly like `/` and collapses
- *  `..` segments delimited by it. A `/`-only split therefore misses a payload like
- *  `.../modules/\..\..\AttackerOwner/evil-repo/x.mjs`: no `/`-delimited `..` is present,
- *  so a slash-only guard passes it, and the parser still collapses it out of modules/.
- *  This guard also refuses any raw backslash outright, traversal or not — a legitimate
- *  github.com / raw.githubusercontent.com URL never contains one, and trying to enumerate
- *  every way a backslash could be arranged to defeat a segment check is the same mistake
- *  that produced this gap in the first place. */
-function hasLiteralDotSegment(url: string): boolean {
-  if (url.includes('\\')) return true;
-  const pathAndBeyond = url.split(/[?#]/, 1)[0];
-  return pathAndBeyond.split(/[/\\]/).some((seg) => seg === '.' || seg === '..');
+ *  This replaces three successive attempts to *enumerate* what a dot-segment traversal
+ *  looks like (`/../`, then `\..\`, then `%2e%2e`/`%2e.`/`.%2e` and tab/newline-obfuscated
+ *  spellings) — each fix caught one more spelling and missed the next, because
+ *  enumeration can never be complete: the WHATWG URL algorithm normalizes dozens of
+ *  constructs (dot segments in any spelling, backslashes, percent-encoded dots,
+ *  stripped tab/newline, userinfo, case, default ports) and any one of them can move
+ *  the fetched target away from what the raw string displays. Refusing anything that
+ *  is not already canonical closes the entire class at once: if `new URL(url).href`
+ *  is identical to `url`, there is no normalization step left for an attacker to hide
+ *  a different destination inside, so what a human reads in the catalog is exactly
+ *  what the toolchain will fetch. */
+function isCanonicalUrl(url: string): URL | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  return parsed.href === url ? parsed : null;
 }
 
-/** True only when the parsed, normalized URL is https and lives under this repo's
- *  modules/ directory. Comparing the RAW string with startsWith is not enough: the
- *  WHATWG URL parser collapses `..` segments, so
- *  `…/main/modules/../../../../Other/repo/x.mjs` passes a raw prefix test and then
- *  fetches from `Other/repo`. Normalize, then compare — and refuse any literal
- *  dot-segment outright rather than trust the collapse landed somewhere allowed. */
+/** True only when `url` is already a canonical (see `isCanonicalUrl`), https, URL that
+ *  lives under this repo's modules/ directory. */
 export function isAllowedArtifactUrl(url: unknown): boolean {
   if (typeof url !== 'string') return false;
-  if (hasLiteralDotSegment(url)) return false;
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:' && u.href.startsWith(ALLOWED_ARTIFACT_URL_PREFIX);
-  } catch {
-    return false;
-  }
+  const parsed = isCanonicalUrl(url);
+  if (!parsed) return false;
+  return parsed.protocol === 'https:' && parsed.href.startsWith(ALLOWED_ARTIFACT_URL_PREFIX);
 }
 
 function isEntry(v: unknown): v is CatalogEntry {
@@ -144,21 +138,18 @@ const COMPANION_FIELDS = new Set([
 ]);
 const ALLOWED_COMPANION_URL_PREFIX = 'https://github.com/';
 
-/** Same normalization trap as isAllowedArtifactUrl — a companion url is never fetched
- *  by the toolchain, but a professor clicks it, and browsers collapse `..` too. Unlike
- *  the artifact prefix, ALLOWED_COMPANION_URL_PREFIX is domain-wide (any github.com
- *  repo is a legitimate companion), so a collapsed target can still satisfy the prefix
- *  test while the raw string displayed a different repo entirely — the literal
- *  dot-segment refusal is what actually catches that case. */
+/** Same canonical-URL rule as isAllowedArtifactUrl (see `isCanonicalUrl`) — a companion
+ *  url is never fetched by the toolchain, but a professor clicks it, and a browser
+ *  normalizes a URL the same way `new URL()` does. ALLOWED_COMPANION_URL_PREFIX is
+ *  domain-wide (any github.com repo is a legitimate companion), which makes the
+ *  canonical check load-bearing here rather than optional: a non-canonical URL can
+ *  normalize to a *different* repo that still satisfies the domain-wide prefix, so a
+ *  raw or even normalized-but-unverified prefix test alone is not enough. */
 export function isAllowedCompanionUrl(url: unknown): boolean {
   if (typeof url !== 'string') return false;
-  if (hasLiteralDotSegment(url)) return false;
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:' && u.href.startsWith(ALLOWED_COMPANION_URL_PREFIX);
-  } catch {
-    return false;
-  }
+  const parsed = isCanonicalUrl(url);
+  if (!parsed) return false;
+  return parsed.protocol === 'https:' && parsed.href.startsWith(ALLOWED_COMPANION_URL_PREFIX);
 }
 
 function isCompanion(v: unknown): v is CompanionEntry {

@@ -175,6 +175,91 @@ describe('isAllowedArtifactUrl — normalized-URL comparison, not raw-string pre
     const withBackslash = 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/a' + bs + 'b/1.0.0/a-1.0.0.mjs';
     expect(isAllowedArtifactUrl(withBackslash)).toBe(false);
   });
+
+  // The canonical-URL rule (new_URL(url).href === url) replaces hasLiteralDotSegment's
+  // enumeration of "what does a dot-segment look like." These cases build a URL that
+  // LOOKS like it points at announcements/1.1.0/evil.mjs but, via a dot-segment spelling
+  // the enumeration-based guard did not know about, actually collapses to a DIFFERENT
+  // module's directory that still satisfies the modules/ prefix — the old prefix-only
+  // check therefore accepted it, even though what a human reads and what the code fetches
+  // are two different files. Each payload is verified empirically below.
+  describe('canonical-URL rule catches confusable dot-segment spellings the old guard missed', () => {
+    const TAB = String.fromCharCode(9);
+    const NL = String.fromCharCode(10);
+
+    it('%2e%2e percent-encoded traversal', () => {
+      const payload = ALLOWED_ARTIFACT_URL_PREFIX + 'announcements/1.1.0/%2e%2e/%2e%2e/rubrics/9.9.9/evil.mjs';
+      // Empirical (Node v24.12.0): new URL(payload).href ===
+      //   'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/rubrics/9.9.9/evil.mjs'
+      // i.e. it silently lands in a different module's directory while still starting
+      // with ALLOWED_ARTIFACT_URL_PREFIX, so a prefix-only check (with or without the old
+      // literal-dot-segment guard, which never sees a literal '..' here) wrongly accepts it.
+      expect(new URL(payload).href).toBe(
+        'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/rubrics/9.9.9/evil.mjs',
+      );
+      expect(isAllowedArtifactUrl(payload)).toBe(false);
+    });
+
+    it('%2e. and .%2e mixed-form percent-encoded traversal', () => {
+      const mixed1 = ALLOWED_ARTIFACT_URL_PREFIX + 'announcements/1.1.0/%2e./%2e./rubrics/9.9.9/evil.mjs';
+      const mixed2 = ALLOWED_ARTIFACT_URL_PREFIX + 'announcements/1.1.0/.%2e/.%2e/rubrics/9.9.9/evil.mjs';
+      // Empirical: both normalize identically to the %2e%2e case above.
+      expect(new URL(mixed1).href).toBe(
+        'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/rubrics/9.9.9/evil.mjs',
+      );
+      expect(new URL(mixed2).href).toBe(
+        'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/rubrics/9.9.9/evil.mjs',
+      );
+      expect(isAllowedArtifactUrl(mixed1)).toBe(false);
+      expect(isAllowedArtifactUrl(mixed2)).toBe(false);
+    });
+
+    it('tab/newline-obfuscated dot segments with no bare ".." substring anywhere in the raw string', () => {
+      // Built from explicit char codes so no editor/shell/quoting layer can silently
+      // strip or mangle the tab/newline into something harmless before the assertion runs.
+      const tabPayload = ALLOWED_ARTIFACT_URL_PREFIX
+        + 'announcements/1.1.0/.' + TAB + './.' + TAB + './rubrics/9.9.9/evil.mjs';
+      const nlPayload = ALLOWED_ARTIFACT_URL_PREFIX
+        + 'announcements/1.1.0/.' + NL + './.' + NL + './rubrics/9.9.9/evil.mjs';
+      expect(tabPayload.includes('..')).toBe(false);
+      expect(nlPayload.includes('..')).toBe(false);
+      // Empirical: the WHATWG URL parser strips ASCII tab/newline from the input before
+      // parsing the path, so these collapse identically to a literal '..' — landing in
+      // a different module's directory while still satisfying the modules/ prefix.
+      expect(new URL(tabPayload).href).toBe(
+        'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/rubrics/9.9.9/evil.mjs',
+      );
+      expect(new URL(nlPayload).href).toBe(
+        'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/rubrics/9.9.9/evil.mjs',
+      );
+      expect(isAllowedArtifactUrl(tabPayload)).toBe(false);
+      expect(isAllowedArtifactUrl(nlPayload)).toBe(false);
+    });
+
+    it('refuses a non-canonical but otherwise innocent URL (default port) — intentional strictness, not a bug', () => {
+      const withPort = 'https://raw.githubusercontent.com:443/Ryfter/canvas-toolchain/main/modules/announcements/1.1.0/announcements-1.1.0.mjs';
+      // Empirical: new URL(withPort).href drops the redundant default HTTPS port, so
+      // href !== withPort even though this URL carries no attack payload at all. This is
+      // the canonical rule being stricter than strictly necessary — refused by design.
+      expect(new URL(withPort).href).toBe(
+        'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.1.0/announcements-1.1.0.mjs',
+      );
+      expect(isAllowedArtifactUrl(withPort)).toBe(false);
+    });
+
+    it('refuses a non-canonical but otherwise innocent URL (uppercase host) — intentional strictness, not a bug', () => {
+      const upperHost = 'https://RAW.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.1.0/announcements-1.1.0.mjs';
+      // Empirical: new URL(upperHost).href lowercases the host, so href !== upperHost.
+      expect(new URL(upperHost).href).toBe(
+        'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.1.0/announcements-1.1.0.mjs',
+      );
+      expect(isAllowedArtifactUrl(upperHost)).toBe(false);
+    });
+
+    it('still accepts the legitimate, already-canonical artifact URL', () => {
+      expect(isAllowedArtifactUrl(GOOD_ENTRY.artifactUrl)).toBe(true);
+    });
+  });
 });
 
 describe('validateCatalog — companions', () => {
@@ -261,6 +346,55 @@ describe('isAllowedCompanionUrl — normalized-URL comparison, not raw-string pr
     const bs = String.fromCharCode(92);
     const withBackslash = 'https://github.com/Ryfter' + bs + 'Canvas-Download';
     expect(isAllowedCompanionUrl(withBackslash)).toBe(false);
+  });
+
+  // Same confusable-URL construction as isAllowedArtifactUrl's suite above: a URL that
+  // reads as Ryfter/Canvas-Download but, via a dot-segment spelling the old
+  // hasLiteralDotSegment enumeration didn't cover, actually lands on a different repo
+  // while still satisfying the domain-wide 'https://github.com/' prefix.
+  describe('canonical-URL rule catches confusable dot-segment spellings the old guard missed', () => {
+    const TAB = String.fromCharCode(9);
+
+    it('%2e%2e percent-encoded traversal', () => {
+      const payload = 'https://github.com/Ryfter/Canvas-Download/%2e%2e/%2e%2e/evil-owner/evil-repo';
+      // Empirical: new URL(payload).href === 'https://github.com/evil-owner/evil-repo'
+      expect(new URL(payload).href).toBe('https://github.com/evil-owner/evil-repo');
+      expect(isAllowedCompanionUrl(payload)).toBe(false);
+    });
+
+    it('%2e. and .%2e mixed-form percent-encoded traversal', () => {
+      const mixed1 = 'https://github.com/Ryfter/Canvas-Download/%2e./%2e./evil-owner/evil-repo';
+      const mixed2 = 'https://github.com/Ryfter/Canvas-Download/.%2e/.%2e/evil-owner/evil-repo';
+      expect(new URL(mixed1).href).toBe('https://github.com/evil-owner/evil-repo');
+      expect(new URL(mixed2).href).toBe('https://github.com/evil-owner/evil-repo');
+      expect(isAllowedCompanionUrl(mixed1)).toBe(false);
+      expect(isAllowedCompanionUrl(mixed2)).toBe(false);
+    });
+
+    it('tab-obfuscated dot segments with no bare ".." substring anywhere in the raw string', () => {
+      // Built from an explicit char code so no editor/shell/quoting layer can silently
+      // strip or mangle the tab into something harmless before the assertion runs.
+      const payload = 'https://github.com/Ryfter/Canvas-Download/.' + TAB + './.' + TAB + './evil-owner/evil-repo';
+      expect(payload.includes('..')).toBe(false);
+      expect(new URL(payload).href).toBe('https://github.com/evil-owner/evil-repo');
+      expect(isAllowedCompanionUrl(payload)).toBe(false);
+    });
+
+    it('refuses a non-canonical but otherwise innocent URL (default port) — intentional strictness, not a bug', () => {
+      const withPort = 'https://github.com:443/Ryfter/Canvas-Download';
+      expect(new URL(withPort).href).toBe('https://github.com/Ryfter/Canvas-Download');
+      expect(isAllowedCompanionUrl(withPort)).toBe(false);
+    });
+
+    it('refuses a non-canonical but otherwise innocent URL (uppercase host) — intentional strictness, not a bug', () => {
+      const upperHost = 'https://GitHub.com/Ryfter/Canvas-Download';
+      expect(new URL(upperHost).href).toBe('https://github.com/Ryfter/Canvas-Download');
+      expect(isAllowedCompanionUrl(upperHost)).toBe(false);
+    });
+
+    it('still accepts the legitimate, already-canonical companion URL', () => {
+      expect(isAllowedCompanionUrl(GOOD_COMPANION.url)).toBe(true);
+    });
   });
 });
 
