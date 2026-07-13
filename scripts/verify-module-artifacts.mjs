@@ -10,10 +10,28 @@ import { join } from 'node:path';
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 const fail = (msg) => { console.error(`FAIL: ${msg}`); process.exitCode = 1; };
 
+// Same shapes build-module.mjs enforces. id and version become path segments and argv
+// elements below, so a catalog entry must never be able to smuggle a traversal or a
+// shell metacharacter through them — even though the catalog is itself reviewed.
+const MODULE_ID = /^[a-z0-9][a-z0-9-]*$/;
+const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?$/;
+
 const catalog = JSON.parse(readFileSync('module-catalog.json', 'utf-8'));
 
-for (const entry of catalog.modules) {
+// A gate that passes because it checked nothing is worse than no gate: it reports
+// "verified" while proving zero bytes. An empty modules[] is never a legitimate state.
+if (!Array.isArray(catalog.modules) || catalog.modules.length === 0) {
+  fail('module-catalog.json lists no modules — nothing was verified. If this is intentional, remove this gate deliberately rather than letting it pass vacuously.');
+}
+
+for (const entry of catalog.modules ?? []) {
   const { id, version, sha256: expected, sizeBytes, artifactUrl } = entry;
+
+  if (typeof id !== 'string' || !MODULE_ID.test(id) || typeof version !== 'string' || !VERSION.test(version)) {
+    fail(`malformed catalog entry: id=${JSON.stringify(id)} version=${JSON.stringify(version)}`);
+    continue;
+  }
+
   const rel = join('modules', id, version, `${id}-${version}.mjs`);
 
   const expectedUrl =
@@ -39,7 +57,12 @@ for (const entry of catalog.modules) {
     continue;
   }
 
-  execFileSync('npm', ['run', 'build:module', '--silent', '--', id], { stdio: 'pipe', shell: process.platform === 'win32' });
+  try {
+    execFileSync('npm', ['run', 'build:module', '--silent', '--', id], { stdio: 'pipe', shell: process.platform === 'win32' });
+  } catch (err) {
+    fail(`${id} v${version}: the module failed to build from source, so its committed artifact cannot be verified.\n  ${err.message}`);
+    continue;
+  }
   const built = readFileSync(join('dist-channel', `module-${id}-${version}.mjs`));
   if (sha256(built) !== committedHash) {
     fail(`${id} v${version}: committed artifact is NOT what the source builds.\n  built:     ${sha256(built)}\n  committed: ${committedHash}\nRebuild and recommit the artifact.`);
