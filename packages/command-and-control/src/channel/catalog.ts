@@ -86,10 +86,21 @@ export function isAllowedRedirectHost(host: string): boolean {
  *  normalization ever runs: comparing only the *normalized* result against a prefix is
  *  not sufficient on its own when that prefix is domain-wide rather than path-scoped
  *  (see isAllowedCompanionUrl) — the collapsed target can still satisfy a broad prefix
- *  even though the raw string encoded a completely different destination. */
+ *  even though the raw string encoded a completely different destination.
+ *
+ *  Segments are split on BOTH `/` and `\`. For "special" schemes — which https is —
+ *  the WHATWG URL parser treats `\` as a path separator exactly like `/` and collapses
+ *  `..` segments delimited by it. A `/`-only split therefore misses a payload like
+ *  `.../modules/\..\..\AttackerOwner/evil-repo/x.mjs`: no `/`-delimited `..` is present,
+ *  so a slash-only guard passes it, and the parser still collapses it out of modules/.
+ *  This guard also refuses any raw backslash outright, traversal or not — a legitimate
+ *  github.com / raw.githubusercontent.com URL never contains one, and trying to enumerate
+ *  every way a backslash could be arranged to defeat a segment check is the same mistake
+ *  that produced this gap in the first place. */
 function hasLiteralDotSegment(url: string): boolean {
+  if (url.includes('\\')) return true;
   const pathAndBeyond = url.split(/[?#]/, 1)[0];
-  return pathAndBeyond.split('/').some((seg) => seg === '.' || seg === '..');
+  return pathAndBeyond.split(/[/\\]/).some((seg) => seg === '.' || seg === '..');
 }
 
 /** True only when the parsed, normalized URL is https and lives under this repo's

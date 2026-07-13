@@ -155,6 +155,26 @@ describe('isAllowedArtifactUrl — normalized-URL comparison, not raw-string pre
     expect(normalized.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)).toBe(true); // never escapes modules/
     expect(isAllowedArtifactUrl(payload)).toBe(true); // harmlessly literal, not a bypass
   });
+
+  it('refuses backslash-delimited traversal — the WHATWG parser treats \\ as a path separator too', () => {
+    // Built with String.fromCharCode(92) so no editor/shell/quoting layer can silently
+    // collapse or mangle the backslashes into something harmless before the assertion runs.
+    const bs = String.fromCharCode(92);
+    const evil = ALLOWED_ARTIFACT_URL_PREFIX
+      + bs + '..' + bs + '..' + bs + '..' + bs + '..' + bs + 'AttackerOwner/evil-repo/main/payload.mjs';
+    // Empirical (Node v24.12.0): new URL(evil).href collapses the backslash-delimited
+    // '..' segments exactly like forward-slash ones, landing outside modules/ entirely —
+    // NOT left as a literal, harmless path segment.
+    expect(new URL(evil).href).toBe('https://raw.githubusercontent.com/Ryfter/AttackerOwner/evil-repo/main/payload.mjs');
+    expect(evil.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)).toBe(true); // the raw-string trap
+    expect(isAllowedArtifactUrl(evil)).toBe(false);
+  });
+
+  it('refuses any raw backslash in the URL, even without a traversal pattern', () => {
+    const bs = String.fromCharCode(92);
+    const withBackslash = 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/a' + bs + 'b/1.0.0/a-1.0.0.mjs';
+    expect(isAllowedArtifactUrl(withBackslash)).toBe(false);
+  });
 });
 
 describe('validateCatalog — companions', () => {
@@ -221,6 +241,26 @@ describe('isAllowedCompanionUrl — normalized-URL comparison, not raw-string pr
     expect(isAllowedCompanionUrl(undefined)).toBe(false);
     expect(isAllowedCompanionUrl('not a url')).toBe(false);
     expect(isAllowedCompanionUrl('http://github.com/Ryfter/Canvas-Download')).toBe(false);
+  });
+
+  it('refuses backslash-delimited traversal — the WHATWG parser treats \\ as a path separator too', () => {
+    // Built with String.fromCharCode(92) so no editor/shell/quoting layer can silently
+    // collapse or mangle the backslashes into something harmless before the assertion runs.
+    const bs = String.fromCharCode(92);
+    const evil = 'https://github.com/Ryfter/Canvas-Download' + bs + '..' + bs + '..' + bs + 'evil-owner/evil-repo';
+    // Empirical (Node v24.12.0): new URL(evil).href collapses the backslash-delimited
+    // '..' segments exactly like forward-slash ones, landing on a different owner/repo —
+    // and that collapsed target still satisfies the domain-wide 'https://github.com/'
+    // prefix, which is exactly why this must be refused before normalization.
+    expect(new URL(evil).href).toBe('https://github.com/evil-owner/evil-repo');
+    expect(evil.startsWith('https://github.com/')).toBe(true); // the raw-string trap
+    expect(isAllowedCompanionUrl(evil)).toBe(false);
+  });
+
+  it('refuses any raw backslash in the URL, even without a traversal pattern', () => {
+    const bs = String.fromCharCode(92);
+    const withBackslash = 'https://github.com/Ryfter' + bs + 'Canvas-Download';
+    expect(isAllowedCompanionUrl(withBackslash)).toBe(false);
   });
 });
 
