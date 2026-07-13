@@ -73,7 +73,8 @@ toolchain helps instructors accomplish, especially:
 
 Do not turn the overview into a command catalog. Command names and parameters belong in
 [`docs/commands-and-credentials.md`](docs/commands-and-credentials.md); implementation and
-module details belong in [`docs/modules.md`](docs/modules.md).
+module details belong in [`docs/architecture-modules.md`](docs/architecture-modules.md). For the
+list of installable modules and companion programs, see [`docs/modules.md`](docs/modules.md).
 
 ---
 

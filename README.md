@@ -12,6 +12,8 @@ Canvas Backup archive
 
 Professors drive the whole thing by talking to the **Command & Control** MCP server from any MCP-capable AI client (Claude Desktop, Claude Code, ChatGPT, Gemini). Each underlying app also stays independently usable. Direct Canvas API publishing is always optional — the no-token "generate HTML and paste it in" path is first-class.
 
+**Optional modules and companion programs:** see [docs/modules.md](docs/modules.md).
+
 ## Where to start
 
 - **Installing as a user?** Download the native installer (Windows x64 / macOS arm64) from [Releases](https://github.com/Ryfter/canvas-toolchain/releases) — it bundles Node, the toolchain, and an auto-updater behind a five-screen wizard.
@@ -26,7 +28,7 @@ Professors drive the whole thing by talking to the **Command & Control** MCP ser
 | 🗺️ [**Roadmap**](docs/roadmap.md) | What ships next and in what order — the WCAG 2.2 gate phases, upcoming releases, the v2.0 plug-in direction, and the unscheduled ideas backlog |
 | 🚀 [**User Guide & Tutorial**](docs/user-guide.md) | **Start here.** What you can do, how to use it, a hands-on end-to-end tutorial, and a task-by-task command catalog (*what each command is · how it works · why you'd use it*) |
 | 📘 [**Commands & Credentials reference**](docs/commands-and-credentials.md) | Every command (MCP tool) with its parameters, and every API key/secret — what it's for, why, and whether it's optional |
-| 🧩 [**Module view**](docs/modules.md) | The toolchain broken into modules: what each is, why it exists, what it does, and its commands |
+| 🧩 [**Module view**](docs/architecture-modules.md) | The toolchain broken into modules: what each is, why it exists, what it does, and its commands |
 | ♿ [**Accessibility checks**](docs/accessibility.md) | Every automated accessibility check the toolchain runs — what each one catches, how it works (with the contrast math), where it runs (advisory vs blocking), how to fix findings, and its limitations |
 | 🎨 [**Visual guide**](docs/visual-guide/README.md) | Picture-first tour — diagrams of the pipeline, architecture, and setup ([rendered PNG/SVG](docs/visual-guide/images/) + an editable [Excalidraw scene](docs/visual-guide/pipeline.excalidraw)) |
 

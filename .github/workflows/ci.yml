@@ -55,3 +55,8 @@ jobs:
       - run: npm run build
       - name: Verify committed module artifacts match the source and the catalog
         run: npm run verify:modules
+
+      - name: Verify docs/modules.md is regenerated from the catalog
+        run: |
+          npm run docs:modules
+          git diff --exit-code docs/modules.md
