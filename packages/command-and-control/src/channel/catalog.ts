@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
+import { VERSION_SEGMENT } from './installed.js';
 
 export const CATALOG_URL =
   'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/module-catalog.json';
@@ -121,7 +122,7 @@ function isEntry(v: unknown): v is CatalogEntry {
     typeof e.id === 'string' && MODULE_ID.test(e.id) &&
     typeof e.name === 'string' &&
     typeof e.description === 'string' &&
-    typeof e.version === 'string' &&
+    typeof e.version === 'string' && VERSION_SEGMENT.test(e.version) &&
     typeof e.minHostVersion === 'string' &&
     typeof e.artifactUrl === 'string' && isAllowedArtifactUrl(e.artifactUrl) &&
     typeof e.sha256 === 'string' && SHA256_HEX.test(e.sha256) &&

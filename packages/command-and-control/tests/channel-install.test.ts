@@ -144,6 +144,45 @@ describe('installModule download-origin allowlist (#121)', () => {
   });
 });
 
+describe('installModule artifact-ref path hygiene (version as a filesystem path segment)', () => {
+  it('refuses ARTIFACT_REF_INVALID for a traversal-shaped version even with a canonical artifactUrl, and touches nothing', async () => {
+    // The catalog entry's artifactUrl is a fine, canonical, allowlisted URL (passes
+    // isAllowedArtifactUrl) but the version field — never cross-checked against it — is a
+    // traversal payload. artifactPath(id, version) and the tmp filename both join it onto
+    // disk; without this recheck, an ordinary install failure's cleanupPlacementDir would
+    // rmSync(recursive, force) a directory outside the modules root. deps.catalog injection
+    // (and the on-disk cache, via the same validateCatalog gap) both reach this without ever
+    // re-running network validation, so the engine must hold this invariant on its own.
+    const evilVersion = '../../../../evil';
+    const { installModule } = await import('../src/channel/install.js');
+    const calls: string[] = [];
+    const spy: typeof fetch = (async (url: string) => {
+      calls.push(url);
+      return new Response(ARTIFACT, { status: 200 });
+    }) as unknown as typeof fetch;
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith({ version: evilVersion }), hostVersion: '2.0.0', fetchImpl: spy },
+    );
+    expect(res.error).toBe('ARTIFACT_REF_INVALID');
+    expect(String(res.message)).toContain(evilVersion);
+    // Nothing was downloaded, nothing was placed, and nothing outside the modules root moved.
+    expect(calls).toEqual([]);
+    expect(existsSync(join(home, 'modules'))).toBe(false);
+    expect(existsSync(join(home, 'installed-modules.json'))).toBe(false);
+  });
+
+  it('the preview path (no confirm) also refuses cleanly for a bad version, before any download logic runs', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const res = await installModule(
+      { moduleId: 'announcements' },
+      { catalog: catalogWith({ version: '../../../../evil' }), hostVersion: '2.0.0' },
+    );
+    expect(res.error).toBe('ARTIFACT_REF_INVALID');
+    expect(res.preview).toBeUndefined();
+  });
+});
+
 describe('installModule', () => {
   it('previews without side effects when confirm is absent', async () => {
     const { installModule } = await import('../src/channel/install.js');

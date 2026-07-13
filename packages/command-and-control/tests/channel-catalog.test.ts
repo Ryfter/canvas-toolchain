@@ -406,6 +406,25 @@ describe('validateCatalog — version', () => {
   });
 });
 
+describe('validateCatalog — module entry version is a filesystem path segment (path-traversal gap)', () => {
+  // entry.version is joined onto disk (artifactPath, the tmp download filename) by
+  // installModule/uninstallModule. isEntry() previously only checked typeof === 'string' —
+  // id was regex-guarded via MODULE_ID but version was not, so a catalog entry with a
+  // valid artifactUrl but a traversal-shaped version could reach a filesystem sink.
+  it('refuses a module entry whose version is not a tight semver path segment', () => {
+    for (const version of ['../../evil', '1.0', 'not-a-version', '1.0.0/../..']) {
+      const bad = { ...GOOD_ENTRY, version };
+      expect(() => validateCatalog({ catalogVersion: 2, modules: [bad] }))
+        .toThrowError(expect.objectContaining({ code: 'CATALOG_INVALID' }));
+    }
+  });
+
+  it('still accepts a normal release version and a prerelease version', () => {
+    expect(validateCatalog({ catalogVersion: 2, modules: [{ ...GOOD_ENTRY, version: '1.1.0' }] }).modules).toHaveLength(1);
+    expect(validateCatalog({ catalogVersion: 2, modules: [{ ...GOOD_ENTRY, version: '1.1.0-rc1' }] }).modules).toHaveLength(1);
+  });
+});
+
 describe('isAllowedRedirectHost (#121)', () => {
   it('accepts the GitHub asset hosts that actually serve release downloads', () => {
     // GitHub rotates this host without notice: it was objects.githubusercontent.com,
