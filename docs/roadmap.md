@@ -8,10 +8,12 @@ _Last updated: 2026-07-11. This is the planned order of work — what ships next
 
 **On `main`, unreleased: the v2.0.1 hardening pass** (PR #130, closed #121–#129) — a post-ship security review of the module channel, executed in full. Origin/size pins now back the sha256 (catalog `artifactUrl` pinned to this repo's GitHub Releases, redirects allowlisted, `sizeBytes` ceiling); installed-ledger `id`/`version` are re-validated as safe path segments before load, prune, and uninstall; the module-catalog cache is written `0o600`; the Announcements Auditor validates ids and dates before any Canvas call; the CallTool dispatch glue is unit-testable (`dispatchCallTool`); the installer moved to Fyne 2.6.3 with `fyne.Do`. The headline fix is repo-wide: **all seven Canvas clients now refuse off-origin `Link: rel="next"` pagination**, so a hostile or injected pagination URL can never receive the professor's Canvas token.
 
+**In progress: v2.1.0 — one release surface** (branch `feat/one-release-module-directory`). The v2.0.0 design's per-module GitHub Release is what actually broke the update check in the first place — see "Now: v2.1.0" below for the fix and its compat break.
+
 **Immediate next steps, in order:**
 
 1. **Publish `module-announcements` 1.1.0 (#131)** — the live catalog still serves the 1.0.0 artifact, which bundles the pre-fix Canvas client. Channel artifacts are self-contained bundles, so a fix in the repo does not reach installed modules until a new module version ships and the catalog is bumped. This is the only user-facing residue of the hardening pass.
-2. **v2.0 plug-in module channel (#78)** — **SHIPPED as v2.0.0 (2026-07-11).** Announcements Auditor 1.0.0 published to the catalog same day (first live `release-module.yml` run). All three original follow-ups (#121 artifactUrl host pin, #122 Fyne ≥2.6 / `fyne.Do`, #123 dispatch testability) shipped in the v2.0.1 hardening pass above.
+2. **v2.0 plug-in module channel (#78)** — **SHIPPED as v2.0.0 (2026-07-11).** Announcements Auditor 1.0.0 published to the catalog same day. All three original follow-ups (#121 artifactUrl host pin, #122 Fyne ≥2.6 / `fyne.Do`, #123 dispatch testability) shipped in the v2.0.1 hardening pass above.
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
@@ -44,11 +46,11 @@ Built on `feat/wcag22-phase3` per the Phase 3 implementation plan. Contents:
 
 Full detail: [`docs/accessibility.md`](accessibility.md#phase-3--institution-policy-wcag-3-advisories-wave-deep-check-2026-07). Design spec: [`packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md`](../packages/command-and-control/docs/superpowers/specs/2026-07-01-wcag22-conformance-gate-design.md).
 
-## Now: v2.0 — plug-in module channel
+## Shipped in v2.0.0: plug-in module channel
 
 Tracked as umbrella issue [#78](https://github.com/Ryfter/canvas-toolchain/issues/78) under the v2.0 milestone. **Shipped as v2.0.0 (2026-07-11; PR #120 squash `09c63c1`).** The 1.x plug-in system (the `CanvasToolchainModule` contract, workspace module packages, `modules.json` enablement, the fail-soft loader, `list_modules`/`set_module_enabled`) stays exactly as it is — what v2.0 adds is *distribution*: a module (or a fix to one) can now ship without a new installer release.
 
-- Modules build into single-file, hash-pinned artifacts attached to GitHub Releases; `module-catalog.json` on `main` is the single source of truth for what exists and what its bytes must hash to.
+- Modules build into single-file, hash-pinned artifacts, each version tagged and attached to its own GitHub Release; `module-catalog.json` on `main` is the single source of truth for what exists and what its bytes must hash to. **This part is superseded in v2.1.0 below** — module releases took the "Latest" badge away from real toolchain releases and silently broke the update check.
 - Three new C&C tools drive it conversationally: `browse_module_catalog` (read-only), `install_module` (two-call confirm gate — preview, then `confirm: true` to download/verify/install), and `uninstall_module`.
 - The installer GUI gains an "Additional modules" picker that only **requests** a module via a pending-request file — chat's confirmed `install_module` remains the only place code installation is authorized.
 - The hash is verified twice — once at install, again at every server startup — so a tampered, corrupted, or mismatched artifact is refused rather than loaded; every new failure mode stays fail-soft (the server always starts).
@@ -61,7 +63,20 @@ Related platform items that ride with (or follow) the module channel:
 - **Institutional tool-discovery** — after install, detect/ask which LMS tools an institution uses and build a standardized institution profile. (Shipped as `discover_tools`/#76; the module channel extends its `handles[]` matching to catalog modules too.)
 - **Usage feedback via GitHub** — an opt-in flow that submits anonymized institution profiles as GitHub issues/PRs, so module priorities follow real usage. (Shipped as `submit_usage_feedback`/#77.)
 
-**Status: implementation complete on the feature branch, verification green, release not yet cut.** Release sequence: PR → CI green → squash-merge → tag `module-announcements-v1.0.0` → `release-module.yml` → commit the catalog entry to `main` → tag `v2.0.0` → `release-installer.yml` → close #78.
+Release sequence as it actually shipped: PR → CI green → squash-merge → tag `module-announcements-v1.0.0` → `release-module.yml` (now deleted, see v2.1.0) → commit the catalog entry to `main` → tag `v2.0.0` → `release-installer.yml` → close #78.
+
+## Now: v2.1.0 — one release surface
+
+`release-module.yml` gave each module version its own tagged GitHub Release. On 2026-07-11 that caused a real outage: the module tag took the Releases page's "Latest" badge away from the actual `v2.0.0` release, and the update check — which reads `/releases/latest` — got a module tag back, couldn't parse a `vX.Y.Z` out of it, and silently reported no update. Every professor still on v1.x was never told v2.0.0 or the v2.0.1 security release existed. v2.1.0 (branch `feat/one-release-module-directory`) removes the second release surface entirely:
+
+- **Repo-hosted module artifacts.** A module version's `.mjs` artifact is now a file committed to this repo at `modules/<id>/<version>/<id>-<version>.mjs`, fetched at install time over `raw.githubusercontent.com` rather than a GitHub Release asset. `release-module.yml` is deleted. Publishing a version is a pull request: build, commit the artifact, update the catalog entry, open a PR — CI's `module-artifacts` job rebuilds the module from source and fails unless the committed bytes equal both the fresh build and the catalog's pinned sha256/sizeBytes.
+- **Companion entries.** `module-catalog.json` moves to `catalogVersion: 2`, adding a `companions[]` array alongside `modules[]` for separate programs that work alongside the toolchain (Canvas Backup and friends) — `id`/`name`/`summary`/`whyYouWantIt`/`url`/`worksWithoutToolchain` only, validated default-deny so a companion entry can never carry anything runnable.
+- **Hardened update check.** The only release tags that exist from here on are `vX.Y.Z`; the update check now accepts only a strictly-matching tag and ignores everything else, so no future tag (module or otherwise) can take the "Latest" badge and poison it again.
+- **Generated module page.** `docs/modules.md` is generated from `module-catalog.json` via `npm run docs:modules`; a CI docs-drift step fails the PR if it's out of date. The former hand-written module-architecture page now lives at `docs/architecture-modules.md`.
+
+**Compat break:** a v2.0.x installed toolchain cannot read a `catalogVersion: 2` catalog — its validator refuses any catalog version newer than it understands (`CATALOG_VERSION_UNSUPPORTED`) rather than guessing at an unknown shape. That refusal is deliberate fail-closed behavior, but it means the `catalogVersion: 2` catalog cannot go live on `main` until v2.1.0 professors exist to read it — see the cutover sequencing below.
+
+**Sequencing (order is load-bearing):** merge the v2.1.0 PR to `main` — the live catalog stays `catalogVersion: 1`, pointed at the old Announcements 1.1.0 Release asset, so no installed toolchain is affected. Cut the `v2.1.0` release next — this is what gives the update nudge a "Latest" badge to land on for every v1.x/v2.0.x professor. Only then merge the catalog-cutover PR (`catalogVersion: 2`, the Announcements artifact re-pointed at its `modules/` path using the exact already-published bytes — no rebuild, no version bump — plus `minHostVersion: "2.1.0"` and the `canvas-backup` companion). Finally delete the old module release tags and verify the live catalog end to end against a real v2.1.0 host before calling it done.
 
 ## Ideas backlog (unscheduled)
 

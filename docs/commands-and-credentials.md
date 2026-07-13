@@ -73,7 +73,7 @@ Legend: **R** = required parameter, *italic* = optional.
 
 ### 2.3 Command & Control — module channel
 
-Ships a module (or a fix to one) without a new installer release: modules are single-file, hash-pinned artifacts attached to GitHub Releases, cataloged in `module-catalog.json` on `main`. See [`module-channel.md`](module-channel.md) for the full publish/install runbook.
+Ships a module (or a fix to one) without a new installer release: modules are single-file, hash-pinned artifacts committed to this repo under `modules/<id>/<version>/`, cataloged in `module-catalog.json` on `main`. See [`module-channel.md`](module-channel.md) for the full publish/install runbook.
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
@@ -273,7 +273,7 @@ See [`accessibility.md`](accessibility.md) for how the publishing gate, acknowle
 
 **Bottom line: every credential is optional.** With zero credentials you can still import a Canvas archive, analyze/plan a course, generate Canvas-safe HTML, and **paste it into Canvas by hand**. Each credential unlocks one optional enhancement.
 
-**The module channel adds no new credentials.** `browse_module_catalog`, `install_module`, and `uninstall_module` talk to the public `module-catalog.json` on GitHub and GitHub Release asset URLs — no auth. The one channel-only module, Announcements Auditor, uses the existing Canvas token (§3.1) for its Canvas calls; it does not introduce a credential of its own.
+**The module channel adds no new credentials.** `browse_module_catalog`, `install_module`, and `uninstall_module` talk to the public `module-catalog.json` and module artifact files on `raw.githubusercontent.com` — no auth. The one channel-only module, Announcements Auditor, uses the existing Canvas token (§3.1) for its Canvas calls; it does not introduce a credential of its own.
 
 All secrets are stored **locally** under `~/.command-and-control/` (override with the `CC_HOME` env var). Every credential file is written **atomically (temp + rename) with `0o600` permissions** (owner read/write only). Keys are **validated against the live service before being saved**, are **never echoed back** in tool responses (the registry token is explicitly redacted), and are **never transmitted** to analytics — `submit_usage_feedback` is opt-in and anonymized and refuses to send tokens or student data.
 
