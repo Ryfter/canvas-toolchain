@@ -17,7 +17,7 @@ You never download a module by hand.
 Find scheduled Canvas announcements whose fire dates are stale (typically after a course copy keeps last term's dates) and recreate them with corrected dates. Read-first; creation is confirm-gated; never deletes anything.
 
 - **Current version:** 1.1.0
-- **Needs Canvas Toolchain:** v2.0.0 or newer
+- **Needs Canvas Toolchain:** v2.1.0 or newer
 - **Install with:** `install_module({ moduleId: "announcements" })` — or just ask Claude for it by name
 
 ## Companion programs
@@ -25,4 +25,12 @@ Find scheduled Canvas announcements whose fire dates are stale (typically after 
 These are separate programs. They work alongside Canvas Toolchain, and most work perfectly well on their own.
 The toolchain will not install them for you — read what they do and pick them up from their own page if you want them.
 
-_No companion programs are listed yet._
+### Canvas Backup
+
+Downloads a complete local archive of a Canvas course.
+
+**Why you'd want it:** Canvas Toolchain reads a Canvas Backup archive as the starting point of the course-refresh pipeline. It also works entirely on its own as a backup tool.
+
+Works on its own, without Canvas Toolchain.
+
+[Get Canvas Backup](https://github.com/Ryfter/Canvas-Download)
