@@ -1,5 +1,19 @@
 # Canvas Toolchain Installer
 
+## What's new in v2.1.0
+
+**One product, one Releases page — and the update notice works again.**
+
+- **Your toolchain will tell you about updates again.** In 2.0, publishing a module accidentally took over the "latest release" spot, and a side effect was that the toolchain quietly stopped noticing when a *new toolchain version* was available. That's fixed: the update check now looks only at real toolchain releases, so the one-line "update available" nudge is reliable again. **If you're on an older version and haven't been prompted in a while, this is why — update to 2.1.0 and it starts working.**
+- **Modules are a directory, not a pile of releases.** Add-on modules (like the Announcements Auditor) and companion programs (like Canvas Backup) are now listed in one place — see [the module directory](https://github.com/Ryfter/canvas-toolchain/blob/main/docs/modules.md). The Releases page shows only Canvas Toolchain itself, the way it should.
+- **You still install modules the same way** — just ask Claude, e.g. *"install the announcements module,"* and confirm when it shows you what it will do. Nothing about the install experience changed.
+- **Companion programs are listed and explained, never auto-installed.** Things like Canvas Backup that run alongside the toolchain now appear in the directory with a description and a link, so you can decide for yourself. The toolchain will never download or run them on its own.
+- **Security hardening under the hood.** This release closes several ways a tampered module catalog could have pointed the toolchain at the wrong download, and tightens how module files are validated before they ever run. Nothing you do differently — it's all in the plumbing that decides whether a module is safe to load.
+
+Nothing changes if you ignore all of this: every existing tool and workflow behaves exactly as it did in 2.0, and your installed modules keep working.
+
+Full diff: [v2.0.0...v2.1.0](https://github.com/Ryfter/canvas-toolchain/compare/v2.0.0...v2.1.0)
+
 ## What's new in v2.0.0
 
 The 2.0 headline: **modules are now drop-in**. New capabilities can be published and installed **without waiting for an installer release** — and the first one ships today.
