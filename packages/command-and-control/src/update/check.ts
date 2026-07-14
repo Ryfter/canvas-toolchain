@@ -5,7 +5,23 @@ import { fileURLToPath } from 'node:url';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const NETWORK_TIMEOUT_MS = 5000;
 const GITHUB_RELEASES_URL =
-  'https://api.github.com/repos/Ryfter/canvas-toolchain/releases/latest';
+  'https://api.github.com/repos/Ryfter/canvas-toolchain/releases?per_page=30';
+
+const TOOLCHAIN_TAG = /^v(\d+)\.(\d+)\.(\d+)$/;
+
+/**
+ * A toolchain release tag, or null.
+ *
+ * The Releases page is shared with anything else that gets tagged. Trusting
+ * GitHub's `/releases/latest` once returned `module-announcements-v1.1.0`, which
+ * the lenient parser read as 0.1.0 — so the toolchain concluded it was already
+ * up to date and stopped telling anyone about updates, security ones included.
+ * Anything that is not exactly `vMAJOR.MINOR.PATCH` is invisible here, by design.
+ */
+export function parseToolchainTag(tag: string): string | null {
+  const m = TOOLCHAIN_TAG.exec(tag);
+  return m ? `${m[1]}.${m[2]}.${m[3]}` : null;
+}
 
 interface UpdateCache {
   lastCheckAt: string;
@@ -67,8 +83,7 @@ function getCachePath(): string {
   return join(getInstallDir(), '.canvas-toolchain-update-cache.json');
 }
 
-function readCache(): UpdateCache | null {
-  const cachePath = getCachePath();
+function readCache(cachePath: string): UpdateCache | null {
   if (!existsSync(cachePath)) return null;
   try {
     return JSON.parse(readFileSync(cachePath, 'utf-8')) as UpdateCache;
@@ -87,18 +102,28 @@ function formatNotice(latest: string): string {
   return `\n\n_Update available: v${latest} — click the Canvas Toolchain Updater shortcut to upgrade._`;
 }
 
-async function fetchLatestRelease(): Promise<string | null> {
+interface GitHubRelease { tag_name?: unknown; draft?: unknown; prerelease?: unknown }
+
+async function fetchLatestToolchainRelease(fetchImpl: typeof fetch): Promise<string | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
   try {
-    const response = await fetch(GITHUB_RELEASES_URL, {
+    const response = await fetchImpl(GITHUB_RELEASES_URL, {
       headers: { accept: 'application/vnd.github+json' },
       signal: controller.signal,
     });
     if (!response.ok) return null;
-    const body = (await response.json()) as { tag_name?: string };
-    if (typeof body.tag_name !== 'string') return null;
-    return body.tag_name.replace(/^v/i, '');
+    const body = await response.json();
+    if (!Array.isArray(body)) return null;
+    let best: string | null = null;
+    for (const raw of body as GitHubRelease[]) {
+      if (raw.draft === true || raw.prerelease === true) continue;
+      if (typeof raw.tag_name !== 'string') continue;
+      const version = parseToolchainTag(raw.tag_name);
+      if (!version) continue;
+      if (best === null || compareVersions(best, version) < 0) best = version;
+    }
+    return best;
   } catch {
     return null;
   } finally {
@@ -106,21 +131,29 @@ async function fetchLatestRelease(): Promise<string | null> {
   }
 }
 
-export async function checkForUpdates(): Promise<void> {
-  const installed = getInstalledVersion();
-  const cache = readCache();
+export interface UpdateCheckOptions {
+  fetchImpl?: typeof fetch;
+  installedVersion?: string;
+  cachePath?: string;
+}
+
+export async function checkForUpdates(opts: UpdateCheckOptions = {}): Promise<void> {
+  const fetchImpl = opts.fetchImpl ?? fetch;
+  const installed = opts.installedVersion ?? getInstalledVersion();
+  const cachePath = opts.cachePath ?? getCachePath();
+  const cache = readCache(cachePath);
 
   let latest: string | null = null;
   if (cache && isFresh(cache)) {
     latest = cache.latestVersion;
   } else {
-    latest = await fetchLatestRelease();
+    latest = await fetchLatestToolchainRelease(fetchImpl);
     if (latest !== null) {
       try {
         writeFileSync(
-          getCachePath(),
+          cachePath,
           JSON.stringify({ lastCheckAt: new Date().toISOString(), latestVersion: latest }, null, 2),
-          'utf-8',
+          { encoding: 'utf-8', mode: 0o600 },
         );
       } catch {
         // Cache write is best-effort; ignore failures (e.g. read-only filesystem).
@@ -128,11 +161,7 @@ export async function checkForUpdates(): Promise<void> {
     }
   }
 
-  if (latest && compareVersions(installed, latest) < 0) {
-    cachedNotice = formatNotice(latest);
-  } else {
-    cachedNotice = null;
-  }
+  cachedNotice = latest && compareVersions(installed, latest) < 0 ? formatNotice(latest) : null;
 }
 
 export function getUpdateNotice(): string | null {

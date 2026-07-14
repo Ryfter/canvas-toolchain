@@ -2,7 +2,7 @@
 
 > A narrative, end-to-end guide: **what you can do**, **how to use it**, a **hands-on tutorial**, and a task-by-task command catalog where every command gets *what it is · how it works · why you'd use it*.
 >
-> Companion docs: the [Commands & Credentials reference](commands-and-credentials.md) is the dry lookup table; the [Module view](modules.md) explains the code's building blocks; the [Visual guide](visual-guide/README.md) is the picture-first tour. **This document is the one to read first if you want to actually use the toolchain.**
+> Companion docs: the [Commands & Credentials reference](commands-and-credentials.md) is the dry lookup table; the [Module view](architecture-modules.md) explains the code's building blocks; the [Visual guide](visual-guide/README.md) is the picture-first tour. **This document is the one to read first if you want to actually use the toolchain.**
 
 ---
 
@@ -399,4 +399,4 @@ Full detail, including the env-var table and validation endpoints, is in the [Co
 
 ---
 
-*Last reconciled against the source tree on 2026-06-11. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*
+*Last reconciled against the source tree on 2026-06-11. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*

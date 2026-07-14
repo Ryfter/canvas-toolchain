@@ -9,13 +9,14 @@ const ARTIFACT_SHA = createHash('sha256').update(ARTIFACT).digest('hex');
 
 function catalogWith(overrides: Record<string, unknown> = {}) {
   return {
-    catalogVersion: 1,
+    catalogVersion: 2,
     modules: [{
       id: 'announcements', name: 'Announcements Auditor', description: 'Audit scheduled announcements.',
       version: '1.0.0', minHostVersion: '2.0.0',
-      artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.0.0/module-announcements-1.0.0.mjs',
+      artifactUrl: 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.0.0/announcements-1.0.0.mjs',
       sha256: ARTIFACT_SHA, sizeBytes: ARTIFACT.length, ...overrides,
     }],
+    companions: [],
   };
 }
 const artifactFetch: typeof fetch = (async () => new Response(ARTIFACT, { status: 200 })) as unknown as typeof fetch;
@@ -70,20 +71,27 @@ describe('installModule download-origin allowlist (#121)', () => {
     }) as unknown as typeof fetch;
     const res = await installModule(
       { moduleId: 'announcements', confirm: true },
-      { catalog: catalogWith({ artifactUrl: 'https://evil.example/m.mjs' }), hostVersion: '2.0.0', fetchImpl: spy },
+      {
+        // The v2.0 hosting scheme (GitHub Releases) is no longer accepted: proves
+        // the previous scheme is refused, not just an arbitrary evil host.
+        catalog: catalogWith({ artifactUrl: 'https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.0.0/module-announcements-1.0.0.mjs' }),
+        hostVersion: '2.0.0', fetchImpl: spy,
+      },
     );
     expect(res.error).toBe('ARTIFACT_URL_NOT_ALLOWED');
     expect(calls).toEqual([]);
   });
 
-  it('follows a redirect to the GitHub release-asset host and installs', async () => {
+  it('follows a redirect to another githubusercontent.com host and installs', async () => {
     const { installModule } = await import('../src/channel/install.js');
-    // The host GitHub actually 302s to today (see isAllowedRedirectHost tests).
+    // raw.githubusercontent.com is not expected to redirect in practice, but the
+    // downloader must still re-check every hop against the allowlist rather than
+    // trusting the first URL — see isAllowedRedirectHost's tests.
     const assetUrl = 'https://release-assets.githubusercontent.com/github-production-release-asset/1245052104/abc?sig=x';
     const calls: string[] = [];
     const spy: typeof fetch = (async (url: string) => {
       calls.push(url);
-      if (url.startsWith('https://github.com/')) {
+      if (url.startsWith('https://raw.githubusercontent.com/')) {
         return new Response(null, { status: 302, headers: { location: assetUrl } });
       }
       if (url === assetUrl) return new Response(ARTIFACT, { status: 200 });
@@ -95,6 +103,27 @@ describe('installModule download-origin allowlist (#121)', () => {
     );
     expect(res.installed).toBe(true);
     expect(calls).toHaveLength(2);
+  });
+
+  it('refuses a dot-segment traversal artifactUrl injected via deps.catalog (raw prefix check bypass)', async () => {
+    // deps.catalog skips validateCatalog entirely — this is exactly what the
+    // belt-and-suspenders recheck inside installModule exists to catch. The raw
+    // string passes startsWith(ALLOWED_ARTIFACT_URL_PREFIX); new URL(...).href
+    // collapses the '..' segments onto a different owner/repo.
+    const { installModule } = await import('../src/channel/install.js');
+    const calls: string[] = [];
+    const spy: typeof fetch = (async (url: string) => {
+      calls.push(url);
+      return new Response(ARTIFACT, { status: 200 });
+    }) as unknown as typeof fetch;
+    const evilArtifactUrl = 'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/../../../../AttackerOwner/evil-repo/main/payload.mjs';
+    expect(evilArtifactUrl.startsWith('https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/')).toBe(true);
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith({ artifactUrl: evilArtifactUrl }), hostVersion: '2.0.0', fetchImpl: spy },
+    );
+    expect(res.error).toBe('ARTIFACT_URL_NOT_ALLOWED');
+    expect(calls).toEqual([]);
   });
 
   it('refuses a redirect off the allowlist and never fetches the target', async () => {
@@ -112,6 +141,45 @@ describe('installModule download-origin allowlist (#121)', () => {
     expect(res.error).toBe('ARTIFACT_URL_NOT_ALLOWED');
     expect(calls).toHaveLength(1);
     expect(existsSync(join(home, 'modules', 'announcements'))).toBe(false);
+  });
+});
+
+describe('installModule artifact-ref path hygiene (version as a filesystem path segment)', () => {
+  it('refuses ARTIFACT_REF_INVALID for a traversal-shaped version even with a canonical artifactUrl, and touches nothing', async () => {
+    // The catalog entry's artifactUrl is a fine, canonical, allowlisted URL (passes
+    // isAllowedArtifactUrl) but the version field — never cross-checked against it — is a
+    // traversal payload. artifactPath(id, version) and the tmp filename both join it onto
+    // disk; without this recheck, an ordinary install failure's cleanupPlacementDir would
+    // rmSync(recursive, force) a directory outside the modules root. deps.catalog injection
+    // (and the on-disk cache, via the same validateCatalog gap) both reach this without ever
+    // re-running network validation, so the engine must hold this invariant on its own.
+    const evilVersion = '../../../../evil';
+    const { installModule } = await import('../src/channel/install.js');
+    const calls: string[] = [];
+    const spy: typeof fetch = (async (url: string) => {
+      calls.push(url);
+      return new Response(ARTIFACT, { status: 200 });
+    }) as unknown as typeof fetch;
+    const res = await installModule(
+      { moduleId: 'announcements', confirm: true },
+      { catalog: catalogWith({ version: evilVersion }), hostVersion: '2.0.0', fetchImpl: spy },
+    );
+    expect(res.error).toBe('ARTIFACT_REF_INVALID');
+    expect(String(res.message)).toContain(evilVersion);
+    // Nothing was downloaded, nothing was placed, and nothing outside the modules root moved.
+    expect(calls).toEqual([]);
+    expect(existsSync(join(home, 'modules'))).toBe(false);
+    expect(existsSync(join(home, 'installed-modules.json'))).toBe(false);
+  });
+
+  it('the preview path (no confirm) also refuses cleanly for a bad version, before any download logic runs', async () => {
+    const { installModule } = await import('../src/channel/install.js');
+    const res = await installModule(
+      { moduleId: 'announcements' },
+      { catalog: catalogWith({ version: '../../../../evil' }), hostVersion: '2.0.0' },
+    );
+    expect(res.error).toBe('ARTIFACT_REF_INVALID');
+    expect(res.preview).toBeUndefined();
   });
 });
 

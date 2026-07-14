@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
+import { VERSION_SEGMENT } from './installed.js';
 
 export const CATALOG_URL =
   'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/module-catalog.json';
-export const SUPPORTED_CATALOG_VERSION = 1;
+export const SUPPORTED_CATALOG_VERSION = 2;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const NETWORK_TIMEOUT_MS = 5000;
 
@@ -21,9 +22,21 @@ export interface CatalogEntry {
   bundled?: boolean;
 }
 
+/** A separate program that works alongside the toolchain (Canvas Backup and friends).
+ *  Prose and a link — never anything runnable. See COMPANION_FIELDS. */
+export interface CompanionEntry {
+  id: string;
+  name: string;
+  summary: string;
+  whyYouWantIt: string;
+  url: string;
+  worksWithoutToolchain?: boolean;
+}
+
 export interface ModuleCatalog {
   catalogVersion: number;
   modules: CatalogEntry[];
+  companions: CompanionEntry[];
 }
 
 export type CatalogErrorCode = 'CATALOG_INVALID' | 'CATALOG_VERSION_UNSUPPORTED' | 'CATALOG_UNREACHABLE';
@@ -44,12 +57,14 @@ const MODULE_ID = /^[a-z0-9][a-z0-9-]*$/;
  *  turn the size guard into an unbounded buffer. */
 export const MAX_ARTIFACT_BYTES = 50 * 1024 * 1024;
 
-/** #121: catalog artifacts may only come from this repo's GitHub Releases —
- *  hash pinning guarantees the bytes, this pin guarantees where they were
- *  supposed to come from (a bad catalog can pair an evil URL with its own
- *  matching hash). */
+/** Artifacts are files in this repo, not release assets. A GitHub Release is an
+ *  announcement, not a file host: using one put a module on the product's front
+ *  page, took the "Latest" badge, and silently killed the update check that
+ *  depended on it. Files on main are reviewable in a PR, diffable, and CI can
+ *  prove they are what the source builds. The version is a path segment, so a
+ *  published artifact's URL is content-immutable by construction. */
 export const ALLOWED_ARTIFACT_URL_PREFIX =
-  'https://github.com/Ryfter/canvas-toolchain/releases/download/';
+  'https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/';
 
 /** GitHub serves release-asset bodies via a 302 off github.com to a signed URL on
  *  its own user-content domain — historically `objects.githubusercontent.com`, today
@@ -67,6 +82,39 @@ export function isAllowedRedirectHost(host: string): boolean {
   return host === ALLOWED_REDIRECT_DOMAIN || host.endsWith(`.${ALLOWED_REDIRECT_DOMAIN}`);
 }
 
+/** True only when `url` is already canonical: parsing it and re-serializing it via
+ *  `URL#href` changes nothing at all, byte for byte.
+ *
+ *  This replaces three successive attempts to *enumerate* what a dot-segment traversal
+ *  looks like (`/../`, then `\..\`, then `%2e%2e`/`%2e.`/`.%2e` and tab/newline-obfuscated
+ *  spellings) — each fix caught one more spelling and missed the next, because
+ *  enumeration can never be complete: the WHATWG URL algorithm normalizes dozens of
+ *  constructs (dot segments in any spelling, backslashes, percent-encoded dots,
+ *  stripped tab/newline, userinfo, case, default ports) and any one of them can move
+ *  the fetched target away from what the raw string displays. Refusing anything that
+ *  is not already canonical closes the entire class at once: if `new URL(url).href`
+ *  is identical to `url`, there is no normalization step left for an attacker to hide
+ *  a different destination inside, so what a human reads in the catalog is exactly
+ *  what the toolchain will fetch. */
+function isCanonicalUrl(url: string): URL | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  return parsed.href === url ? parsed : null;
+}
+
+/** True only when `url` is already a canonical (see `isCanonicalUrl`), https, URL that
+ *  lives under this repo's modules/ directory. */
+export function isAllowedArtifactUrl(url: unknown): boolean {
+  if (typeof url !== 'string') return false;
+  const parsed = isCanonicalUrl(url);
+  if (!parsed) return false;
+  return parsed.protocol === 'https:' && parsed.href.startsWith(ALLOWED_ARTIFACT_URL_PREFIX);
+}
+
 function isEntry(v: unknown): v is CatalogEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
@@ -74,12 +122,50 @@ function isEntry(v: unknown): v is CatalogEntry {
     typeof e.id === 'string' && MODULE_ID.test(e.id) &&
     typeof e.name === 'string' &&
     typeof e.description === 'string' &&
-    typeof e.version === 'string' &&
+    typeof e.version === 'string' && VERSION_SEGMENT.test(e.version) &&
     typeof e.minHostVersion === 'string' &&
-    typeof e.artifactUrl === 'string' && e.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX) &&
+    typeof e.artifactUrl === 'string' && isAllowedArtifactUrl(e.artifactUrl) &&
     typeof e.sha256 === 'string' && SHA256_HEX.test(e.sha256) &&
     typeof e.sizeBytes === 'number' && Number.isInteger(e.sizeBytes) &&
     e.sizeBytes > 0 && e.sizeBytes <= MAX_ARTIFACT_BYTES
+  );
+}
+
+/** Default-deny. The catalog is the trust root: if an entry could carry a command
+ *  line and anything ran it, every hash pin in this file would be decoration. A
+ *  companion entry may contain these keys and nothing else. */
+const COMPANION_FIELDS = new Set([
+  'id', 'name', 'summary', 'whyYouWantIt', 'url', 'worksWithoutToolchain',
+]);
+const ALLOWED_COMPANION_URL_PREFIX = 'https://github.com/';
+
+/** Same canonical-URL rule as isAllowedArtifactUrl (see `isCanonicalUrl`) — a companion
+ *  url is never fetched by the toolchain, but a professor clicks it, and a browser
+ *  normalizes a URL the same way `new URL()` does. ALLOWED_COMPANION_URL_PREFIX is
+ *  domain-wide (any github.com repo is a legitimate companion), which makes the
+ *  canonical check load-bearing here rather than optional: a non-canonical URL can
+ *  normalize to a *different* repo that still satisfies the domain-wide prefix, so a
+ *  raw or even normalized-but-unverified prefix test alone is not enough. */
+export function isAllowedCompanionUrl(url: unknown): boolean {
+  if (typeof url !== 'string') return false;
+  const parsed = isCanonicalUrl(url);
+  if (!parsed) return false;
+  return parsed.protocol === 'https:' && parsed.href.startsWith(ALLOWED_COMPANION_URL_PREFIX);
+}
+
+function isCompanion(v: unknown): v is CompanionEntry {
+  if (typeof v !== 'object' || v === null) return false;
+  const e = v as Record<string, unknown>;
+  for (const key of Object.keys(e)) {
+    if (!COMPANION_FIELDS.has(key)) return false;
+  }
+  return (
+    typeof e.id === 'string' && MODULE_ID.test(e.id) &&
+    typeof e.name === 'string' && e.name.length > 0 &&
+    typeof e.summary === 'string' && e.summary.length > 0 &&
+    typeof e.whyYouWantIt === 'string' && e.whyYouWantIt.length > 0 &&
+    typeof e.url === 'string' && isAllowedCompanionUrl(e.url) &&
+    (e.worksWithoutToolchain === undefined || typeof e.worksWithoutToolchain === 'boolean')
   );
 }
 
@@ -111,7 +197,24 @@ export function validateCatalog(value: unknown): ModuleCatalog {
     }
     seenIds.add(entry.id);
   }
-  return { catalogVersion: c.catalogVersion, modules: c.modules as CatalogEntry[] };
+  const companionsRaw = c.companions ?? [];
+  if (!Array.isArray(companionsRaw)) {
+    throw new CatalogError('CATALOG_INVALID', 'Catalog companions must be an array.');
+  }
+  for (const entry of companionsRaw) {
+    if (!isCompanion(entry)) {
+      throw new CatalogError('CATALOG_INVALID', `Malformed companion entry: ${JSON.stringify(entry).slice(0, 200)}`);
+    }
+    if (seenIds.has(entry.id)) {
+      throw new CatalogError('CATALOG_INVALID', `Duplicate id in catalog: '${entry.id}'.`);
+    }
+    seenIds.add(entry.id);
+  }
+  return {
+    catalogVersion: c.catalogVersion,
+    modules: c.modules as CatalogEntry[],
+    companions: companionsRaw as CompanionEntry[],
+  };
 }
 
 interface CatalogCache { fetchedAt: string; catalog: ModuleCatalog }

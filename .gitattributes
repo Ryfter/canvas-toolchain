@@ -1,0 +1,4 @@
+# Module channel artifacts are hash-pinned in module-catalog.json. Git must never
+# rewrite their line endings — a single LF→CRLF conversion changes every hash and
+# breaks the pin on checkout.
+modules/**/*.mjs -text

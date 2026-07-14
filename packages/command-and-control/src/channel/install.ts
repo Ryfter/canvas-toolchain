@@ -2,13 +2,13 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync }
 import { dirname, join } from 'node:path';
 import {
   fetchCatalog, CatalogError, MAX_ARTIFACT_BYTES,
-  ALLOWED_ARTIFACT_URL_PREFIX, ALLOWED_REDIRECT_DOMAIN, isAllowedRedirectHost,
+  ALLOWED_ARTIFACT_URL_PREFIX, ALLOWED_REDIRECT_DOMAIN, isAllowedRedirectHost, isAllowedArtifactUrl,
   type ModuleCatalog, type CatalogEntry,
 } from './catalog.js';
 import { sha256File } from './hash.js';
 import {
   artifactPath, getModulesRoot, getTmpDownloadDir, MODULE_ID_SEGMENT,
-  loadInstalledModules, saveInstalledModules,
+  loadInstalledModules, saveInstalledModules, isSafeArtifactRef,
 } from './installed.js';
 import { removePendingModule } from './pending.js';
 import { compareVersions, getInstalledVersion } from '../update/check.js';
@@ -94,7 +94,7 @@ class OffOriginDownloadError extends Error {
 const MAX_REDIRECTS = 5;
 
 function isAllowedDownloadUrl(url: string): boolean {
-  if (url.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) return true;
+  if (isAllowedArtifactUrl(url)) return true;
   try {
     const u = new URL(url);
     return u.protocol === 'https:' && isAllowedRedirectHost(u.host);
@@ -185,9 +185,23 @@ export async function installModule(
 
   // #121 belt-and-suspenders: validateCatalog already pins the URL for fetched
   // catalogs, but injected deps.catalog and pre-fix caches never pass through it.
-  if (!entry.artifactUrl.startsWith(ALLOWED_ARTIFACT_URL_PREFIX)) {
+  // Artifacts may only come from this repo's `modules/` directory on `main`. Compare
+  // the normalized URL, not the raw string — see isAllowedArtifactUrl's doc comment
+  // for the dot-segment collapse this guards against.
+  if (!isAllowedArtifactUrl(entry.artifactUrl)) {
     return refusal('ARTIFACT_URL_NOT_ALLOWED',
       `Module '${entry.id}' artifactUrl (${entry.artifactUrl}) is not under ${ALLOWED_ARTIFACT_URL_PREFIX}; refusing.`,
+      'The catalog entry is malformed or tampered — check https://github.com/Ryfter/canvas-toolchain for a catalog correction.');
+  }
+
+  // #126-class gap: entry.id/entry.version become filesystem path segments (artifactPath,
+  // the tmp download filename) below. isEntry() format-validates version too, but injected
+  // deps.catalog and the on-disk cache both reach this point without re-running
+  // validateCatalog — the engine must hold this invariant independently. Same shape the
+  // loader already enforces via isSafeArtifactRef (#126).
+  if (!isSafeArtifactRef(entry.id, entry.version)) {
+    return refusal('ARTIFACT_REF_INVALID',
+      `Module '${entry.id}' has an invalid id or version ('${entry.version}') for a filesystem path; refusing.`,
       'The catalog entry is malformed or tampered — check https://github.com/Ryfter/canvas-toolchain for a catalog correction.');
   }
 

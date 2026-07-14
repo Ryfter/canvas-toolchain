@@ -42,3 +42,25 @@ jobs:
 
       - name: Production dependency audit
         run: npm audit --omit=dev --audit-level=high
+
+  module-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # Runs BEFORE verify:modules on purpose. Actions halts a job at its first failed
+      # step, and verify:modules is deliberately red until the post-release catalog
+      # cutover — so ordering it first would leave this drift gate unreachable, and
+      # silently unprotecting docs/modules.md, for the whole interim.
+      - name: Verify docs/modules.md is regenerated from the catalog
+        run: |
+          npm run docs:modules
+          git diff --exit-code docs/modules.md
+
+      - name: Verify committed module artifacts match the source and the catalog
+        run: npm run verify:modules
