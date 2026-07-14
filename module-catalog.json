@@ -1,16 +1,26 @@
 {
-  "catalogVersion": 1,
+  "catalogVersion": 2,
   "modules": [
     {
       "id": "announcements",
       "name": "Announcements Auditor",
       "description": "Find scheduled Canvas announcements whose fire dates are stale (typically after a course copy keeps last term's dates) and recreate them with corrected dates. Read-first; creation is confirm-gated; never deletes anything.",
       "version": "1.1.0",
-      "minHostVersion": "2.0.0",
-      "artifactUrl": "https://github.com/Ryfter/canvas-toolchain/releases/download/module-announcements-v1.1.0/module-announcements-1.1.0.mjs",
+      "minHostVersion": "2.1.0",
+      "artifactUrl": "https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.1.0/announcements-1.1.0.mjs",
       "sha256": "821aae56e774b10c4ce643ca358052264e52d0db9491e8692370a461bb0aae35",
       "sizeBytes": 9757,
       "handles": ["announcements"]
+    }
+  ],
+  "companions": [
+    {
+      "id": "canvas-backup",
+      "name": "Canvas Backup",
+      "summary": "Downloads a complete local archive of a Canvas course.",
+      "whyYouWantIt": "Canvas Toolchain reads a Canvas Backup archive as the starting point of the course-refresh pipeline. It also works entirely on its own as a backup tool.",
+      "url": "https://github.com/Ryfter/Canvas-Download",
+      "worksWithoutToolchain": true
     }
   ]
 }
