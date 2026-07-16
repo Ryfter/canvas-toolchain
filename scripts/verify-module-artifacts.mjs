@@ -58,7 +58,10 @@ for (const entry of catalog.modules ?? []) {
   }
 
   try {
-    execFileSync('npm', ['run', 'build:module', '--silent', '--', id], { stdio: 'pipe', shell: process.platform === 'win32' });
+    // Invoke the build script directly with the running Node binary: shelling
+    // through npm needed shell:true on Windows, which triggers DEP0190 and
+    // reintroduces the arg-escaping risk the id/version regexes exist to prevent.
+    execFileSync(process.execPath, ['scripts/build-module.mjs', id], { stdio: 'pipe' });
   } catch (err) {
     fail(`${id} v${version}: the module failed to build from source, so its committed artifact cannot be verified.\n  ${err.message}`);
     continue;
