@@ -1,19 +1,19 @@
 # Canvas Toolchain Roadmap
 
-_Last updated: 2026-07-11. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
+_Last updated: 2026-07-16. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
 
 ## Where we are
 
-**Current release: v2.0.0** (plug-in module channel — hash-pinned drop-in modules, `browse_module_catalog`/`install_module`/`uninstall_module`, Announcements Auditor as the first channel module; PR #120, closed #78, released 2026-07-11). Prior: v1.11.x (WCAG 2.2 Phase 3 + hardening).
+**Current release: v2.1.0 — one release surface** (released 2026-07-14, catalog cutover completed the same day). Module artifacts are now repo-hosted files under `modules/` — hash-pinned, rebuilt-and-verified by CI — the catalog is `catalogVersion: 2` with companion-program listings, and the update check accepts only strict `vX.Y.Z` tags. The Releases page carries only toolchain releases again, and the issue tracker is at **zero open issues**. Details in "Shipped in v2.1.0" below.
 
-**On `main`, unreleased: the v2.0.1 hardening pass** (PR #130, closed #121–#129) — a post-ship security review of the module channel, executed in full. Origin/size pins now back the sha256 (catalog `artifactUrl` pinned to this repo's GitHub Releases, redirects allowlisted, `sizeBytes` ceiling); installed-ledger `id`/`version` are re-validated as safe path segments before load, prune, and uninstall; the module-catalog cache is written `0o600`; the Announcements Auditor validates ids and dates before any Canvas call; the CallTool dispatch glue is unit-testable (`dispatchCallTool`); the installer moved to Fyne 2.6.3 with `fyne.Do`. The headline fix is repo-wide: **all seven Canvas clients now refuse off-origin `Link: rel="next"` pagination**, so a hostile or injected pagination URL can never receive the professor's Canvas token.
-
-**In progress: v2.1.0 — one release surface** (branch `feat/one-release-module-directory`). The v2.0.0 design's per-module GitHub Release is what actually broke the update check in the first place — see "Now: v2.1.0" below for the fix and its compat break.
+Recent history: **v2.0.0** (plug-in module channel, closed #78) and the **v2.0.1 hardening pass** (PR #130, closed #121–#129) — a post-ship security review executed in full, whose headline fix was repo-wide: all seven Canvas clients refuse off-origin `Link: rel="next"` pagination, so a hostile or injected pagination URL can never receive the professor's Canvas token. **Announcements Auditor 1.1.0** (carrying those fixes) is the version the catalog serves.
 
 **Immediate next steps, in order:**
 
-1. **Publish `module-announcements` 1.1.0 (#131)** — the live catalog still serves the 1.0.0 artifact, which bundles the pre-fix Canvas client. Channel artifacts are self-contained bundles, so a fix in the repo does not reach installed modules until a new module version ships and the catalog is bumped. This is the only user-facing residue of the hardening pass.
-2. **v2.0 plug-in module channel (#78)** — **SHIPPED as v2.0.0 (2026-07-11).** Announcements Auditor 1.0.0 published to the catalog same day. All three original follow-ups (#121 artifactUrl host pin, #122 Fyne ≥2.6 / `fyne.Do`, #123 dispatch testability) shipped in the v2.0.1 hardening pass above.
+1. **Canvas capability showcase → assisted template creator + information hierarchy** — one combined design effort. The browse half exists (`show_canvas_capabilities` / `preview_canvas_pattern`); what's missing is the assisted "build a valid page from structured choices" flow, and the at-a-glance / working-detail / deep-support content-priority tiers are the structure that flow should ask about.
+2. **Rubric persona tie-in** — `draft_student_rubric` accepts course personas but does not yet emit per-persona criterion explanations. Small, well-bounded.
+3. **Module migration pilot (decision pending)** — five modules are still compiled into the base install (video, oral-assessment, group-builder, roster, peerassessment) while the catalog channel has only ever carried one. Candidate: migrate `module-video` alone first, proving the channel with more than one module before moving the rest.
+4. **Generation-quality eval harness** — a golden-input regression suite for the LLM-generated outputs (rubric rewrites, page generation), so model upgrades — including refreshing the aging default model id — become verifiable diffs instead of judgment calls.
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
@@ -65,28 +65,28 @@ Related platform items that ride with (or follow) the module channel:
 
 Release sequence as it actually shipped: PR → CI green → squash-merge → tag `module-announcements-v1.0.0` → `release-module.yml` (now deleted, see v2.1.0) → commit the catalog entry to `main` → tag `v2.0.0` → `release-installer.yml` → close #78.
 
-## Now: v2.1.0 — one release surface
+## Shipped in v2.1.0: one release surface (2026-07-14)
 
-`release-module.yml` gave each module version its own tagged GitHub Release. On 2026-07-11 that caused a real outage: the module tag took the Releases page's "Latest" badge away from the actual `v2.0.0` release, and the update check — which reads `/releases/latest` — got a module tag back, couldn't parse a `vX.Y.Z` out of it, and silently reported no update. Every professor still on v1.x was never told v2.0.0 or the v2.0.1 security release existed. v2.1.0 (branch `feat/one-release-module-directory`) removes the second release surface entirely:
+`release-module.yml` gave each module version its own tagged GitHub Release. On 2026-07-11 that caused a real outage: the module tag took the Releases page's "Latest" badge away from the actual `v2.0.0` release, and the update check — which reads `/releases/latest` — got a module tag back, couldn't parse a `vX.Y.Z` out of it, and silently reported no update. Every professor still on v1.x was never told v2.0.0 or the v2.0.1 security release existed. v2.1.0 removed the second release surface entirely:
 
 - **Repo-hosted module artifacts.** A module version's `.mjs` artifact is now a file committed to this repo at `modules/<id>/<version>/<id>-<version>.mjs`, fetched at install time over `raw.githubusercontent.com` rather than a GitHub Release asset. `release-module.yml` is deleted. Publishing a version is a pull request: build, commit the artifact, update the catalog entry, open a PR — CI's `module-artifacts` job rebuilds the module from source and fails unless the committed bytes equal both the fresh build and the catalog's pinned sha256/sizeBytes.
 - **Companion entries.** `module-catalog.json` moves to `catalogVersion: 2`, adding a `companions[]` array alongside `modules[]` for separate programs that work alongside the toolchain (Canvas Backup and friends) — `id`/`name`/`summary`/`whyYouWantIt`/`url`/`worksWithoutToolchain` only, validated default-deny so a companion entry can never carry anything runnable.
 - **Hardened update check.** The only release tags that exist from here on are `vX.Y.Z`; the update check now accepts only a strictly-matching tag and ignores everything else, so no future tag (module or otherwise) can take the "Latest" badge and poison it again.
 - **Generated module page.** `docs/modules.md` is generated from `module-catalog.json` via `npm run docs:modules`; a CI docs-drift step fails the PR if it's out of date. The former hand-written module-architecture page now lives at `docs/architecture-modules.md`.
 
-**Compat break:** a v2.0.x installed toolchain cannot read a `catalogVersion: 2` catalog — its validator refuses any catalog version newer than it understands (`CATALOG_VERSION_UNSUPPORTED`) rather than guessing at an unknown shape. That refusal is deliberate fail-closed behavior, but it means the `catalogVersion: 2` catalog cannot go live on `main` until v2.1.0 professors exist to read it — see the cutover sequencing below.
+**Compat break (accepted):** a v2.0.x installed toolchain cannot read a `catalogVersion: 2` catalog — its validator refuses any catalog version newer than it understands (`CATALOG_VERSION_UNSUPPORTED`) rather than guessing at an unknown shape. That refusal is deliberate fail-closed behavior; a v2.0.x install must update to v2.1.0 (the update nudge tells it so) before it can browse or install modules again.
 
-**Sequencing (order is load-bearing):** merge the v2.1.0 PR to `main` — the live catalog stays `catalogVersion: 1`, pointed at the old Announcements 1.1.0 Release asset, so no installed toolchain is affected. Cut the `v2.1.0` release next — this is what gives the update nudge a "Latest" badge to land on for every v1.x/v2.0.x professor. Only then merge the catalog-cutover PR (`catalogVersion: 2`, the Announcements artifact re-pointed at its `modules/` path using the exact already-published bytes — no rebuild, no version bump — plus `minHostVersion: "2.1.0"` and the `canvas-backup` companion). Finally delete the old module release tags and verify the live catalog end to end against a real v2.1.0 host before calling it done.
+**Sequencing as executed (order was load-bearing):** the v2.1.0 PR merged to `main` with the live catalog still `catalogVersion: 1`, so no installed toolchain was affected. The `v2.1.0` release was cut next — restoring the "Latest" badge the update nudge depends on for every v1.x/v2.0.x professor. Only then did the catalog-cutover PR merge (`catalogVersion: 2`, the Announcements artifact re-pointed at its `modules/` path using the exact already-published bytes — no rebuild, no version bump — plus `minHostVersion: "2.1.0"` and companion listings). Finally the old module release tags were deleted and the live catalog verified end to end — fetched over HTTPS from `raw.githubusercontent.com`, artifact bytes hashed against the catalog pin — before calling it done.
 
 ## Ideas backlog (unscheduled)
 
-Captured, not committed:
+Captured, not committed. (The showcase/template-creator, information-hierarchy, and rubric-persona items graduated to "Immediate next steps" above.)
 
-- **Canvas capability showcase + assisted template creator** — show professors the full design surface Canvas allows (inline-CSS-only constraints included) and generate valid pages from structured choices.
-- **Information hierarchy / content priority tiers** — rank page content into at-a-glance / working-detail / deep-support tiers and let that drive layout decisions.
-- **Rubric persona tie-in completion** — `draft_student_rubric` accepts personas but does not yet emit per-persona explanations.
+- **API cost visibility** — surface a rough per-operation cost estimate for LLM-backed tools, so a professor on their own API key is never surprised by a bill.
+- **Diagnostics export** — a sanitized `export_diagnostics` bundle a professor can attach to a bug report, so support doesn't require screen-sharing.
+- **Installer accessibility** — the wizard GUI itself (Fyne) has weak screen-reader support; audit it if institutional adoption becomes a goal.
 
 ## Housekeeping riding the next releases
 
-- Close **#108** on merge (Phase 3 PR body ends `Closes #108`).
-- Keep `docs/accessibility.md`, `docs/tool-overview.md`, and the module view current as each phase lands (Phase 3's plan includes its own doc task — this one).
+- Refresh the generation default model id alongside the eval harness (next step 4), so the change is verified rather than assumed.
+- Keep `docs/accessibility.md`, `docs/tool-overview.md`, and the generated `docs/modules.md` current as features land (the modules page is CI-enforced; the others are manual).

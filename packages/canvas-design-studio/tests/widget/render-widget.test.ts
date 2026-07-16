@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,6 +9,10 @@ let tmp: string;
 
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), 'render-widget-test-'));
+});
+
+afterEach(() => {
+  rmSync(tmp, { recursive: true, force: true });
 });
 
 function writeSpec(filename: string, spec: unknown): string {
@@ -76,5 +80,4 @@ describe('renderWidget', () => {
   });
 
   // Cleanup
-  it.skip('cleanup', () => { rmSync(tmp, { recursive: true, force: true }); });
 });
