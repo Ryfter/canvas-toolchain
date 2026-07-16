@@ -1,6 +1,9 @@
+import { createRequire } from 'node:module';
 import { loadConfig } from '../kb/config.js';
 import type { CcConfig, Mode, ProviderName } from '../types.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
+
+const localRequire = createRequire(import.meta.url);
 
 export interface GetCcStatusResult {
   mode: Mode;
@@ -29,9 +32,12 @@ async function pingOllama(baseUrl: string): Promise<boolean> {
   }
 }
 
-async function isPackageInstalled(pkg: string): Promise<boolean> {
+// Resolve, don't import: a status probe must not execute a package's module-level
+// code, and cold-importing these bundles takes seconds (it made this tool's tests
+// time out under parallel suite load).
+function isPackageInstalled(pkg: string): boolean {
   try {
-    await import(pkg);
+    localRequire.resolve(pkg);
     return true;
   } catch {
     return false;
@@ -49,10 +55,8 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
     };
   }
 
-  const [ciInstalled, designStudioInstalled] = await Promise.all([
-    isPackageInstalled('curriculum-intelligence-mcp'),
-    isPackageInstalled('canvas-design-mcp'),
-  ]);
+  const ciInstalled = isPackageInstalled('curriculum-intelligence-mcp');
+  const designStudioInstalled = isPackageInstalled('canvas-design-mcp');
 
   return {
     mode: config.mode,
