@@ -21,6 +21,14 @@
       "whyYouWantIt": "Canvas Toolchain reads a Canvas Backup archive as the starting point of the course-refresh pipeline. It also works entirely on its own as a backup tool.",
       "url": "https://github.com/Ryfter/Canvas-Download",
       "worksWithoutToolchain": true
+    },
+    {
+      "id": "asr-bench",
+      "name": "ASR Bench",
+      "summary": "Benchmarks local speech-recognition (speech-to-text) models on your own audio and hardware, producing a markdown report of accuracy, speed, and resource cost.",
+      "whyYouWantIt": "If you transcribe lectures or recorded oral assessments, ASR Bench tells you which local speech-to-text model actually performs best on your recordings and your machine, instead of trusting a public leaderboard measured on someone else's audio.",
+      "url": "https://github.com/Ryfter/asr-bench",
+      "worksWithoutToolchain": true
     }
   ]
 }
