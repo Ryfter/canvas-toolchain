@@ -34,3 +34,13 @@ Downloads a complete local archive of a Canvas course.
 Works on its own, without Canvas Toolchain.
 
 [Get Canvas Backup](https://github.com/Ryfter/Canvas-Download)
+
+### ASR Bench
+
+Benchmarks local speech-recognition (speech-to-text) models on your own audio and hardware, producing a markdown report of accuracy, speed, and resource cost.
+
+**Why you'd want it:** If you transcribe lectures or recorded oral assessments, ASR Bench tells you which local speech-to-text model actually performs best on your recordings and your machine, instead of trusting a public leaderboard measured on someone else's audio.
+
+Works on its own, without Canvas Toolchain.
+
+[Get ASR Bench](https://github.com/Ryfter/asr-bench)
