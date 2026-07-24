@@ -24,7 +24,7 @@
     "@canvas-toolchain/shared-llm": "*",
     "@canvas-toolchain/shared-types": "*",
     "@modelcontextprotocol/sdk": "^1.10.0",
-    "fast-xml-parser": "^5.8.0",
+    "fast-xml-parser": "^5.10.1",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
