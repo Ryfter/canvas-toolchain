@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@canvas-toolchain/module-contract": "*",
-    "@canvas-toolchain/module-roster": "*",
+    "@canvas-toolchain/module-contract": "2.2.0",
+    "@canvas-toolchain/module-roster": "2.2.0",
     "@modelcontextprotocol/sdk": "^1.10.0"
   },
   "devDependencies": {
