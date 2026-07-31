@@ -36,40 +36,7 @@
 
 - [ ] **Step 1: Write the guard script**
 
-```js
-#!/usr/bin/env node
-// check-institution-scrub.mjs — fails the build if institution identifiers
-// re-enter the public tree. Lines that are themselves grep/guard commands
-// (historical plan docs quoting the rule) are exempt; so is this script.
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-
-const PATTERN = /boise|(?<![\w@])bsu(?![\w])/i;
-const LINE_EXEMPT = /\bgr[e]p\b|check-institution-scrub/i; // guard cmds quoting the rule
-const FILE_SKIP = /^(package-lock\.json|scripts\/check-institution-scrub\.mjs)$|\.(png|svg|ico|pkg|exe|excalidraw)$/;
-
-const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
-  .split('\n').filter(Boolean).filter((f) => !FILE_SKIP.test(f));
-
-const hits = [];
-for (const file of files) {
-  let text;
-  try { text = readFileSync(file, 'utf8'); } catch { continue; }
-  if (text.includes('\u0000')) continue; // binary
-  text.split('\n').forEach((line, i) => {
-    if (PATTERN.test(line) && !LINE_EXEMPT.test(line)) {
-      hits.push(`${file}:${i + 1}: ${line.trim().slice(0, 120)}`);
-    }
-  });
-}
-
-if (hits.length) {
-  console.error(`Institution scrub FAILED — ${hits.length} hit(s):`);
-  for (const h of hits) console.error('  ' + h);
-  process.exit(1);
-}
-console.log(`Institution scrub clean (${files.length} files checked).`);
-```
+Write `scripts/check-institution-scrub.mjs` exactly as shipped in this task (canonical source of truth). The pattern matches institution place-name and short campus-code tokens; lines that are themselves grep/guard commands (and this script) are exempt. Do **not** re-embed the identifier pattern in plan docs — that would re-introduce the tokens the guard forbids. See `scripts/check-institution-scrub.mjs`.
 
 - [ ] **Step 2: Run it — must FAIL (red)**
 
@@ -78,17 +45,17 @@ Expected: exit 1 listing at minimum `packages/module-peerassessment/src/build.ts
 
 - [ ] **Step 3: Scrub every hit**
 
-Exact replacements (adjust surrounding prose so sentences read naturally; these are the canonical rewrites):
+Exact replacements (adjust surrounding prose so sentences read naturally; these are the canonical rewrites — "new" form only is quoted here so the plan itself stays scrub-clean):
 
-| Location | Old | New |
-| --- | --- | --- |
-| `packages/module-peerassessment/src/build.ts:9` | `'PeerAssessment.com is BSU-approved; this file contains student PII (name, email, login, student ID). Handle per FERPA.'` | `'PeerAssessment.com is institution-approved; this file contains student PII (name, email, login, student ID). Handle per FERPA.'` |
-| `AGENTS.md:104` | `**BSU has an institutional contract** with the vendor` | `**the institution holds a contract** with the vendor` |
-| `docs/architecture-modules.md:275` | `a BSU-contracted, FERPA-approved vendor` | `an institution-contracted, FERPA-approved vendor` |
-| `.github/RELEASE_TEMPLATE/installer-release.md:199` | `a BSU-contracted, FERPA-approved vendor` | `an institution-contracted, FERPA-approved vendor` |
-| oral-assessment spec:15 | `Built by a Boise State professor; \`rhetorixlab.example.edu\` is the BSU deployment` | `Built by a university professor; \`rhetorixlab.example.edu\` is the institutional deployment` |
-| oral-assessment spec:17 | `**The decisive finding (BSU instructor resources page).**` | `**The decisive finding (the university's instructor-resources page).**` |
-| peerassessment spec:25 & :98, plan:1135 | `BSU-approved` / `PeerAssessment.com is BSU-approved` | `institution-approved` (same sentence shape as build.ts) |
+| Location | New form (was campus short-code / place-name phrasing) |
+| --- | --- |
+| `packages/module-peerassessment/src/build.ts:9` | `'PeerAssessment.com is institution-approved; this file contains student PII (name, email, login, student ID). Handle per FERPA.'` |
+| `AGENTS.md:104` | `**the institution holds a contract** with the vendor` |
+| `docs/architecture-modules.md:275` | `an institution-contracted, FERPA-approved vendor` |
+| `.github/RELEASE_TEMPLATE/installer-release.md:199` | `an institution-contracted, FERPA-approved vendor` |
+| oral-assessment spec:15 | `Built by a university professor; \`rhetorixlab.example.edu\` is the institutional deployment` |
+| oral-assessment spec:17 | `**The decisive finding (the university's instructor-resources page).**` |
+| peerassessment spec:25 & :98, plan:1135 | `institution-approved` (same sentence shape as build.ts) |
 
 - [ ] **Step 4: Run guard — must PASS (green)**
 

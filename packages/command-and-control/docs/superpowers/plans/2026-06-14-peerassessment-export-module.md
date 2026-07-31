@@ -1132,7 +1132,7 @@ import { findIncomplete, findUngrouped, findDuplicateEmails } from './report.js'
 import type { PaGroup, PaCanvasUser, ImportReport } from './types.js';
 
 const FERPA_NOTE =
-  'PeerAssessment.com is BSU-approved; this file contains student PII (name, email, login, student ID). Handle per FERPA.';
+  'PeerAssessment.com is institution-approved; this file contains student PII (name, email, login, student ID). Handle per FERPA.';
 
 export interface BuildInput {
   courseId: string;

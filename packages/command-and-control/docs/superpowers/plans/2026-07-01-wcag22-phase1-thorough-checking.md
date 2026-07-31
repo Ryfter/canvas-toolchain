@@ -1197,7 +1197,7 @@ Expected: all builds clean; all suites PASS (~1737+ tests, including command-and
 - [ ] **Step 4: Institution-data guard**
 
 Run: `git grep -iE "exampleu|bsu" -- packages/shared-types packages/canvas-design-studio/src/tools/a11y docs/accessibility.md`
-Expected: no matches (the word "Boise" must not appear in any file touched by this plan).
+Expected: no matches (institution place-name identifiers must not appear in any file touched by this plan).
 
 - [ ] **Step 5: Commit**
 

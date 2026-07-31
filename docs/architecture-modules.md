@@ -272,7 +272,7 @@ The Go + Fyne installer's "Additional modules" picker screen only *requests* a m
 
 **Why it was created.** Hand-building the PeerAssessment import file is tedious and error-prone. Scope is deliberately **import-only** — the inbound grade round-trip is an explicit non-goal, which also keeps the toolchain free of any Canvas grade-write capability.
 
-**What it does.** Emits `Team,Login ID,Email,First Name,Last Name,Student ID #` with Canvas-first field sourcing and the roster vault + PeopleSoft export filling the login/SIS columns Canvas withholds. A `dryRun` flag produces a full pre-upload validation report (incomplete rows, ungrouped students, duplicate emails, multi-grouped students) without writing a file. Output is RFC-4180 escaped with a CSV formula-injection guard; PII is used transiently and never written to the vault. (PeerAssessment.com is a BSU-contracted, FERPA-approved vendor.)
+**What it does.** Emits `Team,Login ID,Email,First Name,Last Name,Student ID #` with Canvas-first field sourcing and the roster vault + PeopleSoft export filling the login/SIS columns Canvas withholds. A `dryRun` flag produces a full pre-upload validation report (incomplete rows, ungrouped students, duplicate emails, multi-grouped students) without writing a file. Output is RFC-4180 escaped with a CSV formula-injection guard; PII is used transiently and never written to the vault. (PeerAssessment.com is an institution-contracted, FERPA-approved vendor.)
 
 **Commands.** `build_peerassessment_import` (with `dryRun`). Enable it with `set_module_enabled` (module: `peerassessment`).
 

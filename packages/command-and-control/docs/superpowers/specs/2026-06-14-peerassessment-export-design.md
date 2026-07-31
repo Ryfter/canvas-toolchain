@@ -22,7 +22,7 @@ By the time the instructor builds groups, the roster vault is populated and the 
 
 ### FERPA posture
 
-PeerAssessment.com is **email-based**: it emails each student an assessment link, so the import file necessarily contains real PII (email, name, login, student ID). BSU has an institutional contract with PeerAssessment.com, satisfying FERPA's "school official" exception, so instructor-upload is legitimate. The module is therefore **not** held to the toolchain's PII-free pseudonym model for this external tool — email/name/IDs are the required round-trip keys. PII is used **transiently** at build time and **never written to the vault**; the only at-rest artifact is the import CSV the instructor uploads. The tool emits a one-line FERPA courtesy note in its report. No DPA gate is enforced (the contract already exists).
+PeerAssessment.com is **email-based**: it emails each student an assessment link, so the import file necessarily contains real PII (email, name, login, student ID). The institution holds a contract with PeerAssessment.com, satisfying FERPA's "school official" exception, so instructor-upload is legitimate. The module is therefore **not** held to the toolchain's PII-free pseudonym model for this external tool — email/name/IDs are the required round-trip keys. PII is used **transiently** at build time and **never written to the vault**; the only at-rest artifact is the import CSV the instructor uploads. The tool emits a one-line FERPA courtesy note in its report. No DPA gate is enforced (the contract already exists).
 
 ## The data contract
 
@@ -95,7 +95,7 @@ The tool never silently ships a bad file. The report lists:
 - **Incomplete students** — in a group but missing a required column after fallback (e.g., no Login ID from either source), listed by name.
 - **Ungrouped students** — enrolled in the course but in no group in the named set (they won't appear in the file).
 - **Duplicate emails** — PeerAssessment.com keys on email; duplicates are flagged.
-- **FERPA note** — one line: PeerAssessment.com is BSU-approved; the file contains student PII.
+- **FERPA note** — one line: PeerAssessment.com is institution-approved; the file contains student PII.
 
 When `dryRun` is false, the report also states the output path and row count written. A build that produces zero valid rows writes no file and says so.
 

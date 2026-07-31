@@ -10,7 +10,7 @@ A colleague was handed a source copy of the repo and could not start anything:
 2. `npx canvas-design-mcp` → not recognized (workspace bins point at `dist/index.js`, which does not exist until `npm run build` — a step no doc mentions).
 3. Naming drift: releases say v2.1.0 while every package.json says 1.0.0; MCP servers register as `command-and-control` etc. while the installer writes `canvas-toolchain` into host configs; docs mix component names and product name.
 4. Shipped source contains ~43 hard-coded "Claude" strings and the installer has Claude-specific UI, contradicting the product claim of running on any MCP-capable model.
-5. Institution-specific "BSU/Boise State" strings crept back into the public repo (worst: `packages/module-peerassessment/src/build.ts`).
+5. Institution-specific campus identifiers crept back into the public repo (worst: `packages/module-peerassessment/src/build.ts`).
 
 ## Goals
 

@@ -196,7 +196,7 @@ Two more capability **modules** land on the plug-in architecture, completing the
 ### PeerAssessment.com Export module (`module-peerassessment`)
 
 - **`build_peerassessment_import`** — turn a Canvas group set into the exact import CSV PeerAssessment.com expects (`Team,Login ID,Email,First Name,Last Name,Student ID #`). Canvas-first field sourcing, with the roster vault + PeopleSoft export filling the login/SIS columns Canvas withholds. A `dryRun` flag produces a full pre-upload validation report (incomplete students, ungrouped students, duplicate emails, multi-group students) without writing a file.
-- **Import-only and FERPA-aware.** The module produces an upload file only — it never writes Canvas or the vault, and grade round-trip is an explicit non-goal. PII is used transiently at build time; the only at-rest artifact is the import CSV the instructor uploads to a BSU-contracted, FERPA-approved vendor. Output is RFC-4180 escaped with a CSV formula-injection guard.
+- **Import-only and FERPA-aware.** The module produces an upload file only — it never writes Canvas or the vault, and grade round-trip is an explicit non-goal. PII is used transiently at build time; the only at-rest artifact is the import CSV the instructor uploads to an institution-contracted, FERPA-approved vendor. Output is RFC-4180 escaped with a CSV formula-injection guard.
 
 ### Dependency & supply-chain hygiene
 

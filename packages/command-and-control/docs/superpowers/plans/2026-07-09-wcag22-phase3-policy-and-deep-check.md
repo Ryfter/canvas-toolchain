@@ -1516,7 +1516,7 @@ git commit -m "feat(cc): canonical relPath keys for approvals + a11yAcknowledgme
 Run from the repo root:
 
 ```powershell
-# BSU/PII guard — must return nothing:
+# Institution/PII guard — must return nothing:
 git grep -niE "exampleu|bsu|krank|rank85|20244|20255" -- ':!*.lock' | Select-String -NotMatch "example"
 # Full verification floor:
 npm run build; npm test; npm run smoke:integration --workspace=packages/command-and-control
