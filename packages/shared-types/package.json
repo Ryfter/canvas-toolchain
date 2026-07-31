@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/shared-types",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "2.2.0",
   "description": "Shared TypeScript types across Curriculum Intelligence, Canvas Design Studio, and Command & Control",
   "type": "module",
   "main": "dist/index.js",
@@ -17,5 +17,16 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ryfter/canvas-toolchain.git",
+    "directory": "packages/shared-types"
+  },
+  "files": [
+    "dist"
+  ]
 }

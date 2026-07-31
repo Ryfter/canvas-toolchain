@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -40,6 +41,8 @@ import { BraveSearchAdapter } from './search/brave_search_adapter.js';
 import type { SearchClient } from './search/search_client.js';
 import { formatError } from './utils/errors.js';
 
+const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
+
 function getLlmClient(): LlmClient {
   const ollamaUrl = process.env.OLLAMA_BASE_URL;
   const ollamaModel = process.env.OLLAMA_MODEL;
@@ -54,7 +57,7 @@ function getSearchClient(): SearchClient | undefined {
 }
 
 const server = new Server(
-  { name: 'curriculum-intelligence', version: '1.0.0' },
+  { name: 'curriculum-intelligence', version: pkg.version },
   { capabilities: { tools: {} } }
 );
 

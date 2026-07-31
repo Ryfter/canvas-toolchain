@@ -1,6 +1,6 @@
 {
   "name": "canvas-toolchain",
-  "version": "1.0.0",
+  "version": "2.2.0",
   "description": "Monorepo for Curriculum Intelligence, Canvas Design Studio, and Command & Control MCP servers",
   "license": "MIT",
   "private": true,

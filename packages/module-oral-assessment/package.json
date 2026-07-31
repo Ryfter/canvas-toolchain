@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/module-oral-assessment",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "2.2.0",
   "description": "Oral Assessment module for canvas-toolchain (Rhetorix Lab recommended provider).",
   "type": "module",
   "main": "dist/index.js",
@@ -20,5 +20,18 @@
     "typescript": "^5.0.0",
     "vitest": "^3.2.6"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ryfter/canvas-toolchain.git",
+    "directory": "packages/module-oral-assessment"
+  },
+  "files": [
+    "dist"
+  ]
 }

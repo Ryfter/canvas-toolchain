@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/curriculum-intelligence",
   "license": "MIT",
-  "version": "1.1.0",
+  "version": "2.2.0",
   "description": "Curriculum Intelligence — MCP server that reads past course archives and lecture transcripts, scores topic currency, and plans the next semester",
   "type": "module",
   "main": "dist/index.js",
@@ -14,11 +14,6 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "files": [
-    "dist/",
-    "docs/",
-    "README.md"
-  ],
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
     "@canvas-toolchain/shared-llm": "*",
@@ -35,5 +30,17 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ryfter/canvas-toolchain.git",
+    "directory": "packages/curriculum-intelligence"
+  },
+  "files": [
+    "dist",
+    "python"
+  ]
 }

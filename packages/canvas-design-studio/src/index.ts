@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -48,6 +49,8 @@ import { fetchBrandColors } from './tools/fetch-brand-colors.js';
 import { renderWidget } from './tools/render-widget.js';
 import { publishWidget } from './tools/publish-widget.js';
 
+const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
+
 async function main() {
   if (!configExists()) {
     if (!process.stdin.isTTY) {
@@ -66,7 +69,7 @@ async function main() {
   }
 
   const server = new Server(
-    { name: 'canvas-design-studio', version: '0.1.0' },
+    { name: 'canvas-design-studio', version: pkg.version },
     { capabilities: { tools: {} } }
   );
 

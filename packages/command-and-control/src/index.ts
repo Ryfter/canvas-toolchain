@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -89,10 +90,12 @@ import { loadModules } from './modules/registry.js';
 import { checkChannelNotices, getChannelNotices } from './channel/notices.js';
 import { browseModuleCatalog, installModuleTool, uninstallModuleTool } from './tools/module_channel_tools.js';
 
+const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
+
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
 const server = new Server(
-  { name: 'command-and-control', version: '1.0.0' },
+  { name: 'canvas-toolchain', version: pkg.version },
   { capabilities: { tools: {} } }
 );
 
