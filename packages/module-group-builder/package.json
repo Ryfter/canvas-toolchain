@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/module-group-builder",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "2.2.0",
   "description": "Group Creator/Maintainer module for canvas-toolchain",
   "type": "module",
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@canvas-toolchain/module-contract": "*",
+    "@canvas-toolchain/module-contract": "2.2.0",
     "@modelcontextprotocol/sdk": "^1.10.0"
   },
   "devDependencies": {
@@ -19,5 +19,18 @@
     "typescript": "^5.0.0",
     "vitest": "^3.2.6"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ryfter/canvas-toolchain.git",
+    "directory": "packages/module-group-builder"
+  },
+  "files": [
+    "dist"
+  ]
 }

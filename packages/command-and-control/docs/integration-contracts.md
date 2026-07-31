@@ -17,9 +17,9 @@ Canvas Backup archive
 | App | Owns | Does not own |
 | --- | --- | --- |
 | Canvas Backup (`canvas-backup`) | Canvas API download, local archive, due-date manifests, optional Google Drive mirror | Topic analysis, content rewriting, page design |
-| Curriculum Intelligence (`curriculum-intelligence-mcp`) | Archive ingest, semester diff, topic currency, next-semester planning, CDS export | Canvas API download, Canvas-safe HTML rendering |
-| Canvas Design Studio (`canvas-design-mcp`) | Importing archive/course folders, Canvas-safe page generation, design review, optional publishing | Semester-level curriculum judgment |
-| Command & Control (`command-and-control-mcp`) | One MCP entrypoint, high-level workflow tools, model routing, cross-app status | Replacing the domain apps |
+| Curriculum Intelligence (`@canvas-toolchain/curriculum-intelligence`) | Archive ingest, semester diff, topic currency, next-semester planning, CDS export | Canvas API download, Canvas-safe HTML rendering |
+| Canvas Design Studio (`@canvas-toolchain/canvas-design-studio`) | Importing archive/course folders, Canvas-safe page generation, design review, optional publishing | Semester-level curriculum judgment |
+| Command & Control (`@canvas-toolchain/command-and-control`) | One MCP entrypoint, high-level workflow tools, model routing, cross-app status | Replacing the domain apps |
 
 ## File Contracts
 
@@ -93,8 +93,8 @@ Architecture review follow-ups from Gemini/Antigravity are triaged in `docs/arch
 
 Implemented:
 
-- Command & Control imports Curriculum Intelligence as `curriculum-intelligence-mcp`.
-- Command & Control imports Canvas Design Studio as `canvas-design-mcp`.
+- Command & Control imports Curriculum Intelligence as `@canvas-toolchain/curriculum-intelligence`.
+- Command & Control imports Canvas Design Studio as `@canvas-toolchain/canvas-design-studio`.
 - `import_course` and `generate_course` are real Design Studio pass-through tools.
 - `download_canvas_archive` invokes the Python Canvas Backup CLI through a small subprocess bridge.
 - `npm run smoke:integration` verifies archive analysis, Design Studio import, and HTML generation against fixtures.
@@ -138,14 +138,14 @@ This was an implementation decision, not a rejection of Go. The practical test i
 
 ## Verification
 
-**Build order matters.** `canvas-design-mcp` is a `file:` dependency with no `exports` map. C&C imports directly from `dist/`. Build Design Studio before running C&C tests or build for the first time, or after any Design Studio change:
+**Build order matters.** `@canvas-toolchain/canvas-design-studio` is a `file:` dependency with no `exports` map. C&C imports directly from `dist/`. Build Design Studio before running C&C tests or build for the first time, or after any Design Studio change:
 
 ```powershell
 cd D:\Dev\canvas-design-studio; npm run build
-cd D:\Dev\Command-and-Control-MCP; npm install
+cd D:\Dev\canvas-toolchain\packages\command-and-control; npm install
 ```
 
-Run from `D:\Dev\Command-and-Control-MCP`:
+Run from `D:\Dev\canvas-toolchain\packages\command-and-control`:
 
 ```powershell
 npm test

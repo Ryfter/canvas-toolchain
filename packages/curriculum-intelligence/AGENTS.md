@@ -244,8 +244,8 @@ The combined workflow lives in `D:\Dev\Command-and-Control-MCP`. Curriculum Inte
 
 Current integration decisions:
 
-- C&C imports `curriculum-intelligence-mcp` directly.
-- C&C imports `canvas-design-mcp` directly.
+- C&C imports `@canvas-toolchain/curriculum-intelligence` directly.
+- C&C imports `@canvas-toolchain/canvas-design-studio` directly.
 - C&C invokes Canvas Backup through its Python CLI bridge.
 - The cross-app fixture smoke is `cd D:\Dev\Command-and-Control-MCP; npm run smoke:integration`.
 - The durable data handoff into Design Studio remains the CDS `course/` folder created by `export_course_folder` or Design Studio `import_course`.

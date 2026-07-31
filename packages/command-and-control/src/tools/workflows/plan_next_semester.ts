@@ -1,7 +1,7 @@
-import { importPreviousShell } from 'curriculum-intelligence-mcp/dist/tools/import_previous_shell.js';
-import { fetchAcademicCalendar } from 'curriculum-intelligence-mcp/dist/tools/fetch_academic_calendar.js';
-import { shiftDates } from 'curriculum-intelligence-mcp/dist/tools/shift_dates.js';
-import { generateRecommendedOutline } from 'curriculum-intelligence-mcp/dist/tools/generate_recommended_outline.js';
+import { importPreviousShell } from '@canvas-toolchain/curriculum-intelligence/dist/tools/import_previous_shell.js';
+import { fetchAcademicCalendar } from '@canvas-toolchain/curriculum-intelligence/dist/tools/fetch_academic_calendar.js';
+import { shiftDates } from '@canvas-toolchain/curriculum-intelligence/dist/tools/shift_dates.js';
+import { generateRecommendedOutline } from '@canvas-toolchain/curriculum-intelligence/dist/tools/generate_recommended_outline.js';
 
 export interface PlanNextSemesterInput {
   courseId: string;

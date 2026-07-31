@@ -13,8 +13,8 @@ import { setupCc } from '../src/tools/setup_cc.js';
 import { getCcStatus } from '../src/tools/get_cc_status.js';
 import { analyzeCourse } from '../src/tools/workflows/analyze_course.js';
 import { planNextSemester } from '../src/tools/workflows/plan_next_semester.js';
-import { exportCourseFolder } from 'curriculum-intelligence-mcp/dist/tools/export_course_folder.js';
-import { setupCourse } from 'curriculum-intelligence-mcp/dist/tools/setup_course.js';
+import { exportCourseFolder } from '@canvas-toolchain/curriculum-intelligence/dist/tools/export_course_folder.js';
+import { setupCourse } from '@canvas-toolchain/curriculum-intelligence/dist/tools/setup_course.js';
 
 const SOURCE_SEM = 'Spring2026';
 const TARGET_SEM = 'Fall2026';

@@ -1,4 +1,4 @@
-# Installing canvas-design-mcp
+# Installing Canvas Toolchain — Design Studio
 
 This guide covers every supported MCP client. The server is a stdio MCP server — clients that speak stdio connect directly. Clients that require an HTTP/SSE bridge need an extra step.
 
@@ -99,10 +99,10 @@ After installing, run `node --version` to confirm Node 20 or later is active.
 ## Install Option A — npm Global Install
 
 ```bash
-npm install -g canvas-design-mcp
+npm install -g @canvas-toolchain/canvas-design-studio
 ```
 
-This puts the `canvas-design-mcp` binary on your PATH.
+This puts the `canvas-toolchain-design-studio` binary on your PATH.
 
 ---
 
@@ -111,10 +111,10 @@ This puts the `canvas-design-mcp` binary on your PATH.
 Run the binary once in a terminal to trigger the interactive wizard:
 
 ```bash
-canvas-design-mcp
+canvas-toolchain-design-studio
 ```
 
-The wizard asks for your Canvas instance URL, optional API token, and optional Panopto credentials. It writes config to `~/.canvas-design-mcp/institution.json`. Run this once — every client then shares the same config.
+The wizard asks for your Canvas instance URL, optional API token, and optional Panopto credentials. It writes config to `~/.canvas-design-mcp/institution.json` (legacy data-dir name for Design Studio config; not the npm package name). Run this once — every client then shares the same config.
 
 After setup, the binary exits the wizard and starts the MCP server (which clients connect to automatically). Close it with Ctrl+C — from this point on the MCP client launches it.
 
@@ -242,8 +242,8 @@ Restart the AI app after saving. From then on, the AI app starts the Docker cont
 ```json
 {
   "mcpServers": {
-    "canvas-design-mcp": {
-      "command": "canvas-design-mcp"
+    "canvas-toolchain-design-studio": {
+      "command": "canvas-toolchain-design-studio"
     }
   }
 }
@@ -263,9 +263,9 @@ VS Code uses a `servers` key (not `mcpServers`) and supports both workspace-leve
 ```json
 {
   "servers": {
-    "canvas-design-mcp": {
+    "canvas-toolchain-design-studio": {
       "type": "stdio",
-      "command": "canvas-design-mcp"
+      "command": "canvas-toolchain-design-studio"
     }
   }
 }
@@ -278,9 +278,9 @@ Add to your VS Code `settings.json`:
 {
   "mcp": {
     "servers": {
-      "canvas-design-mcp": {
+      "canvas-toolchain-design-studio": {
         "type": "stdio",
-        "command": "canvas-design-mcp"
+        "command": "canvas-toolchain-design-studio"
       }
     }
   }
@@ -298,8 +298,8 @@ Open the Command Palette → `MCP: List Servers` to verify the server appears an
 ```json
 {
   "mcpServers": {
-    "canvas-design-mcp": {
-      "command": "canvas-design-mcp"
+    "canvas-toolchain-design-studio": {
+      "command": "canvas-toolchain-design-studio"
     }
   }
 }
@@ -318,8 +318,8 @@ Restart Cursor after saving. Go to **Settings → MCP** to confirm the server sh
 ```json
 {
   "mcpServers": {
-    "canvas-design-mcp": {
-      "command": "canvas-design-mcp",
+    "canvas-toolchain-design-studio": {
+      "command": "canvas-toolchain-design-studio",
       "args": [],
       "env": {}
     }
@@ -338,19 +338,19 @@ Codex uses TOML, not JSON. Each server gets its own `[mcp_servers.<name>]` block
 **Config file:** `~/.codex/config.toml`
 
 ```toml
-[mcp_servers.canvas-design-mcp]
-command = "canvas-design-mcp"
+[mcp_servers.canvas-toolchain-design-studio]
+command = "canvas-toolchain-design-studio"
 args = []
 ```
 
 If you also want to pass environment variables (e.g., for debugging):
 
 ```toml
-[mcp_servers.canvas-design-mcp]
-command = "canvas-design-mcp"
+[mcp_servers.canvas-toolchain-design-studio]
+command = "canvas-toolchain-design-studio"
 args = []
 
-[mcp_servers.canvas-design-mcp.env]
+[mcp_servers.canvas-toolchain-design-studio.env]
 NODE_ENV = "production"
 ```
 
@@ -367,8 +367,8 @@ LM Studio (≥ 0.3.x) supports MCP via a config file.
 ```json
 {
   "mcpServers": {
-    "canvas-design-mcp": {
-      "command": "canvas-design-mcp",
+    "canvas-toolchain-design-studio": {
+      "command": "canvas-toolchain-design-studio",
       "args": []
     }
   }
@@ -390,8 +390,8 @@ AnythingLLM Desktop stores MCP config in:
 ```json
 {
   "mcpServers": {
-    "canvas-design-mcp": {
-      "command": "canvas-design-mcp",
+    "canvas-toolchain-design-studio": {
+      "command": "canvas-toolchain-design-studio",
       "args": []
     }
   }
@@ -408,8 +408,8 @@ Antigravity manages MCP config through its UI — there's no file to edit manual
 
 1. Open Antigravity and go to **Settings → Integrations → MCP Servers**
 2. Click **Add Server**
-3. Set **Name:** `canvas-design-mcp`
-4. Set **Command:** `canvas-design-mcp`
+3. Set **Name:** `canvas-toolchain-design-studio`
+4. Set **Command:** `canvas-toolchain-design-studio`
 5. Leave **Args** empty
 6. Click **Save**
 
@@ -430,7 +430,7 @@ pip install mcpo
 **Step 2 — Start the bridge:**
 
 ```bash
-mcpo --port 8808 -- canvas-design-mcp
+mcpo --port 8808 -- canvas-toolchain-design-studio
 ```
 
 Leave this running. It exposes the MCP server at `http://localhost:8808`.
@@ -452,7 +452,7 @@ If you run Open WebUI via Docker Compose, add an `mcpo` service:
 services:
   mcpo:
     image: ghcr.io/open-webui/mcpo:main
-    command: --port 8808 -- canvas-design-mcp
+    command: --port 8808 -- canvas-toolchain-design-studio
     volumes:
       - ~/.canvas-design-mcp:/root/.canvas-design-mcp:ro
     ports:
@@ -463,7 +463,7 @@ services:
 
 ### Ollama
 
-Ollama itself does not have a built-in MCP client. To use canvas-design-mcp with Ollama-hosted models, you need a front-end that supports both MCP and Ollama:
+Ollama itself does not have a built-in MCP client. To use Canvas Toolchain — Design Studio with Ollama-hosted models, you need a front-end that supports both MCP and Ollama:
 
 - **Open WebUI** (recommended) — add Ollama as the model backend and connect MCP via the HTTP bridge above
 - **AnythingLLM** — set Ollama as the LLM provider and configure MCP as shown above
@@ -489,14 +489,14 @@ ChatGPT's web interface does not support custom MCP servers. The Responses API (
 To pull the latest npm release:
 
 ```bash
-npm install -g canvas-design-mcp
+npm install -g @canvas-toolchain/canvas-design-studio
 ```
 
 Config in `~/.canvas-design-mcp/` is untouched by upgrades. Re-run the setup wizard only if you need to change your institution settings:
 
 ```bash
 rm ~/.canvas-design-mcp/institution.json
-canvas-design-mcp
+canvas-toolchain-design-studio
 ```
 
 ---
@@ -505,17 +505,17 @@ canvas-design-mcp
 
 **"No institution config found" on server start**
 
-The wizard hasn't been run yet, or config was deleted. Run `canvas-design-mcp` in a terminal to trigger the wizard.
+The wizard hasn't been run yet, or config was deleted. Run `canvas-toolchain-design-studio` in a terminal to trigger the wizard.
 
 **Server shows as disconnected in client**
 
-1. Confirm `canvas-design-mcp` is on your PATH: `which canvas-design-mcp` (macOS/Linux) or `where canvas-design-mcp` (Windows)
-2. If not found, re-run `npm install -g canvas-design-mcp`
+1. Confirm `canvas-toolchain-design-studio` is on your PATH: `which canvas-toolchain-design-studio` (macOS/Linux) or `where canvas-toolchain-design-studio` (Windows)
+2. If not found, re-run `npm install -g @canvas-toolchain/canvas-design-studio`
 3. Restart the client application after any config change
 
 **Canvas API errors ("Invalid access token")**
 
-Re-run the wizard to update your token: delete `~/.canvas-design-mcp/institution.json` and run `canvas-design-mcp`.
+Re-run the wizard to update your token: delete `~/.canvas-design-mcp/institution.json` and run `canvas-toolchain-design-studio`.
 
 **Panopto search returns no results**
 
@@ -523,7 +523,7 @@ Panopto credentials are optional. If not configured during wizard setup, Panopto
 
 **Windows path issues**
 
-Use PowerShell and confirm Node is on your PATH: `node --version`. If `npm install -g` succeeds but `canvas-design-mcp` isn't found, add the npm global bin directory to your PATH:
+Use PowerShell and confirm Node is on your PATH: `node --version`. If `npm install -g` succeeds but `canvas-toolchain-design-studio` isn't found, add the npm global bin directory to your PATH:
 
 ```powershell
 npm config get prefix

@@ -9,7 +9,7 @@ interface RenderMarkdownInput {
 }
 
 /** Render criteria into the rubric markdown schema that CDS's renderRubric
- *  (in canvas-design-mcp) consumes. Schema:
+ *  (in @canvas-toolchain/canvas-design-studio) consumes. Schema:
  *
  *    ---
  *    week: N
@@ -55,7 +55,7 @@ export function renderRubricMarkdown(input: RenderMarkdownInput): string {
 
 Use this rubric to self-check your work BEFORE you submit. The "Worked example" sections under each criterion are the most reliable guide — if your work matches the worked-example pattern, you're on track.
 
-You can also download this rubric as a markdown file (link at the top of the page) and paste it into ChatGPT, Claude, or any LLM along with your work for personalized help. Don't outsource your thinking — use the rubric as a starting point for a conversation about what to fix.
+You can also download this rubric as a markdown file (link at the top of the page) and paste it into any AI assistant along with your work for personalized help. Don't outsource your thinking — use the rubric as a starting point for a conversation about what to fix.
 `;
 
   return [fm.join('\n'), '', body, notes].join('\n');

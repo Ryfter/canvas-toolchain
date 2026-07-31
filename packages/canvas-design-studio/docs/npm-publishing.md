@@ -1,10 +1,10 @@
 # npm Publishing Runbook
 
-Canvas Design Studio is published on npm as `canvas-design-mcp`.
+Canvas Design Studio is published on npm as `@canvas-toolchain/canvas-design-studio`.
 
 Current verified package state:
 
-- npm package: `canvas-design-mcp`
+- npm package: `@canvas-toolchain/canvas-design-studio`
 - Current version: `0.9.5`
 - Current dist-tag: `latest -> 0.9.5`
 - Public source repository: `https://github.com/Ryfter/canvas-design-studio`
@@ -13,7 +13,7 @@ Current verified package state:
 Professors can install from npm:
 
 ```bash
-npm install -g canvas-design-mcp
+npm install -g @canvas-toolchain/canvas-design-studio
 ```
 
 ## How Publishing Works
@@ -50,7 +50,7 @@ The public GitHub repository has an Actions secret named `NPM_TOKEN`.
 
 Do not store the token value in the repository or docs. If the secret must be replaced:
 
-1. Create an npm token that can publish `canvas-design-mcp`.
+1. Create an npm token that can publish `@canvas-toolchain/canvas-design-studio`.
 2. Use a token mode that works with automation and does not require an interactive one-time password during `npm publish`.
 3. Save it in the public GitHub repo as `NPM_TOKEN`.
 
@@ -102,7 +102,7 @@ gh run watch <run-id> --repo Ryfter/canvas-design-studio --exit-status
 Verify npm:
 
 ```powershell
-npm view canvas-design-mcp version dist-tags repository --json
+npm view @canvas-toolchain/canvas-design-studio version dist-tags repository --json
 ```
 
 ## Historical Release Notes

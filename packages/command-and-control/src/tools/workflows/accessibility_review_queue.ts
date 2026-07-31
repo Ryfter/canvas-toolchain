@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import {
   loadReviewQueue, resolveReviewEntry, sortWorstFirst,
   type ReviewQueueEntry,
-} from 'canvas-design-mcp/dist/tools/a11y/records.js';
+} from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/records.js';
 
 export interface AccessibilityReviewQueueInput {
   courseDir: string;

@@ -213,7 +213,7 @@ export const DOWNLOADER_TOOLS: PassthroughTool[] = [
     handler: () => ({
       error:
         'Bulk Panopto transcript download is not implemented in Canvas Backup yet. ' +
-        'Use canvas-design-mcp/fetch_panopto_captions for one video, or ingest existing .vtt/.srt files with Curriculum Intelligence.',
+        'Use @canvas-toolchain/canvas-design-studio/fetch_panopto_captions for one video, or ingest existing .vtt/.srt files with Curriculum Intelligence.',
     }),
   },
 ];

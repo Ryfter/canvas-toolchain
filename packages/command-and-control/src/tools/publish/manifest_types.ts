@@ -1,4 +1,4 @@
-import type { PageType } from 'canvas-design-mcp/dist/course-types.js';
+import type { PageType } from '@canvas-toolchain/canvas-design-studio/dist/course-types.js';
 
 export type WarningKind = 'ferpa' | 'a11y' | 'validation';
 export type WarningSeverity = 'block' | 'warn';

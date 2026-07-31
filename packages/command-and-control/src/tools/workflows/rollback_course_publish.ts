@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { restorePage } from 'canvas-design-mcp/dist/tools/restore-page.js';
-import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
-import { CanvasApiClient } from 'canvas-design-mcp/dist/canvas-api.js';
-import { publishWidget as publishWidgetReal } from 'canvas-design-mcp/dist/tools/publish-widget.js';
+import { restorePage } from '@canvas-toolchain/canvas-design-studio/dist/tools/restore-page.js';
+import { updateAssignmentDescription } from '@canvas-toolchain/canvas-design-studio/dist/tools/update-assignment-description.js';
+import { CanvasApiClient } from '@canvas-toolchain/canvas-design-studio/dist/canvas-api.js';
+import { publishWidget as publishWidgetReal } from '@canvas-toolchain/canvas-design-studio/dist/tools/publish-widget.js';
 import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
 import { readManifest, readState, snapshotDir, readPriorHtml, writeState, snapshotsRootFor, snapshotDirFor } from '../publish/snapshot_store.js';
 import { readPublishStateMeta, updateCurrentlyLive } from '../publish/state_meta.js';
@@ -84,7 +84,7 @@ async function deleteCanvasFile(host: string, token: string, fileId: number): Pr
 /** Optional DI hooks so tests can stub Canvas writes without round-tripping. */
 export interface RollbackHooks {
   deleteCanvasFile?: typeof deleteCanvasFile;
-  /** Override the publish_widget function (canvas-design-mcp). Tests inject a mock
+  /** Override the publish_widget function (@canvas-toolchain/canvas-design-studio). Tests inject a mock
    *  to avoid round-tripping through real Canvas Files when restoring prior content. */
   publishWidget?: typeof publishWidgetReal;
 }

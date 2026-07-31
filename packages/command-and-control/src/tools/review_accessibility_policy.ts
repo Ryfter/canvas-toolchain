@@ -1,6 +1,6 @@
 import {
   loadAccessibilityPolicy, saveAccessibilityPolicy, type PolicyDeps,
-} from 'canvas-design-mcp/dist/tools/a11y/policy.js';
+} from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js';
 import {
   DEFAULT_ACCESSIBILITY_POLICY, policyNudge,
   type AccessibilityPolicy, type RequiredLevel,

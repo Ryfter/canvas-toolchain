@@ -1,6 +1,6 @@
 {
-  "name": "canvas-toolchain",
-  "version": "1.0.0",
+  "name": "canvas-toolchain-monorepo",
+  "version": "2.2.0",
   "description": "Monorepo for Curriculum Intelligence, Canvas Design Studio, and Command & Control MCP servers",
   "license": "MIT",
   "private": true,
@@ -14,6 +14,7 @@
     "verify:modules": "node scripts/verify-module-artifacts.mjs",
     "docs:modules": "node scripts/generate-module-docs.mjs",
     "test": "npm run test --workspaces --if-present",
+    "prepare": "npm run build",
     "dev:ci": "npm run dev --workspace=packages/curriculum-intelligence",
     "dev:cds": "npm run dev --workspace=packages/canvas-design-studio",
     "dev:cc": "npm run dev --workspace=packages/command-and-control"

@@ -1,6 +1,6 @@
-import { scanFerpa } from 'canvas-design-mcp/dist/tools/publish.js';
-import { validateCanvasHtml } from 'canvas-design-mcp/dist/tools/validate.js';
-import { runPolicyConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/policy.js';
+import { scanFerpa } from '@canvas-toolchain/canvas-design-studio/dist/tools/publish.js';
+import { validateCanvasHtml } from '@canvas-toolchain/canvas-design-studio/dist/tools/validate.js';
+import { runPolicyConformanceCheck } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js';
 import { isBorderlineFinding } from '@canvas-toolchain/shared-types';
 import type { Warning } from './manifest_types.js';
 

@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/module-contract",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "2.2.0",
   "description": "Shared interfaces for canvas-toolchain plug-in modules",
   "type": "module",
   "main": "dist/index.js",
@@ -20,5 +20,16 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ryfter/canvas-toolchain.git",
+    "directory": "packages/module-contract"
+  },
+  "files": [
+    "dist"
+  ]
 }

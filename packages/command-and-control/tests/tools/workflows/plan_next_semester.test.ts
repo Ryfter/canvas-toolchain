@@ -19,16 +19,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-vi.mock('curriculum-intelligence-mcp/dist/tools/import_previous_shell.js', () => ({
+vi.mock('@canvas-toolchain/curriculum-intelligence/dist/tools/import_previous_shell.js', () => ({
   importPreviousShell: vi.fn().mockReturnValue({ briefsCreated: 15, briefPaths: [] }),
 }));
-vi.mock('curriculum-intelligence-mcp/dist/tools/fetch_academic_calendar.js', () => ({
+vi.mock('@canvas-toolchain/curriculum-intelligence/dist/tools/fetch_academic_calendar.js', () => ({
   fetchAcademicCalendar: vi.fn().mockResolvedValue({ semesterId: 'Fall2026', classesBegin: '2026-08-25', breaks: [] }),
 }));
-vi.mock('curriculum-intelligence-mcp/dist/tools/shift_dates.js', () => ({
+vi.mock('@canvas-toolchain/curriculum-intelligence/dist/tools/shift_dates.js', () => ({
   shiftDates: vi.fn().mockReturnValue({ shiftsApplied: 15, collisions: 0, shiftedPaths: [] }),
 }));
-vi.mock('curriculum-intelligence-mcp/dist/tools/generate_recommended_outline.js', () => ({
+vi.mock('@canvas-toolchain/curriculum-intelligence/dist/tools/generate_recommended_outline.js', () => ({
   generateRecommendedOutline: vi.fn().mockReturnValue({ topics: new Array(16), outlinePath: '/tmp/plan-outline.md' }),
 }));
 

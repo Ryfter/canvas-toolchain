@@ -12,6 +12,7 @@ Parent: [Canvas Design Knowledge Base](../README.md) | [KB Overview](KB-Overview
 ## 2026-05-10 - Public Release v0.9.3
 
 - Published `canvas-design-mcp@0.9.3` to npm with GitHub Actions provenance.
+  *(renamed to `@canvas-toolchain/canvas-design-studio` in v2.2.0)*
 - Published the release Docker image to GitHub Container Registry.
 - Added npm package repository metadata required for provenance validation.
 

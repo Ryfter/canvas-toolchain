@@ -1,5 +1,7 @@
 import * as cheerio from 'cheerio';
-import { canvasSafeTransform, auditAccessibility } from 'canvas-design-mcp';
+// Import tool modules directly — package main starts an MCP server on load.
+import { canvasSafeTransform } from '@canvas-toolchain/canvas-design-studio/dist/utils/transform.js';
+import { auditAccessibility } from '@canvas-toolchain/canvas-design-studio/dist/tools/accessibility.js';
 import { installResourceAtomically } from '../registry/local_registry.js';
 import type { ResourceManifest } from '../registry/local_registry.js';
 

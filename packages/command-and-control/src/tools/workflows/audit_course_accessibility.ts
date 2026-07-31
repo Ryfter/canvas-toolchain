@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { runPolicyConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/policy.js';
-import { upsertReviewEntry, clearReviewEntryIfClean, loadReviewQueue } from 'canvas-design-mcp/dist/tools/a11y/records.js';
+import { runPolicyConformanceCheck } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js';
+import { upsertReviewEntry, clearReviewEntryIfClean, loadReviewQueue } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/records.js';
 import type { ConformanceReport } from '@canvas-toolchain/shared-types';
 
 export interface AuditCourseAccessibilityInput {

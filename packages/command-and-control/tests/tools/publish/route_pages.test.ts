@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { routePages, type RoutedPages } from '../../../src/tools/publish/route_pages.js';
-import type { GenerateCourseResult, GeneratePageResult } from 'canvas-design-mcp/dist/course-types.js';
+import type { GenerateCourseResult, GeneratePageResult } from '@canvas-toolchain/canvas-design-studio/dist/course-types.js';
 
 function page(pageType: GeneratePageResult['pageType'], filename: string): GeneratePageResult {
   return { html: '<p>x</p>', filename, weekNumber: 1, pageType, savedTo: `/tmp/${filename}` };

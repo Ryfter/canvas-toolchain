@@ -12,9 +12,9 @@
 
 Issue #75 originally framed Rhetorix Lab integration as "scope intentionally open," blocked on a conversation with the tool's author, because the public marketing pages show no API/LTI/export. A thorough pass on **2026-06-12** changed that picture.
 
-**What Rhetorix Lab is.** An "AI-irrelevant by design" video-based assessment platform — asynchronous video capture with AI-enhanced grading, for oral exams, quizzes, journals, and short essays. It confirms genuine student understanding rather than detecting AI. Built by a Boise State professor; `rhetorixlab.example.edu` is the BSU deployment, `rhetorixlab.io` is the productized public version (tiers: Foundations $0/student, Scholar $9.99/student, Campus custom).
+**What Rhetorix Lab is.** An "AI-irrelevant by design" video-based assessment platform — asynchronous video capture with AI-enhanced grading, for oral exams, quizzes, journals, and short essays. It confirms genuine student understanding rather than detecting AI. Built by a university professor; `rhetorixlab.example.edu` is the institutional deployment, `rhetorixlab.io` is the productized public version (tiers: Foundations $0/student, Scholar $9.99/student, Campus custom).
 
-**The decisive finding (BSU instructor resources page).** Rhetorix Lab is **already an LTI tool with native Canvas integration**:
+**The decisive finding (the university's instructor-resources page).** Rhetorix Lab is **already an LTI tool with native Canvas integration**:
 
 - External Tool Link: `https://rhetorixlab.example.edu/lti/launch` — a standard LTI launch endpoint.
 - Instructors can "create assignments in Canvas that are linked to Rhetorix Lab assessments" and "link existing Rhetorix Lab assessments to new Canvas assignments."

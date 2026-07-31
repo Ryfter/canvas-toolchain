@@ -1,12 +1,12 @@
 import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { getTranscriptionEngine } from 'curriculum-intelligence-mcp/dist/transcription/faster_whisper_engine.js';
+import { getTranscriptionEngine } from '@canvas-toolchain/curriculum-intelligence/dist/transcription/faster_whisper_engine.js';
 import {
   compareTranscripts,
   renderComparisonMd,
   type SuggestedCorrection,
-} from 'curriculum-intelligence-mcp/dist/transcription/compare.js';
-import { parseVtt } from 'curriculum-intelligence-mcp/dist/parsers/transcript_vtt.js';
+} from '@canvas-toolchain/curriculum-intelligence/dist/transcription/compare.js';
+import { parseVtt } from '@canvas-toolchain/curriculum-intelligence/dist/parsers/transcript_vtt.js';
 import { fetchSessionAudio, loadPanoptoConfig, loadPanoptoVocab } from '@canvas-toolchain/module-video';
 import { loadTranscriptConfig } from '../setup_transcript_source.js';
 

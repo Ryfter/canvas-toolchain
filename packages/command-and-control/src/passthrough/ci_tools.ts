@@ -1,29 +1,29 @@
-import { setupCourse } from 'curriculum-intelligence-mcp/dist/tools/setup_course.js';
-import { getCourseState } from 'curriculum-intelligence-mcp/dist/tools/get_course_state.js';
-import { ingestCanvasArchive } from 'curriculum-intelligence-mcp/dist/tools/ingest_canvas_archive.js';
-import { listAssignments } from 'curriculum-intelligence-mcp/dist/tools/list_assignments.js';
-import { listPages } from 'curriculum-intelligence-mcp/dist/tools/list_pages.js';
-import { listModules } from 'curriculum-intelligence-mcp/dist/tools/list_modules.js';
-import { listResources } from 'curriculum-intelligence-mcp/dist/tools/list_resources.js';
-import { diffSemesters } from 'curriculum-intelligence-mcp/dist/tools/diff_semesters.js';
-import { ingestTranscripts } from 'curriculum-intelligence-mcp/dist/tools/ingest_transcripts.js';
-import { mapTranscriptsToWeeks } from 'curriculum-intelligence-mcp/dist/tools/map_transcripts_to_weeks.js';
-import { extractLectureTopics } from 'curriculum-intelligence-mcp/dist/tools/extract_lecture_topics.js';
-import { findOffSyllabusTopics } from 'curriculum-intelligence-mcp/dist/tools/find_off_syllabus_topics.js';
-import { buildQuoteBank } from 'curriculum-intelligence-mcp/dist/tools/build_quote_bank.js';
-import { fetchNewsFeed } from 'curriculum-intelligence-mcp/dist/tools/fetch_news_feed.js';
-import { scanRecentDevelopments } from 'curriculum-intelligence-mcp/dist/tools/scan_recent_developments.js';
-import { suggestTopics } from 'curriculum-intelligence-mcp/dist/tools/suggest_topics.js';
-import { scoreTopicCurrency } from 'curriculum-intelligence-mcp/dist/tools/score_topic_currency.js';
-import { recommendForTopic } from 'curriculum-intelligence-mcp/dist/tools/recommend_for_topic.js';
-import { generateIdeasFile } from 'curriculum-intelligence-mcp/dist/tools/generate_ideas_file.js';
-import { importPreviousShell } from 'curriculum-intelligence-mcp/dist/tools/import_previous_shell.js';
-import { fetchAcademicCalendar } from 'curriculum-intelligence-mcp/dist/tools/fetch_academic_calendar.js';
-import { shiftDates } from 'curriculum-intelligence-mcp/dist/tools/shift_dates.js';
-import { generateRecommendedOutline } from 'curriculum-intelligence-mcp/dist/tools/generate_recommended_outline.js';
-import { draftAssignmentBrief } from 'curriculum-intelligence-mcp/dist/tools/draft_assignment_brief.js';
-import { updateExamples } from 'curriculum-intelligence-mcp/dist/tools/update_examples.js';
-import { exportCourseFolder } from 'curriculum-intelligence-mcp/dist/tools/export_course_folder.js';
+import { setupCourse } from '@canvas-toolchain/curriculum-intelligence/dist/tools/setup_course.js';
+import { getCourseState } from '@canvas-toolchain/curriculum-intelligence/dist/tools/get_course_state.js';
+import { ingestCanvasArchive } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_canvas_archive.js';
+import { listAssignments } from '@canvas-toolchain/curriculum-intelligence/dist/tools/list_assignments.js';
+import { listPages } from '@canvas-toolchain/curriculum-intelligence/dist/tools/list_pages.js';
+import { listModules } from '@canvas-toolchain/curriculum-intelligence/dist/tools/list_modules.js';
+import { listResources } from '@canvas-toolchain/curriculum-intelligence/dist/tools/list_resources.js';
+import { diffSemesters } from '@canvas-toolchain/curriculum-intelligence/dist/tools/diff_semesters.js';
+import { ingestTranscripts } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js';
+import { mapTranscriptsToWeeks } from '@canvas-toolchain/curriculum-intelligence/dist/tools/map_transcripts_to_weeks.js';
+import { extractLectureTopics } from '@canvas-toolchain/curriculum-intelligence/dist/tools/extract_lecture_topics.js';
+import { findOffSyllabusTopics } from '@canvas-toolchain/curriculum-intelligence/dist/tools/find_off_syllabus_topics.js';
+import { buildQuoteBank } from '@canvas-toolchain/curriculum-intelligence/dist/tools/build_quote_bank.js';
+import { fetchNewsFeed } from '@canvas-toolchain/curriculum-intelligence/dist/tools/fetch_news_feed.js';
+import { scanRecentDevelopments } from '@canvas-toolchain/curriculum-intelligence/dist/tools/scan_recent_developments.js';
+import { suggestTopics } from '@canvas-toolchain/curriculum-intelligence/dist/tools/suggest_topics.js';
+import { scoreTopicCurrency } from '@canvas-toolchain/curriculum-intelligence/dist/tools/score_topic_currency.js';
+import { recommendForTopic } from '@canvas-toolchain/curriculum-intelligence/dist/tools/recommend_for_topic.js';
+import { generateIdeasFile } from '@canvas-toolchain/curriculum-intelligence/dist/tools/generate_ideas_file.js';
+import { importPreviousShell } from '@canvas-toolchain/curriculum-intelligence/dist/tools/import_previous_shell.js';
+import { fetchAcademicCalendar } from '@canvas-toolchain/curriculum-intelligence/dist/tools/fetch_academic_calendar.js';
+import { shiftDates } from '@canvas-toolchain/curriculum-intelligence/dist/tools/shift_dates.js';
+import { generateRecommendedOutline } from '@canvas-toolchain/curriculum-intelligence/dist/tools/generate_recommended_outline.js';
+import { draftAssignmentBrief } from '@canvas-toolchain/curriculum-intelligence/dist/tools/draft_assignment_brief.js';
+import { updateExamples } from '@canvas-toolchain/curriculum-intelligence/dist/tools/update_examples.js';
+import { exportCourseFolder } from '@canvas-toolchain/curriculum-intelligence/dist/tools/export_course_folder.js';
 import type { TaskCategory } from '../types.js';
 
 export interface PassthroughTool {
@@ -187,7 +187,7 @@ export const CI_TOOLS: PassthroughTool[] = [
   {
     name: 'extract_lecture_topics',
     taskCategory: 'fast',
-    description: 'Return lecture chunks shaped for Claude to reason over.',
+    description: 'Return lecture chunks shaped for the model to reason over.',
     inputSchema: {
       type: 'object',
       required: ['courseId', 'semesterId'],
@@ -251,7 +251,7 @@ export const CI_TOOLS: PassthroughTool[] = [
   {
     name: 'scan_recent_developments',
     taskCategory: 'judgment',
-    description: 'Ask Claude what\'s new in a given topic area since a date.',
+    description: 'Ask the model what\'s new in a given topic area since a date.',
     inputSchema: {
       type: 'object',
       required: ['courseId', 'topicArea'],

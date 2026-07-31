@@ -1,16 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('canvas-design-mcp/dist/tools/publish.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/publish.js', () => ({
   scanFerpa: vi.fn((html: string) =>
     html.includes('B12345678') ? { reason: 'possible University student ID', line: 1 } : undefined,
   ),
 }));
-vi.mock('canvas-design-mcp/dist/tools/validate.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/validate.js', () => ({
   validateCanvasHtml: vi.fn((html: string) =>
     html.includes('<script>') ? { valid: false, violations: [{ message: 'script tag', line: 1 }] } : { valid: true, violations: [] },
   ),
 }));
-import { runConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/conformance.js';
+import { runConformanceCheck } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/conformance.js';
 import { scanWarnings } from '../../../src/tools/publish/scan_warnings.js';
 
 describe('scanWarnings', () => {

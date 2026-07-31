@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('canvas-design-mcp/dist/tools/generate-page.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/generate-page.js', () => ({
   generatePage: vi.fn(),
 }));
-vi.mock('canvas-design-mcp/dist/tools/accessibility.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/accessibility.js', () => ({
   auditAccessibility: vi.fn(),
 }));
-vi.mock('canvas-design-mcp/dist/tools/redesign.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/redesign.js', () => ({
   redesignCanvasPage: vi.fn(),
 }));
-vi.mock('canvas-design-mcp/dist/tools/validate.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/validate.js', () => ({
   validateCanvasHtml: vi.fn(),
 }));
 vi.mock('node:fs', async (importOriginal) => {
@@ -17,10 +17,10 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, writeFileSync: vi.fn() };
 });
 
-import { generatePage } from 'canvas-design-mcp/dist/tools/generate-page.js';
-import { auditAccessibility } from 'canvas-design-mcp/dist/tools/accessibility.js';
-import { redesignCanvasPage } from 'canvas-design-mcp/dist/tools/redesign.js';
-import { validateCanvasHtml } from 'canvas-design-mcp/dist/tools/validate.js';
+import { generatePage } from '@canvas-toolchain/canvas-design-studio/dist/tools/generate-page.js';
+import { auditAccessibility } from '@canvas-toolchain/canvas-design-studio/dist/tools/accessibility.js';
+import { redesignCanvasPage } from '@canvas-toolchain/canvas-design-studio/dist/tools/redesign.js';
+import { validateCanvasHtml } from '@canvas-toolchain/canvas-design-studio/dist/tools/validate.js';
 import { writeFileSync } from 'node:fs';
 import { renderPageWithA11y } from '../../src/lib/page-renderer.js';
 

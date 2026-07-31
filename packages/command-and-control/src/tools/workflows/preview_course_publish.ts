@@ -1,8 +1,8 @@
-import { generateCourse } from 'canvas-design-mcp/dist/tools/generate-course.js';
-import { titleSimilarity } from 'canvas-design-mcp/dist/tools/publish.js';
-import { listCanvasPages, listCanvasAssignments, type CanvasAssignment } from 'canvas-design-mcp/dist/tools/list-canvas-objects.js';
-import { CanvasApiClient } from 'canvas-design-mcp/dist/canvas-api.js';
-import type { CanvasPage } from 'canvas-design-mcp/dist/types.js';
+import { generateCourse } from '@canvas-toolchain/canvas-design-studio/dist/tools/generate-course.js';
+import { titleSimilarity } from '@canvas-toolchain/canvas-design-studio/dist/tools/publish.js';
+import { listCanvasPages, listCanvasAssignments, type CanvasAssignment } from '@canvas-toolchain/canvas-design-studio/dist/tools/list-canvas-objects.js';
+import { CanvasApiClient } from '@canvas-toolchain/canvas-design-studio/dist/canvas-api.js';
+import type { CanvasPage } from '@canvas-toolchain/canvas-design-studio/dist/types.js';
 import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
 import { routePages } from '../publish/route_pages.js';
 import { buildDiffSummary, computeUnifiedDiff } from '../publish/build_diff_summary.js';

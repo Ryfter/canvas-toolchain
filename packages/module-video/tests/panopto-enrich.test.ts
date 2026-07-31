@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('curriculum-intelligence-mcp/dist/parsers/transcript_vtt.js', () => ({
+vi.mock('@canvas-toolchain/curriculum-intelligence/dist/parsers/transcript_vtt.js', () => ({
   parseVtt: vi.fn(),
 }));
 
-import { parseVtt } from 'curriculum-intelligence-mcp/dist/parsers/transcript_vtt.js';
+import { parseVtt } from '@canvas-toolchain/curriculum-intelligence/dist/parsers/transcript_vtt.js';
 import {
   BUILTIN_FILLER_WORDS,
   enrichVtt,

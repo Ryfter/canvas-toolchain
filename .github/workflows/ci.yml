@@ -16,10 +16,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 20 = engines floor; 24 = the runtime bundled by the installer.
+        # 20 = engines floor; 24 = the runtime bundled by the installer; 26 = current.
         # Node 18 is NOT supported: cheerio -> undici 7 requires the global
         # File API, which landed in Node 20.
-        node: ['20', '24']
+        node: ['20', '24', '26']
     steps:
       - uses: actions/checkout@v6
 
@@ -30,6 +30,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Institution scrub guard
+        run: node scripts/check-institution-scrub.mjs
 
       - name: Build all packages
         run: npm run build
@@ -64,3 +67,21 @@ jobs:
 
       - name: Verify committed module artifacts match the source and the catalog
         run: npm run verify:modules
+
+  from-source-onboarding:
+    name: npx canvas-toolchain from a fresh copy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      # Mirror a colleague's real folder: spaces and parentheses in the path.
+      - name: Copy tree to a hostile path and install
+        run: |
+          DEST="$RUNNER_TEMP/Canvas Toolchain (Copy)/canvas-toolchain"
+          mkdir -p "$DEST"
+          git archive HEAD | tar -x -C "$DEST"
+          cd "$DEST"
+          npm install
+          node scripts/smoke-npx.mjs npx canvas-toolchain

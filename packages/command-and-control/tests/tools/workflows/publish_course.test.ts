@@ -3,14 +3,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-vi.mock('canvas-design-mcp/dist/tools/publish.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/publish.js', () => ({
   publishToCanvas: vi.fn(),
   titleSimilarity: vi.fn(),
 }));
-vi.mock('canvas-design-mcp/dist/tools/update-assignment-description.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/update-assignment-description.js', () => ({
   updateAssignmentDescription: vi.fn(),
 }));
-vi.mock('canvas-design-mcp/dist/canvas-api.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/canvas-api.js', () => ({
   CanvasApiClient: vi.fn().mockImplementation(() => ({})),
   CanvasApiError: class extends Error {
     constructor(public status: number, public code: string, message: string, public details?: unknown) { super(message); }
@@ -26,8 +26,8 @@ vi.mock('../../../src/tools/publish/git_state.js', () => ({
   gitPushTag: vi.fn(() => ({ ok: true })),
 }));
 
-import { publishToCanvas } from 'canvas-design-mcp/dist/tools/publish.js';
-import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
+import { publishToCanvas } from '@canvas-toolchain/canvas-design-studio/dist/tools/publish.js';
+import { updateAssignmentDescription } from '@canvas-toolchain/canvas-design-studio/dist/tools/update-assignment-description.js';
 import {
   createSnapshotDir, writeManifest, writeState, writePriorHtml, writeNewHtml,
 } from '../../../src/tools/publish/snapshot_store.js';

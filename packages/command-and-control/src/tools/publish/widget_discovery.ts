@@ -1,7 +1,7 @@
 /** Widget discovery + iframe-src substitution for publish_course.
  *
  *  Pages rendered by generate_course go through substituteWidgetPlaceholders
- *  (in canvas-design-mcp) which replaces every `{{ widget:<id> }}` in the
+ *  (in @canvas-toolchain/canvas-design-studio) which replaces every `{{ widget:<id> }}` in the
  *  source markdown with a self-contained <iframe> pointing at
  *  `<pageSlug>/widgets/<id>.html` (relative path).
  *
@@ -18,7 +18,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { InteractiveSpec } from 'canvas-design-mcp/dist/tools/widget/types.js';
+import type { InteractiveSpec } from '@canvas-toolchain/canvas-design-studio/dist/tools/widget/types.js';
 
 export interface WidgetRef {
   /** Page slug — first path component of the iframe src (e.g., "assignment"). */

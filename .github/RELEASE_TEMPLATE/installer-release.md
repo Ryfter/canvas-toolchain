@@ -41,7 +41,7 @@ A small hardening release — no new tools, no setup changes, nothing to migrate
 
 ### Safer storage for your Canvas credentials
 
-- **The institution config is now written atomically with owner-only permissions.** `~/.canvas-design-mcp/institution.json` holds your Canvas API token (and WAVE key, if you set one). It is now saved via a temp-file-plus-rename write with `0o600` permissions on Mac/Linux, so a crash mid-save can never leave a partial or world-readable config. Existing configs keep working unchanged. ([#119](https://github.com/Ryfter/canvas-toolchain/pull/119))
+- **The institution config is now written atomically with owner-only permissions.** `~/.canvas-design-mcp/institution.json` (legacy Design Studio data dir) holds your Canvas API token (and WAVE key, if you set one). It is now saved via a temp-file-plus-rename write with `0o600` permissions on Mac/Linux, so a crash mid-save can never leave a partial or world-readable config. Existing configs keep working unchanged. ([#119](https://github.com/Ryfter/canvas-toolchain/pull/119))
 - **`CANVAS_DESIGN_HOME`** — the environment variable the coordinator server already honored for this directory now works everywhere, letting tests and multi-profile setups point the toolchain at an alternate home.
 
 ### Generic examples throughout
@@ -196,7 +196,7 @@ Two more capability **modules** land on the plug-in architecture, completing the
 ### PeerAssessment.com Export module (`module-peerassessment`)
 
 - **`build_peerassessment_import`** — turn a Canvas group set into the exact import CSV PeerAssessment.com expects (`Team,Login ID,Email,First Name,Last Name,Student ID #`). Canvas-first field sourcing, with the roster vault + PeopleSoft export filling the login/SIS columns Canvas withholds. A `dryRun` flag produces a full pre-upload validation report (incomplete students, ungrouped students, duplicate emails, multi-group students) without writing a file.
-- **Import-only and FERPA-aware.** The module produces an upload file only — it never writes Canvas or the vault, and grade round-trip is an explicit non-goal. PII is used transiently at build time; the only at-rest artifact is the import CSV the instructor uploads to a BSU-contracted, FERPA-approved vendor. Output is RFC-4180 escaped with a CSV formula-injection guard.
+- **Import-only and FERPA-aware.** The module produces an upload file only — it never writes Canvas or the vault, and grade round-trip is an explicit non-goal. PII is used transiently at build time; the only at-rest artifact is the import CSV the instructor uploads to an institution-contracted, FERPA-approved vendor. Output is RFC-4180 escaped with a CSV formula-injection guard.
 
 ### Dependency & supply-chain hygiene
 

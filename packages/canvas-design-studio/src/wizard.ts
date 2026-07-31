@@ -24,19 +24,19 @@ function deriveColors(primary: string, secondary: string): InstitutionConfig['co
 function printMcpConfig(): void {
   const config = {
     mcpServers: {
-      'canvas-design': {
+      'canvas-toolchain-design-studio': {
         command: 'npx',
-        args: ['canvas-design-mcp'],
+        args: ['canvas-toolchain-design-studio'],
       },
     },
   };
 
   console.log('\n┌─────────────────────────────────────────────────────────┐');
-  console.log('│  Add this to your Claude Code MCP settings:             │');
+  console.log('│  Add this to your MCP client settings:                  │');
   console.log('└─────────────────────────────────────────────────────────┘\n');
   console.log(JSON.stringify(config, null, 2));
-  console.log('\nRestart Claude Code (or your MCP host) to activate.\n');
-  console.log('Works in: Claude Code · VS Code · ChatGPT Codex · any MCP host\n');
+  console.log('\nRestart your MCP client to activate.\n');
+  console.log('Works in: Claude · Codex · Gemini · Cursor · VS Code · any MCP host\n');
 }
 
 export function formatWorksheetSummary(defaults: WizardDefaults): string {
@@ -275,7 +275,7 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
 
   if (!kbResult.exists) {
     const buildKb = await confirm({
-      message: 'Would you like to build your teaching philosophy KB now?\nClaude uses it to tailor every Canvas page to your style.\n(You can skip and build it in Claude later.)',
+      message: 'Would you like to build your teaching philosophy KB now?\nThe model uses it to tailor every Canvas page to your style.\n(You can skip and build it with your AI assistant later.)',
       default: true,
     });
 
@@ -306,7 +306,7 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
       console.log('✓ Teaching philosophy KB saved');
     } else {
       savePhilosophyKb(PHILOSOPHY_TEMPLATE);
-      console.log('✓ Philosophy KB template saved — build it in Claude anytime');
+      console.log('✓ Philosophy KB template saved — build it with your AI assistant anytime');
     }
   } else {
     const updateKb = await confirm({
@@ -330,7 +330,7 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
           validate: (v) => v.trim().length > 0 || 'Course key is required',
         });
         const courseNote = await input({
-          message: `What should Claude know specifically about ${courseKey.trim()}?`,
+          message: `What should the model know specifically about ${courseKey.trim()}?`,
         });
         if (courseNote.trim()) {
           updatePhilosophyKb({ entry: courseNote.trim(), section: 'course', courseKey: courseKey.trim() });

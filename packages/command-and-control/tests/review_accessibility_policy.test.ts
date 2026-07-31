@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { reviewAccessibilityPolicy } from '../src/tools/review_accessibility_policy.js';
-import type { PolicyDeps } from 'canvas-design-mcp/dist/tools/a11y/policy.js';
-import type { InstitutionConfig } from 'canvas-design-mcp/dist/types.js';
+import type { PolicyDeps } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js';
+import type { InstitutionConfig } from '@canvas-toolchain/canvas-design-studio/dist/types.js';
 
 const BASE: InstitutionConfig = {
   institution: 'Example U', canvasUrl: 'https://example.instructure.com',

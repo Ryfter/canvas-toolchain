@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import type { TopicMap, TrajectoryEntry } from 'curriculum-intelligence-mcp/dist/types.js';
+import type { TopicMap, TrajectoryEntry } from '@canvas-toolchain/curriculum-intelligence/dist/types.js';
 
 export type { TrajectoryEntry, TopicMap };
 

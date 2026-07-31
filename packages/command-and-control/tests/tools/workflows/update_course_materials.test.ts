@@ -12,14 +12,14 @@ vi.mock('../../../src/lib/kb-bridge.js', () => ({
 vi.mock('../../../src/lib/verdict-template-resolver.js', () => ({
   resolveResources: vi.fn(),
 }));
-vi.mock('curriculum-intelligence-mcp/dist/tools/export_course_folder.js', () => ({
+vi.mock('@canvas-toolchain/curriculum-intelligence/dist/tools/export_course_folder.js', () => ({
   exportCourseFolder: vi.fn(),
 }));
 
 import { renderPageWithA11y } from '../../../src/lib/page-renderer.js';
 import { loadKb } from '../../../src/lib/kb-bridge.js';
 import { resolveResources } from '../../../src/lib/verdict-template-resolver.js';
-import { exportCourseFolder } from 'curriculum-intelligence-mcp/dist/tools/export_course_folder.js';
+import { exportCourseFolder } from '@canvas-toolchain/curriculum-intelligence/dist/tools/export_course_folder.js';
 import { updateCourseMaterials } from '../../../src/tools/workflows/update_course_materials.js';
 
 const mockRenderPage = vi.mocked(renderPageWithA11y);

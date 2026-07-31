@@ -114,6 +114,7 @@ This file records decisions made during design and implementation that are not o
 ## Command & Control integration hardening
 
 **Decision:** Command & Control now imports `curriculum-intelligence-mcp` and `canvas-design-mcp` directly, but reaches Canvas Backup through its existing Python CLI instead of waiting for or inventing a `canvas-downloader-mcp` npm package.
+*(Package names later renamed to `@canvas-toolchain/curriculum-intelligence` and `@canvas-toolchain/canvas-design-studio` in v2.2.0)*
 
 **Why:** Curriculum Intelligence and Canvas Design Studio are already tested TypeScript MCP packages, so direct imports keep the coordinator simple. Canvas Backup is the runtime outlier, but it already has a working CLI, local-first archive format, setup scripts, and professor-facing launchers. A narrow CLI bridge gets the integrated workflow working without a risky rewrite.
 

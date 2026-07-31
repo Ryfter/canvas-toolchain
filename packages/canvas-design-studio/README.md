@@ -1,4 +1,4 @@
-# Canvas Design Studio
+# Canvas Toolchain — Design Studio
 
 **An MCP server that gives AI assistants the power to generate, validate, and maintain beautiful Canvas LMS assignment pages.**
 
@@ -46,7 +46,7 @@ Works in Claude Code, VS Code, ChatGPT Codex, and any MCP-compatible host. Zero 
 ### Option A — npm global install
 
 ```bash
-npm install -g canvas-design-mcp
+npm install -g @canvas-toolchain/canvas-design-studio
 ```
 
 Then add to your MCP client config:
@@ -54,8 +54,8 @@ Then add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "canvas-design-mcp": {
-      "command": "canvas-design-mcp"
+    "canvas-toolchain-design-studio": {
+      "command": "canvas-toolchain-design-studio"
     }
   }
 }
@@ -154,7 +154,7 @@ Favorite Canvas course IDs, comma-separated (optional):
 
 When the wizard finishes it prints a formatted setup summary showing your settings and what you can do right now. Ask your AI to save it as `my-canvas-setup.md` for reference.
 
-Config saves to `~/.canvas-design-mcp/institution.json` — survives `npx` reinstalls.
+Config saves to `~/.canvas-design-mcp/institution.json` (legacy data-dir name for Design Studio config; not the npm package name) — survives `npx` reinstalls.
 
 **New to Canvas Design Studio?** See `docs/start_here.md` for a full orientation, or run `get_started` at the beginning of any session for a tailored overview of what's active.
 

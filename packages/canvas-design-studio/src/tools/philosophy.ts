@@ -18,7 +18,7 @@ export const PHILOSOPHY_TEMPLATE = [
   '',
 ].join('\n');
 
-// Embedded interview questions — returned to Claude when no KB file exists yet
+// Embedded interview questions — returned to the model when no KB file exists yet
 const PHILOSOPHY_QUESTIONS_HINT = [
   '*No answers yet. Ask the professor these questions one at a time to populate this section:*',
   '',

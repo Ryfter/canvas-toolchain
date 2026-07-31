@@ -152,7 +152,7 @@ export async function runCourseWizard(rootDir?: string): Promise<string[]> {
   console.log('\nNext steps:');
   console.log('  1. Fill in week titles and topics in course-config.md');
   console.log("  2. Fill in content for each week's .md files");
-  console.log('  3. Tell Claude: "Generate the course from the course/ folder"');
+  console.log('  3. Tell your AI assistant: "Generate the course from the course/ folder"');
 
   return created;
 }

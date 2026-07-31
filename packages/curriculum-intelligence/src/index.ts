@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -40,6 +43,8 @@ import { BraveSearchAdapter } from './search/brave_search_adapter.js';
 import type { SearchClient } from './search/search_client.js';
 import { formatError } from './utils/errors.js';
 
+const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
+
 function getLlmClient(): LlmClient {
   const ollamaUrl = process.env.OLLAMA_BASE_URL;
   const ollamaModel = process.env.OLLAMA_MODEL;
@@ -54,7 +59,7 @@ function getSearchClient(): SearchClient | undefined {
 }
 
 const server = new Server(
-  { name: 'curriculum-intelligence', version: '1.0.0' },
+  { name: 'curriculum-intelligence', version: pkg.version },
   { capabilities: { tools: {} } }
 );
 
@@ -236,7 +241,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'extract_lecture_topics',
       description:
-        'Return lecture chunks shaped for Claude to reason over. Each chunk has the ' +
+        'Return lecture chunks shaped for the model to reason over. Each chunk has the ' +
         'transcript id, week (if mapped), source, duration, and fullText. Filter by week ' +
         'or transcriptId to scope down. Server does no LLM call — it just shapes the data.',
       inputSchema: {
@@ -312,7 +317,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'scan_recent_developments',
       description:
-        'Ask Claude (with web search) what\'s new in a given topic area since a date. ' +
+        'Ask the model (with web search) what\'s new in a given topic area since a date. ' +
         'Returns structured developments and candidate topic phrases for the professor to review. ' +
         'Requires ANTHROPIC_API_KEY in the environment.',
       inputSchema: {
@@ -420,7 +425,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description:
         'Write ideas.md under the course folder after a v0.5/0.6 run. Lists deferred v1 ' +
         'scope (outline generator, date shifting, shell update), architecture follow-ons, ' +
-        'and suggested next prompts for Claude. Optionally records usage notes from this run.',
+        'and suggested next prompts for the model. Optionally records usage notes from this run.',
       inputSchema: {
         type: 'object' as const,
         required: ['courseId'],
@@ -817,5 +822,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+// Only boot the MCP server when this file is the process entrypoint.
+// Importing the package root must never attach stdio.
+// realpath so npm bin shims that pass the node_modules symlink path still match.
+function isMainModule(): boolean {
+  if (process.argv[1] === undefined) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+if (isMainModule()) {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}

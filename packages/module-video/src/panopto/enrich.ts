@@ -12,7 +12,7 @@
  * markdown content — both are design/content concerns, not coordinator concerns.
  */
 import { readFileSync } from 'node:fs';
-import { parseVtt } from 'curriculum-intelligence-mcp/dist/parsers/transcript_vtt.js';
+import { parseVtt } from '@canvas-toolchain/curriculum-intelligence/dist/parsers/transcript_vtt.js';
 
 // Exported so callers can spread it with professor additions without mutating this constant.
 export const BUILTIN_FILLER_WORDS: string[] = [

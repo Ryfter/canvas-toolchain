@@ -63,7 +63,7 @@ Every rendered template uses `config.colors.primary`, `config.colors.primaryDark
 - A course can override just the primary color (e.g., a department has a slightly different accent) without touching templates.
 - Adding a new institution takes seconds: change the colors in `institution.json`, regenerate.
 
-The color inheritance chain is: institution config (`~/.canvas-design-mcp/institution.json`) → course config (`course-config.md` `colors:` block, optional overrides) → template rendering. If a course config field is blank, the institution value is used. If the institution config doesn't exist (test environments), University defaults are used.
+The color inheritance chain is: institution config (`~/.canvas-design-mcp/institution.json`, legacy data dir) → course config (`course-config.md` `colors:` block, optional overrides) → template rendering. If a course config field is blank, the institution value is used. If the institution config doesn't exist (test environments), University defaults are used.
 
 ---
 

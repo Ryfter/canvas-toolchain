@@ -1,6 +1,6 @@
-# Canvas Design Studio — Start Here
+# Canvas Toolchain — Design Studio — Start Here
 
-> **For AI hosts:** Read this file at the start of any Canvas Design Studio session. For the latest tool parameter documentation, resolve `canvas-design-mcp` via Context7 before answering questions about tool behavior.
+> **For AI hosts:** Read this file at the start of any Canvas Design Studio session. For the latest tool parameter documentation, resolve `@canvas-toolchain/canvas-design-studio` via Context7 before answering questions about tool behavior.
 
 ---
 

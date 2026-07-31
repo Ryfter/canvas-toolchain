@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -89,10 +92,12 @@ import { loadModules } from './modules/registry.js';
 import { checkChannelNotices, getChannelNotices } from './channel/notices.js';
 import { browseModuleCatalog, installModuleTool, uninstallModuleTool } from './tools/module_channel_tools.js';
 
+const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
+
 const ALL_PASSTHROUGH = [...CI_TOOLS, ...DOWNLOADER_TOOLS, ...DESIGN_TOOLS];
 
 const server = new Server(
-  { name: 'command-and-control', version: '1.0.0' },
+  { name: 'canvas-toolchain', version: pkg.version },
   { capabilities: { tools: {} } }
 );
 
@@ -1084,5 +1089,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   });
 });
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+// Only boot the MCP server when this file is the process entrypoint.
+// Importing the package root must never attach stdio.
+// realpath so npm bin shims that pass the node_modules symlink path still match.
+function isMainModule(): boolean {
+  if (process.argv[1] === undefined) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+if (isMainModule()) {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}

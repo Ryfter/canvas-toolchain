@@ -1,6 +1,6 @@
-import { analyzeCourse as ciAnalyzeCourse } from 'curriculum-intelligence-mcp/dist/tools/analyze_course.js';
-import { fetchNewsFeed } from 'curriculum-intelligence-mcp/dist/tools/fetch_news_feed.js';
-import { setupCourse } from 'curriculum-intelligence-mcp/dist/tools/setup_course.js';
+import { analyzeCourse as ciAnalyzeCourse } from '@canvas-toolchain/curriculum-intelligence/dist/tools/analyze_course.js';
+import { fetchNewsFeed } from '@canvas-toolchain/curriculum-intelligence/dist/tools/fetch_news_feed.js';
+import { setupCourse } from '@canvas-toolchain/curriculum-intelligence/dist/tools/setup_course.js';
 
 type CiReport = Awaited<ReturnType<typeof ciAnalyzeCourse>>;
 
@@ -54,8 +54,8 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
   if (process.env.BRAVE_SEARCH_API_KEY) {
     try {
       const [{ BraveSearchAdapter }, { scanRecentDevelopments }] = await Promise.all([
-        import('curriculum-intelligence-mcp/dist/search/brave_search_adapter.js'),
-        import('curriculum-intelligence-mcp/dist/tools/scan_recent_developments.js'),
+        import('@canvas-toolchain/curriculum-intelligence/dist/search/brave_search_adapter.js'),
+        import('@canvas-toolchain/curriculum-intelligence/dist/tools/scan_recent_developments.js'),
       ]);
       const searchClient = new BraveSearchAdapter(process.env.BRAVE_SEARCH_API_KEY);
       const topicArea = courseId;
@@ -70,8 +70,8 @@ export async function analyzeCourse(input: AnalyzeCourseInput): Promise<AnalyzeC
   if (transcriptsPath) {
     try {
       const [{ ingestTranscripts }, { mapTranscriptsToWeeks }] = await Promise.all([
-        import('curriculum-intelligence-mcp/dist/tools/ingest_transcripts.js'),
-        import('curriculum-intelligence-mcp/dist/tools/map_transcripts_to_weeks.js'),
+        import('@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js'),
+        import('@canvas-toolchain/curriculum-intelligence/dist/tools/map_transcripts_to_weeks.js'),
       ]);
       augmentations.transcripts = await ingestTranscripts({ courseId, semesterId, transcriptsPath });
       augmentations.weekMap = await mapTranscriptsToWeeks({ courseId, semesterId });

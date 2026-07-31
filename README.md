@@ -1,6 +1,6 @@
 # canvas-toolchain
 
-A toolchain that helps a professor refresh a Canvas LMS course every semester. It combines three apps — **Curriculum Intelligence**, **Canvas Design Studio**, and **Command & Control** — behind a single MCP entrypoint, plus a Python sidecar for downloading Canvas data and a native installer.
+**Canvas Toolchain** helps a professor refresh a Canvas LMS course every semester. It combines three apps — **Canvas Toolchain — Curriculum Intelligence**, **Canvas Toolchain — Design Studio**, and **Canvas Toolchain — Command & Control** — behind a single MCP entrypoint, plus a Python sidecar for downloading Canvas data and a native installer.
 
 ```text
 Canvas Backup archive
@@ -10,15 +10,79 @@ Canvas Backup archive
   -> optional Canvas publishing
 ```
 
-Professors drive the whole thing by talking to the **Command & Control** MCP server from any MCP-capable AI client (Claude Desktop, Claude Code, ChatGPT, Gemini). Each underlying app also stays independently usable. Direct Canvas API publishing is always optional — the no-token "generate HTML and paste it in" path is first-class.
+Professors drive the whole thing by talking to the **Canvas Toolchain** MCP server (`npx canvas-toolchain`) from any MCP-capable AI client. Each underlying app also stays independently usable. Direct Canvas API publishing is always optional — the no-token "generate HTML and paste it in" path is first-class.
 
 **Optional modules and companion programs:** see [docs/modules.md](docs/modules.md).
 
 ## Where to start
 
-- **Installing as a user?** Download the native installer (Windows x64 / macOS arm64) from [Releases](https://github.com/Ryfter/canvas-toolchain/releases) — it bundles Node, the toolchain, and an auto-updater behind a five-screen wizard.
-- **Working on this repo (human or AI agent)?** Read [`AGENTS.md`](AGENTS.md) first — it maps the tools, skills, packages, and workflow conventions, and links to every per-package handoff doc.
-- **Latest repo health review:** [`docs/repo-health-check-2026-06-07.md`](docs/repo-health-check-2026-06-07.md).
+**Canvas Toolchain** runs as an MCP server you talk to from any MCP-capable AI client —
+Claude (Desktop/Code), Codex, Gemini, Cursor, VS Code, Grok, or a local model via any MCP host.
+
+### Fastest: no install
+
+```bash
+npx canvas-toolchain
+```
+
+That starts the unified MCP server (it speaks MCP on stdio — wire it into a client below;
+it is not an interactive CLI).
+
+### Native installer
+
+Download the Windows x64 / macOS arm64 installer from
+[Releases](https://github.com/Ryfter/canvas-toolchain/releases) — it bundles Node, the
+toolchain, and an auto-updater, and writes the MCP config for every client it detects.
+
+### From source
+
+```bash
+git clone https://github.com/Ryfter/canvas-toolchain.git
+cd canvas-toolchain
+npm install        # install IS the build — no separate build step
+npx canvas-toolchain   # smoke: starts the MCP server (Ctrl+C to stop)
+```
+
+> Requires Node ≥ 20. If your checkout lives in a folder with spaces (e.g.
+> `C:\Users\you\Documents\Canvas Toolchain`), quote the path anywhere it appears in JSON config.
+
+### Wire it into your client
+
+Everywhere below, `npx canvas-toolchain` also accepts an absolute path form:
+`node <checkout>/packages/command-and-control/dist/index.js`.
+
+**Claude Desktop** (`claude_desktop_config.json`) / **Claude Code** (`.mcp.json`) / **Cursor** / **VS Code** — mcpServers JSON:
+
+```json
+{
+  "mcpServers": {
+    "canvas-toolchain": { "command": "npx", "args": ["canvas-toolchain"] }
+  }
+}
+```
+
+**Codex CLI:**
+
+```bash
+codex mcp add canvas-toolchain -- npx canvas-toolchain
+```
+
+**Gemini CLI** (`~/.gemini/settings.json`):
+
+```json
+{ "mcpServers": { "canvas-toolchain": { "command": "npx", "args": ["canvas-toolchain"] } } }
+```
+
+**Anything else (Grok, local models, other MCP hosts):** any client that can run a
+stdio MCP server works — command `npx`, args `["canvas-toolchain"]`. Restart the client
+after editing its config.
+
+**Migration:** existing configs that point at the old bin names (`canvas-design-mcp`,
+`command-and-control-mcp`) should switch to `npx canvas-toolchain` (or the new bins
+`canvas-toolchain-server`, `canvas-toolchain-design-studio`,
+`canvas-toolchain-curriculum-intelligence` if you still want a single-package server).
+
+**Working on this repo (human or AI agent)?** Read [`AGENTS.md`](AGENTS.md) first.
 
 ## Documentation
 
@@ -34,21 +98,22 @@ Professors drive the whole thing by talking to the **Command & Control** MCP ser
 
 ## What lives where
 
-| Path | What it owns |
-| --- | --- |
-| `packages/command-and-control/` | Single professor-facing MCP entrypoint; workflow orchestration, registry, adapters |
-| `packages/canvas-design-studio/` | Canvas-safe HTML generation, design review, transcript enrichment |
-| `packages/curriculum-intelligence/` | Course analysis, semester comparison, topic currency, planning |
-| `packages/shared-types/` | TypeScript contracts shared across packages |
-| `packages/shared-llm/` | Shared LLM client (Anthropic + Ollama providers) |
-| `packages/module-contract/` | The `CanvasToolchainModule` plug-in contract for opt-in capability modules |
-| `packages/module-video/` | Lecture Video module (Panopto as the first provider) |
-| `packages/module-oral-assessment/` | Oral/video assessment authoring (Rhetorix-first) |
-| `packages/module-group-builder/` | Create and rotate balanced student groups |
-| `packages/module-roster/` | Roster & Identity Manager (PeopleSoft → de-identified roster + pseudonyms) |
-| `packages/module-peerassessment/` | Export a Canvas group set to a PeerAssessment.com import CSV |
-| `installer/` | Go + Fyne native installer and auto-updater |
-| [`canvas-backup`](https://github.com/Ryfter/canvas-backup) (separate repo) | Python Canvas backup downloader, reached via a CLI bridge |
+| Path | Package | What it owns |
+| --- | --- | --- |
+| `packages/canvas-toolchain/` | `canvas-toolchain` | **npx entrypoint launcher** — the published bin professors run (`npx canvas-toolchain`) |
+| `packages/command-and-control/` | `@canvas-toolchain/command-and-control` | Single professor-facing MCP server (`canvas-toolchain-server`); workflow orchestration, registry, adapters |
+| `packages/canvas-design-studio/` | `@canvas-toolchain/canvas-design-studio` | Canvas-safe HTML generation (`canvas-toolchain-design-studio`), design review, transcript enrichment |
+| `packages/curriculum-intelligence/` | `@canvas-toolchain/curriculum-intelligence` | Course analysis, semester comparison, topic currency, planning (`canvas-toolchain-curriculum-intelligence`) |
+| `packages/shared-types/` | `@canvas-toolchain/shared-types` | TypeScript contracts shared across packages |
+| `packages/shared-llm/` | `@canvas-toolchain/shared-llm` | Shared LLM client (Anthropic + Ollama providers) |
+| `packages/module-contract/` | `@canvas-toolchain/module-contract` | The `CanvasToolchainModule` plug-in contract for opt-in capability modules |
+| `packages/module-video/` | `@canvas-toolchain/module-video` | Lecture Video module (Panopto as the first provider) |
+| `packages/module-oral-assessment/` | `@canvas-toolchain/module-oral-assessment` | Oral/video assessment authoring (Rhetorix-first) |
+| `packages/module-group-builder/` | `@canvas-toolchain/module-group-builder` | Create and rotate balanced student groups |
+| `packages/module-roster/` | `@canvas-toolchain/module-roster` | Roster & Identity Manager (PeopleSoft → de-identified roster + pseudonyms) |
+| `packages/module-peerassessment/` | `@canvas-toolchain/module-peerassessment` | Export a Canvas group set to a PeerAssessment.com import CSV |
+| `installer/` | — | Go + Fyne native installer and auto-updater |
+| [`canvas-backup`](https://github.com/Ryfter/canvas-backup) (separate repo) | — | Python Canvas backup downloader, reached via a CLI bridge |
 
 ## Verification
 
