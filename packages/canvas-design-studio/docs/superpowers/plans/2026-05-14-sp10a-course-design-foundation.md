@@ -468,7 +468,7 @@ function parseWeekOutlineTable(body: string): WeekEntry[] {
   return rows;
 }
 
-const BSU_FALLBACK: CourseColors = {
+const FALLBACK_COLORS: CourseColors = {
   primary: '#0033A0',
   primaryDark: '#002277',
   primaryLight: '#E6ECF9',
@@ -480,13 +480,13 @@ function loadInstitutionColors(): CourseColors {
     const instConfig = loadConfig();
     const c = instConfig.colors as { primary: string; primaryDark: string; primaryLight: string; secondary: string };
     return {
-      primary: c.primary ?? BSU_FALLBACK.primary,
-      primaryDark: c.primaryDark ?? BSU_FALLBACK.primaryDark,
-      primaryLight: c.primaryLight ?? BSU_FALLBACK.primaryLight,
-      secondary: c.secondary ?? BSU_FALLBACK.secondary,
+      primary: c.primary ?? FALLBACK_COLORS.primary,
+      primaryDark: c.primaryDark ?? FALLBACK_COLORS.primaryDark,
+      primaryLight: c.primaryLight ?? FALLBACK_COLORS.primaryLight,
+      secondary: c.secondary ?? FALLBACK_COLORS.secondary,
     };
   } catch {
-    return BSU_FALLBACK;
+    return FALLBACK_COLORS;
   }
 }
 

@@ -5,7 +5,8 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const PATTERN = /boise|(?<![\w@])bsu(?![\w])/i;
+// Trailing `_` must NOT exempt: `BSU_FALLBACK` is a hit. Lookahead only allows [A-Za-z0-9].
+const PATTERN = /boise|(?<![\w@])bsu(?![A-Za-z0-9])/i;
 const LINE_EXEMPT = /\bgr[e]p\b|check-institution-scrub/i; // guard cmds quoting the rule
 const FILE_SKIP = /^(package-lock\.json|scripts\/check-institution-scrub\.mjs)$|\.(png|svg|ico|pkg|exe|excalidraw)$/;
 
