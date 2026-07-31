@@ -9,7 +9,7 @@ const fakeEngine = {
   isAvailable: vi.fn().mockResolvedValue({ available: true, engine: 'fake', detail: 'ok' }),
   transcribe: vi.fn().mockResolvedValue([{ startSec: 0, endSec: 5, text: 'welcome to COBE' }]),
 };
-vi.mock('curriculum-intelligence-mcp/dist/transcription/faster_whisper_engine.js', () => ({
+vi.mock('@canvas-toolchain/curriculum-intelligence/dist/transcription/faster_whisper_engine.js', () => ({
   getTranscriptionEngine: () => fakeEngine,
 }));
 vi.mock('@canvas-toolchain/module-video', () => ({

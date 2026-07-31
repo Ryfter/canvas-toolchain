@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { publishToCanvas } from 'canvas-design-mcp/dist/tools/publish.js';
-import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
-import { CanvasApiClient, CanvasApiError } from 'canvas-design-mcp/dist/canvas-api.js';
-import { publishWidget as publishWidgetReal } from 'canvas-design-mcp/dist/tools/publish-widget.js';
-import { appendAcknowledgment, upsertReviewEntry, clearReviewEntryIfClean } from 'canvas-design-mcp/dist/tools/a11y/records.js';
+import { publishToCanvas } from '@canvas-toolchain/canvas-design-studio/dist/tools/publish.js';
+import { updateAssignmentDescription } from '@canvas-toolchain/canvas-design-studio/dist/tools/update-assignment-description.js';
+import { CanvasApiClient, CanvasApiError } from '@canvas-toolchain/canvas-design-studio/dist/canvas-api.js';
+import { publishWidget as publishWidgetReal } from '@canvas-toolchain/canvas-design-studio/dist/tools/publish-widget.js';
+import { appendAcknowledgment, upsertReviewEntry, clearReviewEntryIfClean } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/records.js';
 import { DEFAULT_REQUIRED_LEVEL } from '@canvas-toolchain/shared-types';
 import { evaluateEntryA11yGate } from '../publish/a11y_gate.js';
 import { loadInstitutionConfig } from '../publish/canvas_config_bridge.js';
@@ -54,7 +54,7 @@ export interface PublishCourseInput {
 
 /** Optional dependency-injection hooks for tests. Production callers pass nothing. */
 export interface PublishCourseHooks {
-  /** Override the publish_widget function (canvas-design-mcp). Tests inject a mock
+  /** Override the publish_widget function (@canvas-toolchain/canvas-design-studio). Tests inject a mock
    *  to avoid round-tripping through real Canvas Files. */
   publishWidget?: typeof publishWidgetReal;
 }

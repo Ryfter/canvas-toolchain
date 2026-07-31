@@ -1,13 +1,13 @@
 {
-  "name": "command-and-control-mcp",
+  "name": "@canvas-toolchain/command-and-control",
   "license": "MIT",
   "version": "1.0.0",
   "description": "Command & Control — MCP server that orchestrates the professor toolset with task-aware model routing",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "command-and-control-mcp": "dist/index.js",
-    "canvas-toolchain-dashboard": "dist/cli/dashboard.js"
+    "canvas-toolchain-dashboard": "dist/cli/dashboard.js",
+    "canvas-toolchain-server": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -18,20 +18,20 @@
   },
   "dependencies": {
     "@canvas-toolchain/module-contract": "*",
-    "yaml": "^2.9.0",
-    "@canvas-toolchain/module-video": "*",
-    "@canvas-toolchain/module-oral-assessment": "*",
     "@canvas-toolchain/module-group-builder": "*",
-    "@canvas-toolchain/module-roster": "*",
+    "@canvas-toolchain/module-oral-assessment": "*",
     "@canvas-toolchain/module-peerassessment": "*",
+    "@canvas-toolchain/module-roster": "*",
+    "@canvas-toolchain/module-video": "*",
     "@canvas-toolchain/shared-llm": "*",
     "@canvas-toolchain/shared-types": "*",
     "@llamaindex/liteparse": "^2.0.5",
     "@modelcontextprotocol/sdk": "^1.10.0",
     "better-sqlite3": "^12.10.0",
-    "canvas-design-mcp": "*",
-    "curriculum-intelligence-mcp": "*",
-    "sqlite-vec": "^0.1.9"
+    "@canvas-toolchain/canvas-design-studio": "*",
+    "@canvas-toolchain/curriculum-intelligence": "*",
+    "sqlite-vec": "^0.1.9",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

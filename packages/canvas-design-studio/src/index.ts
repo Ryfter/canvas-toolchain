@@ -54,7 +54,7 @@ async function main() {
       process.stderr.write(
         'Error: No institution config found.\n' +
         'Run the setup wizard on your host machine first:\n\n' +
-        '  npx canvas-design-mcp\n\n' +
+        '  npx canvas-toolchain-design-studio\n\n' +
         'Then mount the config when running Docker:\n\n' +
         '  docker run -i --rm \\\n' +
         '    -v ~/.canvas-design-mcp:/root/.canvas-design-mcp \\\n' +

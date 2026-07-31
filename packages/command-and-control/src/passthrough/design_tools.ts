@@ -1,14 +1,14 @@
 import type { PassthroughTool } from './ci_tools.js';
-import { importCourse } from 'canvas-design-mcp/dist/tools/import-course.js';
-import { generateCourse } from 'canvas-design-mcp/dist/tools/generate-course.js';
-import type { ImportCourseInput } from 'canvas-design-mcp/dist/tools/import-course.js';
-import type { GenerateCourseInput } from 'canvas-design-mcp/dist/course-types.js';
+import { importCourse } from '@canvas-toolchain/canvas-design-studio/dist/tools/import-course.js';
+import { generateCourse } from '@canvas-toolchain/canvas-design-studio/dist/tools/generate-course.js';
+import type { ImportCourseInput } from '@canvas-toolchain/canvas-design-studio/dist/tools/import-course.js';
+import type { GenerateCourseInput } from '@canvas-toolchain/canvas-design-studio/dist/course-types.js';
 
 export const DESIGN_TOOLS: PassthroughTool[] = [
   {
     name: 'import_course',
     taskCategory: 'none',
-    description: '[canvas-design-mcp] Import a Canvas Backup archive into a Canvas Design Studio course folder.',
+    description: '[@canvas-toolchain/canvas-design-studio] Import a Canvas Backup archive into a Canvas Design Studio course folder.',
     inputSchema: {
       type: 'object',
       required: ['archivePath', 'outputDir'],
@@ -24,7 +24,7 @@ export const DESIGN_TOOLS: PassthroughTool[] = [
   {
     name: 'generate_course',
     taskCategory: 'none',
-    description: '[canvas-design-mcp] Generate Canvas-safe HTML for every page in a Canvas Design Studio course folder.',
+    description: '[@canvas-toolchain/canvas-design-studio] Generate Canvas-safe HTML for every page in a Canvas Design Studio course folder.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -82,7 +82,7 @@ export async function updateCanvasKb(force = false): Promise<KbUpdateResult> {
   }
 
   const response = await fetch(CANVAS_SANITIZE_URL, {
-    headers: { 'User-Agent': 'canvas-design-mcp/0.1.0' },
+    headers: { 'User-Agent': '@canvas-toolchain/canvas-design-studio/0.1.0' },
   });
   if (!response.ok) {
     throw new Error(`Failed to fetch Canvas sanitizer source: HTTP ${response.status}`);

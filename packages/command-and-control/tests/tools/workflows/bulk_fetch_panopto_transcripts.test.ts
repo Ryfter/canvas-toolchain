@@ -4,12 +4,12 @@ vi.mock('@canvas-toolchain/module-video', () => ({
   loadPanoptoConfig: vi.fn(),
   bulkDownloadPanoptoCaptions: vi.fn(),
 }));
-vi.mock('curriculum-intelligence-mcp/dist/tools/ingest_transcripts.js', () => ({
+vi.mock('@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js', () => ({
   ingestTranscripts: vi.fn(),
 }));
 
 import { loadPanoptoConfig, bulkDownloadPanoptoCaptions } from '@canvas-toolchain/module-video';
-import { ingestTranscripts } from 'curriculum-intelligence-mcp/dist/tools/ingest_transcripts.js';
+import { ingestTranscripts } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js';
 import { bulkFetchPanoptoTranscripts } from '../../../src/tools/workflows/bulk_fetch_panopto_transcripts.js';
 
 const MOCK_CONFIG = {

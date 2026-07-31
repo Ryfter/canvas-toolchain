@@ -2,8 +2,8 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   CANONICAL_AIAS_NOTES,
-} from 'canvas-design-mcp/dist/course/aias_canonical.js';
-import { writeAiasDefaults } from 'canvas-design-mcp/dist/course/aias_config.js';
+} from '@canvas-toolchain/canvas-design-studio/dist/course/aias_canonical.js';
+import { writeAiasDefaults } from '@canvas-toolchain/canvas-design-studio/dist/course/aias_config.js';
 import type { AiasLevel } from '@canvas-toolchain/shared-types';
 
 export interface SetCourseAiasDefaultInput {

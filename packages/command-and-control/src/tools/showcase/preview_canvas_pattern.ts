@@ -2,8 +2,8 @@ import {
   loadCatalog,
   getPatternById,
   type SupportStatus,
-} from 'canvas-design-mcp/dist/tools/showcase/catalog.js';
-import { renderPreview } from 'canvas-design-mcp/dist/tools/showcase/render_preview.js';
+} from '@canvas-toolchain/canvas-design-studio/dist/tools/showcase/catalog.js';
+import { renderPreview } from '@canvas-toolchain/canvas-design-studio/dist/tools/showcase/render_preview.js';
 
 export interface PreviewCanvasPatternInput {
   patternId: string;

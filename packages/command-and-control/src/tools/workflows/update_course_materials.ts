@@ -1,7 +1,7 @@
 import { readdirSync, existsSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { homedir } from 'node:os';
-import { exportCourseFolder } from 'curriculum-intelligence-mcp/dist/tools/export_course_folder.js';
+import { exportCourseFolder } from '@canvas-toolchain/curriculum-intelligence/dist/tools/export_course_folder.js';
 import type {
   UpdateCourseMaterialsResult,
   UpdateCourseMaterialsPage,

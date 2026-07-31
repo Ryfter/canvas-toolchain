@@ -2,7 +2,7 @@ import { configExists, loadConfig } from '../config.js';
 import type { InstitutionConfig } from '../types.js';
 
 const CONTEXT7_HINT =
-  '> For the latest tool documentation, resolve `canvas-design-mcp` via Context7.';
+  '> For the latest tool documentation, resolve `@canvas-toolchain/canvas-design-studio` via Context7.';
 
 function noConfigText(): string {
   return [

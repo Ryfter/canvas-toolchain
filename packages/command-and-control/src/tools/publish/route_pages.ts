@@ -1,4 +1,4 @@
-import type { GenerateCourseResult, GeneratePageResult, PageType } from 'canvas-design-mcp/dist/course-types.js';
+import type { GenerateCourseResult, GeneratePageResult, PageType } from '@canvas-toolchain/canvas-design-studio/dist/course-types.js';
 import type { SkippedEntry } from './manifest_types.js';
 
 const PAGE_LIKE: ReadonlySet<PageType> = new Set<PageType>([

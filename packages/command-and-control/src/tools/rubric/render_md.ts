@@ -9,7 +9,7 @@ interface RenderMarkdownInput {
 }
 
 /** Render criteria into the rubric markdown schema that CDS's renderRubric
- *  (in canvas-design-mcp) consumes. Schema:
+ *  (in @canvas-toolchain/canvas-design-studio) consumes. Schema:
  *
  *    ---
  *    week: N

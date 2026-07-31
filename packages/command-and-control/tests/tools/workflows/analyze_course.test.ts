@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyzeCourse } from '../../../src/tools/workflows/analyze_course.js';
-import { setupCourse } from 'curriculum-intelligence-mcp/dist/tools/setup_course.js';
+import { setupCourse } from '@canvas-toolchain/curriculum-intelligence/dist/tools/setup_course.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

@@ -1,4 +1,4 @@
-import { loadCatalog, type CapabilityCatalog, type CatalogPattern, type SupportStatus } from 'canvas-design-mcp/dist/tools/showcase/catalog.js';
+import { loadCatalog, type CapabilityCatalog, type CatalogPattern, type SupportStatus } from '@canvas-toolchain/canvas-design-studio/dist/tools/showcase/catalog.js';
 
 export interface ShowCanvasCapabilitiesInput {
   category?: string;

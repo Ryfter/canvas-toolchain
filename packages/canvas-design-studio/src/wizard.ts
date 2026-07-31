@@ -26,7 +26,7 @@ function printMcpConfig(): void {
     mcpServers: {
       'canvas-design': {
         command: 'npx',
-        args: ['canvas-design-mcp'],
+        args: ['canvas-toolchain-design-studio'],
       },
     },
   };

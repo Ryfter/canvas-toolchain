@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { upsertReviewEntry, loadReviewQueue } from 'canvas-design-mcp/dist/tools/a11y/records.js';
+import { upsertReviewEntry, loadReviewQueue } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/records.js';
 import { accessibilityReviewQueue } from '../../src/tools/workflows/accessibility_review_queue.js';
 
 let courseDir: string;

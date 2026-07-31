@@ -1,12 +1,12 @@
 {
-  "name": "curriculum-intelligence-mcp",
+  "name": "@canvas-toolchain/curriculum-intelligence",
   "license": "MIT",
   "version": "1.1.0",
   "description": "Curriculum Intelligence — MCP server that reads past course archives and lecture transcripts, scores topic currency, and plans the next semester",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "curriculum-intelligence-mcp": "dist/index.js"
+    "canvas-toolchain-curriculum-intelligence": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",

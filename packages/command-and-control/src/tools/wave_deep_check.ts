@@ -1,5 +1,5 @@
-import { waveDeepCheck } from 'canvas-design-mcp/dist/tools/a11y/wave.js';
-import { loadWaveApiKey, saveWaveApiKey } from 'canvas-design-mcp/dist/tools/a11y/policy.js';
+import { waveDeepCheck } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/wave.js';
+import { loadWaveApiKey, saveWaveApiKey } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js';
 
 export interface WaveDeepCheckToolInput {
   url: string;

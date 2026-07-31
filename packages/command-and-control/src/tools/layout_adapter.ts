@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { canvasSafeTransform, auditAccessibility } from 'canvas-design-mcp';
+import { canvasSafeTransform, auditAccessibility } from '@canvas-toolchain/canvas-design-studio';
 import { installResourceAtomically } from '../registry/local_registry.js';
 import type { ResourceManifest } from '../registry/local_registry.js';
 

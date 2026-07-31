@@ -3,9 +3,9 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-vi.mock('canvas-design-mcp/dist/tools/restore-page.js', () => ({ restorePage: vi.fn() }));
-vi.mock('canvas-design-mcp/dist/tools/update-assignment-description.js', () => ({ updateAssignmentDescription: vi.fn() }));
-vi.mock('canvas-design-mcp/dist/canvas-api.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/restore-page.js', () => ({ restorePage: vi.fn() }));
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/update-assignment-description.js', () => ({ updateAssignmentDescription: vi.fn() }));
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/canvas-api.js', () => ({
   CanvasApiClient: vi.fn().mockImplementation(() => ({})),
   CanvasApiError: class extends Error {
     constructor(public status: number, public code: string, message: string, public details?: unknown) { super(message); }
@@ -15,8 +15,8 @@ vi.mock('../../../src/tools/publish/canvas_config_bridge.js', () => ({
   loadInstitutionConfig: vi.fn().mockReturnValue({ canvasUrl: 'https://x', apiToken: 't' }),
 }));
 
-import { restorePage } from 'canvas-design-mcp/dist/tools/restore-page.js';
-import { updateAssignmentDescription } from 'canvas-design-mcp/dist/tools/update-assignment-description.js';
+import { restorePage } from '@canvas-toolchain/canvas-design-studio/dist/tools/restore-page.js';
+import { updateAssignmentDescription } from '@canvas-toolchain/canvas-design-studio/dist/tools/update-assignment-description.js';
 import { createSnapshotDir, writeManifest, writeState, writePriorHtml } from '../../../src/tools/publish/snapshot_store.js';
 import { rollbackCoursePublish } from '../../../src/tools/workflows/rollback_course_publish.js';
 

@@ -3,13 +3,13 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-vi.mock('canvas-design-mcp/dist/tools/a11y/policy.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('canvas-design-mcp/dist/tools/a11y/policy.js')>();
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js')>();
   return { ...actual, runPolicyConformanceCheck: vi.fn(actual.runPolicyConformanceCheck) };
 });
 
-import { runPolicyConformanceCheck } from 'canvas-design-mcp/dist/tools/a11y/policy.js';
-import { loadReviewQueue, upsertReviewEntry } from 'canvas-design-mcp/dist/tools/a11y/records.js';
+import { runPolicyConformanceCheck } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js';
+import { loadReviewQueue, upsertReviewEntry } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/records.js';
 import { auditCourseAccessibility } from '../../src/tools/workflows/audit_course_accessibility.js';
 
 const CLEAN = '<p>Read the <a href="https://example.edu/syllabus">course syllabus</a> before week one.</p>';

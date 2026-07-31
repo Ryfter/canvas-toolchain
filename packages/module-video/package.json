@@ -13,7 +13,7 @@
   "dependencies": {
     "@canvas-toolchain/module-contract": "*",
     "@modelcontextprotocol/sdk": "^1.10.0",
-    "curriculum-intelligence-mcp": "*"
+    "@canvas-toolchain/curriculum-intelligence": "*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

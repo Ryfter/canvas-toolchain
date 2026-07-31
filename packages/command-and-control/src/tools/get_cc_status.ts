@@ -55,8 +55,8 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
     };
   }
 
-  const ciInstalled = isPackageInstalled('curriculum-intelligence-mcp');
-  const designStudioInstalled = isPackageInstalled('canvas-design-mcp');
+  const ciInstalled = isPackageInstalled('@canvas-toolchain/curriculum-intelligence');
+  const designStudioInstalled = isPackageInstalled('@canvas-toolchain/canvas-design-studio');
 
   return {
     mode: config.mode,

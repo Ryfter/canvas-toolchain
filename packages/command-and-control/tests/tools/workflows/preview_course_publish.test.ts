@@ -3,23 +3,23 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-vi.mock('canvas-design-mcp/dist/tools/generate-course.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/generate-course.js', () => ({
   generateCourse: vi.fn(),
 }));
-vi.mock('canvas-design-mcp/dist/tools/list-canvas-objects.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/list-canvas-objects.js', () => ({
   listCanvasPages: vi.fn(),
   listCanvasAssignments: vi.fn(),
 }));
 vi.mock('../../../src/tools/publish/canvas_config_bridge.js', () => ({
   loadInstitutionConfig: vi.fn().mockReturnValue({ canvasUrl: 'https://x', apiToken: 't' }),
 }));
-vi.mock('canvas-design-mcp/dist/canvas-api.js', () => ({
+vi.mock('@canvas-toolchain/canvas-design-studio/dist/canvas-api.js', () => ({
   CanvasApiClient: vi.fn().mockImplementation(() => ({ getPageBody: vi.fn().mockResolvedValue('') })),
   CanvasApiError: class extends Error {},
 }));
 
-import { generateCourse } from 'canvas-design-mcp/dist/tools/generate-course.js';
-import { listCanvasPages, listCanvasAssignments } from 'canvas-design-mcp/dist/tools/list-canvas-objects.js';
+import { generateCourse } from '@canvas-toolchain/canvas-design-studio/dist/tools/generate-course.js';
+import { listCanvasPages, listCanvasAssignments } from '@canvas-toolchain/canvas-design-studio/dist/tools/list-canvas-objects.js';
 import { previewCoursePublish } from '../../../src/tools/workflows/preview_course_publish.js';
 
 let cc: string;
@@ -104,7 +104,7 @@ describe('previewCoursePublish', () => {
   });
 
   it('attaches a block-severity warning when getPageBody fails (rollback safety)', async () => {
-    const { CanvasApiClient } = await import('canvas-design-mcp/dist/canvas-api.js');
+    const { CanvasApiClient } = await import('@canvas-toolchain/canvas-design-studio/dist/canvas-api.js');
     vi.mocked(CanvasApiClient as any).mockImplementationOnce(() => ({
       getPageBody: vi.fn().mockRejectedValue(new Error('429 rate limited')),
     }));

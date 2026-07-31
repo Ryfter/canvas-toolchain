@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
-import { generatePage } from 'canvas-design-mcp/dist/tools/generate-page.js';
-import { auditAccessibility } from 'canvas-design-mcp/dist/tools/accessibility.js';
-import { redesignCanvasPage } from 'canvas-design-mcp/dist/tools/redesign.js';
-import { validateCanvasHtml } from 'canvas-design-mcp/dist/tools/validate.js';
+import { generatePage } from '@canvas-toolchain/canvas-design-studio/dist/tools/generate-page.js';
+import { auditAccessibility } from '@canvas-toolchain/canvas-design-studio/dist/tools/accessibility.js';
+import { redesignCanvasPage } from '@canvas-toolchain/canvas-design-studio/dist/tools/redesign.js';
+import { validateCanvasHtml } from '@canvas-toolchain/canvas-design-studio/dist/tools/validate.js';
 import type { UpdateCourseMaterialsPage, Verdict } from '@canvas-toolchain/shared-types';
 import type { ResolvedResources } from './verdict-template-resolver.js';
 

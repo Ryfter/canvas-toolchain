@@ -19,6 +19,6 @@ COPY --from=builder /app/dist ./dist/
 
 # Institution config is mounted from the host at runtime:
 #   -v ~/.canvas-design-mcp:/root/.canvas-design-mcp
-# Run the setup wizard on your host first: npx canvas-design-mcp
+# Run the setup wizard on your host first: npx canvas-toolchain-design-studio
 
 ENTRYPOINT ["node", "dist/index.js"]

@@ -1,6 +1,6 @@
 import { bulkDownloadPanoptoCaptions, loadPanoptoConfig, type ProgressCallback } from '@canvas-toolchain/module-video';
-import { ingestTranscripts } from 'curriculum-intelligence-mcp/dist/tools/ingest_transcripts.js';
-import type { IngestTranscriptsResult } from 'curriculum-intelligence-mcp/dist/tools/ingest_transcripts.js';
+import { ingestTranscripts } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js';
+import type { IngestTranscriptsResult } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js';
 
 export interface BulkFetchPanoptoTranscriptsInput {
   folderId: string;
