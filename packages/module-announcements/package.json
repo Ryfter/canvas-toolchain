@@ -1,7 +1,8 @@
 {
   "name": "@canvas-toolchain/module-announcements",
   "license": "MIT",
-  "version": "2.2.0",
+  "version": "1.1.0",
+  "private": true,
   "description": "Announcements Auditor: find scheduled Canvas announcements with stale fire dates (e.g. after a course copy) and recreate them with corrected dates. Channel-native module — never bundled into the installer.",
   "type": "module",
   "main": "dist/index.js",
@@ -21,9 +22,6 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "repository": {
     "type": "git",

@@ -4,7 +4,7 @@
 // never be checked this way: it existed only after it was already public.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
@@ -57,6 +57,15 @@ for (const entry of catalog.modules ?? []) {
     continue;
   }
 
+  // Stale-proof the gate: a leftover dist-channel file from a prior local run
+  // must never satisfy verification. (2026-07-30: verify:modules passed locally
+  // on a stale module-announcements-1.1.0.mjs while package.json said 2.2.0 and
+  // the build wrote a differently named file — CI on a clean tree then ENOENT'd.)
+  const builtPath = join('dist-channel', `module-${id}-${version}.mjs`);
+  if (existsSync(builtPath)) {
+    unlinkSync(builtPath);
+  }
+
   try {
     // Invoke the build script directly with the running Node binary: shelling
     // through npm needed shell:true on Windows, which triggers DEP0190 and
@@ -66,7 +75,7 @@ for (const entry of catalog.modules ?? []) {
     fail(`${id} v${version}: the module failed to build from source, so its committed artifact cannot be verified.\n  ${err.message}`);
     continue;
   }
-  const built = readFileSync(join('dist-channel', `module-${id}-${version}.mjs`));
+  const built = readFileSync(builtPath);
   if (sha256(built) !== committedHash) {
     fail(`${id} v${version}: committed artifact is NOT what the source builds.\n  built:     ${sha256(built)}\n  committed: ${committedHash}\nRebuild and recommit the artifact.`);
     continue;

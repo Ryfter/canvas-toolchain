@@ -60,9 +60,17 @@ jobs:
             );
           }
 
+          let checkedWorkspaces = 0;
           for (const manifestPath of workspaceManifests) {
             const rel = path.relative(process.cwd(), manifestPath).replace(/\\/g, '/');
             const pkg = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            // Channel modules (and any other private workspace) version independently
+            // of the toolchain tag and are never npm-published. Skip their package
+            // version; they must also not appear as intra-workspace dep pins elsewhere.
+            if (pkg.private === true) {
+              continue;
+            }
+            checkedWorkspaces += 1;
             if (pkg.version !== tag) {
               offenders.push(
                 `VERSION: ${rel} name=${pkg.name ?? '(missing)'} version=${pkg.version ?? '(missing)'} (expected exact ${tag})`,
@@ -91,7 +99,7 @@ jobs:
           }
 
           console.log(
-            `OK: all workspace package versions and intra-workspace dep pins match tag v${tag} (${workspaceManifests.length} workspaces)`,
+            `OK: all publishable workspace package versions and intra-workspace dep pins match tag v${tag} (${checkedWorkspaces} workspaces; private workspaces skipped)`,
           );
           NODE
 

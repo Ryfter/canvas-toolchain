@@ -1,9 +1,12 @@
 # npm publishing — runbook
 
-Canvas Toolchain publishes 13 packages to npm on every `vX.Y.Z` tag: the unscoped
+Canvas Toolchain publishes 12 packages to npm on every `vX.Y.Z` tag: the unscoped
 [`canvas-toolchain`](https://www.npmjs.com/package/canvas-toolchain) entrypoint plus the
-`@canvas-toolchain/*` workspace packages. The workflow is
-`.github/workflows/release-npm.yml`; it runs alongside the installer release on the same tag.
+`@canvas-toolchain/*` workspace packages that are not channel-only. Channel-distributed
+modules (e.g. `@canvas-toolchain/module-announcements`, marked `"private": true`) version
+independently via `module-catalog.json` and are excluded from npm publish and the
+tag version-lockstep guard. The workflow is `.github/workflows/release-npm.yml`; it runs
+alongside the installer release on the same tag.
 
 ## One-time setup (repo owner)
 
@@ -19,9 +22,10 @@ Canvas Toolchain publishes 13 packages to npm on every `vX.Y.Z` tag: the unscope
 ## Every release
 
 Nothing manual — pushing the `vX.Y.Z` tag publishes. Versions are locked: CI fails
-the publish unless every workspace `package.json` version **and** every
+the publish unless every **non-private** workspace `package.json` version **and** every
 intra-workspace dependency pin (`@canvas-toolchain/*` or `canvas-toolchain`) equals
-the tag version exactly (no `*`, no ranges).
+the tag version exactly (no `*`, no ranges). Workspaces with `"private": true` are
+skipped by the guard (and by `npm publish --workspaces`).
 
 ## Post-publish smoke (run once after each release)
 
