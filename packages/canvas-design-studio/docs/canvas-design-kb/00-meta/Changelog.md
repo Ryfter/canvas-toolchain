@@ -11,7 +11,8 @@ Parent: [Canvas Design Knowledge Base](../README.md) | [KB Overview](KB-Overview
 
 ## 2026-05-10 - Public Release v0.9.3
 
-- Published `@canvas-toolchain/canvas-design-studio@0.9.3` to npm with GitHub Actions provenance.
+- Published `canvas-design-mcp@0.9.3` to npm with GitHub Actions provenance.
+  *(renamed to `@canvas-toolchain/canvas-design-studio` in v2.2.0)*
 - Published the release Docker image to GitHub Container Registry.
 - Added npm package repository metadata required for provenance validation.
 
@@ -44,12 +45,12 @@ Parent: [Canvas Design Knowledge Base](../README.md) | [KB Overview](KB-Overview
 - `team: true/false` front-matter flag — renders a Team section on any assignment type
 - `timeline: true/false` front-matter flag — renders the milestone table on project assignments
 - Both types appear automatically in the `setup_course` wizard checkbox list
-- Published `@canvas-toolchain/canvas-design-studio@0.9.8` to npm and Docker image to GHCR
+- Published `canvas-design-mcp@0.9.8` to npm and Docker image to GHCR
 
 ## 2026-05-13 - npm Publishing Docs
 
 - Added `docs/npm-publishing.md` as the release runbook.
-- Updated install instructions to use the live npm package: `npm install -g @canvas-toolchain/canvas-design-studio`.
+- Updated install instructions to use the live npm package: `npm install -g canvas-design-mcp`.
 - Recorded the current successful npm/Docker release as `v0.9.5`.
 
 ## 2026-04-28 - Resource Evaluation Pass

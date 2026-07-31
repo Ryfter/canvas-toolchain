@@ -113,11 +113,12 @@ This file records decisions made during design and implementation that are not o
 
 ## Command & Control integration hardening
 
-**Decision:** Command & Control now imports `@canvas-toolchain/curriculum-intelligence` and `@canvas-toolchain/canvas-design-studio` directly, but reaches Canvas Backup through its existing Python CLI instead of waiting for or inventing a `canvas-downloader-mcp` npm package.
+**Decision:** Command & Control now imports `curriculum-intelligence-mcp` and `canvas-design-mcp` directly, but reaches Canvas Backup through its existing Python CLI instead of waiting for or inventing a `canvas-downloader-mcp` npm package.
+*(Package names later renamed to `@canvas-toolchain/curriculum-intelligence` and `@canvas-toolchain/canvas-design-studio` in v2.2.0)*
 
 **Why:** Curriculum Intelligence and Canvas Design Studio are already tested TypeScript MCP packages, so direct imports keep the coordinator simple. Canvas Backup is the runtime outlier, but it already has a working CLI, local-first archive format, setup scripts, and professor-facing launchers. A narrow CLI bridge gets the integrated workflow working without a risky rewrite.
 
-**Verification:** The fixture smoke in `D:\Dev\canvas-toolchain\packages\command-and-control` analyzes a Canvas Backup archive fixture, imports it through Canvas Design Studio, and generates Canvas-safe HTML. The hardening pass verified C&C tests/build/smoke, Curriculum Intelligence tests/build, Canvas Design Studio tests/build, and Canvas Backup tests.
+**Verification:** The fixture smoke in `D:\Dev\Command-and-Control-MCP` analyzes a Canvas Backup archive fixture, imports it through Canvas Design Studio, and generates Canvas-safe HTML. The hardening pass verified C&C tests/build/smoke, Curriculum Intelligence tests/build, Canvas Design Studio tests/build, and Canvas Backup tests.
 
 **Follow-up:** Go remains a candidate for a single installer/launcher or a future Canvas Backup rewrite if Python packaging becomes the bottleneck. It is not the current target for rewriting the full MCP stack.
 

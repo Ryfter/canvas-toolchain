@@ -115,7 +115,8 @@ Each domain app has one job. Command & Control provides the single MCP entrypoin
 
 **Job:** Take course content and make it look polished and accessible in Canvas.
 
-**Status:** Live at v1.1.0 — 27 tools in the MCP entrypoint, 391 tests passing locally, available as `@canvas-toolchain/canvas-design-studio`.
+**Status:** Live at v1.1.0 — 27 tools in the MCP entrypoint, 391 tests passing locally, available as `canvas-design-mcp`.
+*(renamed to `@canvas-toolchain/canvas-design-studio` in v2.2.0)*
 
 ### Setup and Configuration
 
