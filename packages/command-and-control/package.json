@@ -10,7 +10,7 @@
     "canvas-toolchain-server": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').cpSync('src/recommended-models.fallback.md','dist/recommended-models.fallback.md')\"",
     "dev": "tsx src/index.ts",
     "smoke:integration": "tsx scripts/smoke-integration.ts",
     "test": "vitest run",
