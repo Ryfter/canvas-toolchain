@@ -18,8 +18,10 @@ Canvas Toolchain publishes 13 packages to npm on every `vX.Y.Z` tag: the unscope
 
 ## Every release
 
-Nothing manual — pushing the `vX.Y.Z` tag publishes. Versions are locked: every
-package.json carries the release version (CI fails the publish if the tag disagrees).
+Nothing manual — pushing the `vX.Y.Z` tag publishes. Versions are locked: CI fails
+the publish unless every workspace `package.json` version **and** every
+intra-workspace dependency pin (`@canvas-toolchain/*` or `canvas-toolchain`) equals
+the tag version exactly (no `*`, no ranges).
 
 ## Post-publish smoke (run once after each release)
 

@@ -24,11 +24,76 @@ jobs:
 
       - name: Verify tag matches package versions
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          PKG="$(node -p "require('./package.json').version")"
-          if [ "$TAG" != "$PKG" ]; then
-            echo "Tag v$TAG does not match package version $PKG"; exit 1
-          fi
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+
+          const tag = (process.env.GITHUB_REF_NAME || '').replace(/^v/, '');
+          if (!tag) {
+            console.error('GITHUB_REF_NAME is empty or missing');
+            process.exit(1);
+          }
+
+          const offenders = [];
+          const depFields = [
+            'dependencies',
+            'devDependencies',
+            'optionalDependencies',
+            'peerDependencies',
+          ];
+          const isIntraWorkspace = (name) =>
+            name === 'canvas-toolchain' || name.startsWith('@canvas-toolchain/');
+
+          const packagesDir = path.join(process.cwd(), 'packages');
+          const workspaceManifests = fs
+            .readdirSync(packagesDir, { withFileTypes: true })
+            .filter((d) => d.isDirectory())
+            .map((d) => path.join(packagesDir, d.name, 'package.json'))
+            .filter((p) => fs.existsSync(p));
+
+          // Root monorepo version must also match the tag.
+          const rootPath = path.join(process.cwd(), 'package.json');
+          const root = JSON.parse(fs.readFileSync(rootPath, 'utf8'));
+          if (root.version !== tag) {
+            offenders.push(
+              `VERSION: package.json (root monorepo) version=${root.version} (expected exact ${tag})`,
+            );
+          }
+
+          for (const manifestPath of workspaceManifests) {
+            const rel = path.relative(process.cwd(), manifestPath).replace(/\\/g, '/');
+            const pkg = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            if (pkg.version !== tag) {
+              offenders.push(
+                `VERSION: ${rel} name=${pkg.name ?? '(missing)'} version=${pkg.version ?? '(missing)'} (expected exact ${tag})`,
+              );
+            }
+            for (const field of depFields) {
+              const deps = pkg[field];
+              if (!deps || typeof deps !== 'object') continue;
+              for (const [name, range] of Object.entries(deps)) {
+                if (!isIntraWorkspace(name)) continue;
+                if (range !== tag) {
+                  offenders.push(
+                    `DEP: ${rel} ${field}["${name}"]="${range}" (expected exact "${tag}", not '*' or any range)`,
+                  );
+                }
+              }
+            }
+          }
+
+          if (offenders.length > 0) {
+            console.error(
+              `Tag v${tag} version guard failed (${offenders.length} offender(s)):`,
+            );
+            for (const line of offenders) console.error(`  - ${line}`);
+            process.exit(1);
+          }
+
+          console.log(
+            `OK: all workspace package versions and intra-workspace dep pins match tag v${tag} (${workspaceManifests.length} workspaces)`,
+          );
+          NODE
 
       - name: Install (builds via prepare)
         run: npm ci
