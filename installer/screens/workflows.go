@@ -75,8 +75,8 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 	}()
 
 	modulesLabel := widget.NewLabelWithStyle("Additional modules", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	modulesHint := widget.NewLabel("These install later through Claude — checking one just queues the request. " +
-		"Next time you open Claude it will offer to install them, or just ask: \"install the <module> module\".")
+	modulesHint := widget.NewLabel("These install later through your AI assistant — checking one just queues the request. " +
+		"Next time you open your MCP client it will offer to install them, or just ask: \"install the <module> module\".")
 	modulesHint.Wrapping = fyne.TextWrapWord
 	modulesStatus := ui.NewStatusRow("Checking the module catalog…")
 	modulesStatus.SetStatus(ui.StatusRunning, "")
@@ -93,7 +93,7 @@ func NewWorkflowsScreen(parent fyne.Window, st *State, onNext, onBack func()) fy
 		mods, err := tasks.FetchModuleCatalog(ctx, tasks.ModuleCatalogURL)
 		fyne.Do(func() {
 			if err != nil {
-				modulesStatus.SetStatus(ui.StatusWarn, "Module catalog unavailable — you can install modules later by asking Claude.")
+				modulesStatus.SetStatus(ui.StatusWarn, "Module catalog unavailable — you can install modules later by asking your AI assistant.")
 				return
 			}
 			if len(mods) == 0 {

@@ -6,6 +6,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/Ryfter/canvas-toolchain/installer/tasks"
@@ -62,13 +63,16 @@ func NewSummaryScreen(parent fyne.Window, st *State, onClose func()) fyne.Canvas
 		),
 	)
 
-	launch := ui.NewHoverButton("Launch Claude Desktop", ui.ButtonPrimary, func() {
-		_ = launchClaudeDesktop()
-		onClose()
-	})
+	var launchBtn fyne.CanvasObject = layout.NewSpacer()
+	if st.WiredHosts["claude-desktop"] {
+		launchBtn = ui.NewHoverButton("Launch Claude Desktop", ui.ButtonPrimary, func() {
+			_ = launchClaudeDesktop()
+			onClose()
+		})
+	}
 	done := ui.NewHoverButton("Done", ui.ButtonDefault, onClose)
 
-	bottom := container.NewBorder(nil, nil, done, launch)
+	bottom := container.NewBorder(nil, nil, done, launchBtn)
 	return container.NewBorder(
 		container.NewVBox(title, widget.NewSeparator(), wins, widget.NewSeparator(), warns, widget.NewSeparator(), snippetExpander),
 		bottom, nil, nil,
