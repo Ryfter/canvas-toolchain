@@ -220,7 +220,7 @@ Step order:
 12. Live-validate credentials in parallel (non-blocking, results surface on screen 5):
     - Anthropic key: real API call — POST a 1-token completion request to `api.anthropic.com/v1/messages` with `model: claude-haiku-4-5-20251001, max_tokens: 1, messages: [{role:"user", content:"."}]`. 401/403 = invalid key, other errors = network problem (warning, not failure).
     - Canvas token: `GET /api/v1/users/self` against the Canvas host the user entered on screen 3. 401 = invalid token; 200 = valid.
-    - Panopto creds: existing `getPanoptoToken` call (imported from `canvas-design-mcp/dist/tools/panopto.js` — already proven against Panopto in `setup_panopto.ts`).
+    - Panopto creds: existing `getPanoptoToken` call (imported from `@canvas-toolchain/canvas-design-studio/dist/tools/panopto.js` — already proven against Panopto in `setup_panopto.ts`).
 
 If any step fails, the corresponding row turns red with a one-line error. The bottom of the screen shows three buttons:
 

@@ -115,7 +115,7 @@ Each domain app has one job. Command & Control provides the single MCP entrypoin
 
 **Job:** Take course content and make it look polished and accessible in Canvas.
 
-**Status:** Live at v1.1.0 — 27 tools in the MCP entrypoint, 391 tests passing locally, available as `canvas-design-mcp`.
+**Status:** Live at v1.1.0 — 27 tools in the MCP entrypoint, 391 tests passing locally, available as `@canvas-toolchain/canvas-design-studio`.
 
 ### Setup and Configuration
 
@@ -232,12 +232,12 @@ A professor starting fresh can skip to step 3 and use `setup_course` directly.
 
 ## Command & Control Layer
 
-`D:\Dev\Command-and-Control-MCP` is the combined workflow project.
+`D:\Dev\canvas-toolchain\packages\command-and-control` is the combined workflow project.
 
 Implemented now:
 
-- Imports `curriculum-intelligence-mcp` as a real local npm dependency.
-- Imports `canvas-design-mcp` as a real local npm dependency.
+- Imports `@canvas-toolchain/curriculum-intelligence` as a real local npm dependency.
+- Imports `@canvas-toolchain/canvas-design-studio` as a real local npm dependency.
 - Exposes real `import_course` and `generate_course` pass-throughs from Design Studio.
 - Invokes Canvas Backup through the Python CLI bridge for `download_canvas_archive`.
 - Verifies the archive-analysis-design flow with `npm run smoke:integration`.

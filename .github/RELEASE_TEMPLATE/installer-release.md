@@ -41,7 +41,7 @@ A small hardening release — no new tools, no setup changes, nothing to migrate
 
 ### Safer storage for your Canvas credentials
 
-- **The institution config is now written atomically with owner-only permissions.** `~/.canvas-design-mcp/institution.json` holds your Canvas API token (and WAVE key, if you set one). It is now saved via a temp-file-plus-rename write with `0o600` permissions on Mac/Linux, so a crash mid-save can never leave a partial or world-readable config. Existing configs keep working unchanged. ([#119](https://github.com/Ryfter/canvas-toolchain/pull/119))
+- **The institution config is now written atomically with owner-only permissions.** `~/.canvas-design-mcp/institution.json` (legacy Design Studio data dir) holds your Canvas API token (and WAVE key, if you set one). It is now saved via a temp-file-plus-rename write with `0o600` permissions on Mac/Linux, so a crash mid-save can never leave a partial or world-readable config. Existing configs keep working unchanged. ([#119](https://github.com/Ryfter/canvas-toolchain/pull/119))
 - **`CANVAS_DESIGN_HOME`** — the environment variable the coordinator server already honored for this directory now works everywhere, letting tests and multi-profile setups point the toolchain at an alternate home.
 
 ### Generic examples throughout

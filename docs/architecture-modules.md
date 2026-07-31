@@ -42,7 +42,7 @@ A capability-by-capability breakdown of the toolchain. Each **module** below is 
 
 ## 0. Command & Control — the coordinator
 
-**What it is.** The single professor-facing MCP server. You talk to it; it runs everything else. It re-exports the tools of Curriculum Intelligence, Canvas Design Studio, and the Canvas Backup downloader so you never juggle three servers.
+**What it is.** **Canvas Toolchain — Command & Control** (`@canvas-toolchain/command-and-control`, bin `canvas-toolchain-server`) is the single professor-facing MCP server. You talk to it; it runs everything else. It re-exports the tools of Curriculum Intelligence, Design Studio, and the Canvas Backup downloader so you never juggle three servers.
 
 **Why it was created.** The toolchain is three independent apps (Canvas Backup, CI, CDS) plus a Python sidecar. Asking a professor to wire up and drive all of them is a non-starter. C&C presents one surface and stitches them together **by data contract, not code dependency** — each app stays independently usable and testable, while the coordinator owns the cross-cutting concerns (model routing, credentials, module registry, workflow status).
 
@@ -88,7 +88,7 @@ The Go + Fyne installer's "Additional modules" picker screen only *requests* a m
 
 ## 3. Curriculum Intelligence
 
-**What it is.** The analysis-and-planning brain (`packages/curriculum-intelligence`). Reads past Canvas archives and lecture transcripts, scores topic currency, diffs semesters, and plans the next term.
+**What it is.** **Canvas Toolchain — Curriculum Intelligence** (`@canvas-toolchain/curriculum-intelligence`, bin `canvas-toolchain-curriculum-intelligence`; package path `packages/curriculum-intelligence`) is the analysis-and-planning brain. Reads past Canvas archives and lecture transcripts, scores topic currency, diffs semesters, and plans the next term.
 
 **Why it was created.** Professors in fast-moving fields face one recurring problem: *what I taught last semester is already outdated.* CI exists to answer "how stale is my course, and what should next semester look like?" — ingesting the past, scoring what aged out (evergreen vs. current vs. dated), and emitting KEEP/UPDATE/DROP/ADD verdicts plus a recommended outline.
 
@@ -100,7 +100,7 @@ The Go + Fyne installer's "Additional modules" picker screen only *requests* a m
 
 ## 4. Canvas Design Studio
 
-**What it is.** The presentation layer (`packages/canvas-design-studio`). A KB-backed generator of **Canvas-safe HTML**, plus design critique/redesign and interactive widgets.
+**What it is.** **Canvas Toolchain — Design Studio** (`@canvas-toolchain/canvas-design-studio`, bin `canvas-toolchain-design-studio`; package path `packages/canvas-design-studio`) is the presentation layer. A KB-backed generator of **Canvas-safe HTML**, plus design critique/redesign and interactive widgets.
 
 **Why it was created.** Canvas's RCE sanitizer silently strips `<script>`, `<style>` blocks, custom fonts, transforms, filters, `box-shadow`, and more — so naïve HTML breaks. CDS encapsulates that hard-won expertise into a generator that enforces the rules (inline CSS only, start at H2, use Canvas's built-in grid classes) and ships reusable components, so professors get polished pages that actually render.
 

@@ -6,9 +6,9 @@ Read this before touching anything in this package. Design-system and Canvas-HTM
 
 ## What this project is
 
-**Canvas Design Studio** (`canvas-design-mcp`) is an MCP server that generates, previews, and manages Canvas LMS HTML pages. It is imported as a local npm dependency by Command & Control; it is also usable standalone.
+**Canvas Design Studio** (`@canvas-toolchain/canvas-design-studio`) is an MCP server that generates, previews, and manages Canvas LMS HTML pages. It is imported as a local npm dependency by Command & Control; it is also usable standalone.
 
-**Stack:** Node.js 20+, TypeScript ESM, `@modelcontextprotocol/sdk`, `curriculum-intelligence-mcp` (local file dep for VTT parsing).
+**Stack:** Node.js 20+, TypeScript ESM, `@modelcontextprotocol/sdk`, `@canvas-toolchain/curriculum-intelligence` (local file dep for VTT parsing).
 
 **Run tests:** `npm test`
 **Build:** `npm run build`
@@ -37,7 +37,7 @@ tests/
 
 ## Panopto enrichment module (`src/tools/panopto-enrich.ts`)
 
-This module is the enrichment engine for the Panopto transcript pipeline. It lives in CDS (not C&C) because it depends on `curriculum-intelligence-mcp`'s VTT parser and produces markdown content — both are design/content concerns, not workflow concerns.
+This module is the enrichment engine for the Panopto transcript pipeline. It lives in CDS (not C&C) because it depends on `@canvas-toolchain/curriculum-intelligence`'s VTT parser and produces markdown content — both are design/content concerns, not workflow concerns.
 
 ### Exports
 
@@ -95,7 +95,7 @@ The Panopto API returns `duration` as a float (e.g. `3600.47`). `Math.floor` pre
 
 ```typescript
 beforeEach(() => {
-  vi.mock('curriculum-intelligence-mcp/dist/parsers/transcript_vtt.js', () => ({
+  vi.mock('@canvas-toolchain/curriculum-intelligence/dist/parsers/transcript_vtt.js', () => ({
     parseVtt: vi.fn(),
   }));
 });

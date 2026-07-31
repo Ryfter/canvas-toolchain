@@ -2,6 +2,8 @@
 
 Canvas Toolchain is an **instructor-led system for refreshing, improving, and safely managing Canvas course shells**. AI accelerates the work, but instructors stay in control of decisions and student-facing output.
 
+Its core apps are **Canvas Toolchain — Command & Control** (the single professor-facing MCP entrypoint), **Canvas Toolchain — Curriculum Intelligence** (staleness analysis and next-semester planning), and **Canvas Toolchain — Design Studio** (Canvas-safe HTML generation). Optional plug-in modules and a companion Canvas Backup downloader sit alongside them.
+
 ## Core Features
 
 **Faster Canvas shell refreshes.** Import prior Canvas content, identify stale materials, shift due dates, draft updates, and generate ready-to-paste Canvas pages.

@@ -4,7 +4,7 @@ This file records follow-up items accepted from the Gemini / Antigravity archite
 
 Reviewed inputs:
 
-- `D:\Dev\Command-and-Control-MCP\Gemini-Results.md`
+- `D:\Dev\canvas-toolchain\packages\command-and-control\Gemini-Results.md`
 - `C:\Users\professor\.gemini\antigravity\brain\5b3b88c7-2bf2-45ee-b576-9fbff068c9cd\architectural_review.md`
 
 The two files largely overlap. The external architectural review is more actionable; it adds explicit downloader path registration and a planning sidecar recommendation.
@@ -45,7 +45,7 @@ Identified during the gap-cleanup pass after Codex's initial triage.
 | P1 | `downloader.executablePath` in `CcConfig` + `setup_cc` | **Done** | The env-var-only approach doesn't survive shell restarts for professors. Persisted via `setup_cc({ downloaderPath: '...' })` so professors configure it once. |
 | P1 | Replace raw stdout/stderr in `DownloadCanvasArchiveResult` with `logPath` | **Done** | Canvas Backup stdout can contain Canvas API tokens and student data. Writing to a temp log file keeps that out of LLM context. |
 | P1 | Document `archivePathFromStdout` as format-coupled | **Done** | The regex `Archived(?: course)? .+ to (.+)$` is tied to Canvas Backup's current CLI wording. Scoped the `--json-progress` spec to include a structured final summary line with the archive path so this parser can be replaced. |
-| P2 | Canvas Backup deep import paths verified | **Done** | `canvas-design-mcp/dist/tools/import-course.js` and `generate-course.js` confirmed correct. No `exports` map so deep imports work; Design Studio must be built (`npm run build`) before C&C can import it. Document in build order. |
+| P2 | Canvas Backup deep import paths verified | **Done** | `@canvas-toolchain/canvas-design-studio/dist/tools/import-course.js` and `generate-course.js` confirmed correct. No `exports` map so deep imports work; Design Studio must be built (`npm run build`) before C&C can import it. Document in build order. |
 | P2 | PyPI publish as precursor to PyInstaller | Accept | Before bundling with PyInstaller, publish `canvas-backup` to PyPI with a proper entry point. Professors can then install with `pip install canvas-backup` and the bridge resolves `canvas-backup` on PATH without needing `.venv` or an explicit path. PyInstaller is the right long-term answer but PyPI is lower overhead while the tool is still changing. |
 
 ## Deferred or Not Accepted Yet

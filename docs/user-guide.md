@@ -27,11 +27,11 @@ Canvas Toolchain helps a professor **refresh a Canvas LMS course every semester*
 The flow it automates:
 
 ```text
-Canvas Backup archive            download last semester's shell
-   →  Curriculum Intelligence    analyze what's stale · plan next semester
-   →  Canvas Design Studio       generate beautiful, Canvas-safe HTML
+Canvas Backup archive                         download last semester's shell
+   →  Canvas Toolchain — Curriculum Intelligence   analyze what's stale · plan next semester
+   →  Canvas Toolchain — Design Studio             generate beautiful, Canvas-safe HTML
    →  Canvas-safe HTML
-   →  optional Canvas publishing  push pages back to Canvas (or paste by hand)
+   →  optional Canvas publishing                   push pages back to Canvas (or paste by hand)
 ```
 
 **Two promises that shape everything:**
@@ -70,7 +70,7 @@ You don't have to use all of it. Most professors live in three or four commands.
 
 There is **no command line to memorize.** Every capability is an **MCP tool**, and you invoke it by talking to an AI client in plain English. You say *"analyze how stale my ITM 310 course is from last fall's archive,"* and the client picks the matching tool (`analyze_course`) and fills in the parameters from your sentence.
 
-- **Single entry point:** the **Command & Control (C&C)** MCP server. It re-exports the tools of the other apps, so in normal use you only ever talk to C&C.
+- **Single entry point:** **Canvas Toolchain — Command & Control (C&C)** MCP server. It re-exports the tools of the other apps, so in normal use you only ever talk to C&C.
 - **Works in any MCP-capable client:** Claude Desktop, Claude Code, ChatGPT, or Gemini. The installer wires C&C into your client for you.
 - **The tools have descriptions.** Your AI client reads them, so you rarely need exact tool names — but this guide lists them so you can be explicit when you want to ("use `preview_course_publish`, not `publish_course`").
 

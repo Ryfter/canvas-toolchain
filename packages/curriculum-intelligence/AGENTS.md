@@ -240,14 +240,14 @@ Steps 1–4 are data operations (no LLM). Steps 6–7 call the LLM. Step 8 is pu
 
 ## Command & Control integration
 
-The combined workflow lives in `D:\Dev\Command-and-Control-MCP`. Curriculum Intelligence should stay focused on analysis and planning, but it is now a real local dependency of C&C.
+The combined workflow lives in `D:\Dev\@canvas-toolchain/command-and-control`. Curriculum Intelligence should stay focused on analysis and planning, but it is now a real local dependency of C&C.
 
 Current integration decisions:
 
-- C&C imports `curriculum-intelligence-mcp` directly.
-- C&C imports `canvas-design-mcp` directly.
+- C&C imports `@canvas-toolchain/curriculum-intelligence` directly.
+- C&C imports `@canvas-toolchain/canvas-design-studio` directly.
 - C&C invokes Canvas Backup through its Python CLI bridge.
-- The cross-app fixture smoke is `cd D:\Dev\Command-and-Control-MCP; npm run smoke:integration`.
+- The cross-app fixture smoke is `cd D:\Dev\@canvas-toolchain/command-and-control; npm run smoke:integration`.
 - The durable data handoff into Design Studio remains the CDS `course/` folder created by `export_course_folder` or Design Studio `import_course`.
 
 Do not move orchestration, model routing, or installer concerns into this repo unless the domain boundary is intentionally being changed.

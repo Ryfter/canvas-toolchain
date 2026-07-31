@@ -17,16 +17,16 @@ Canvas Backup archive
 The coordinator is not meant to replace the domain tools. Each app stays independently usable:
 
 - `Canvas-Download` / `canvas-backup` owns downloading Canvas data and creating the local archive.
-- `Curriculum-Intelligence` / `curriculum-intelligence-mcp` owns analysis, semester comparison, topic currency, and next-semester planning.
-- `canvas-design-studio` / `canvas-design-mcp` owns Canvas-safe HTML generation, design review, and optional page publishing.
-- `Command-and-Control-MCP` owns the one-entrypoint workflow, status reporting, and model-routing layer.
+- `Curriculum-Intelligence` / `@canvas-toolchain/curriculum-intelligence` owns analysis, semester comparison, topic currency, and next-semester planning.
+- `canvas-design-studio` / `@canvas-toolchain/canvas-design-studio` owns Canvas-safe HTML generation, design review, and optional page publishing.
+- `@canvas-toolchain/command-and-control` owns the one-entrypoint workflow, status reporting, and model-routing layer.
 
 ## Current Integration State
 
 Implemented:
 
-- Curriculum Intelligence is a real local npm dependency: `curriculum-intelligence-mcp`.
-- Canvas Design Studio is a real local npm dependency: `canvas-design-mcp`.
+- Curriculum Intelligence is a real local npm dependency: `@canvas-toolchain/curriculum-intelligence`.
+- Canvas Design Studio is a real local npm dependency: `@canvas-toolchain/canvas-design-studio`.
 - `import_course` and `generate_course` call real Design Studio functions.
 - `download_canvas_archive` calls the Python Canvas Backup CLI through a bridge instead of pretending a downloader npm package exists.
 - `npm run smoke:integration` verifies the cross-app contract with fixtures: archive analysis, Design Studio import, and HTML generation.

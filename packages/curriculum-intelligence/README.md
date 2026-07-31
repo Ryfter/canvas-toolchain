@@ -1,4 +1,4 @@
-# Curriculum Intelligence
+# Canvas Toolchain — Curriculum Intelligence
 
 MCP server that reads past course archives and lecture transcripts, scores topic currency, and plans the next semester.
 

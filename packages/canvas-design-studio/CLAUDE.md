@@ -18,7 +18,7 @@ Canvas Backup archive
   -> optional Canvas publishing
 ```
 
-`D:\Dev\Command-and-Control-MCP` now imports this project as the real local npm package `canvas-design-mcp`. Do not use or document the stale package name `canvas-design-studio-mcp`.
+`D:\Dev\canvas-toolchain\packages\command-and-control` now imports this project as the real local npm package `@canvas-toolchain/canvas-design-studio`. Do not use or document the stale package name `canvas-design-studio-mcp`.
 
 Command & Control currently calls these Design Studio functions directly:
 

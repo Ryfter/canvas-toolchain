@@ -6,9 +6,9 @@ Read this before touching anything. Claude-focused guidance also lives in `CLAUD
 
 ## What this project is
 
-**Command & Control** (`command-and-control-mcp`) is an MCP server that acts as a unified entry point for the professor toolset. It imports Curriculum Intelligence and Canvas Design Studio as npm dependencies, reaches Canvas Backup through its Python CLI, re-exposes selected domain tools with task-category annotations, adds high-level workflow tools, and routes LLM calls to Anthropic or Ollama based on config.
+**Command & Control** (`@canvas-toolchain/command-and-control`) is an MCP server that acts as a unified entry point for the professor toolset. It imports Curriculum Intelligence and Canvas Design Studio as npm dependencies, reaches Canvas Backup through its Python CLI, re-exposes selected domain tools with task-category annotations, adds high-level workflow tools, and routes LLM calls to Anthropic or Ollama based on config.
 
-**Stack:** Node.js 20+, TypeScript ESM (`"type": "module"`), `@modelcontextprotocol/sdk`, `curriculum-intelligence-mcp` (local file dep at `../Curriculum-Intelligence`), `canvas-design-mcp` (local file dep at `../canvas-design-studio`).
+**Stack:** Node.js 20+, TypeScript ESM (`"type": "module"`), `@modelcontextprotocol/sdk`, `@canvas-toolchain/curriculum-intelligence` (local file dep at `../Curriculum-Intelligence`), `@canvas-toolchain/canvas-design-studio` (local file dep at `../canvas-design-studio`).
 
 **This is not a web app. There is no frontend, no database, no HTTP server.**
 
@@ -121,7 +121,7 @@ All 27 Curriculum Intelligence tools re-registered verbatim. See `src/passthroug
 
 `download_canvas_archive` invokes Canvas Backup (`canvas-backup`) through a CLI bridge. It discovers Canvas Backup from `CANVAS_BACKUP_COMMAND`, `CANVAS_BACKUP_REPO`, a sibling `../Canvas-Download` checkout, or `canvas-backup` on PATH.
 
-`import_course` and `generate_course` call real Canvas Design Studio functions from `canvas-design-mcp`.
+`import_course` and `generate_course` call real Canvas Design Studio functions from `@canvas-toolchain/canvas-design-studio`.
 
 `publish_course` is shipped as a reviewed page-by-page transaction (the V&R system): `preview_course_publish` → per-page approvals → `publish_course`, with snapshots, rollback, widget publishing, Canvas breadcrumbs, and snapshot retention/auto-pruning.
 
@@ -158,7 +158,7 @@ enrich_panopto_transcripts       → 2026-01-15_Week-1.enriched.md × N
 
 Written by `bulk_fetch_panopto_transcripts` (CDS `panopto.ts`), read by `enrich_panopto_transcripts`. Decoupling via this manifest means enrichment can run independently of the network — professors tweak vocab and re-enrich without re-downloading.
 
-Shape (typed as `SessionsManifest` in `canvas-design-mcp/dist/tools/panopto-enrich.js`):
+Shape (typed as `SessionsManifest` in `@canvas-toolchain/canvas-design-studio/dist/tools/panopto-enrich.js`):
 
 ```json
 {
@@ -190,7 +190,7 @@ Written atomically: write to `.tmp` → `renameSync` to final path. `mode: 0o600
 
 ### Enrichment algorithm
 
-The enrichment logic lives in CDS at `src/tools/panopto-enrich.ts` and is called by C&C through `canvas-design-mcp`. See `packages/canvas-design-studio/AGENTS.md` for the algorithm walkthrough.
+The enrichment logic lives in CDS at `src/tools/panopto-enrich.ts` and is called by C&C through `@canvas-toolchain/canvas-design-studio`. See `packages/canvas-design-studio/AGENTS.md` for the algorithm walkthrough.
 
 ### Error taxonomy
 
@@ -241,7 +241,7 @@ The May 2026 hardening pass made two deliberate decisions:
 - Keep the coordinator in TypeScript because Curriculum Intelligence and Canvas Design Studio are already tested TypeScript MCP packages.
 - Bridge Canvas Backup through its existing Python CLI because the downloader is the only runtime outlier and already has working professor-facing launchers.
 
-Do not reintroduce fake npm package names such as `canvas-design-studio-mcp` or `canvas-downloader-mcp`. The real packages/commands are `canvas-design-mcp`, `curriculum-intelligence-mcp`, and `canvas-backup`.
+Do not reintroduce fake npm package names such as `canvas-design-studio-mcp` or `canvas-downloader-mcp`. The real packages are `@canvas-toolchain/canvas-design-studio`, `@canvas-toolchain/curriculum-intelligence`, and `@canvas-toolchain/command-and-control` (bins: `canvas-toolchain-design-studio`, `canvas-toolchain-curriculum-intelligence`, `canvas-toolchain-server` / `canvas-toolchain-dashboard`); Canvas Backup remains `canvas-backup`.
 
 ## Architecture review backlog
 
@@ -262,7 +262,7 @@ Claude MCP config (`~/.claude/mcp_servers.json`):
 {
   "command-and-control": {
     "command": "node",
-    "args": ["D:/Dev/Command-and-Control-MCP/dist/index.js"]
+    "args": ["D:/Dev/canvas-toolchain/packages/command-and-control/dist/index.js"]
   }
 }
 ```

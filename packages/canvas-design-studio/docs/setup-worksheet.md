@@ -4,7 +4,7 @@ Fill this out before running `setup_institution`. Take your time — having thes
 
 After filling it out, run the setup wizard:
 ```
-npx canvas-design-mcp
+npx canvas-toolchain-design-studio
 ```
 
 Or tell your AI host: *"Run setup_institution."*
