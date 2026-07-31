@@ -333,7 +333,7 @@ export async function installModule(
     installed: true,
     id: entry.id,
     version: entry.version,
-    note: 'Takes effect on the next Claude reconnect/restart (modules load at startup).',
+    note: 'Takes effect on the next MCP host reconnect/restart (modules load at startup).',
     ...(warning ? { warning } : {}),
   };
 }
@@ -365,5 +365,5 @@ export function uninstallModule(
   manifest.modules[args.moduleId] = { ...manifest.modules[args.moduleId], enabled: false };
   saveModuleManifest(manifest);
 
-  return { uninstalled: true, id: args.moduleId, note: 'Takes effect on the next Claude reconnect/restart.' };
+  return { uninstalled: true, id: args.moduleId, note: 'Takes effect on the next MCP host reconnect/restart.' };
 }

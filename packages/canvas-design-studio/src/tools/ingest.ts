@@ -244,7 +244,7 @@ export async function ingestAssignmentFolder(
   // Combine style-notes with shell as generation context.
   // Note: generateCanvasPage() currently does not use styleNotes in HTML output —
   // it is passed for forward compatibility. The shell's primary value is being
-  // returned in sources.shell for Claude to use when reviewing the generated page.
+  // returned in sources.shell for the model to use when reviewing the generated page.
   const combinedStyleNotes = [
     sources.styleNotes,
     sources.shell

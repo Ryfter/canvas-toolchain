@@ -187,7 +187,7 @@ export const CI_TOOLS: PassthroughTool[] = [
   {
     name: 'extract_lecture_topics',
     taskCategory: 'fast',
-    description: 'Return lecture chunks shaped for Claude to reason over.',
+    description: 'Return lecture chunks shaped for the model to reason over.',
     inputSchema: {
       type: 'object',
       required: ['courseId', 'semesterId'],
@@ -251,7 +251,7 @@ export const CI_TOOLS: PassthroughTool[] = [
   {
     name: 'scan_recent_developments',
     taskCategory: 'judgment',
-    description: 'Ask Claude what\'s new in a given topic area since a date.',
+    description: 'Ask the model what\'s new in a given topic area since a date.',
     inputSchema: {
       type: 'object',
       required: ['courseId', 'topicArea'],

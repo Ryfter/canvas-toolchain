@@ -107,7 +107,7 @@ async function main() {
           type: 'object' as const,
           required: ['assignmentBrief', 'courseName', 'courseNumber', 'assignmentNumber', 'professorName', 'semester'],
           properties: {
-            assignmentBrief: { type: 'string', description: 'Raw assignment instructions — paste from Word, email, or notes. Claude will rewrite into polished student-friendly copy.' },
+            assignmentBrief: { type: 'string', description: 'Raw assignment instructions — paste from Word, email, or notes. The model rewrites into polished student-friendly copy.' },
             courseName: { type: 'string', description: 'e.g. AI Augmented Projects' },
             courseNumber: { type: 'string', description: 'e.g. ITM 370' },
             assignmentNumber: { type: 'string', description: 'e.g. 16.06' },
@@ -194,7 +194,7 @@ async function main() {
       },
       {
         name: 'critique_canvas_page',
-        description: 'Evaluate a Canvas HTML page for visual design quality. Returns a score, strengths, and prioritized findings. Use quick mode for a fast structural check; comprehensive mode for a full design review with KB context for Claude to reason about. If the professor philosophy KB is in context, evaluate the page against the professor\'s stated standards and teaching philosophy. If student personas are in context, factor their backgrounds into the findings where relevant.',
+        description: 'Evaluate a Canvas HTML page for visual design quality. Returns a score, strengths, and prioritized findings. Use quick mode for a fast structural check; comprehensive mode for a full design review with KB context for the model to reason about. If the professor philosophy KB is in context, evaluate the page against the professor\'s stated standards and teaching philosophy. If student personas are in context, factor their backgrounds into the findings where relevant.',
         inputSchema: {
           type: 'object' as const,
           required: ['html', 'pageType', 'primaryGoal'],
@@ -210,14 +210,14 @@ async function main() {
             mode: {
               type: 'string',
               enum: ['quick', 'comprehensive'],
-              description: 'quick: fast code-based checks only. comprehensive: adds KB design principles to the response for deeper Claude analysis. Defaults to quick.',
+              description: 'quick: fast code-based checks only. comprehensive: adds KB design principles to the response for deeper model analysis. Defaults to quick.',
             },
           },
         },
       },
       {
         name: 'redesign_canvas_page',
-        description: 'Apply design fixes to Canvas HTML based on critique findings. Applies mechanical fixes automatically; returns remaining findings and KB context for Claude to address. Runs WCAG 2.1 AA accessibility check on output. If the professor philosophy KB is in context, redesign toward the professor\'s aesthetic and pedagogical preferences.',
+        description: 'Apply design fixes to Canvas HTML based on critique findings. Applies mechanical fixes automatically; returns remaining findings and KB context for the model to address. Runs WCAG 2.1 AA accessibility check on output. If the professor philosophy KB is in context, redesign toward the professor\'s aesthetic and pedagogical preferences.',
         inputSchema: {
           type: 'object' as const,
           required: ['html', 'findings'],
@@ -227,10 +227,10 @@ async function main() {
             mode: {
               type: 'string',
               enum: ['quick', 'comprehensive'],
-              description: 'quick: mechanical fixes only. comprehensive: mechanical fixes + KB context for Claude to complete the redesign. Defaults to quick.',
+              description: 'quick: mechanical fixes only. comprehensive: mechanical fixes + KB context for the model to complete the redesign. Defaults to quick.',
             },
-            pageType: { type: 'string', description: 'Optional. Helps Claude in comprehensive mode.' },
-            primaryGoal: { type: 'string', description: 'Optional. Helps Claude in comprehensive mode.' },
+            pageType: { type: 'string', description: 'Optional. Helps the model in comprehensive mode.' },
+            primaryGoal: { type: 'string', description: 'Optional. Helps the model in comprehensive mode.' },
           },
         },
       },
@@ -239,7 +239,7 @@ async function main() {
         description: 'Read assignment materials from a folder and generate a Canvas-safe HTML page. ' +
           'Supports simple mode (ingest/ folder with up to 5 files) and advanced mode ' +
           '(assignments/{id}/ subfolders with shared rubric and shell inheritance for assignment groups). ' +
-          'Returns the generated HTML alongside the raw brief, rubric, and shell content so Claude can ' +
+          'Returns the generated HTML alongside the raw brief, rubric, and shell content so the model can ' +
           'review brief clarity, rubric alignment, and shell completeness. ' +
           'Brief and style-notes are per-assignment; rubric and shell are inherited from parent folders if not present locally. ' +
           'If the professor philosophy KB is in context, apply it when generating the page and note any alignment between the assignment materials and the professor\'s philosophy. ' +
@@ -676,7 +676,7 @@ async function main() {
           lines.push(`\n📸 Hero image prompt (1200×400px):\n${result.heroImagePrompt}`);
         }
 
-        // Return raw sources so Claude can review brief/rubric/shell alignment
+        // Return raw sources so the model can review brief/rubric/shell alignment
         lines.push(`\n---\n**Source content for review:**`);
         lines.push(`\n**Brief:**\n${result.sources.brief}`);
         if (result.sources.rubric) lines.push(`\n**Rubric:**\n${result.sources.rubric}`);
@@ -802,7 +802,7 @@ async function main() {
         lines.push('\nNext steps:');
         lines.push('  1. Open course-config.md — update semester, professor name, and week topics');
         lines.push('  2. Search for [NEEDS REVIEW] in .md files and fill in missing content');
-        lines.push('  3. Tell Claude: "Generate the course from the course/ folder"');
+        lines.push('  3. Tell your AI assistant: "Generate the course from the course/ folder"');
         return { content: [{ type: 'text', text: lines.join('\n') }] };
       }
 

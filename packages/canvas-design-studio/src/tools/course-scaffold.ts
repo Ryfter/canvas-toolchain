@@ -8,7 +8,7 @@ export function getWeekFolderName(week: number): string {
 
 const PAGE_PROMPTS: Record<PageType, string> = {
   'front-page': `## Course Introduction
-[Brief course description — Claude rewrites into student-facing copy]
+[Brief course description — the model rewrites into student-facing copy]
 
 ## What You'll Learn
 [3-5 high-level outcomes for the course]
@@ -24,7 +24,7 @@ const PAGE_PROMPTS: Record<PageType, string> = {
 - Students will understand...
 
 ## Introduction
-[Professor notes for this week — rough is fine, Claude rewrites]
+[Professor notes for this week — rough is fine, the model rewrites]
 
 ## Activities
 - Lecture: [title] (Panopto)
@@ -63,7 +63,7 @@ const PAGE_PROMPTS: Record<PageType, string> = {
 [Anything students should pay attention to while watching]
 `,
   'assignment': `## Brief
-[Paste raw assignment instructions here — rough is fine, Claude rewrites into polished student-facing copy]
+[Paste raw assignment instructions here — rough is fine, the model rewrites into polished student-facing copy]
 
 ## Rubric
 [Paste rubric criteria here, or leave blank to inherit from a shared rubric file]
@@ -128,7 +128,7 @@ const PAGE_PROMPTS: Record<PageType, string> = {
 [Any software, files, or accounts students need before starting]
 
 ## Instructions
-[Step-by-step lab instructions — can be rough, Claude rewrites]
+[Step-by-step lab instructions — can be rough, the model rewrites]
 
 ## Submission
 - Due: [date]
@@ -163,7 +163,7 @@ const PAGE_PROMPTS: Record<PageType, string> = {
 [What tool, technology, or hands-on skill this assignment covers]
 
 ## Instructions
-[Step-by-step technical instructions — rough is fine, Claude rewrites]
+[Step-by-step technical instructions — rough is fine, the model rewrites]
 
 ## Requirements
 - [Technical requirement 1]

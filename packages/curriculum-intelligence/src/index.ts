@@ -241,7 +241,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'extract_lecture_topics',
       description:
-        'Return lecture chunks shaped for Claude to reason over. Each chunk has the ' +
+        'Return lecture chunks shaped for the model to reason over. Each chunk has the ' +
         'transcript id, week (if mapped), source, duration, and fullText. Filter by week ' +
         'or transcriptId to scope down. Server does no LLM call — it just shapes the data.',
       inputSchema: {
@@ -317,7 +317,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'scan_recent_developments',
       description:
-        'Ask Claude (with web search) what\'s new in a given topic area since a date. ' +
+        'Ask the model (with web search) what\'s new in a given topic area since a date. ' +
         'Returns structured developments and candidate topic phrases for the professor to review. ' +
         'Requires ANTHROPIC_API_KEY in the environment.',
       inputSchema: {
@@ -425,7 +425,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description:
         'Write ideas.md under the course folder after a v0.5/0.6 run. Lists deferred v1 ' +
         'scope (outline generator, date shifting, shell update), architecture follow-ons, ' +
-        'and suggested next prompts for Claude. Optionally records usage notes from this run.',
+        'and suggested next prompts for the model. Optionally records usage notes from this run.',
       inputSchema: {
         type: 'object' as const,
         required: ['courseId'],
