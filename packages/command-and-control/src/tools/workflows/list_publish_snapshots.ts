@@ -77,7 +77,12 @@ export async function listPublishSnapshots(
     });
   }
 
-  entries.sort((a, b) => a.publishedAt.localeCompare(b.publishedAt));
+  // Secondary key so snapshots published in the same millisecond always list in
+  // the same order rather than in whatever order the filesystem returned them.
+  entries.sort(
+    (a, b) =>
+      a.publishedAt.localeCompare(b.publishedAt) || a.snapshotId.localeCompare(b.snapshotId),
+  );
 
   return { currentlyLiveSnapshotId, snapshots: entries };
 }
