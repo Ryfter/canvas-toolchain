@@ -4,6 +4,13 @@ import { createWriteStream, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 import { loadConfig } from '../kb/config.js';
+import { loadCanvasConfig } from '../tools/setup_canvas.js';
+import {
+  managedCanvasBackupConfigExists,
+  managedCanvasBackupConfigPath,
+  writeManagedCanvasBackupConfig,
+  type CanvasBackupPrefs,
+} from './canvas_backup_config.js';
 
 export interface CanvasBackupInvocation {
   command: string;
@@ -101,9 +108,18 @@ export function downloadCanvasArchive(
   onProgress?: (message: string) => void
 ): Promise<DownloadCanvasArchiveResult> {
   const invocation = getCanvasBackupInvocation();
+
+  // Explicit input.configPath always wins; otherwise use the C&C-managed file if present.
+  let configArgs: string[] = [];
+  if (input.configPath) {
+    configArgs = ['--config', input.configPath];
+  } else if (managedCanvasBackupConfigExists()) {
+    configArgs = ['--config', managedCanvasBackupConfigPath()];
+  }
+
   const cliArgs = [
     ...invocation.baseArgs,
-    ...(input.configPath ? ['--config', input.configPath] : []),
+    ...configArgs,
     'archive',
     '--course-id', input.courseId,
     '--json-progress',
@@ -114,6 +130,18 @@ export function downloadCanvasArchive(
     ...(input.downloadWorkers ? ['--download-workers', String(input.downloadWorkers)] : []),
   ];
 
+  // Merge env: preserve invocation.env (PYTHONPATH/cwd sibling-venv) when present,
+  // inject CANVAS_TOKEN from the C&C canvas config when available. Never crash if
+  // Canvas is not configured — spawn without the token and let the CLI report it.
+  const baseEnv = invocation.env ?? process.env;
+  let env: NodeJS.ProcessEnv = baseEnv;
+  try {
+    const canvas = loadCanvasConfig();
+    env = { ...baseEnv, CANVAS_TOKEN: canvas.token };
+  } catch {
+    // Canvas not configured — leave env as-is.
+  }
+
   return new Promise((resolveP, rejectP) => {
     const logPath = join(tmpdir(), `canvas-backup-${Date.now()}.log`);
     const logStream = createWriteStream(logPath, { encoding: 'utf-8' });
@@ -122,7 +150,7 @@ export function downloadCanvasArchive(
 
     const child = spawn(invocation.command, cliArgs, {
       cwd: invocation.cwd,
-      env: invocation.env ?? process.env,
+      env,
     });
 
     child.stdout.on('data', (chunk: Buffer) => {
@@ -176,6 +204,50 @@ export function downloadCanvasArchive(
 }
 
 export const DOWNLOADER_TOOLS: PassthroughTool[] = [
+  {
+    name: 'setup_canvas_backup',
+    taskCategory: 'none',
+    description:
+      '[canvas-backup] Generate a Canvas Backup config from the Canvas connection already ' +
+      'configured in Command and Control. Writes ~/.command-and-control/canvas-backup.generated.toml ' +
+      '(token stays out of the file; passed via CANVAS_TOKEN at archive time). Run this once per ' +
+      'semester so download_canvas_archive can find base_url / archive root / year / semester.',
+    inputSchema: {
+      type: 'object',
+      required: ['semester'],
+      properties: {
+        root: {
+          type: 'string',
+          description: 'Archive root directory. Defaults to ~/CanvasArchive.',
+        },
+        year: {
+          type: 'string',
+          description: 'Archive year folder (e.g. "2026"). Defaults to the current calendar year.',
+        },
+        semester: {
+          type: 'string',
+          description:
+            'Archive semester folder (e.g. "Fall", "Spring", "Summer"). Required — never guessed.',
+        },
+        downloadWorkers: {
+          type: 'number',
+          description: 'Concurrent Canvas file downloads. Defaults to 6.',
+        },
+      },
+    },
+    handler: (args) => {
+      const prefs = args as CanvasBackupPrefs;
+      const { path, baseUrl } = writeManagedCanvasBackupConfig(prefs);
+      return {
+        configured: true,
+        configPath: path,
+        baseUrl,
+        message:
+          `Canvas Backup config written to ${path} (base_url=${baseUrl}). ` +
+          'download_canvas_archive will use it automatically. The API token is not stored in the file.',
+      };
+    },
+  },
   {
     name: 'download_canvas_archive',
     taskCategory: 'none',

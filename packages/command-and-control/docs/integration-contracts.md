@@ -123,6 +123,24 @@ Implemented since integration-hardening:
 3. A sibling checkout at `../Canvas-Download` plus its `.venv`.
 4. `canvas-backup` on `PATH`.
 
+### Canvas Backup's own config
+
+Canvas Backup loads a TOML config and requires four keys before it will run:
+`canvas.base_url`, `archive.root`, `archive.year`, `archive.semester`. Those are
+required at config-load time, so an archive fails during preflight even when CLI
+overrides like `--year` are supplied. Nothing in the toolchain used to produce that
+file, which left professors hand-editing TOML and guessing the schema.
+
+`setup_canvas_backup` now writes `~/.command-and-control/canvas-backup.generated.toml`
+from the Canvas connection already stored by `setup_canvas`. Config resolution for an
+archive run is: an explicit `configPath` argument wins; otherwise the managed file is
+used when present; otherwise Canvas Backup falls back to its own default lookup.
+
+The Canvas API token is deliberately **not** written into that file. The generated
+config sets `token_env = "CANVAS_TOKEN"`, and `download_canvas_archive` injects the
+token into the child process environment at spawn time — so the credential exists in
+exactly one place on disk (`canvas-config.json`, mode 0600) rather than two.
+
 The local archive remains the source of truth. Google Drive is still only a mirror.
 
 ## Go Decision

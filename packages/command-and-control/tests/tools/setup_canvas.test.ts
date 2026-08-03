@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -189,5 +189,39 @@ describe('CanvasSetupConfig V&R Plan C fields', () => {
     expect(cfg.snapshotRetentionDays).toBeUndefined();
     expect(cfg.canvasBreadcrumbs).toBeUndefined();
     expect(cfg.backupOverride).toBeUndefined();
+  });
+});
+
+describe('bare-subdomain hosts (regression)', () => {
+  it('completes a bare subdomain before validating and saving', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ id: 1 }) } as Response);
+
+    const result = await setupCanvas({ host: 'exampleucanvas', token: 'tok' });
+
+    // The validation call must go to the completed host, not https://exampleucanvas/.
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      'https://exampleucanvas.instructure.com/api/v1/users/self',
+    );
+    expect(result.host).toBe('exampleucanvas.instructure.com');
+
+    const saved = JSON.parse(readFileSync(join(tmpHome, 'canvas-config.json'), 'utf-8'));
+    expect(saved.host).toBe('exampleucanvas.instructure.com');
+  });
+
+  it('self-heals a bare subdomain already on disk', async () => {
+    // Simulates a config written before normalization was unified, or hand-edited.
+    await setupCanvas({ host: 'exampleucanvas.instructure.com', token: 'tok', test: false });
+    const path = join(tmpHome, 'canvas-config.json');
+    const raw = JSON.parse(readFileSync(path, 'utf-8'));
+    writeFileSync(path, JSON.stringify({ ...raw, host: 'exampleucanvas' }, null, 2));
+
+    expect(loadCanvasConfig().host).toBe('exampleucanvas.instructure.com');
+  });
+
+  it('refuses an empty host instead of saving an unusable config', async () => {
+    const result = await setupCanvas({ host: '   ', token: 'tok' });
+    expect(result.configured).toBe(false);
+    expect(result.error).toBe('CANVAS_HOST_INVALID');
+    expect(existsSync(join(tmpHome, 'canvas-config.json'))).toBe(false);
   });
 });
