@@ -122,10 +122,18 @@ export function findMostRecentPrior(
   currentSemesterId: string,
   registeredSemesters: { id: string; registeredAt: string }[],
 ): string | null {
-  const sorted = [...registeredSemesters]
-    .filter((s) => s.id !== currentSemesterId)
-    .sort((a, b) => b.registeredAt.localeCompare(a.registeredAt));
-  return sorted[0]?.id ?? null;
+  // Semesters are appended in registration order, so a later index means a later
+  // registration. Two registrations inside the same millisecond compare equal on
+  // registeredAt alone, which left the winner to the sort's tie handling — and
+  // yielded the OLDEST semester, the opposite of the intent.
+  const sorted = registeredSemesters
+    .map((semester, index) => ({ semester, index }))
+    .filter(({ semester }) => semester.id !== currentSemesterId)
+    .sort(
+      (a, b) =>
+        b.semester.registeredAt.localeCompare(a.semester.registeredAt) || b.index - a.index,
+    );
+  return sorted[0]?.semester.id ?? null;
 }
 
 export function readEntries(courseId: CourseId, lookback?: number): TrajectoryEntry[] {
