@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir, platform } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { sha256File } from '../src/channel/hash.js';
 import {
   validateCatalog, fetchCatalog, CatalogError, SUPPORTED_CATALOG_VERSION, MAX_ARTIFACT_BYTES,
@@ -259,6 +260,18 @@ describe('isAllowedArtifactUrl — normalized-URL comparison, not raw-string pre
     it('still accepts the legitimate, already-canonical artifact URL', () => {
       expect(isAllowedArtifactUrl(GOOD_ENTRY.artifactUrl)).toBe(true);
     });
+  });
+});
+
+describe('live module-catalog.json companions', () => {
+  it('points canvas-backup at the public canvas-backup repo, not the dead Canvas-Download URL', () => {
+    const catalogPath = fileURLToPath(new URL('../../../module-catalog.json', import.meta.url));
+    const catalog = JSON.parse(readFileSync(catalogPath, 'utf-8')) as {
+      companions?: Array<{ id: string; url: string }>;
+    };
+    const backup = (catalog.companions ?? []).find((c) => c.id === 'canvas-backup');
+    expect(backup, 'canvas-backup companion must be listed').toBeDefined();
+    expect(backup?.url).toBe('https://github.com/Ryfter/canvas-backup');
   });
 });
 

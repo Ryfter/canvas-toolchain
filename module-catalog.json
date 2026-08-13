@@ -19,7 +19,7 @@
       "name": "Canvas Backup",
       "summary": "Downloads a complete local archive of a Canvas course.",
       "whyYouWantIt": "Canvas Toolchain reads a Canvas Backup archive as the starting point of the course-refresh pipeline. It also works entirely on its own as a backup tool.",
-      "url": "https://github.com/Ryfter/Canvas-Download",
+      "url": "https://github.com/Ryfter/canvas-backup",
       "worksWithoutToolchain": true
     },
     {
