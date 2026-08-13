@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -48,6 +49,32 @@ func TestFetchModuleCatalogAcceptsVersion2(t *testing.T) {
 	}
 	if len(mods) != 1 || mods[0].ID != "announcements" {
 		t.Fatalf("expected only the non-bundled module (companions are not installable), got %+v", mods)
+	}
+}
+
+func TestFetchModuleCatalogAcceptsRepoCatalog(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	// installer/tasks/ → repo root module-catalog.json
+	catalogPath := filepath.Join(filepath.Dir(thisFile), "..", "..", "module-catalog.json")
+	raw, err := os.ReadFile(catalogPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", catalogPath, err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(raw)
+	}))
+	defer srv.Close()
+
+	mods, err := FetchModuleCatalog(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("installer must accept the repo module-catalog.json: %v", err)
+	}
+	if len(mods) < 1 {
+		t.Fatal("expected at least one installable (non-bundled) module from the live catalog")
 	}
 }
 

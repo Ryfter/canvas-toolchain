@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'installer/**'
+      - 'module-catalog.json'
       - '.github/workflows/installer-ci.yml'
   pull_request:
     paths:
       - 'installer/**'
+      - 'module-catalog.json'
       - '.github/workflows/installer-ci.yml'
 
 jobs:
