@@ -1,6 +1,7 @@
 import { confirm, input, password } from '@inquirer/prompts';
 import Color from 'color';
 import { saveConfig } from './config.js';
+import { canvasBaseUrl, normalizeCanvasHost } from '@canvas-toolchain/shared-types';
 import type { InstitutionConfig } from './types.js';
 import { wcagContrastRatio } from './tools/contrast.js';
 import {
@@ -165,15 +166,20 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
     if (go) break;
   }
 
-  const canvasUrl = await input({
-    message: 'Canvas base URL (log into Canvas, copy the domain, e.g. https://example.instructure.com — no trailing slash):',
+  // Accepts a full URL or just the school's subdomain; the answer is canonicalized
+  // to an origin. Requiring "https://" while never completing a bare label let
+  // "https://schoolname" through — a host that resolves nowhere and fails later
+  // as an opaque TLS error.
+  const canvasUrlAnswer = await input({
+    message:
+      'Canvas base URL (log into Canvas and copy the domain — e.g. https://example.instructure.com, or just "example"):',
     default: defaults?.canvasUrl ?? 'https://example.instructure.com',
     validate: (v: string) => {
-      if (!v.startsWith('https://')) return 'URL must start with https://';
-      if (v.endsWith('/')) return 'Remove the trailing slash (e.g. https://example.instructure.com)';
+      if (!normalizeCanvasHost(v)) return 'Enter your Canvas domain, e.g. example.instructure.com';
       return true;
     },
   });
+  const canvasUrl = canvasBaseUrl(canvasUrlAnswer);
 
   if (defaults?.apiToken) {
     console.log('  ✓ API token from worksheet — leave blank to use it, or type a new token to override.');

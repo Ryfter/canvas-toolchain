@@ -124,3 +124,46 @@ describe('pruneSnapshots', () => {
     expect(existsSync(join(snapshotsRootFor(courseDir), 'old'))).toBe(false);
   });
 });
+
+describe('same-timestamp tie-break (determinism)', () => {
+  const TIED = '2026-06-01T12:00:00.000Z';
+
+  it('retains the same snapshot on tied timestamps regardless of directory order', () => {
+    // Snapshot ids are random UUIDs, so a tie carries no recency information.
+    // What matters is that the outcome is reproducible: entries reach the sort
+    // in readdirSync order, which differs by platform and filesystem, so an
+    // unbroken tie lets the OS decide which snapshot gets deleted.
+    makeSnap('aaaa-1111', TIED);
+    makeSnap('bbbb-2222', TIED);
+    makeSnap('recent', '2026-06-03T12:00:00.000Z');
+
+    const result = computePruneList({
+      courseId: 20255, courseDir, retainCount: 2, retainDays: 0,
+      now: Date.parse('2026-08-01T00:00:00.000Z'),
+    });
+
+    // Tie resolves toward the higher snapshotId, so the outcome never depends
+    // on the order the filesystem happened to hand back.
+    expect(result.kept).toContain('recent');
+    expect(result.kept).toContain('bbbb-2222');
+    expect(result.pruned).toEqual(['aaaa-1111']);
+  });
+
+  it('is stable across repeated evaluations of identical input', () => {
+    makeSnap('aaaa-1111', TIED);
+    makeSnap('bbbb-2222', TIED);
+    makeSnap('cccc-3333', TIED);
+
+    const runs = Array.from({ length: 5 }, () =>
+      computePruneList({
+        courseId: 20255, courseDir, retainCount: 1, retainDays: 0,
+        now: Date.parse('2026-08-01T00:00:00.000Z'),
+      }),
+    );
+    for (const run of runs) {
+      expect(run.kept).toEqual(runs[0]!.kept);
+      expect(run.pruned).toEqual(runs[0]!.pruned);
+    }
+    expect(runs[0]!.kept).toEqual(['cccc-3333']);
+  });
+});

@@ -48,8 +48,17 @@ function readSnapshotIndex(courseDir: string, courseId: number): SnapshotIndexEn
 }
 
 export function computePruneList(input: ComputePruneInput): ComputePruneResult {
+  // Entries arrive in readdirSync order, which varies by platform and filesystem.
+  // publishedAt alone leaves same-millisecond snapshots tied, so the OS would decide
+  // which one falls outside retainCount and gets deleted. Snapshot ids are random
+  // UUIDs and carry no recency, so the tie-break cannot recover which is newer — it
+  // only has to be reproducible, so that the same on-disk state always prunes the
+  // same snapshot.
   const all = readSnapshotIndex(input.courseDir, input.courseId)
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+    .sort(
+      (a, b) =>
+        b.publishedAt.localeCompare(a.publishedAt) || b.snapshotId.localeCompare(a.snapshotId),
+    );
 
   const now = input.now ?? Date.now();
   const ageThresholdMs = input.retainDays * 86_400_000;

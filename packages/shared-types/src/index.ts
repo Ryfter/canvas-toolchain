@@ -190,3 +190,7 @@ export interface PageClos {
   /** IDs the page referenced that weren't found in the catalog. */
   unknownIds: string[];
 }
+
+// ── Canvas host ──────────────────────────────────────────────────────────────
+
+export { normalizeCanvasHost, canvasBaseUrl } from './canvas-host.js';

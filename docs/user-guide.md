@@ -202,7 +202,8 @@ Every command, organized by the job it does. For each: **what it is**, **how it 
 
 | Command | What · How · Why |
 | --- | --- |
-| `download_canvas_archive` *(passthrough)* | **What:** archive a live Canvas course to disk. **How:** drives the Python Canvas Backup CLI (pages, assignments, quizzes, modules, files). **Why:** creates the local source-of-truth archive everything else reads. |
+| `setup_canvas_backup` *(passthrough)* | **What:** one-time-per-term setup for archiving. **How:** writes Canvas Backup's config from the Canvas connection you already gave `setup_canvas` — you supply the semester (and optionally the archive folder and year). Your API token is not written into that file. **Why:** Canvas Backup refuses to start without a base URL, archive folder, year, and semester; this fills them in so you never hand-edit a config file. |
+| `download_canvas_archive` *(passthrough)* | **What:** archive a live Canvas course to disk. **How:** drives the Python Canvas Backup CLI (pages, assignments, quizzes, modules, files); uses the config from `setup_canvas_backup`. **Why:** creates the local source-of-truth archive everything else reads. |
 | `import_course` *(CDS)* | **What:** scaffold an editable course folder from an archive. **How:** reads modules/pages/assignments and writes a pre-filled `course/` folder; unclear content becomes `[NEEDS REVIEW]`. Works at full-course, single-week, or single-assignment granularity. **Why:** turns a raw backup into something you can edit and regenerate. |
 | `ingest_canvas_archive` *(CI, passthrough)* | **What:** parse an archive into a structured `topic-map.json`. **How:** idempotent — re-running overwrites the map. **Why:** the machine-readable form the analysis tools work on. |
 

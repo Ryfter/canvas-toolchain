@@ -155,6 +155,38 @@ For changes inside a single package, the package-local `npm test` + `npm run bui
 
 ---
 
+## Canvas host handling (PR #141)
+
+`~/.command-and-control/canvas-config.json` has **two writers** — the Go installer and the
+`setup_canvas` MCP tool — so the file format is a cross-language contract. Both must produce
+the same thing. `normalizeCanvasHost` / `canvasBaseUrl` in `@canvas-toolchain/shared-types` are
+the single TypeScript implementation and the behavioral twin of `installer/tasks/canvashost.go`;
+`packages/shared-types/tests/canvas-host.test.ts` pins them against the Go table. **Never
+re-implement host cleanup locally** — a bare subdomain (`schoolname`) must become
+`schoolname.instructure.com`, or it resolves nowhere and fails much later as an opaque TLS error.
+Normalization runs on **write and read** in both config surfaces (C&C `setup_canvas.ts`, CDS
+`config.ts`), so configs already broken on disk heal without the professor re-running setup.
+Design Studio stores the full origin (`canvasUrl`), C&C stores the bare host (`host`).
+
+Canvas Backup keeps its **own** TOML config and requires `canvas.base_url`, `archive.root`,
+`archive.year`, and `archive.semester` at load time — CLI overrides do not satisfy them, so a
+missing key kills an archive in preflight. `setup_canvas_backup` generates that file at
+`~/.command-and-control/canvas-backup.generated.toml`. The API token is **never** written into
+it: the file sets `token_env = "CANVAS_TOKEN"` and `download_canvas_archive` injects the token
+into the child environment at spawn, keeping the credential in exactly one place on disk.
+
+**Sorting rule (three bugs of one class fixed in PR #141):** any comparator over a timestamp
+needs an explicit tie-break, and any sort whose input order comes from `readdirSync` needs a
+total order. Same-millisecond ties made `findMostRecentPrior` return the *oldest* semester and
+let the filesystem choose which publish snapshot `computePruneList` **deleted**.
+
+**Test isolation:** Design Studio's vitest config sandboxes `CANVAS_DESIGN_HOME` to a temp dir
+for every test file (`packages/canvas-design-studio/tests/setup-sandbox-home.ts`). Keep it —
+without it a test that forgets its own `beforeEach` overwrites the professor's real
+`institution.json`, including their API token. That has happened twice.
+
+---
+
 ## Hard rules
 
 - **Do not port the whole toolchain to Go.** Go is for the installer and possibly a future Canvas Backup rewrite. The working product logic stays in TypeScript and Python.

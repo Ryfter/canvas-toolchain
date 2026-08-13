@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import type { InstitutionConfig } from '../src/types.js';
 
@@ -62,5 +62,47 @@ describe('config storage hardening (real module)', () => {
     expect(onDisk.institution).toBe('Second University');
     expect(onDisk.apiToken).toBeUndefined();
     expect(readdirSync(testHome)).toEqual(['institution.json']);
+  });
+});
+
+describe('canvasUrl canonicalization (regression)', () => {
+  beforeEach(() => {
+    testHome = mkdtempSync(join(tmpdir(), 'cds-config-canon-'));
+    process.env.CANVAS_DESIGN_HOME = testHome;
+  });
+
+  afterEach(() => {
+    delete process.env.CANVAS_DESIGN_HOME;
+    rmSync(testHome, { recursive: true, force: true });
+  });
+
+  it('completes a bare subdomain that only passed the old https:// check', () => {
+    // "https://schoolname" satisfied startsWith('https://') but resolves nowhere,
+    // surfacing much later as an opaque TLS/auth failure.
+    saveConfig({ ...SAMPLE_CONFIG, canvasUrl: 'https://exampleucanvas' });
+    expect(loadConfig().canvasUrl).toBe('https://exampleucanvas.instructure.com');
+  });
+
+  it('accepts a bare subdomain with no scheme at all', () => {
+    saveConfig({ ...SAMPLE_CONFIG, canvasUrl: 'exampleucanvas' });
+    expect(loadConfig().canvasUrl).toBe('https://exampleucanvas.instructure.com');
+  });
+
+  it('strips trailing slashes and paths, leaving a bare origin', () => {
+    saveConfig({ ...SAMPLE_CONFIG, canvasUrl: 'https://example.instructure.com/courses/1/' });
+    expect(loadConfig().canvasUrl).toBe('https://example.instructure.com');
+  });
+
+  it('leaves a vanity domain untouched', () => {
+    saveConfig({ ...SAMPLE_CONFIG, canvasUrl: 'https://canvas.exampleu.edu' });
+    expect(loadConfig().canvasUrl).toBe('https://canvas.exampleu.edu');
+  });
+
+  it('heals a config already on disk without re-running setup', () => {
+    saveConfig(SAMPLE_CONFIG);
+    const path = join(testHome, 'institution.json');
+    const raw = JSON.parse(readFileSync(path, 'utf-8'));
+    writeFileSync(path, JSON.stringify({ ...raw, canvasUrl: 'https://exampleucanvas' }));
+    expect(loadConfig().canvasUrl).toBe('https://exampleucanvas.instructure.com');
   });
 });

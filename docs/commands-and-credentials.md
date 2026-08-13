@@ -149,7 +149,8 @@ These run through C&C but are owned by other packages.
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
-| `download_canvas_archive` | **courseId**, *configPath*, *year*, *semester*, *root*, *shellName*, *downloadWorkers* | Archive a Canvas course shell locally via the Python Canvas Backup CLI. |
+| `setup_canvas_backup` | **semester**, *root*, *year*, *downloadWorkers* | Generate Canvas Backup's config from the Canvas connection already stored by `setup_canvas`. Run once per term before the first archive. The API token is never written to the file — it is passed to Canvas Backup as `CANVAS_TOKEN` at archive time. |
+| `download_canvas_archive` | **courseId**, *configPath*, *year*, *semester*, *root*, *shellName*, *downloadWorkers* | Archive a Canvas course shell locally via the Python Canvas Backup CLI. Uses the config written by `setup_canvas_backup` unless *configPath* is given. |
 | `download_transcripts` | — | Placeholder for future bulk Panopto download. |
 
 **From Curriculum Intelligence (28 tools).** Course setup/state (`setup_course`, `get_course_state`), archive ingestion (`ingest_canvas_archive`), content analysis (`list_assignments`, `list_pages`, `list_modules`, `list_resources`, `diff_semesters`), transcript processing (`ingest_transcripts`, `map_transcripts_to_weeks`, `extract_lecture_topics`, `find_off_syllabus_topics`, `build_quote_bank`), topic currency (`fetch_news_feed`, `scan_recent_developments`, `suggest_topics`, `score_topic_currency`, `recommend_for_topic`), planning (`generate_ideas_file`, `import_previous_shell`, `fetch_academic_calendar`, `shift_dates`, `generate_recommended_outline`, `draft_assignment_brief`, `update_examples`, `export_course_folder`), and full analysis (`analyze_course`, `get_course_trajectory`). See §2.10 for the CI-direct detail.

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
+import { normalizeCanvasHost } from '@canvas-toolchain/shared-types';
 
 export interface CanvasSetupConfig {
   host: string;
@@ -44,13 +45,6 @@ function getCanvasConfigPath(): string {
   return join(getCcHomePath(), 'canvas-config.json');
 }
 
-function normalizeHost(raw: string): string {
-  return raw
-    .trim()
-    .replace(/^https?:\/\//i, '')
-    .replace(/\/+$/, '');
-}
-
 export function loadCanvasConfig(): CanvasSetupConfig {
   const configPath = getCanvasConfigPath();
   if (!existsSync(configPath)) {
@@ -71,7 +65,10 @@ export function loadCanvasConfig(): CanvasSetupConfig {
       'CANVAS_NOT_CONFIGURED: canvas-config.json is missing required fields. Re-run setup_canvas.',
     );
   }
-  return config as CanvasSetupConfig;
+  // Self-heal on read: configs written before host normalization was unified —
+  // or hand-edited — can hold a bare subdomain that resolves nowhere. Correct it
+  // in memory so existing installs work without re-running setup.
+  return { ...config, host: normalizeCanvasHost(config.host) } as CanvasSetupConfig;
 }
 
 async function validateToken(host: string, token: string): Promise<void> {
@@ -87,8 +84,17 @@ async function validateToken(host: string, token: string): Promise<void> {
 }
 
 export async function setupCanvas(input: SetupCanvasInput): Promise<SetupCanvasResult> {
-  const host = normalizeHost(input.host);
+  const host = normalizeCanvasHost(input.host);
   const { token, test = true } = input;
+
+  if (!host) {
+    return {
+      configured: false,
+      error: 'CANVAS_HOST_INVALID',
+      message: 'No Canvas hostname was provided.',
+      fix: ['Pass your school\'s Canvas host, e.g. "example.instructure.com"'],
+    };
+  }
   const now = new Date().toISOString();
 
   if (test) {
