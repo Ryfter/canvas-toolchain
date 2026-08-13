@@ -30,13 +30,34 @@ func TestFetchModuleCatalogFiltersBundled(t *testing.T) {
 	}
 }
 
+const catalogV2JSON = `{"catalogVersion":2,"modules":[
+  {"id":"announcements","name":"Announcements Auditor","description":"Audit scheduled announcements.","version":"1.1.0"},
+  {"id":"video","name":"Lecture Video","description":"Bundled.","version":"1.0.0","bundled":true}
+],"companions":[
+  {"id":"canvas-backup","name":"Canvas Backup","summary":"Downloads a complete local archive.","whyYouWantIt":"Starting point of the course-refresh pipeline.","url":"https://github.com/Ryfter/canvas-backup","worksWithoutToolchain":true}
+]}`
+
+func TestFetchModuleCatalogAcceptsVersion2(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(catalogV2JSON))
+	}))
+	defer srv.Close()
+	mods, err := FetchModuleCatalog(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("catalogVersion 2 should be accepted: %v", err)
+	}
+	if len(mods) != 1 || mods[0].ID != "announcements" {
+		t.Fatalf("expected only the non-bundled module (companions are not installable), got %+v", mods)
+	}
+}
+
 func TestFetchModuleCatalogRejectsUnknownVersion(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"catalogVersion":2,"modules":[]}`))
+		_, _ = w.Write([]byte(`{"catalogVersion":99,"modules":[]}`))
 	}))
 	defer srv.Close()
 	if _, err := FetchModuleCatalog(context.Background(), srv.URL); err == nil {
-		t.Fatal("expected an error for catalogVersion 2")
+		t.Fatal("expected an error for catalogVersion 99")
 	}
 }
 
