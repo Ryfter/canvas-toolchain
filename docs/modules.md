@@ -33,7 +33,7 @@ Downloads a complete local archive of a Canvas course.
 
 Works on its own, without Canvas Toolchain.
 
-[Get Canvas Backup](https://github.com/Ryfter/Canvas-Download)
+[Get Canvas Backup](https://github.com/Ryfter/canvas-backup)
 
 ### ASR Bench
 

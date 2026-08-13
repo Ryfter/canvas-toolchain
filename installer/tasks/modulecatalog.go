@@ -20,7 +20,11 @@ const maxCatalogBytes = 1 << 20 // 1 MiB
 // ModuleCatalogURL is the raw-GitHub location of the module catalog on main.
 const ModuleCatalogURL = "https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/module-catalog.json"
 
-const supportedCatalogVersion = 1
+// supportedCatalogVersion is the newest catalog schema this installer understands.
+// v2 added companions[] alongside modules[]; older catalogs (v1) remain readable.
+// Versions newer than this are refused so a future schema cannot silently
+// drop fields the picker depends on.
+const supportedCatalogVersion = 2
 
 // CatalogModule is one entry of module-catalog.json (installer-relevant fields only).
 type CatalogModule struct {
@@ -56,8 +60,8 @@ func FetchModuleCatalog(ctx context.Context, url string) ([]CatalogModule, error
 	if err := json.NewDecoder(io.LimitReader(res.Body, maxCatalogBytes)).Decode(&cat); err != nil {
 		return nil, fmt.Errorf("module catalog parse: %w", err)
 	}
-	if cat.CatalogVersion != supportedCatalogVersion {
-		return nil, fmt.Errorf("module catalog version %d unsupported (want %d)", cat.CatalogVersion, supportedCatalogVersion)
+	if cat.CatalogVersion < 1 || cat.CatalogVersion > supportedCatalogVersion {
+		return nil, fmt.Errorf("module catalog version %d unsupported (want 1..%d)", cat.CatalogVersion, supportedCatalogVersion)
 	}
 	out := make([]CatalogModule, 0, len(cat.Modules))
 	for _, m := range cat.Modules {

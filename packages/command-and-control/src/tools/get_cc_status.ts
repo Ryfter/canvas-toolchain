@@ -1,7 +1,10 @@
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { loadConfig } from '../kb/config.js';
+import { join } from 'node:path';
+import { getCcHomePath, loadConfig } from '../kb/config.js';
 import type { CcConfig, Mode, ProviderName } from '../types.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
+import { loadAnthropicConfig } from './setup_anthropic.js';
 
 const localRequire = createRequire(import.meta.url);
 
@@ -16,8 +19,28 @@ export interface GetCcStatusResult {
     downloader: boolean;
     designStudio: boolean;
   };
+  /** Presence-only. Never includes tokens, keys, hosts, or file contents. */
+  configured: {
+    canvasConfig: boolean;
+    llmProvider: boolean;
+    canvasBackupToml: boolean;
+  };
   routing: { fast: ProviderName; judgment: ProviderName };
   lastRun: CcConfig['lastRun'];
+}
+
+function anthropicKeyPresent(): boolean {
+  if (process.env.ANTHROPIC_API_KEY) return true;
+  try {
+    loadAnthropicConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function configFilePresent(name: string): boolean {
+  return existsSync(join(getCcHomePath(), name));
 }
 
 async function pingOllama(baseUrl: string): Promise<boolean> {
@@ -63,7 +86,7 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
     providers: {
       anthropic: {
         model: config.providers.anthropic.model,
-        keyPresent: !!process.env.ANTHROPIC_API_KEY,
+        keyPresent: anthropicKeyPresent(),
       },
       ollama: ollamaStatus,
     },
@@ -71,6 +94,11 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
       ci: ciInstalled,
       downloader: isCanvasBackupConfigured(),
       designStudio: designStudioInstalled,
+    },
+    configured: {
+      canvasConfig: configFilePresent('canvas-config.json'),
+      llmProvider: configFilePresent('llm-provider.json'),
+      canvasBackupToml: configFilePresent('canvas-backup.generated.toml'),
     },
     routing: config.routing,
     lastRun: config.lastRun,
