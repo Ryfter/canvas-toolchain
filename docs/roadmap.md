@@ -1,22 +1,23 @@
 # Canvas Toolchain Roadmap
 
-_Last updated: 2026-07-30. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
+_Last updated: 2026-08-13. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
 
 ## Where we are
 
-**Current release: v2.1.0 — one release surface** (released 2026-07-14, catalog cutover completed the same day). Module artifacts are now repo-hosted files under `modules/` — hash-pinned, rebuilt-and-verified by CI — the catalog is `catalogVersion: 2` with companion-program listings, and the update check accepts only strict `vX.Y.Z` tags. The Releases page carries only toolchain releases again, and the issue tracker is at **zero open issues**. Details in "Shipped in v2.1.0" below.
+**Current release: v2.1.0 — one release surface** (released 2026-07-14, catalog cutover completed the same day). Module artifacts are now repo-hosted files under `modules/` — hash-pinned, rebuilt-and-verified by CI — the catalog is `catalogVersion: 2` with companion-program listings, and the update check accepts only strict `vX.Y.Z` tags. The Releases page carries only toolchain releases again. Open issues (verified 2026-08-13): **#150** and **#151** — treat `gh issue list --state open` as the source of truth. Details in "Shipped in v2.1.0" below.
 
-**Next release: v2.2.0 — Canvas Toolchain unification** (complete on `feat/canvas-toolchain-unification`, unreleased). `npx canvas-toolchain` everywhere, packages under `@canvas-toolchain/*`, model-agnostic copy, npm publish workflow (needs org + `NPM_TOKEN` before tag). Details in "Next: v2.2.0" below.
+**Next release: v2.2.0 — Canvas Toolchain unification** (merged to `main` as `e2e1b74` / #140; still unreleased — no `v2.2.0` tag). `npx canvas-toolchain` everywhere, packages under `@canvas-toolchain/*`, model-agnostic copy, npm publish workflow (needs org + `NPM_TOKEN` before tag). Details in "v2.2.0 on main, awaiting release" below.
 
 Recent history: **v2.0.0** (plug-in module channel, closed #78) and the **v2.0.1 hardening pass** (PR #130, closed #121–#129) — a post-ship security review executed in full, whose headline fix was repo-wide: all seven Canvas clients refuse off-origin `Link: rel="next"` pagination, so a hostile or injected pagination URL can never receive the professor's Canvas token. **Announcements Auditor 1.1.0** (carrying those fixes) is the version the catalog serves.
 
 **Immediate next steps, in order:**
 
-1. **Land and tag v2.2.0** — merge the unification branch, create the `canvas-toolchain` npm org, add `NPM_TOKEN`, then tag (see [`docs/npm-publishing.md`](npm-publishing.md)).
-2. **Canvas capability showcase → assisted template creator + information hierarchy** — one combined design effort. The browse half exists (`show_canvas_capabilities` / `preview_canvas_pattern`); what's missing is the assisted "build a valid page from structured choices" flow, and the at-a-glance / working-detail / deep-support content-priority tiers are the structure that flow should ask about.
-3. **Rubric persona tie-in** — `draft_student_rubric` accepts course personas but does not yet emit per-persona criterion explanations. Small, well-bounded.
-4. **Module migration pilot (decision pending)** — five modules are still compiled into the base install (video, oral-assessment, group-builder, roster, peerassessment) while the catalog channel has only ever carried one. Candidate: migrate `module-video` alone first, proving the channel with more than one module before moving the rest.
-5. **Generation-quality eval harness** — a golden-input regression suite for the LLM-generated outputs (rubric rewrites, page generation), so model upgrades — including refreshing the aging default model id — become verifiable diffs instead of judgment calls.
+1. **[#150](https://github.com/Ryfter/canvas-toolchain/issues/150) — Tag and publish v2.2.0** — unification is already on `main` (`e2e1b74`, #140). Remaining, blocked on the maintainer: create the `canvas-toolchain` npm org, add the `NPM_TOKEN` repo secret, tag `v2.2.0` (see [`docs/npm-publishing.md`](npm-publishing.md)), then cut an installer release.
+2. **[#151](https://github.com/Ryfter/canvas-toolchain/issues/151) — One setup/readiness engine** — umbrella: make "installed" mean one thing across the installer, the README, `get_cc_status`, and the tutorial. Design pending; do not implement unasked.
+3. **Canvas capability showcase → assisted template creator + information hierarchy** — one combined design effort. The browse half exists (`show_canvas_capabilities` / `preview_canvas_pattern`); what's missing is the assisted "build a valid page from structured choices" flow, and the at-a-glance / working-detail / deep-support content-priority tiers are the structure that flow should ask about.
+4. **Rubric persona tie-in** — `draft_student_rubric` accepts course personas but does not yet emit per-persona criterion explanations. Small, well-bounded.
+5. **Module migration pilot (decision pending)** — five modules are still compiled into the base install (video, oral-assessment, group-builder, roster, peerassessment) while the catalog channel has only ever carried one. Candidate: migrate `module-video` alone first, proving the channel with more than one module before moving the rest.
+6. **Generation-quality eval harness** — a golden-input regression suite for the LLM-generated outputs (rubric rewrites, page generation), so model upgrades — including refreshing the aging default model id — become verifiable diffs instead of judgment calls.
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
@@ -81,9 +82,9 @@ Release sequence as it actually shipped: PR → CI green → squash-merge → ta
 
 **Sequencing as executed (order was load-bearing):** the v2.1.0 PR merged to `main` with the live catalog still `catalogVersion: 1`, so no installed toolchain was affected. The `v2.1.0` release was cut next — restoring the "Latest" badge the update nudge depends on for every v1.x/v2.0.x professor. Only then did the catalog-cutover PR merge (`catalogVersion: 2`, the Announcements artifact re-pointed at its `modules/` path using the exact already-published bytes — no rebuild, no version bump — plus `minHostVersion: "2.1.0"` and companion listings). Finally the old module release tags were deleted and the live catalog verified end to end — fetched over HTTPS from `raw.githubusercontent.com`, artifact bytes hashed against the catalog pin — before calling it done.
 
-## Next: v2.2.0 — Canvas Toolchain unification (unreleased)
+## v2.2.0 on main, awaiting release — Canvas Toolchain unification
 
-Complete on `feat/canvas-toolchain-unification`. One product name, any model, `npx` everywhere:
+**Merged** to `main` as `e2e1b74` (#140). **Not tagged** — there is no `v2.2.0` release yet. One product name, any model, `npx` everywhere. Remaining publish steps (do not redo the merge): create the npm org, add `NPM_TOKEN`, tag `v2.2.0`, then cut an installer release.
 
 - **`npx canvas-toolchain` entrypoint + `prepare` auto-build** — root launcher package (`packages/canvas-toolchain`); in-repo smoke green at `canvas-toolchain@2.2.0`. Registry-side smoke waits until after first publish.
 - **Scoped package renames** — unscoped packages → `@canvas-toolchain/*` (directories unchanged; installer wiring untouched). C&C registers as `canvas-toolchain`. All workspace versions locked to **2.2.0**.

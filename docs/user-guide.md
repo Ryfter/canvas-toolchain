@@ -48,10 +48,10 @@ Think in terms of goals, not tools. Here's the full surface area, grouped by wha
 | You want to… | The toolchain gives you |
 | --- | --- |
 | **Get last semester's course onto your machine** | A structured local archive of every page, assignment, quiz, module, and file (`download_canvas_archive`), then an importable course folder (`import_course` / `ingest_canvas_archive`). |
-| **Know what's out of date** | A staleness report that scores every topic *evergreen / current / dated* and emits a **KEEP / UPDATE / DROP / ADD** verdict per item (`analyze_course`), plus a multi-semester churn history (`get_course_trajectory`). |
+| **Know what's out of date** | A staleness report that scores every topic *evergreen / current / dated* and emits a **KEEP / UPDATE / DROP / ADD** verdict per item (`analyze_course`). The multi-semester churn view (`get_course_trajectory`) is Curriculum Intelligence standalone only — it is not registered on C&C. |
 | **Plan the new semester** | Auto-imported prior shell, academic-calendar-aware due-date shifting, and a generated week-by-week outline (`plan_next_semester`). |
 | **Rewrite assignments and examples** | LLM-drafted assignment briefs and a two-pass "update the stale examples" sweep (`update_course_materials`). |
-| **Make it look good in Canvas** | Canvas-safe HTML pages with your brand colors, accessibility baked in, design critique, and auto-redesign (`generate_course`, `critique_canvas_page`, `redesign_canvas_page`). |
+| **Make it look good in Canvas** | Canvas-safe HTML pages with your brand colors and accessibility baked in (`generate_course` from C&C). Design critique and auto-redesign (`critique_canvas_page`, `redesign_canvas_page`) require the Design Studio server. |
 | **Add interactive elements** | Brainstorm interactive widget concepts and render them to embeddable Canvas widgets (`brainstorm_interactive`, `render_widget`, `publish_widget`). |
 | **Work with lecture video** | Pull Panopto transcripts, enrich them into readable markdown with deep links, and embed videos accessibly (`bulk_fetch_panopto_transcripts`, `enrich_panopto_transcripts`, `video_embed`). |
 | **Compare auto-captions to reality** | Locally re-transcribe lecture audio with Whisper and diff it against Panopto's captions (`compare_transcripts`). |
@@ -70,8 +70,8 @@ You don't have to use all of it. Most professors live in three or four commands.
 
 There is **no command line to memorize.** Every capability is an **MCP tool**, and you invoke it by talking to an AI client in plain English. You say *"analyze how stale my ITM 310 course is from last fall's archive,"* and the client picks the matching tool (`analyze_course`) and fills in the parameters from your sentence.
 
-- **Single entry point:** **Canvas Toolchain — Command & Control (C&C)** MCP server. It re-exports the tools of the other apps, so in normal use you only ever talk to C&C.
-- **Works in any MCP-capable client:** Claude Desktop, Claude Code, ChatGPT, or Gemini. The installer wires C&C into your client for you.
+- **Single entry point:** **Canvas Toolchain — Command & Control (C&C)** MCP server (`npx canvas-toolchain` / the installer). C&C re-exports **26** Curriculum Intelligence tools (the list in `packages/command-and-control/src/passthrough/ci_tools.ts` — not `get_course_trajectory`, which is CI-standalone only) and **exactly two** Design Studio tools — `import_course` and `generate_course`. The rest of Design Studio is only reachable by connecting the **Canvas Design Studio** MCP server separately. Do not add more passthroughs here — that is issue #151 (design pending).
+- **Works in any MCP-capable client.** The installer auto-wires Claude Desktop, Claude Code, Codex CLI, Gemini CLI, Cursor, VS Code, Kiro, and Antigravity. Any other MCP-capable client works via the manual JSON snippet in the README — it is not auto-wired.
 - **The tools have descriptions.** Your AI client reads them, so you rarely need exact tool names — but this guide lists them so you can be explicit when you want to ("use `preview_course_publish`, not `publish_course`").
 
 When a command needs a credential you haven't set up, it tells you exactly which `setup_*` tool to run first and degrades gracefully where it can (e.g., analysis still runs offline, just with less web-currency signal).
@@ -153,10 +153,10 @@ For every assignment, the LLM drafts an updated brief and runs a two-pass exampl
 
 Turns your `course/` folder of markdown into polished, **Canvas-safe HTML** — your brand colors, TL;DR cards, AI-policy callouts, accessible markup, all applied automatically. **Why:** Canvas's editor silently strips much of what normal HTML/CSS does; this generates markup that survives Canvas's sanitizer and passes WCAG 2.1 AA.
 
-Optionally, sharpen the look:
+Optionally, sharpen the look — these two tools live on the **Design Studio** server, not C&C:
 
 > *"Critique the week 1 overview page, then apply the fixes."*
-> → `critique_canvas_page` → `redesign_canvas_page`
+> → `critique_canvas_page` → `redesign_canvas_page` *(Design Studio only)*
 
 ### Step 6 — Preview the publish
 
@@ -204,7 +204,7 @@ Every command, organized by the job it does. For each: **what it is**, **how it 
 | --- | --- |
 | `setup_canvas_backup` *(passthrough)* | **What:** one-time-per-term setup for archiving. **How:** writes Canvas Backup's config from the Canvas connection you already gave `setup_canvas` — you supply the semester (and optionally the archive folder and year). Your API token is not written into that file. **Why:** Canvas Backup refuses to start without a base URL, archive folder, year, and semester; this fills them in so you never hand-edit a config file. |
 | `download_canvas_archive` *(passthrough)* | **What:** archive a live Canvas course to disk. **How:** drives the Python Canvas Backup CLI (pages, assignments, quizzes, modules, files); uses the config from `setup_canvas_backup`. **Why:** creates the local source-of-truth archive everything else reads. |
-| `import_course` *(CDS)* | **What:** scaffold an editable course folder from an archive. **How:** reads modules/pages/assignments and writes a pre-filled `course/` folder; unclear content becomes `[NEEDS REVIEW]`. Works at full-course, single-week, or single-assignment granularity. **Why:** turns a raw backup into something you can edit and regenerate. |
+| `import_course` *(CDS, passthrough)* | **What:** scaffold an editable course folder from an archive. **How:** reads modules/pages/assignments and writes a pre-filled `course/` folder; unclear content becomes `[NEEDS REVIEW]`. Works at full-course, single-week, or single-assignment granularity. **Why:** turns a raw backup into something you can edit and regenerate. Reachable from C&C. |
 | `ingest_canvas_archive` *(CI, passthrough)* | **What:** parse an archive into a structured `topic-map.json`. **How:** idempotent — re-running overwrites the map. **Why:** the machine-readable form the analysis tools work on. |
 
 ### 6.3 Analyzing what's stale
@@ -212,7 +212,7 @@ Every command, organized by the job it does. For each: **what it is**, **how it 
 | Command | What · How · Why |
 | --- | --- |
 | `analyze_course` | **What:** the one-shot "how stale is my course?" report. **How:** ingest → diff against prior semesters → score topic currency → emit KEEP/UPDATE/DROP/ADD verdicts → log a trajectory entry. **Why:** converts a vague sense of staleness into a concrete, prioritized worklist. |
-| `get_course_trajectory` *(CI)* | **What:** the multi-semester churn view. **How:** reads the trajectory log for churn rate, unstable (verdict-flipping) topics, and true evergreens. **Why:** see which parts of your course are stable vs. perennially in flux. |
+| `get_course_trajectory` *(CI only)* | **What:** the multi-semester churn view. **How:** reads the trajectory log for churn rate, unstable (verdict-flipping) topics, and true evergreens. **Why:** see which parts of your course are stable vs. perennially in flux. **Not on C&C** — asking C&C for it fails. Connect the Curriculum Intelligence server. |
 | `diff_semesters` *(CI)* | **What:** side-by-side diff of two ingested semesters. **How:** classifies items added / removed / reused verbatim / rewritten. **Why:** "what actually changed between fall and spring?" in one view. |
 | `score_topic_currency` *(CI)* | **What:** classify one topic evergreen/current/dated. **How:** combines news-hit count with how recently you taught it. **Why:** the signal behind each verdict; call it directly to interrogate a single topic. |
 | `recommend_for_topic` *(CI)* | **What:** the KEEP/UPDATE/DROP/ADD verdict for one topic. **How:** maps currency class + teaching history to a verdict + rationale. **Why:** a focused second opinion on a topic you're unsure about. |
@@ -250,26 +250,42 @@ Every command, organized by the job it does. For each: **what it is**, **how it 
 
 ### 6.7 Designing & generating Canvas pages
 
+C&C registers Curriculum Intelligence's `setup_course` and passes through **exactly two** Design Studio tools: `import_course` and `generate_course`. Everything else in this section lives on the **Canvas Design Studio** MCP server and is **not** reachable from C&C.
+
+#### Reachable from C&C
+
 | Command | What · How · Why |
 | --- | --- |
-| `setup_course` *(CDS)* | **What:** scaffold a full course folder. **How:** writes `course-config.md`, week folders, and template `.md` files per active page type. **Why:** the structured home for your content, with brand colors and page types chosen up front. |
-| `generate_page` / `generate_week` / `generate_course` *(CDS)* | **What:** render markdown → Canvas-safe HTML at three scopes. **How:** read `course-config.md` for colors and active page types; write HTML to `output/`. **Why:** the core "make it look good in Canvas" step; HTML that survives Canvas's sanitizer and passes WCAG 2.1 AA. |
-| `generate_canvas_page` *(CDS)* | **What:** one page from a free-form brief (not a course folder). **How:** returns HTML + a hero-image prompt + a suggested filename. **Why:** quick one-off page without scaffolding a whole course. |
-| `ingest_assignment_folder` *(CDS)* | **What:** generate a page from a folder of assignment materials. **How:** simple mode (a few files) or advanced mode (per-assignment subfolders with inherited rubric/shell). **Why:** go straight from your existing assignment files to a page. |
-| `validate_canvas_html` *(CDS)* | **What:** check HTML against Canvas + accessibility rules. **How:** returns violations with the offending snippets. **Why:** confirm a page is safe *before* you paste or publish. |
-| `critique_canvas_page` *(CDS)* | **What:** score a page's visual design. **How:** quick (structural) or comprehensive (full review) mode; prioritized findings. **Why:** an objective design read before students see it. |
-| `redesign_canvas_page` *(CDS)* | **What:** apply critique fixes. **How:** mechanical fixes automatically; re-runs the WCAG check on the output. **Why:** close the loop from critique to a better page in one step. |
-| `load_canvas_page` / `save_canvas_page` *(CDS)* | **What:** load/save generated HTML in `output/`. **How:** save auto-creates a `.bak`. **Why:** safe round-tripping while you iterate on a page. |
-| `fetch_brand_colors` *(CDS)* | **What:** extract brand colors from a standards page. **How:** returns ranked candidates with a suggested primary/secondary. **Why:** match your institution's palette without eyedropping by hand. |
-| `setup_institution` / `get_setup_worksheet` / `validate_worksheet` *(CDS)* | **What:** institution config (brand, Canvas URL, token). **How:** fill a worksheet then submit it, or run the wizard; validate before applying. **Why:** set brand + connection once and reuse across courses. |
-| `get_started` *(CDS)* | **What:** a tailored orientation. **How:** reads your current config and suggests next steps. **Why:** the "where do I begin?" command for a new session. |
+| `setup_course` *(CI, passthrough)* | **What:** register a course in Curriculum Intelligence. **How:** takes **id** + **title** (optional *courseRoot*); creates the CI course folder and records its location. **Why:** later CI tools can find the course by id. This is **not** Design Studio's folder-scaffolding `setup_course`. |
+| `import_course` *(CDS, passthrough)* | **What:** scaffold an editable course folder from an archive. **How:** reads modules/pages/assignments and writes a pre-filled `course/` folder; unclear content becomes `[NEEDS REVIEW]`. Works at full-course, single-week, or single-assignment granularity. **Why:** turns a raw backup into something you can edit and regenerate. |
+| `generate_course` *(CDS, passthrough)* | **What:** render every page in a course folder to Canvas-safe HTML. **How:** reads `course-config.md` for colors and active page types; writes HTML to `output/`. **Why:** the C&C-reachable "make the whole course look good in Canvas" step. |
+
+#### Design Studio only — connect the Design Studio server
+
+These tools require the **Canvas Design Studio** MCP server. Asking C&C for them will fail.
+
+| Command | What · How · Why |
+| --- | --- |
+| `setup_course` *(CDS only)* | **What:** scaffold a full Design Studio course folder. **How:** writes `course-config.md`, week folders, and template `.md` files per active page type. **Why:** the structured home for your content, with brand colors and page types chosen up front. Same *name* as CI's tool; different server, different arguments. |
+| `generate_page` / `generate_week` *(CDS only)* | **What:** render markdown → Canvas-safe HTML at page or week scope. **How:** same renderer as `generate_course`; write HTML to `output/`. **Why:** iterate on one page or week without regenerating the whole course. |
+| `generate_canvas_page` *(CDS only)* | **What:** one page from a free-form brief (not a course folder). **How:** returns HTML + a hero-image prompt + a suggested filename. **Why:** quick one-off page without scaffolding a whole course. |
+| `ingest_assignment_folder` *(CDS only)* | **What:** generate a page from a folder of assignment materials. **How:** simple mode (a few files) or advanced mode (per-assignment subfolders with inherited rubric/shell). **Why:** go straight from your existing assignment files to a page. |
+| `validate_canvas_html` *(CDS only)* | **What:** check HTML against Canvas + accessibility rules. **How:** returns violations with the offending snippets. **Why:** confirm a page is safe *before* you paste or publish. |
+| `critique_canvas_page` *(CDS only)* | **What:** score a page's visual design. **How:** quick (structural) or comprehensive (full review) mode; prioritized findings. **Why:** an objective design read before students see it. |
+| `redesign_canvas_page` *(CDS only)* | **What:** apply critique fixes. **How:** mechanical fixes automatically; re-runs the WCAG check on the output. **Why:** close the loop from critique to a better page in one step. |
+| `load_canvas_page` / `save_canvas_page` *(CDS only)* | **What:** load/save generated HTML in `output/`. **How:** save auto-creates a `.bak`. **Why:** safe round-tripping while you iterate on a page. |
+| `fetch_brand_colors` *(CDS only)* | **What:** extract brand colors from a standards page. **How:** returns ranked candidates with a suggested primary/secondary. **Why:** match your institution's palette without eyedropping by hand. |
+| `setup_institution` / `get_setup_worksheet` / `validate_worksheet` *(CDS only)* | **What:** institution config (brand, Canvas URL, token) at `~/.canvas-design-mcp/institution.json`. **How:** fill a worksheet then submit it, or run the wizard; validate before applying. **Why:** set brand + connection once and reuse across courses. **Not on C&C** — from C&C use `setup_canvas` for the Canvas token. |
+| `get_started` *(CDS only)* | **What:** a tailored Design Studio orientation. **How:** reads your current CDS config and suggests next steps. **Why:** the "where do I begin?" command **on the Design Studio server**. From C&C, ask for `get_cc_status` instead. |
 
 ### 6.8 Teaching-philosophy & student-persona context
 
+These four tools are **Design Studio only** — they are not registered on C&C.
+
 | Command | What · How · Why |
 | --- | --- |
-| `get_philosophy_kb` / `update_philosophy_kb` *(CDS)* | **What:** your teaching-philosophy knowledge base. **How:** load it into context, or append a new entry (never overwrites). **Why:** make generated pages reflect *your* tone and pedagogy, not a generic voice. |
-| `get_student_personas` / `generate_student_personas` *(CDS)* | **What:** demographically grounded student personas. **How:** generate from real distributions across ~23 dimensions; load saved sets. **Why:** evaluate pages against the students you actually teach (accessibility, tone, prior knowledge). |
+| `get_philosophy_kb` / `update_philosophy_kb` *(CDS only)* | **What:** your teaching-philosophy knowledge base. **How:** load it into context, or append a new entry (never overwrites). **Why:** make generated pages reflect *your* tone and pedagogy, not a generic voice. |
+| `get_student_personas` / `generate_student_personas` *(CDS only)* | **What:** demographically grounded student personas. **How:** generate from real distributions across ~23 dimensions; load saved sets. **Why:** evaluate pages against the students you actually teach (accessibility, tone, prior knowledge). |
 
 ### 6.9 Lecture video (Module Video — enable first)
 
@@ -353,7 +369,7 @@ These require the **Lecture Video module** enabled and `setup_panopto` run.
 ## 7. Common recipes
 
 **"I just want to update one assignment, not the whole course."**
-`import_course { assignmentName }` → edit the markdown → `generate_page` → `validate_canvas_html` → paste into Canvas (or `publish_to_canvas`).
+From C&C: `import_course { assignmentName }` → edit the markdown → `generate_course` → paste the HTML from `output/`. To publish instead of paste: `preview_course_publish` (`courseDir` + `courseId`; returns a `snapshotId`) → `publish_course` with that `snapshotId` and per-entry `approvals`. `publish_course` cannot run without a preview. Page-scope `generate_page` / `validate_canvas_html` / `publish_to_canvas` require the Design Studio server.
 
 **"No API keys, ever — I'll paste everything myself."**
 Skip all `setup_*` credential tools. Use `import_course` → `generate_course` → copy the HTML from `output/` into Canvas's HTML editor. Fully supported.
@@ -396,8 +412,8 @@ Full detail, including the env-var table and validation endpoints, is in the [Co
 | The Q&A bot returns nothing useful | Run `index_course_for_answers` first; if you switched embedding providers, `reembed_course_index` (vector dimensions aren't interchangeable). |
 | Video tools aren't available | The Lecture Video module is off. `set_module_enabled { module: "video", enabled: true }`, reconnect your client, then `setup_panopto`. |
 | Dashboard is empty | Run `set_courses_root` pointing at the folder that contains your `course-config.md` directories. |
-| Canvas page looks broken after pasting | Run `validate_canvas_html` on it — Canvas strips disallowed markup. Regenerate with `generate_page` rather than hand-editing HTML. |
+| Canvas page looks broken after pasting | On the **Design Studio** server, run `validate_canvas_html` — Canvas strips disallowed markup. Regenerate with Design Studio's `generate_page`, or from C&C re-run `generate_course`. |
 
 ---
 
-*Last reconciled against the source tree on 2026-06-11. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*
+*Last reconciled against the source tree on 2026-08-13 for: C&C vs Design Studio tool reachability (`import_course` / `generate_course` are the only CDS passthroughs; `get_started`, `setup_institution`, `get_setup_worksheet`, and CDS's `setup_course` are Design Studio only; C&C's `setup_course` is Curriculum Intelligence's `id`+`title` tool); C&C CI passthroughs (26 tools in `ci_tools.ts`; `get_course_trajectory` is CI-standalone only; C&C's `analyze_course` is a native workflow wrapper); `publish_course` requiring a prior `preview_course_publish`; and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*

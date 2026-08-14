@@ -63,10 +63,14 @@ describe('review_accessibility_policy', () => {
     expect(r.error).toBe('INVALID_CONFORMANCE');
   });
 
-  it('surfaces the setup_institution fix when no config exists', () => {
+  it('surfaces the Design Studio setup_institution fix when no config exists', () => {
     const r = reviewAccessibilityPolicy({ confirm: true }, memDeps());
     expect(r.ok).toBe(false);
     expect(r.error).toBe('NO_INSTITUTION_CONFIG');
-    expect(r.fix!.join(' ')).toContain('setup_institution');
+    const fix = r.fix!.join(' ');
+    expect(fix).toContain('setup_institution');
+    expect(fix).toContain('Canvas Design Studio');
+    expect(fix).toContain('~/.canvas-design-mcp/institution.json');
+    expect(fix).toContain('does not expose');
   });
 });

@@ -67,7 +67,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph CLIENT [Your AI client]
-        AIC([Claude · ChatGPT · Gemini])
+        AIC([Installer-wired hosts · other MCP clients])
     end
 
     AIC <== "MCP" ==> CC
@@ -112,6 +112,8 @@ flowchart TB
     classDef client fill:#fff,stroke:#999,stroke-width:1.5px,color:#333;
     class CC hub; class CI,CDS app; class SL,ST lib; class MV mod; class ANT,CANVAS,PAN ext; class AIC client;
 ```
+
+The installer auto-wires **Claude Desktop, Claude Code, Codex CLI, Gemini CLI, Cursor, VS Code, Kiro, and Antigravity**. Any other MCP-capable client works via the manual JSON snippet — it is not auto-wired.
 
 ---
 
@@ -221,7 +223,7 @@ sequenceDiagram
 flowchart LR
     S1["⬇️ Install<br/>native wizard<br/>(Win x64 / macOS arm64)"]
     S2["🔌 Connect<br/>add C&C to your<br/>AI client"]
-    S3["🧭 Orient<br/>ask: <i>get_started</i> /<br/>get_cc_status"]
+    S3["🧭 Orient<br/>ask: <i>get_cc_status</i>"]
     S4["🔑 (Optional)<br/>setup_anthropic,<br/>setup_canvas…"]
     S5["▶️ Run<br/>“analyze my course”<br/>then full_pipeline"]
 
