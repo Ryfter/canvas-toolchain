@@ -84,7 +84,7 @@ export function reviewAccessibilityPolicy(
     return {
       ok: false, error: 'NO_INSTITUTION_CONFIG',
       message: e instanceof Error ? e.message : String(e),
-      fix: ['Run setup_institution first — the accessibility policy lives in the institution config.'],
+      fix: ['The accessibility policy lives in ~/.canvas-design-mcp/institution.json, written by the Canvas Design Studio server\'s setup_institution tool. Connect the Design Studio MCP server and run setup_institution there — Command & Control does not expose that tool.'],
     };
   }
 }
