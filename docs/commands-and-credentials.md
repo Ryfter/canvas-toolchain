@@ -2,7 +2,7 @@
 
 > Full documentation of **what the application does**, **every command (MCP tool) it exposes**, and **every API key / secret it asks for and why**.
 >
-> Audience: professors evaluating or operating the toolchain, IT/security reviewers, and contributors. Last reconciled against the source tree on 2026-06-11.
+> Audience: professors evaluating or operating the toolchain, IT/security reviewers, and contributors. Last reconciled against the source tree on 2026-08-13 for: C&C vs Design Studio tool reachability (only `import_course` and `generate_course` pass through; `get_started` / `setup_institution` / `get_setup_worksheet` are Design Studio only; C&C `setup_course` is CI's); and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool.
 >
 > **Want how-to / why-to instead of a lookup table?** Read the [User Guide & Tutorial](user-guide.md) — it walks the toolchain end to end and explains *why* you'd reach for each command.
 

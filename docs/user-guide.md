@@ -416,4 +416,4 @@ Full detail, including the env-var table and validation endpoints, is in the [Co
 
 ---
 
-*Last reconciled against the source tree on 2026-06-11. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*
+*Last reconciled against the source tree on 2026-08-13 for: C&C vs Design Studio tool reachability (`import_course` / `generate_course` are the only CDS passthroughs; `get_started`, `setup_institution`, `get_setup_worksheet`, and CDS's `setup_course` are Design Studio only; C&C's `setup_course` is Curriculum Intelligence's `id`+`title` tool); and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*
