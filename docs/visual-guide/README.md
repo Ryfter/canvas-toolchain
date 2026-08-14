@@ -223,7 +223,7 @@ sequenceDiagram
 flowchart LR
     S1["⬇️ Install<br/>native wizard<br/>(Win x64 / macOS arm64)"]
     S2["🔌 Connect<br/>add C&C to your<br/>AI client"]
-    S3["🧭 Orient<br/>ask: <i>get_started</i> /<br/>get_cc_status"]
+    S3["🧭 Orient<br/>ask: <i>get_cc_status</i>"]
     S4["🔑 (Optional)<br/>setup_anthropic,<br/>setup_canvas…"]
     S5["▶️ Run<br/>“analyze my course”<br/>then full_pipeline"]
 

@@ -20,7 +20,7 @@ Canvas Backup archive            (download last semester's shell)
   -> optional Canvas publishing  (push pages back to Canvas, or paste manually)
 ```
 
-Professors drive everything by **talking to the Command & Control (C&C) MCP server** from any MCP-capable AI client — Claude Desktop, Claude Code, ChatGPT, or Gemini. C&C is the single professor-facing entrypoint; it orchestrates the other apps and re-exports their tools. Each underlying app also stays independently usable.
+Professors drive everything by **talking to the Command & Control (C&C) MCP server**. The installer auto-wires Claude Desktop, Claude Code, Codex CLI, Gemini CLI, Cursor, VS Code, Kiro, and Antigravity; any other MCP-capable client works via the manual JSON snippet. C&C is the single professor-facing entrypoint. It re-exports Curriculum Intelligence's tools and **exactly two** Design Studio tools (`import_course`, `generate_course`). The rest of Design Studio requires connecting the Design Studio MCP server. Each underlying app also stays independently usable.
 
 **Two design guarantees worth knowing up front:**
 
@@ -31,7 +31,7 @@ Professors drive everything by **talking to the Command & Control (C&C) MCP serv
 
 | Package | What it owns |
 | --- | --- |
-| `command-and-control` | The single MCP entrypoint: workflow orchestration, registry, brand/layout adapters, module loader. Re-exports CI and CDS tools. |
+| `command-and-control` | The single MCP entrypoint: workflow orchestration, registry, brand/layout adapters, module loader. Re-exports CI tools and two CDS tools (`import_course`, `generate_course`). |
 | `curriculum-intelligence` | Reads past course archives + lecture transcripts, scores topic currency, plans the next semester. |
 | `canvas-design-studio` | Generates Canvas-safe HTML, design review/critique, publishing to Canvas. |
 | `shared-llm` | Shared LLM client (Anthropic + Ollama providers). |
@@ -44,7 +44,7 @@ Professors drive everything by **talking to the Command & Control (C&C) MCP serv
 
 ## 2. Command (MCP tool) reference
 
-All commands are **MCP tools**. You invoke them by asking your AI client in natural language ("analyze how stale my course is"); the client calls the matching tool. Command & Control exposes its own tools **plus** pass-throughs from Curriculum Intelligence, Canvas Design Studio, and the Canvas Backup downloader, so in normal use you only talk to C&C.
+All commands are **MCP tools**. You invoke them by asking your AI client in natural language ("analyze how stale my course is"); the client calls the matching tool. Command & Control exposes its own tools **plus** Curriculum Intelligence pass-throughs, the Canvas Backup downloader bridge, and **exactly two** Design Studio tools (`import_course`, `generate_course`). Design Studio's other tools — including `get_started`, `setup_institution`, and `get_setup_worksheet` — require the Design Studio server.
 
 Legend: **R** = required parameter, *italic* = optional.
 
@@ -155,7 +155,7 @@ These run through C&C but are owned by other packages.
 
 **From Curriculum Intelligence (28 tools).** Course setup/state (`setup_course`, `get_course_state`), archive ingestion (`ingest_canvas_archive`), content analysis (`list_assignments`, `list_pages`, `list_modules`, `list_resources`, `diff_semesters`), transcript processing (`ingest_transcripts`, `map_transcripts_to_weeks`, `extract_lecture_topics`, `find_off_syllabus_topics`, `build_quote_bank`), topic currency (`fetch_news_feed`, `scan_recent_developments`, `suggest_topics`, `score_topic_currency`, `recommend_for_topic`), planning (`generate_ideas_file`, `import_previous_shell`, `fetch_academic_calendar`, `shift_dates`, `generate_recommended_outline`, `draft_assignment_brief`, `update_examples`, `export_course_folder`), and full analysis (`analyze_course`, `get_course_trajectory`). See §2.10 for the CI-direct detail.
 
-**From Canvas Design Studio:** `import_course`, `generate_course` (full set in §2.11).
+**From Canvas Design Studio (these two only):** `import_course`, `generate_course`. Every other CDS tool — including `get_started`, `setup_institution`, `get_setup_worksheet`, and CDS's own `setup_course` — is **not** registered on C&C; see §2.11.
 
 ### 2.10 Curriculum Intelligence (when run standalone)
 
@@ -187,13 +187,15 @@ These run through C&C but are owned by other packages.
 | `analyze_course` | **courseId**, **semesterId**, **archivePath**, *semanticVerify*, *extractConcepts* | Full pipeline: ingest → diff → score → verdicts → trajectory log. |
 | `get_course_trajectory` | **courseId**, *granularity*, *lookback* | Read the trajectory log: churn rate, unstable topics, true evergreens. |
 
-### 2.11 Canvas Design Studio (when run standalone)
+### 2.11 Canvas Design Studio (own MCP server)
+
+Connect the **Canvas Design Studio** server to use these. C&C does **not** expose them, except the two passthroughs already listed in §2.9 (`import_course`, `generate_course`). `get_started`, `setup_institution`, and `get_setup_worksheet` are Design Studio only.
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
-| `get_started` | — | Tailored orientation based on current config. |
-| `get_setup_worksheet` | — | Return a blank setup worksheet for the professor to fill in. |
-| `setup_institution` | *worksheetContent* | Set/update institution config (brand colors, Canvas URL, API token). |
+| `get_started` | — | Tailored orientation based on current CDS config. **Not on C&C** — from C&C use `get_cc_status`. |
+| `get_setup_worksheet` | — | Return a blank setup worksheet for the professor to fill in. **Not on C&C.** |
+| `setup_institution` | *worksheetContent* | Set/update institution config (brand colors, Canvas URL, API token) at `~/.canvas-design-mcp/institution.json`. **Not on C&C** — from C&C use `setup_canvas` for the Canvas token. |
 | `validate_canvas_html` | **html** | Check HTML against Canvas RCE rules + WCAG 2.1 AA; list violations. |
 | `validate_worksheet` | **worksheetContent** | Validate a filled worksheet (hex colors, URLs) before setup. |
 | `update_canvas_kb` | *force* | Refresh the Canvas knowledge base from live Instructure docs (via Context7). |
@@ -204,7 +206,7 @@ These run through C&C but are owned by other packages.
 | `load_canvas_page` / `save_canvas_page` | *filename* / **html**+**filename** | Load/save generated HTML in `output/` (auto `.bak`). |
 | `get_philosophy_kb` / `update_philosophy_kb` | — / **entry**+**section**+*courseKey* | Load / append-only update the teaching philosophy KB. |
 | `get_student_personas` / `generate_student_personas` | — / *count* | Load / generate demographically grounded student personas. |
-| `setup_course` | *courseDir* | Scaffold a full course folder (config + week folders + templates). |
+| `setup_course` | *courseDir* | Scaffold a full Design Studio course folder (config + week folders + templates). **Different tool** from C&C/CI's `setup_course` (which takes `id` + `title`). |
 | `generate_page` / `generate_week` / `generate_course` | **mdPath** / **weekNumber** / — (+ *courseDir*, *outputDir*) | Generate one page / one week / the whole course. |
 | `import_course` | **archivePath**, *outputDir*, *weekNumber*, *assignmentName* | Import a previous semester from a Canvas Backup archive (full / week / assignment). |
 | `list_canvas_courses` | *semester*, *includeFavorites* | List Canvas courses available to the professor. |
