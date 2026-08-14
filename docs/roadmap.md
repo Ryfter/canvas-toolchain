@@ -12,7 +12,7 @@ Recent history: **v2.0.0** (plug-in module channel, closed #78) and the **v2.0.1
 
 **Immediate next steps, in order:**
 
-1. **[#150](https://github.com/Ryfter/canvas-toolchain/issues/150) — Tag and publish v2.2.0** — unification is already on `main` (`e2e1b74`, #140). Remaining, blocked on Kevin: create the `canvas-toolchain` npm org, add the `NPM_TOKEN` repo secret, tag `v2.2.0` (see [`docs/npm-publishing.md`](npm-publishing.md)), then cut an installer release.
+1. **[#150](https://github.com/Ryfter/canvas-toolchain/issues/150) — Tag and publish v2.2.0** — unification is already on `main` (`e2e1b74`, #140). Remaining, blocked on the maintainer: create the `canvas-toolchain` npm org, add the `NPM_TOKEN` repo secret, tag `v2.2.0` (see [`docs/npm-publishing.md`](npm-publishing.md)), then cut an installer release.
 2. **[#151](https://github.com/Ryfter/canvas-toolchain/issues/151) — One setup/readiness engine** — umbrella: make "installed" mean one thing across the installer, the README, `get_cc_status`, and the tutorial. Design pending; do not implement unasked.
 3. **Canvas capability showcase → assisted template creator + information hierarchy** — one combined design effort. The browse half exists (`show_canvas_capabilities` / `preview_canvas_pattern`); what's missing is the assisted "build a valid page from structured choices" flow, and the at-a-glance / working-detail / deep-support content-priority tiers are the structure that flow should ask about.
 4. **Rubric persona tie-in** — `draft_student_rubric` accepts course personas but does not yet emit per-persona criterion explanations. Small, well-bounded.

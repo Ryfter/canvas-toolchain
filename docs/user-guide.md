@@ -48,7 +48,7 @@ Think in terms of goals, not tools. Here's the full surface area, grouped by wha
 | You want to… | The toolchain gives you |
 | --- | --- |
 | **Get last semester's course onto your machine** | A structured local archive of every page, assignment, quiz, module, and file (`download_canvas_archive`), then an importable course folder (`import_course` / `ingest_canvas_archive`). |
-| **Know what's out of date** | A staleness report that scores every topic *evergreen / current / dated* and emits a **KEEP / UPDATE / DROP / ADD** verdict per item (`analyze_course`), plus a multi-semester churn history (`get_course_trajectory`). |
+| **Know what's out of date** | A staleness report that scores every topic *evergreen / current / dated* and emits a **KEEP / UPDATE / DROP / ADD** verdict per item (`analyze_course`). The multi-semester churn view (`get_course_trajectory`) is Curriculum Intelligence standalone only — it is not registered on C&C. |
 | **Plan the new semester** | Auto-imported prior shell, academic-calendar-aware due-date shifting, and a generated week-by-week outline (`plan_next_semester`). |
 | **Rewrite assignments and examples** | LLM-drafted assignment briefs and a two-pass "update the stale examples" sweep (`update_course_materials`). |
 | **Make it look good in Canvas** | Canvas-safe HTML pages with your brand colors and accessibility baked in (`generate_course` from C&C). Design critique and auto-redesign (`critique_canvas_page`, `redesign_canvas_page`) require the Design Studio server. |
@@ -70,7 +70,7 @@ You don't have to use all of it. Most professors live in three or four commands.
 
 There is **no command line to memorize.** Every capability is an **MCP tool**, and you invoke it by talking to an AI client in plain English. You say *"analyze how stale my ITM 310 course is from last fall's archive,"* and the client picks the matching tool (`analyze_course`) and fills in the parameters from your sentence.
 
-- **Single entry point:** **Canvas Toolchain — Command & Control (C&C)** MCP server (`npx canvas-toolchain` / the installer). C&C re-exports Curriculum Intelligence's tools and **exactly two** Design Studio tools — `import_course` and `generate_course`. The rest of Design Studio is only reachable by connecting the **Canvas Design Studio** MCP server separately. Do not add more passthroughs here — that is issue #151 (design pending).
+- **Single entry point:** **Canvas Toolchain — Command & Control (C&C)** MCP server (`npx canvas-toolchain` / the installer). C&C re-exports **26** Curriculum Intelligence tools (the list in `packages/command-and-control/src/passthrough/ci_tools.ts` — not `get_course_trajectory`, which is CI-standalone only) and **exactly two** Design Studio tools — `import_course` and `generate_course`. The rest of Design Studio is only reachable by connecting the **Canvas Design Studio** MCP server separately. Do not add more passthroughs here — that is issue #151 (design pending).
 - **Works in any MCP-capable client.** The installer auto-wires Claude Desktop, Claude Code, Codex CLI, Gemini CLI, Cursor, VS Code, Kiro, and Antigravity. Any other MCP-capable client works via the manual JSON snippet in the README — it is not auto-wired.
 - **The tools have descriptions.** Your AI client reads them, so you rarely need exact tool names — but this guide lists them so you can be explicit when you want to ("use `preview_course_publish`, not `publish_course`").
 
@@ -212,7 +212,7 @@ Every command, organized by the job it does. For each: **what it is**, **how it 
 | Command | What · How · Why |
 | --- | --- |
 | `analyze_course` | **What:** the one-shot "how stale is my course?" report. **How:** ingest → diff against prior semesters → score topic currency → emit KEEP/UPDATE/DROP/ADD verdicts → log a trajectory entry. **Why:** converts a vague sense of staleness into a concrete, prioritized worklist. |
-| `get_course_trajectory` *(CI)* | **What:** the multi-semester churn view. **How:** reads the trajectory log for churn rate, unstable (verdict-flipping) topics, and true evergreens. **Why:** see which parts of your course are stable vs. perennially in flux. |
+| `get_course_trajectory` *(CI only)* | **What:** the multi-semester churn view. **How:** reads the trajectory log for churn rate, unstable (verdict-flipping) topics, and true evergreens. **Why:** see which parts of your course are stable vs. perennially in flux. **Not on C&C** — asking C&C for it fails. Connect the Curriculum Intelligence server. |
 | `diff_semesters` *(CI)* | **What:** side-by-side diff of two ingested semesters. **How:** classifies items added / removed / reused verbatim / rewritten. **Why:** "what actually changed between fall and spring?" in one view. |
 | `score_topic_currency` *(CI)* | **What:** classify one topic evergreen/current/dated. **How:** combines news-hit count with how recently you taught it. **Why:** the signal behind each verdict; call it directly to interrogate a single topic. |
 | `recommend_for_topic` *(CI)* | **What:** the KEEP/UPDATE/DROP/ADD verdict for one topic. **How:** maps currency class + teaching history to a verdict + rationale. **Why:** a focused second opinion on a topic you're unsure about. |
@@ -369,7 +369,7 @@ These require the **Lecture Video module** enabled and `setup_panopto` run.
 ## 7. Common recipes
 
 **"I just want to update one assignment, not the whole course."**
-From C&C: `import_course { assignmentName }` → edit the markdown → `generate_course` → paste the HTML from `output/` (or `publish_course`). Page-scope `generate_page` / `validate_canvas_html` / `publish_to_canvas` require the Design Studio server.
+From C&C: `import_course { assignmentName }` → edit the markdown → `generate_course` → paste the HTML from `output/`. To publish instead of paste: `preview_course_publish` (`courseDir` + `courseId`; returns a `snapshotId`) → `publish_course` with that `snapshotId` and per-entry `approvals`. `publish_course` cannot run without a preview. Page-scope `generate_page` / `validate_canvas_html` / `publish_to_canvas` require the Design Studio server.
 
 **"No API keys, ever — I'll paste everything myself."**
 Skip all `setup_*` credential tools. Use `import_course` → `generate_course` → copy the HTML from `output/` into Canvas's HTML editor. Fully supported.
@@ -416,4 +416,4 @@ Full detail, including the env-var table and validation endpoints, is in the [Co
 
 ---
 
-*Last reconciled against the source tree on 2026-08-13 for: C&C vs Design Studio tool reachability (`import_course` / `generate_course` are the only CDS passthroughs; `get_started`, `setup_institution`, `get_setup_worksheet`, and CDS's `setup_course` are Design Studio only; C&C's `setup_course` is Curriculum Intelligence's `id`+`title` tool); and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*
+*Last reconciled against the source tree on 2026-08-13 for: C&C vs Design Studio tool reachability (`import_course` / `generate_course` are the only CDS passthroughs; `get_started`, `setup_institution`, `get_setup_worksheet`, and CDS's `setup_course` are Design Studio only; C&C's `setup_course` is Curriculum Intelligence's `id`+`title` tool); C&C CI passthroughs (26 tools in `ci_tools.ts`; `get_course_trajectory` is CI-standalone only; C&C's `analyze_course` is a native workflow wrapper); `publish_course` requiring a prior `preview_course_publish`; and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*
