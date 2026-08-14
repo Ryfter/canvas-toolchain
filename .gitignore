@@ -29,3 +29,9 @@ installer/canvas-toolchain-installer.pkg
 
 # Operator-private multi-agent playbook (machine/tooling-specific; not for the public repo)
 AGENTS.local.md
+
+# Local work orders / job logs — not for the public MIT repo
+TO-WORK-ON/
+
+# Machine-local scheduled-task wrapper (shells to grok/codex)
+scripts/run-install-easy-job.ps1
