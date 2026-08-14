@@ -8,7 +8,7 @@ Verified 2026-08-14 against `main` (`eb396ac`) and `.github/workflows/release-np
 | --- | --- |
 | Version lockstep at `GITHUB_REF_NAME=v2.2.0` | **PASS** — 12 publishable workspaces + root `package.json` are exact `2.2.0`; every intra-workspace pin is exact `2.2.0`. Private `@canvas-toolchain/module-announcements@1.1.0` skipped (channel-versioned). **No offenders.** |
 | Both workflows trigger on `v*.*.*` | **Yes.** `release-npm.yml` publishes the 12 workspaces (`npm publish --workspaces --access public --provenance`). `release-installer.yml` uploads four assets to the GitHub Release (Windows + macOS installers and updaters) and uses `.github/RELEASE_TEMPLATE/installer-release.md` as the body. |
-| `docs/npm-publishing.md` vs the workflow | Runbook matched except the first-publish 403 advice (it told the maintainer to publish locally and re-tag; the workflow already uses `--access public --provenance`). That paragraph was corrected in this branch. |
+| `docs/npm-publishing.md` vs the workflow | Runbook did **not** match. Two defects: (1) first-publish 403 advice told the maintainer to publish locally and re-tag; the workflow already uses `--access public --provenance` (corrected in this branch). (2) the token recipe omitted **Bypass two-factor authentication** and treated organization access as if it granted publish rights — publish permission is **Packages and scopes** (corrected in this branch). Without (2), tagging `v2.2.0` would pass the version guard and tests, then all 12 publishes would fail on 2FA. |
 | `NPM_TOKEN` | **Missing.** `gh secret list` shows only `CLAUDE_CODE_OAUTH_TOKEN`. |
 | Live registry | `canvas-toolchain` and `@canvas-toolchain/command-and-control` both **404**. Issue #150 stays open until step 9. |
 
@@ -17,7 +17,11 @@ Do not push `v2.2.0` until steps 1–3 are done. Tagging now would pass the vers
 ## One-time setup
 
 1. Create the free **canvas-toolchain** organization on npmjs.com (owns the `@canvas-toolchain` scope): npmjs.com → profile → Add Organization.
-2. Create a **granular access token**: npmjs.com → Access Tokens → Generate New Token → Granular; *Read and write* on the `canvas-toolchain` org **and** the unscoped `canvas-toolchain` package; no IP allowlist; expiry ≤ 1 year.
+2. Create a **granular access token**: npmjs.com → Access Tokens → Generate New Token → Granular. Configure it as follows:
+   - **Packages and scopes** — *Read and write* on **both** the `@canvas-toolchain` scope **and** the unscoped `canvas-toolchain` package. This is the permission that lets the token publish.
+   - **Organization access** — a separate permission. It manages org settings, teams, and users. It does **not** grant permission to publish org-scoped packages. Leave it unset unless you also need the token to manage the org itself.
+   - **Bypass two-factor authentication** — **ON**. npm leaves this OFF by default. Publishing requires either an interactive OTP or a granular token with bypass enabled. GitHub Actions cannot answer an OTP; `.github/workflows/release-npm.yml` authenticates only via `NODE_AUTH_TOKEN`.
+   - No IP allowlist (Actions IPs rotate); expiry ≤ 1 year.
 3. GitHub → Settings → Secrets and variables → Actions → new secret named exactly `NPM_TOKEN`. Confirm with `gh secret list` (must list `NPM_TOKEN`). Full runbook: [`docs/npm-publishing.md`](npm-publishing.md).
 
 ## Cut the release (from `main`, after this PR is merged)
@@ -43,24 +47,24 @@ Do not push `v2.2.0` until steps 1–3 are done. Tagging now would pass the vers
 
 The workflow already passes `--access public --provenance`. A 403 is almost always “org or token not ready,” not a missing flag.
 
-- Confirm the org exists, `gh secret list` shows `NPM_TOKEN`, and the token can write both the org and the unscoped package. If the org was created minutes ago, wait and retry.
+- Confirm the org exists, `gh secret list` shows `NPM_TOKEN`, and the token has **Packages and scopes** read/write on both `@canvas-toolchain` and the unscoped `canvas-toolchain` package, with **Bypass two-factor authentication** enabled. If the org was created minutes ago, wait and retry.
 - **Re-run** the failed “Release npm packages” workflow on the same tag.
 - Do **not** `npm publish` 2.2.0 from a laptop (that occupies the versions and blocks provenance).
 - Do **not** delete or move the `v2.2.0` tag. If the installer job already succeeded, the GitHub Release can stay; only the npm job needs a re-run.
 
 ## Post-publish smoke (required)
 
-From a directory that is **not** this repo:
+8. From a directory that is **not** this repo:
 
-```bash
-cd "$(mktemp -d)"          # Windows: cd $env:TEMP; mkdir ct-smoke; cd ct-smoke
-npx --yes canvas-toolchain@latest
-```
+   ```bash
+   cd "$(mktemp -d)"          # Windows: cd $env:TEMP; mkdir ct-smoke; cd ct-smoke
+   npx --yes canvas-toolchain@latest
+   ```
 
-Expect a silent MCP server on stdio (not an interactive CLI). Wire it into any MCP client and confirm the tool list loads. Then:
+   Expect a silent MCP server on stdio (not an interactive CLI). Wire it into any MCP client and confirm the tool list loads. Then:
 
-```bash
-npm view canvas-toolchain version    # must print 2.2.0
-```
+   ```bash
+   npm view canvas-toolchain version    # must print 2.2.0
+   ```
 
-Close [#150](https://github.com/Ryfter/canvas-toolchain/issues/150) only after that smoke passes.
+9. Close [#150](https://github.com/Ryfter/canvas-toolchain/issues/150) only after that smoke passes.

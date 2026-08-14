@@ -25,7 +25,7 @@ Build a single engine in Command & Control (the reviews sketched `readSetupState
 
 | | |
 | --- | --- |
-| **What ships first** | The engine's read model + a doctor that can say ready / optional / blocked for generate-and-paste with zero credentials. Then point `get_cc_status` and the installer summary at that object. Writers and the wizard migrate after. |
+| **What ships first** | The engine's read model + a doctor that can say ready / optional / blocked for generate-and-paste with zero credentials. |
 | **Cost** | Large. Touches C&C, the Go installer (today an independent writer of the same JSON files), npm UX, and every `setup_*` description. Weeks, not a bleed-stop. |
 | **Risks** | A second implementation of setup while the first still ships. Scope creep into signing, prebuilt runtimes, and companion install. Easy to block the v2.2.0 publish that professors actually need next. |
 | **Does NOT solve** | SmartScreen / Gatekeeper. The unpublished npm package (#150). On-laptop `npm run build`. Code signing. A colleague succeeding on a clean machine without a human next to them. |
