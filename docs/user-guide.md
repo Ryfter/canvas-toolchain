@@ -71,7 +71,7 @@ You don't have to use all of it. Most professors live in three or four commands.
 There is **no command line to memorize.** Every capability is an **MCP tool**, and you invoke it by talking to an AI client in plain English. You say *"analyze how stale my ITM 310 course is from last fall's archive,"* and the client picks the matching tool (`analyze_course`) and fills in the parameters from your sentence.
 
 - **Single entry point:** **Canvas Toolchain — Command & Control (C&C)** MCP server. It re-exports the tools of the other apps, so in normal use you only ever talk to C&C.
-- **Works in any MCP-capable client:** Claude Desktop, Claude Code, ChatGPT, or Gemini. The installer wires C&C into your client for you.
+- **Works in any MCP-capable client.** The installer auto-wires Claude Desktop, Claude Code, Codex CLI, Gemini CLI, Cursor, VS Code, Kiro, and Antigravity. Any other MCP-capable client works via the manual JSON snippet in the README — it is not auto-wired.
 - **The tools have descriptions.** Your AI client reads them, so you rarely need exact tool names — but this guide lists them so you can be explicit when you want to ("use `preview_course_publish`, not `publish_course`").
 
 When a command needs a credential you haven't set up, it tells you exactly which `setup_*` tool to run first and degrades gracefully where it can (e.g., analysis still runs offline, just with less web-currency signal).

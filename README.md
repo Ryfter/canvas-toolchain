@@ -16,8 +16,11 @@ Professors drive the whole thing by talking to the **Canvas Toolchain** MCP serv
 
 ## Where to start
 
-**Canvas Toolchain** runs as an MCP server you talk to from any MCP-capable AI client —
-Claude (Desktop/Code), Codex, Gemini, Cursor, VS Code, Grok, or a local model via any MCP host.
+**Canvas Toolchain** runs as an MCP server you talk to from any MCP-capable AI client.
+
+The **installer auto-wires** these eight hosts (verbatim from `installer/tasks/mcphost.go` `SupportedHosts()`): Claude Desktop, Claude Code, Codex CLI, Gemini CLI, Cursor, VS Code, Kiro, and Antigravity.
+
+**Any other MCP-capable client** works via the manual JSON snippet below — it is not auto-wired.
 
 ### Fastest: no install
 
@@ -73,9 +76,9 @@ codex mcp add canvas-toolchain -- npx canvas-toolchain
 { "mcpServers": { "canvas-toolchain": { "command": "npx", "args": ["canvas-toolchain"] } } }
 ```
 
-**Anything else (Grok, local models, other MCP hosts):** any client that can run a
-stdio MCP server works — command `npx`, args `["canvas-toolchain"]`. Restart the client
-after editing its config.
+**Any other MCP-capable client** (not in the installer host table above): any client that can run a
+stdio MCP server works via this same JSON snippet — command `npx`, args `["canvas-toolchain"]`. Restart the client
+after editing its config. That includes hosts the installer does not auto-wire.
 
 **Migration:** existing configs that point at the old bin names (`canvas-design-mcp`,
 `command-and-control-mcp`) should switch to `npx canvas-toolchain` (or the new bins

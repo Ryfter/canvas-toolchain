@@ -67,7 +67,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph CLIENT [Your AI client]
-        AIC([Claude · ChatGPT · Gemini])
+        AIC([Installer-wired hosts · other MCP clients])
     end
 
     AIC <== "MCP" ==> CC
@@ -112,6 +112,8 @@ flowchart TB
     classDef client fill:#fff,stroke:#999,stroke-width:1.5px,color:#333;
     class CC hub; class CI,CDS app; class SL,ST lib; class MV mod; class ANT,CANVAS,PAN ext; class AIC client;
 ```
+
+The installer auto-wires **Claude Desktop, Claude Code, Codex CLI, Gemini CLI, Cursor, VS Code, Kiro, and Antigravity**. Any other MCP-capable client works via the manual JSON snippet — it is not auto-wired.
 
 ---
 
