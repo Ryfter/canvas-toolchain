@@ -13,9 +13,18 @@ alongside the installer release on the same tag.
 1. Create the free **canvas-toolchain** organization on npmjs.com (owns the
    `@canvas-toolchain` scope): npmjs.com → profile → Add Organization.
 2. Create a **granular access token**: npmjs.com → Access Tokens → Generate New Token →
-   Granular; permissions *Read and write* scoped to the `canvas-toolchain` org **and** the
-   `canvas-toolchain` package; no IP allowlist (Actions IPs rotate); expiry ≤ 1 year
-   (calendar the renewal).
+   Granular. Configure it as follows:
+   - **Packages and scopes** — *Read and write* on **both** the `@canvas-toolchain`
+     scope **and** the unscoped `canvas-toolchain` package. This is what grants
+     publish rights.
+   - **Organization access** — a separate permission that manages org settings,
+     teams, and users. It does **not** grant permission to publish org-scoped
+     packages. Leave it unset unless you also need the token to manage the org.
+   - **Bypass two-factor authentication** — **ON**. npm leaves this OFF by
+     default. Publishing requires either an interactive OTP or a granular token
+     with bypass enabled. GitHub Actions cannot answer an OTP;
+     `.github/workflows/release-npm.yml` authenticates only via `NODE_AUTH_TOKEN`.
+   - No IP allowlist (Actions IPs rotate); expiry ≤ 1 year (calendar the renewal).
 3. Add it to the repo: GitHub → Settings → Secrets and variables → Actions →
    `NPM_TOKEN`.
 
@@ -35,10 +44,17 @@ npx canvas-toolchain@latest &   # should start silently (MCP server on stdio)
 ```
 
 Or wire `npx canvas-toolchain` into an MCP client and confirm the tool list loads.
-First publish note: the very first `npm publish` of a new scope may require
-`npm publish --access public` from a logged-in shell once if the org was created
-seconds earlier — if the workflow's first run 403s, run
-`npm publish --workspaces --access public` locally with `npm login`, then re-tag.
+
+The workflow already publishes with `--access public --provenance` (OIDC
+`id-token: write` plus `NODE_AUTH_TOKEN` from the `NPM_TOKEN` repo secret). If
+the first run 403s or 401s, the org or token is not ready — do **not** publish
+the same versions from a laptop, and do **not** delete or retag `vX.Y.Z`. A
+local publish occupies the versions and blocks the provenance job. Confirm the
+org exists, `gh secret list` shows `NPM_TOKEN`, and the granular token has
+**Packages and scopes** read/write on both `@canvas-toolchain` and the unscoped
+`canvas-toolchain` package, with **Bypass two-factor authentication** enabled;
+wait a few minutes if the org was just created; then **Re-run** the failed
+"Release npm packages" workflow on the same tag.
 
 ## Token expiry / rotation
 
