@@ -115,5 +115,51 @@ jobs:
       # Auth via npm Trusted Publishing (OIDC): no token, provenance is automatic.
       # Each package must have a Trusted Publisher configured on npmjs.com
       # pointing at this repo and workflow filename (release-npm.yml).
-      - name: Publish all workspaces
-        run: npm publish --workspaces --access public
+      #
+      # Publishes one workspace at a time instead of `npm publish --workspaces`:
+      # versions already on the registry are skipped and per-package failures
+      # don't abort the rest, so a partially-failed release can be re-run.
+      - name: Publish all workspaces (idempotent)
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import fs from 'node:fs';
+          import path from 'node:path';
+
+          const packagesDir = 'packages';
+          const failures = [];
+          const dirs = fs
+            .readdirSync(packagesDir, { withFileTypes: true })
+            .filter((d) => d.isDirectory())
+            .map((d) => path.join(packagesDir, d.name))
+            .filter((p) => fs.existsSync(path.join(p, 'package.json')));
+
+          for (const dir of dirs) {
+            const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+            if (pkg.private === true) continue;
+            const spec = `${pkg.name}@${pkg.version}`;
+            let published = '';
+            try {
+              published = execFileSync('npm', ['view', spec, 'version'], { stdio: ['ignore', 'pipe', 'pipe'] })
+                .toString().trim();
+            } catch {
+              // E404: package has never been published; proceed.
+            }
+            if (published === pkg.version) {
+              console.log(`SKIP ${spec} (already on registry)`);
+              continue;
+            }
+            console.log(`PUBLISH ${spec}`);
+            try {
+              execFileSync('npm', ['publish', '--access', 'public', '--workspace', pkg.name], { stdio: 'inherit' });
+            } catch {
+              failures.push(spec);
+            }
+          }
+
+          if (failures.length > 0) {
+            console.error(`FAILED to publish ${failures.length} package(s): ${failures.join(', ')}`);
+            process.exit(1);
+          }
+          console.log('All publishable workspaces are on the registry at the tagged version.');
+          NODE
