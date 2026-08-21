@@ -16,10 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # No registry-url here: it writes an `_authToken=${NODE_AUTH_TOKEN}` line
+      # into .npmrc which, with the env var unset, makes npm attempt classic
+      # auth with an empty token instead of the OIDC exchange (E401).
+      # See https://github.com/actions/setup-node/issues/1551
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
           cache: npm
 
       - name: Verify tag matches package versions
