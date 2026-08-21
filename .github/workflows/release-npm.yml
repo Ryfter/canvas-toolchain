@@ -109,7 +109,8 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Publish all workspaces with provenance
-        run: npm publish --workspaces --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Auth via npm Trusted Publishing (OIDC): no token, provenance is automatic.
+      # Each package must have a Trusted Publisher configured on npmjs.com
+      # pointing at this repo and workflow filename (release-npm.yml).
+      - name: Publish all workspaces
+        run: npm publish --workspaces --access public
