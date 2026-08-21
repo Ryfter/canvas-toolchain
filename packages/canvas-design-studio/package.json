@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/canvas-design-studio",
   "license": "MIT",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Canvas Design Studio — MCP server for generating, validating, and publishing Canvas LMS pages",
   "type": "module",
   "main": "dist/index.js",
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
-    "@canvas-toolchain/shared-llm": "2.2.0",
-    "@canvas-toolchain/shared-types": "2.2.0",
+    "@canvas-toolchain/shared-llm": "2.2.1",
+    "@canvas-toolchain/shared-types": "2.2.1",
     "@inquirer/prompts": "^7.0.0",
     "@modelcontextprotocol/sdk": "^1.10.0",
     "axe-core": "^4.12.1",

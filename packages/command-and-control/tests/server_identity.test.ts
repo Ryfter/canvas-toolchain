@@ -12,6 +12,7 @@ describe('server identity', () => {
     expect(src).toContain("name: 'canvas-toolchain'");
     expect(src).not.toContain("name: 'command-and-control'");
     expect(src).toContain('pkg.version'); // version comes from package.json, not a literal
-    expect(pkg.version).toBe('2.2.0');
+    // Exact version-to-tag matching is enforced by the release workflow's guard.
+    expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });

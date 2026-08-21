@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/module-roster",
   "license": "MIT",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Roster & Identity Manager module for canvas-toolchain",
   "type": "module",
   "main": "dist/index.js",
@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@canvas-toolchain/module-contract": "2.2.0",
-    "@canvas-toolchain/shared-llm": "2.2.0",
+    "@canvas-toolchain/module-contract": "2.2.1",
+    "@canvas-toolchain/shared-llm": "2.2.1",
     "@modelcontextprotocol/sdk": "^1.10.0"
   },
   "devDependencies": {
