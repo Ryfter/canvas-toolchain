@@ -10,7 +10,7 @@ Canvas Backup archive
   -> optional Canvas publishing
 ```
 
-Professors drive the whole thing by talking to the **Canvas Toolchain** MCP server (`npx canvas-toolchain`) from any MCP-capable AI client. Each underlying app also stays independently usable. Direct Canvas API publishing is always optional — the no-token "generate HTML and paste it in" path is first-class.
+Professors drive the whole thing by talking to the **Canvas Toolchain** MCP server (installed via the native installer, or `npx canvas-toolchain` if you have Node) from any MCP-capable AI client. Each underlying app also stays independently usable. Direct Canvas API publishing is always optional — the no-token "generate HTML and paste it in" path is first-class.
 
 **Optional modules and companion programs:** see [docs/modules.md](docs/modules.md).
 
@@ -22,20 +22,25 @@ The **installer auto-wires** these eight hosts (verbatim from `installer/tasks/m
 
 **Any other MCP-capable client** works via the manual JSON snippet below — it is not auto-wired.
 
-### Fastest: no install
+### Recommended: native installer
+
+Download the Windows x64 / macOS arm64 installer from
+[Releases](https://github.com/Ryfter/canvas-toolchain/releases) — it bundles Node, the
+toolchain, and an auto-updater, and writes the MCP config for every client it detects.
+
+> **First run:** the installer is not code-signed. Windows SmartScreen and macOS Gatekeeper
+> may block it — use **More info → Run anyway** (Windows) or **Open Anyway** in System
+> Settings → Privacy & Security (macOS). See the release notes for screenshots.
+
+### With Node.js: `npx`
+
+If you already have Node ≥ 20, you can start the unified MCP server without cloning the repo:
 
 ```bash
 npx canvas-toolchain
 ```
 
-That starts the unified MCP server (it speaks MCP on stdio — wire it into a client below;
-it is not an interactive CLI).
-
-### Native installer
-
-Download the Windows x64 / macOS arm64 installer from
-[Releases](https://github.com/Ryfter/canvas-toolchain/releases) — it bundles Node, the
-toolchain, and an auto-updater, and writes the MCP config for every client it detects.
+That speaks MCP on stdio — wire it into a client below; it is not an interactive CLI.
 
 ### From source
 
