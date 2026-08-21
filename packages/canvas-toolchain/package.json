@@ -1,13 +1,27 @@
 {
   "name": "canvas-toolchain",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Canvas Toolchain — course-refresh toolchain for Canvas LMS. Runs the unified MCP server; use from any MCP-capable AI client.",
   "license": "MIT",
   "type": "module",
-  "bin": { "canvas-toolchain": "bin/canvas-toolchain.mjs" },
-  "files": ["bin"],
-  "engines": { "node": ">=20" },
-  "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "git+https://github.com/Ryfter/canvas-toolchain.git", "directory": "packages/canvas-toolchain" },
-  "dependencies": { "@canvas-toolchain/command-and-control": "2.2.0" }
+  "bin": {
+    "canvas-toolchain": "bin/canvas-toolchain.mjs"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ryfter/canvas-toolchain.git",
+    "directory": "packages/canvas-toolchain"
+  },
+  "dependencies": {
+    "@canvas-toolchain/command-and-control": "2.2.1"
+  }
 }
