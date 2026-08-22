@@ -10,6 +10,14 @@
 
 **Command & Control MCP** (`packages/command-and-control/src/index.ts`, launched via `npx canvas-toolchain` or the native installer) is the single professor-facing entrypoint. There is no separate “shell edit” CLI or skill — agents reach shell editing through MCP tools registered on C&C.
 
+**Install (professor path):** one-liner downloads the latest native installer and prints next steps:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/scripts/install.sh | bash
+```
+
+See [`scripts/install.sh`](../scripts/install.sh) and [`docs/2026-08-21-install-simplification.md`](2026-08-21-install-simplification.md). Silent wizard mode is not yet supported — the script launches the GUI installer after download.
+
 | Intent | Primary tool(s) | Where files land |
 | --- | --- | --- |
 | Full-semester refresh (dates + outline) | `plan_next_semester` | `~/.curriculum-intelligence/courses/<courseId>/semesters/<newSemesterId>/next-plan/` |
@@ -47,6 +55,14 @@ Verify readiness without guessing paths:
 ```bash
 node scripts/shell-edit-doctor.mjs --courseId ITM370 --semesterId Fall2026
 ```
+
+Machine-readable report (includes `prerequisitesMet` and `missingPrerequisites`):
+
+```bash
+node scripts/shell-edit-doctor.mjs --courseId ITM370 --semesterId Fall2026 --json
+```
+
+After installing via [`scripts/install.sh`](../scripts/install.sh), the script prints the same doctor command with placeholders for your course and semester.
 
 ### Path B — single assignment hotfix (no CI plan)
 
@@ -143,7 +159,8 @@ Skip all `setup_*`. Path B works with local archive + `import_course` → edit �
 
 **Files:**
 
-- `scripts/shell-edit-doctor.mjs` (added tonight) — prints absolute paths, prerequisite file presence, brief count, and the minimal MCP sequence.
+- `scripts/shell-edit-doctor.mjs` (added tonight) — prints absolute paths, prerequisite file presence (`prerequisitesMet`, JSON validity for plan files), brief count, and the minimal MCP sequence. Supports `--json` and `--strict` (exit 1 when prerequisites incomplete).
+- `scripts/install.sh` — thin curl\|bash helper: latest release download, OS security notes, GUI installer launch, doctor command in exit message.
 - `docs/2026-08-21-shell-edit-reliability.md` (this file) — link from `BATON.md` / orchestrator output.
 
 **Why tonight:** Zero-risk; eliminates the most common “agent edited the wrong folder” failure without waiting for #151 readiness engine.
