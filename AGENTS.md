@@ -280,9 +280,9 @@ GitHub Project view: [Canvas Toolchain Roadmap](https://github.com/users/Ryfter/
 # Grimdex — coding knowledge base (read first)
 
 PROGRAMMING DECISIONS, rules, and lessons → record them in **Grimdex** at
-`D:\Dev\Grimdex` (this project's tier: `projects/canvas-toolchain/`).
+`~/Dev/Grimdex` (this project's tier: `projects/canvas-toolchain/`).
 
-- Read `D:\Dev\Grimdex\GRIMDEX.md` FIRST — layout and contribution rules.
+- Read `~/Dev/Grimdex/GRIMDEX.md` FIRST — layout and contribution rules.
 - When you make or revise a coding rule, decision, or lesson, write it there.
 - Reference decision records by id (e.g. `d012`); do not duplicate them in app repos.
 - Grimdex engine is open source: <https://github.com/Ryfter/Grimdex>.

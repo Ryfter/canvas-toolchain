@@ -116,7 +116,7 @@ See `packages/command-and-control/docs/superpowers/specs/2026-06-05-canvas-capab
 A localhost-only HTTP server that surfaces read-only course health metrics.
 
 ```text
-Setup:        set_courses_root({ coursesRoot: 'D:\\Dev\\courses' })
+Setup:        set_courses_root({ coursesRoot: '<absolute path to your courses folder>' })
 Launch (MCP): open_dashboard({}) → returns http://127.0.0.1:<port>/
 Launch (CLI): canvas-toolchain-dashboard
 ```
@@ -227,10 +227,10 @@ npm run smoke:integration
 
 When changing file contracts between apps, also run:
 
-```powershell
-cd D:\Dev\Curriculum-Intelligence; npm test; npm run build
-cd D:\Dev\canvas-design-studio; npm test; npm run build
-cd D:\Dev\Canvas-Download; .\.venv\Scripts\python.exe -m pytest
+```bash
+cd ../Curriculum-Intelligence && npm test && npm run build
+cd ../canvas-design-studio && npm test && npm run build
+cd ../Canvas-Download && python -m pytest
 ```
 
 ## Downloader Bridge

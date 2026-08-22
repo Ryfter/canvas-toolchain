@@ -52,7 +52,7 @@ npx canvas-toolchain   # smoke: starts the MCP server (Ctrl+C to stop)
 ```
 
 > Requires Node ≥ 20. If your checkout lives in a folder with spaces (e.g.
-> `C:\Users\you\Documents\Canvas Toolchain`), quote the path anywhere it appears in JSON config.
+> `~/Documents/Canvas Toolchain`), quote the path anywhere it appears in JSON config.
 
 ### Wire it into your client
 
