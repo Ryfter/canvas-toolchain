@@ -28,5 +28,9 @@
   "overrides": {
     "esbuild": "^0.28.1",
     "undici@<=6.26.0": "^6.27.0"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "better-sqlite3": true
   }
 }
