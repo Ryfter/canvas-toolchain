@@ -172,10 +172,13 @@ describe('operation registry', () => {
     expect(ids.length).toBe(new Set(ids).size);
   });
 
-  it('marks internal exactly the three pre-approved operations', () => {
+  // Subset, not equality: Task 2 registers zero internal operations, so an
+  // equality assertion would fail here. Task 3 adds the exact-equality check
+  // once all 82 operations exist.
+  it('never marks an operation internal outside the allowlist', () => {
     const reg = buildRegistry();
     const internal = [...reg.values()].filter((o) => o.exposure === 'internal').map((o) => o.id);
-    expect(internal.sort()).toEqual(INTERNAL_ALLOWLIST);
+    for (const id of internal) expect(INTERNAL_ALLOWLIST).toContain(id);
   });
 
   it('gives every intent operation both a tool and an action', () => {
@@ -274,7 +277,7 @@ export function buildRegistry(): Map<string, Operation> {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- surface-registry`
-Expected: PASS (4 tests). The internal-allowlist test passes vacuously for now; Task 3 makes it meaningful.
+Expected: PASS (4 tests). The internal-allowlist test is a subset check, so it holds with zero internal operations; Task 3 tightens it to equality.
 
 - [ ] **Step 5: Commit**
 
@@ -343,6 +346,15 @@ describe('registry parity with the current surface', () => {
 
   it('registers 82 core operations', () => {
     expect(buildRegistry().size).toBe(82);
+  });
+
+  it('marks internal exactly the three pre-approved operations', () => {
+    const internal = [...buildRegistry().values()]
+      .filter((o) => o.exposure === 'internal')
+      .map((o) => o.id);
+    expect(internal.sort()).toEqual([
+      'map_transcripts_to_weeks', 'reembed_course_index', 'snapshot_course',
+    ]);
   });
 });
 ```
@@ -1103,7 +1115,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 ```
 
-If `LoadedModules` does not already expose a `byId` map, add one in `src/modules/registry.ts` alongside the existing `tools`/`handlers` fields — it is the module id that the adapter needs for namespacing.
+**Required:** `LoadedModules` (`src/modules/registry.ts:34`) currently exposes only `tools` and `handlers` — no module id, so the adapter cannot namespace. Add `byId: Map<string, CanvasToolchainModule>` alongside them and populate it from the `active` map already built in `loadModules()`. The field is additive; fail-soft loading must be left exactly as it is.
 
 - [ ] **Step 4: Run the full suite and the smoke test**
 
@@ -1136,6 +1148,7 @@ git commit -m "feat(surface): serve tools/list and tools/call from the operation
 - Modify: `packages/command-and-control/src/index.ts` (delete the old switch)
 - Modify: `packages/command-and-control/src/passthrough/{ci,downloader,design}_tools.ts` (drop presentation fields)
 - Delete: `packages/command-and-control/src/lib/call_tool_dispatch.ts` and `tests/` counterpart if it exists
+- Delete: `packages/command-and-control/tests/surface-parity.test.ts` (see below)
 
 **Interfaces:**
 - Consumes: nothing new.
@@ -1167,6 +1180,12 @@ Run: `npm test -- surface-no-legacy`
 Expected: FAIL — `ALL_PASSTHROUGH` is still present and the file is ~1100 lines.
 
 - [ ] **Step 3: Delete the dead code**
+
+**Delete `tests/surface-parity.test.ts` in this task.** It reads tool-name literals out of
+`src/index.ts` and the passthrough files to prove the migration lost nothing. This task deletes
+those literals, so the test cannot survive them — it is spent migration scaffolding by now.
+The permanent invariants live elsewhere: unique-id (Task 2) and no-orphan (Task 7) still fail
+for any unreachable or duplicated operation.
 
 Remove from `src/index.ts`: the `ALL_PASSTHROUGH` constant, the old `switch (name)` block, the `dispatchCallTool` import, and every now-unused tool-schema import. Keep the server construction, module loading, notice checks, and transport wiring.
 
