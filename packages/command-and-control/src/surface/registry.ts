@@ -1,4 +1,5 @@
 import type { Operation } from './operation.js';
+import type { PassthroughTool } from '../passthrough/ci_tools.js';
 import { setupCc } from '../tools/setup_cc.js';
 import { setupAnthropic } from '../tools/setup_anthropic.js';
 import { setupCanvas } from '../tools/setup_canvas.js';
@@ -46,6 +47,43 @@ import { listInstalledResources, uninstallResource } from '../registry/local_reg
 import { searchRegistry } from '../registry/search_registry.js';
 import { installResourcesFromLockfile } from '../registry/lockfile_install.js';
 import { pasteLayout, saveLayoutAsTemplate } from '../tools/layout_adapter.js';
+import { setupCourse } from '@canvas-toolchain/curriculum-intelligence/dist/tools/setup_course.js';
+import { getCourseState } from '@canvas-toolchain/curriculum-intelligence/dist/tools/get_course_state.js';
+import { ingestCanvasArchive } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_canvas_archive.js';
+import { listAssignments } from '@canvas-toolchain/curriculum-intelligence/dist/tools/list_assignments.js';
+import { listPages } from '@canvas-toolchain/curriculum-intelligence/dist/tools/list_pages.js';
+import { listModules as listCanvasModules } from '@canvas-toolchain/curriculum-intelligence/dist/tools/list_modules.js';
+import { listResources } from '@canvas-toolchain/curriculum-intelligence/dist/tools/list_resources.js';
+import { diffSemesters } from '@canvas-toolchain/curriculum-intelligence/dist/tools/diff_semesters.js';
+import { ingestTranscripts } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js';
+import { mapTranscriptsToWeeks } from '@canvas-toolchain/curriculum-intelligence/dist/tools/map_transcripts_to_weeks.js';
+import { extractLectureTopics } from '@canvas-toolchain/curriculum-intelligence/dist/tools/extract_lecture_topics.js';
+import { findOffSyllabusTopics } from '@canvas-toolchain/curriculum-intelligence/dist/tools/find_off_syllabus_topics.js';
+import { buildQuoteBank } from '@canvas-toolchain/curriculum-intelligence/dist/tools/build_quote_bank.js';
+import { fetchNewsFeed } from '@canvas-toolchain/curriculum-intelligence/dist/tools/fetch_news_feed.js';
+import { scanRecentDevelopments } from '@canvas-toolchain/curriculum-intelligence/dist/tools/scan_recent_developments.js';
+import { suggestTopics } from '@canvas-toolchain/curriculum-intelligence/dist/tools/suggest_topics.js';
+import { scoreTopicCurrency } from '@canvas-toolchain/curriculum-intelligence/dist/tools/score_topic_currency.js';
+import { recommendForTopic } from '@canvas-toolchain/curriculum-intelligence/dist/tools/recommend_for_topic.js';
+import { generateIdeasFile } from '@canvas-toolchain/curriculum-intelligence/dist/tools/generate_ideas_file.js';
+import { importPreviousShell } from '@canvas-toolchain/curriculum-intelligence/dist/tools/import_previous_shell.js';
+import { fetchAcademicCalendar } from '@canvas-toolchain/curriculum-intelligence/dist/tools/fetch_academic_calendar.js';
+import { shiftDates } from '@canvas-toolchain/curriculum-intelligence/dist/tools/shift_dates.js';
+import { generateRecommendedOutline } from '@canvas-toolchain/curriculum-intelligence/dist/tools/generate_recommended_outline.js';
+import { draftAssignmentBrief } from '@canvas-toolchain/curriculum-intelligence/dist/tools/draft_assignment_brief.js';
+import { CI_TOOLS } from '../passthrough/ci_tools.js';
+import { exportCourseFolder } from '@canvas-toolchain/curriculum-intelligence/dist/tools/export_course_folder.js';
+
+/**
+ * Reuse a pass-through tool's existing handler by reference. Used for the few
+ * pass-through handlers that are more than a bare delegation, so their logic is
+ * never copied or reimplemented here.
+ */
+function passthroughHandler(tools: PassthroughTool[], name: string): PassthroughTool['handler'] {
+  const tool = tools.find((t) => t.name === name);
+  if (!tool) throw new Error(`pass-through tool not found: ${name}`);
+  return tool.handler;
+}
 
 /**
  * Every core operation the server can perform, with the exposure that decides
@@ -1056,6 +1094,500 @@ export const CORE_OPERATIONS: Operation[] = [
     handler: (args) => saveLayoutAsTemplate(args as never),
     taskCategory: 'none',
     exposure: 'advanced',
+  },
+  // ── Core: Curriculum Intelligence passthrough (src/passthrough/ci_tools.ts) ──
+  {
+    id: 'setup_course',
+    section: 'admin',
+    description: 'Register a new course in Curriculum Intelligence. Creates a course folder on disk and records its location in the app config so other tools can find it by id alone.',
+    inputSchema: {
+      type: 'object',
+      required: ['id', 'title'],
+      properties: {
+        id: { type: 'string', description: 'Short id (letters, digits, dot, dash, underscore). Example: "ITM370".' },
+        title: { type: 'string', description: 'Human-readable course title.' },
+        courseRoot: { type: 'string', description: 'Optional. Absolute path to parent folder. Defaults to <appHome>/courses.' },
+      },
+    },
+    handler: (args) => setupCourse(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'course',
+  },
+  {
+    id: 'get_course_state',
+    section: 'admin',
+    description: 'List registered courses with their on-disk paths, semester history, and feed counts.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Optional. Course id to inspect. Omit to list all.' },
+      },
+    },
+    handler: (args) => getCourseState(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_inspect',
+    intentAction: 'state',
+  },
+  {
+    id: 'ingest_canvas_archive',
+    section: 'admin',
+    description: 'Read a Canvas export folder for one semester and write a structured topic-map.json.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId', 'archivePath'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        archivePath: { type: 'string', description: 'Absolute path to the Canvas export folder.' },
+      },
+    },
+    handler: (args) => ingestCanvasArchive(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_import',
+    intentAction: 'canvas_archive',
+  },
+  {
+    id: 'list_assignments',
+    section: 'admin',
+    description: 'List assignments for a course/semester from its ingested topic map.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        publishedOnly: { type: 'boolean' },
+      },
+    },
+    handler: (args) => listAssignments(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_inspect',
+    intentAction: 'assignments',
+  },
+  {
+    id: 'list_pages',
+    section: 'admin',
+    description: 'List pages for a course/semester from its ingested topic map.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        publishedOnly: { type: 'boolean' },
+      },
+    },
+    handler: (args) => listPages(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_inspect',
+    intentAction: 'pages',
+  },
+  {
+    id: 'list_canvas_modules',
+    section: 'admin',
+    description: 'List modules for a course/semester. Pass expandItems=true to include item details.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        expandItems: { type: 'boolean' },
+      },
+    },
+    handler: (args) => listCanvasModules(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_inspect',
+    intentAction: 'canvas_modules',
+  },
+  {
+    id: 'list_resources',
+    section: 'admin',
+    description: 'List external resource links referenced in pages, assignments, and discussions.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        sourceKind: { type: 'string', enum: ['page', 'assignment', 'discussion'] },
+        externalOnly: { type: 'boolean', description: 'Defaults to true.' },
+      },
+    },
+    handler: (args) => listResources(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_inspect',
+    intentAction: 'resources',
+  },
+  {
+    id: 'diff_semesters',
+    section: 'admin',
+    description: 'Compute a side-by-side diff between two ingested semesters.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'leftSemesterId', 'rightSemesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        leftSemesterId: { type: 'string' },
+        rightSemesterId: { type: 'string' },
+      },
+    },
+    handler: (args) => diffSemesters(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_analyze',
+    intentAction: 'diff_semesters',
+  },
+  {
+    id: 'ingest_transcripts',
+    section: 'transcripts',
+    description: 'Read .vtt/.srt/.md transcript files from a folder and write transcripts.json.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId', 'transcriptsPath'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        transcriptsPath: { type: 'string' },
+        source: { type: 'string', enum: ['panopto', 'whisper', 'unknown'] },
+        copy: { type: 'boolean' },
+      },
+    },
+    handler: (args) => ingestTranscripts(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_import',
+    intentAction: 'transcripts',
+  },
+  {
+    id: 'map_transcripts_to_weeks',
+    section: 'transcripts',
+    description: 'Match each ingested transcript to a course week. Writes week-map.json.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+      },
+    },
+    handler: (args) => mapTranscriptsToWeeks(args as never),
+    taskCategory: 'none',
+    exposure: 'internal',
+  },
+  {
+    id: 'extract_lecture_topics',
+    section: 'research',
+    description: 'Return lecture chunks shaped for the model to reason over.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        week: { type: 'number' },
+        transcriptId: { type: 'string' },
+        maxTextChars: { type: 'number' },
+      },
+    },
+    handler: (args) => extractLectureTopics(args as never),
+    taskCategory: 'fast',
+    exposure: 'intent',
+    intentTool: 'ct_analyze',
+    intentAction: 'topics',
+  },
+  {
+    id: 'find_off_syllabus_topics',
+    section: 'research',
+    description: 'Compare lecture transcripts against module/page text and return novel tokens.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        topN: { type: 'number' },
+        minTokenLength: { type: 'number' },
+      },
+    },
+    handler: (args) => findOffSyllabusTopics(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_analyze',
+    intentAction: 'off_syllabus',
+  },
+  {
+    id: 'build_quote_bank',
+    section: 'research',
+    description: 'Scan lecture transcripts for notable lines. Writes quote-bank.json.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        minLength: { type: 'number' },
+        maxPerLecture: { type: 'number' },
+      },
+    },
+    handler: (args) => buildQuoteBank(args as never),
+    taskCategory: 'fast',
+    exposure: 'advanced',
+  },
+  {
+    id: 'fetch_news_feed',
+    section: 'research',
+    description: 'Fetch RSS/Atom feeds and return recent items filtered by date.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'feedUrls'],
+      properties: {
+        courseId: { type: 'string' },
+        feedUrls: { type: 'array', items: { type: 'string' } },
+        since: { type: 'string' },
+      },
+    },
+    handler: (args) => fetchNewsFeed(args as never),
+    taskCategory: 'fast',
+    exposure: 'advanced',
+  },
+  {
+    id: 'scan_recent_developments',
+    section: 'research',
+    description: 'Ask the model what\'s new in a given topic area since a date.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'topicArea'],
+      properties: {
+        courseId: { type: 'string' },
+        topicArea: { type: 'string' },
+        since: { type: 'string' },
+      },
+    },
+    handler: (args) => scanRecentDevelopments(args as never),
+    taskCategory: 'judgment',
+    exposure: 'advanced',
+  },
+  {
+    id: 'suggest_topics',
+    section: 'research',
+    description: 'Merge RSS feed items and LLM scan developments into ranked topic candidates. Reads news-cache.json if no inline items are supplied.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId'],
+      properties: {
+        courseId: { type: 'string' },
+        feedItems: { type: 'array', description: 'Feed items from fetch_news_feed (optional).' },
+        scanDevelopments: { type: 'array', description: 'Developments from scan_recent_developments (optional).' },
+      },
+    },
+    handler: (args) => suggestTopics(args as never),
+    taskCategory: 'judgment',
+    exposure: 'intent',
+    intentTool: 'ct_analyze',
+    intentAction: 'topics',
+  },
+  {
+    id: 'score_topic_currency',
+    section: 'research',
+    description: 'Classify a topic as evergreen / current / dated using news-hit count and how recently it was taught.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId', 'topic', 'newsHits', 'lastTaughtSemesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        topic: { type: 'string' },
+        newsHits: { type: 'number', description: 'Number of recent news/feed items mentioning this topic.' },
+        lastTaughtSemesterId: { type: ['string', 'null'], description: 'Semester id when the topic was last taught, or null if never.' },
+      },
+    },
+    handler: (args) => scoreTopicCurrency(args as never),
+    taskCategory: 'fast',
+    exposure: 'intent',
+    intentTool: 'ct_analyze',
+    intentAction: 'currency',
+  },
+  {
+    id: 'recommend_for_topic',
+    section: 'research',
+    description: 'Return a KEEP / UPDATE / DROP / ADD verdict for a topic based on its currency class and teaching history.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId', 'topic', 'currencyClass', 'lastTaughtSemesterId', 'newsHits'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        topic: { type: 'string' },
+        currencyClass: { type: 'string', enum: ['evergreen', 'current', 'dated'] },
+        lastTaughtSemesterId: { type: ['string', 'null'] },
+        newsHits: { type: 'number' },
+        includeDetails: { type: 'boolean', description: 'Return full signal details alongside the verdict.' },
+      },
+    },
+    handler: (args) => recommendForTopic(args as never),
+    taskCategory: 'judgment',
+    exposure: 'advanced',
+  },
+  {
+    id: 'generate_ideas_file',
+    section: 'research',
+    description: 'Write ideas.md with follow-on development ideas based on what the professor used.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId'],
+      properties: {
+        courseId: { type: 'string' },
+        context: { type: 'string' },
+      },
+    },
+    handler: (args) => generateIdeasFile(args as never),
+    taskCategory: 'judgment',
+    exposure: 'advanced',
+  },
+  {
+    id: 'import_previous_shell',
+    section: 'admin',
+    description: 'Copy last semester\'s content into next-plan/ with CI front matter.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'sourceSemesterId', 'newSemesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        sourceSemesterId: { type: 'string' },
+        newSemesterId: { type: 'string' },
+        source: { type: 'string', enum: ['archive', 'cds', 'auto'] },
+      },
+    },
+    handler: (args) => importPreviousShell(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_import',
+    intentAction: 'previous_shell',
+  },
+  {
+    id: 'fetch_academic_calendar',
+    section: 'research',
+    description: 'Parse registrar URL or accept manual dates into calendar.json.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        url: { type: 'string' },
+        semesterPattern: { type: 'string' },
+        manualDates: { type: 'object' },
+      },
+    },
+    handler: (args) => fetchAcademicCalendar(args as never),
+    taskCategory: 'none',
+    exposure: 'advanced',
+  },
+  {
+    id: 'shift_dates',
+    section: 'admin',
+    description: 'Apply target calendar to all due: fields in next-plan/ briefs.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId', 'onBreakCollision'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        onBreakCollision: { type: 'string', enum: ['bump-before', 'bump-after', 'flag'] },
+        sections: { type: 'array', items: { type: 'object' } },
+      },
+    },
+    handler: (args) => shiftDates(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_plan',
+    intentAction: 'shift_dates',
+  },
+  {
+    id: 'generate_recommended_outline',
+    section: 'admin',
+    description: 'Generate a week-by-week outline from diff + optional currency-report.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+      },
+    },
+    handler: (args) => generateRecommendedOutline(args as never),
+    taskCategory: 'judgment',
+    exposure: 'intent',
+    intentTool: 'ct_plan',
+    intentAction: 'outline',
+  },
+  {
+    id: 'draft_assignment_brief',
+    section: 'design',
+    description: 'LLM-draft an updated assignment brief. Sets replacement_recommended on DROP/stale.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId', 'briefPath'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        briefPath: { type: 'string' },
+      },
+    },
+    handler: (args) => draftAssignmentBrief(args as never),
+    taskCategory: 'judgment',
+    exposure: 'intent',
+    intentTool: 'ct_plan',
+    intentAction: 'assignment_brief',
+  },
+  {
+    id: 'update_examples',
+    section: 'design',
+    description: 'Mechanical year/tool-name replacement pass + optional LLM proposed rewrites.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId', 'briefPath'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        briefPath: { type: 'string' },
+        llmPass: { type: 'boolean' },
+      },
+    },
+    handler: passthroughHandler(CI_TOOLS, 'update_examples'),
+    taskCategory: 'fast',
+    exposure: 'intent',
+    intentTool: 'ct_build',
+    intentAction: 'examples',
+  },
+  {
+    id: 'export_course_folder',
+    section: 'admin',
+    description: 'Strip CI fields and write CDS course/ format; one folder per section.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+        outputPath: { type: 'string' },
+        sections: { type: 'array', items: { type: 'string' } },
+      },
+    },
+    handler: (args) => exportCourseFolder(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_inspect',
+    intentAction: 'export',
   },
 ];
 
