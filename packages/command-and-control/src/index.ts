@@ -87,6 +87,7 @@ import type { CheckShellReadinessInput } from './tools/shell_ready/types.js';
 import { setupSpotCheck } from './tools/workflows/setup_spot_check.js';
 import type { SetupSpotCheckInput } from './tools/shell_ready/types.js';
 import { validateQuiz, type ValidateQuizInput } from './tools/workflows/validate_quiz.js';
+import { generateQuiz, type GenerateQuizInput } from './tools/workflows/generate_quiz.js';
 import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
@@ -751,6 +752,43 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'generate_quiz',
+      description:
+        'Author a local quiz draft markdown from course materials (books/slides/lectures) with difficulty-mix knobs. Writes under week-NN/quizzes/ (temp+rename). Manual anytime — not required for the weekly shell spot-check (use validate_quiz for live Canvas). Requires an active LLM (setup_anthropic or Ollama). Does not publish to Canvas Quizzes.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseDir', 'week', 'sources'],
+        properties: {
+          courseDir: { type: 'string', description: 'CDS course folder absolute path.' },
+          week: { type: 'number', description: 'Week number for output path and front matter.' },
+          sources: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Paths to materials (absolute or courseDir-relative).',
+          },
+          title: { type: 'string' },
+          pageType: { type: 'string', enum: ['weekly-quiz', 'reading-quiz'] },
+          difficultyMix: {
+            type: 'object',
+            properties: {
+              easy: { type: 'number' },
+              medium: { type: 'number' },
+              hard: { type: 'number' },
+            },
+            description: 'Must sum to ~1.0 (default 0.4/0.4/0.2).',
+          },
+          questionCount: { type: 'number', description: 'Default 10, max 25.' },
+          types: {
+            type: 'array',
+            items: { type: 'string', enum: ['multiple_choice', 'true_false'] },
+          },
+          outputPath: { type: 'string' },
+          overwrite: { type: 'boolean', description: 'Default false.' },
+          bloomHint: { type: 'string' },
+        },
+      },
+    },
+    {
       name: 'accessibility_review_queue',
       description:
         'The per-course "near the edge" accessibility worklist: pages with borderline findings, needs-human-review criteria, or acknowledged publishes. Lists open entries worst-margin first with live Canvas URLs for human-eyes verification; resolve marks a page reviewed. The professor is the final arbiter.',
@@ -1102,6 +1140,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'validate_quiz':
         result = await validateQuiz(args as unknown as ValidateQuizInput);
+        break;
+      case 'generate_quiz':
+        result = await generateQuiz(args as unknown as GenerateQuizInput);
         break;
       case 'accessibility_review_queue':
         result = await accessibilityReviewQueue(args as unknown as Parameters<typeof accessibilityReviewQueue>[0]);

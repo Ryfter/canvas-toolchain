@@ -13,6 +13,7 @@ import type {
   WeekProvenance,
 } from '../quiz/types.js';
 import { validateQuizItems } from '../quiz/validate.js';
+import { parseQuizDraft } from '../quiz/parse.js';
 
 export interface ValidateQuizInput {
   courseId?: string;
@@ -48,23 +49,13 @@ function defaultRead(path: string): string {
 
 /** Minimal local-draft stem extractor for authoring pre-check (not readiness SoT). */
 function itemsFromDraftMarkdown(md: string): import('../quiz/types.js').QuizItem[] {
-  const chunks = md.split(/^##\s+Q(\d+)\s*$/im).slice(1);
-  const items: import('../quiz/types.js').QuizItem[] = [];
-  for (let i = 0; i < chunks.length; i += 2) {
-    const id = chunks[i]!;
-    const body = chunks[i + 1] ?? '';
-    const stemMatch = body.match(/\*\*stem:\*\*\s*(.+)/i);
-    const keyMatch = body.match(/\*\*key:\*\*\s*(\S+)/i);
-    const choiceLines = [...body.matchAll(/^\s*-\s*([A-D])\.\s*(.+)$/gim)];
-    items.push({
-      id,
-      type: 'multiple_choice_question',
-      stem: stemMatch?.[1]?.trim() ?? '',
-      choices: choiceLines.map((m) => m[2]!.trim()),
-      key: keyMatch?.[1]?.trim().toUpperCase(),
-    });
-  }
-  return items;
+  return parseQuizDraft(md).items.map((it) => ({
+    ...it,
+    type: it.type?.includes('true_false') ? 'true_false_question' : 'multiple_choice_question',
+    key: typeof it.key === 'string' && !it.type?.includes('true_false')
+      ? it.key.toUpperCase()
+      : it.key,
+  }));
 }
 
 /**

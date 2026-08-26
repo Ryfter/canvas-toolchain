@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript ESM, vitest, `@canvas-toolchain/shared-llm`, Node ≥20. Hermetic tests only (inject `fetchFn` + `llm`).
 
-**Phase 1 STATUS (2026-08-26):** IMPLEMENTED on WT-ct-quiz-engine — `validate_quiz` registered; generate deferred.
+**Phase 1+2 STATUS (2026-08-26):** IMPLEMENTED — `validate_quiz` + `generate_quiz` registered on WT-ct-quiz-engine.
 
 **Spec:** `packages/command-and-control/docs/superpowers/specs/2026-08-26-quiz-validation-engine-design.md` (**Approved for planning**).
 
@@ -169,11 +169,11 @@ Source resolution: `courseId+quizId` → live; else `quizPath` XOR `quizMarkdown
 
 **Produces:** `parseQuizDraft(md)`, `generateQuizDraft(input, deps)` → write `week-NN/quizzes/…-draft.md` (temp+rename, `overwrite: false` default), structural pre-check via Task 3 helpers. Item types v1: `multiple_choice` + `true_false`. Schema `canvas-toolchain.quiz/v1`.
 
-- [ ] **Step 1:** Failing test — parse round-trip of draft header + Q blocks
-- [ ] **Step 2:** Implement `parse.ts` minimal
-- [ ] **Step 3:** Failing test — generate refuses empty `sources` with `{ error, fix }`
-- [ ] **Step 4:** Implement generate write + structural findings
-- [ ] **Step 5:** Commit `feat(quiz): generate draft from materials`
+- [x] **Step 1:** Failing test — parse round-trip of draft header + Q blocks
+- [x] **Step 2:** Implement `parse.ts` minimal
+- [x] **Step 3:** Failing test — generate refuses empty `sources` with `{ error, fix }`
+- [x] **Step 4:** Implement generate write + structural findings
+- [x] **Step 5:** Implement generate (commit when requested)
 
 ---
 
@@ -186,7 +186,7 @@ Source resolution: `courseId+quizId` → live; else `quizPath` XOR `quizMarkdown
 
 Description must state: local authoring sibling; manual anytime; not required for weekly spot-check.
 
-- [ ] **Step 1–5:** TDD workflow → register → tests → commit `feat(quiz): register generate_quiz MCP tool`
+- [x] **Step 1–5:** TDD workflow → register → tests (commit when requested)
 
 ---
 
@@ -223,4 +223,9 @@ No TBD/TODO placeholders in Phase 1 tasks.
 
 ## Execution note
 
-This worktree executes **Phase 1 inline** (Tasks 1–6). Phase 2 (`generate_quiz`) waits until Phase 1 is green and committed.
+Phase 1+2 implemented on `WT-ct-quiz-engine`. Do not merge `main` from this worktree.
+
+
+## Phase 2 complete
+
+`generate_quiz` + parse/render + hermetic tests (29 total with phase 1). Registered in `src/index.ts`. No merge main.

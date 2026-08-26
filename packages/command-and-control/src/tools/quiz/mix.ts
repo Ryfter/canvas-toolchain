@@ -25,3 +25,22 @@ export function realizeMixFromItems(items: QuizItem[]): DifficultyMix {
   const n = items.length;
   return { easy: easy / n, medium: medium / n, hard: hard / n };
 }
+
+/** Target item counts from mix; remainder goes to medium. */
+export function realizeTargetCounts(
+  questionCount: number,
+  mix: DifficultyMix,
+): { easy: number; medium: number; hard: number } {
+  const m = normalizeMix(mix);
+  const easy = Math.round(m.easy * questionCount);
+  const hard = Math.round(m.hard * questionCount);
+  let medium = questionCount - easy - hard;
+  if (medium < 0) {
+    // Rounding overflow — pull from easy then hard
+    let deficit = -medium;
+    const takeEasy = Math.min(deficit, easy);
+    medium = 0;
+    return { easy: easy - takeEasy, medium: questionCount - (easy - takeEasy) - hard, hard };
+  }
+  return { easy, medium, hard };
+}

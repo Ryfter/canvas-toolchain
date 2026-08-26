@@ -20,3 +20,40 @@ export function buildQuizTriageUserPrompt(items: QuizItem[], topicHints?: string
   }).join('\n\n');
   return `${hints}Review these quiz items:\n\n${body}`;
 }
+
+export const QUIZ_GENERATE_SYSTEM_PROMPT = `You author Canvas Classic Quiz items for a professor.
+Return ONLY valid JSON (no markdown fences):
+{"items":[{"id":"1","type":"multiple_choice"|"true_false","difficulty":"easy"|"medium"|"hard","stem":"...","choices":["A text","B text","C text","D text"],"key":"A","points":1,"rationale":"...","sources":["path#hint"]}]}
+Rules:
+- multiple_choice must have exactly 4 choices; key is A|B|C|D.
+- true_false: choices ["True","False"]; key is "true" or "false".
+- Ground stems in the provided source excerpts; do not invent unsupported facts.
+- Match the requested difficulty counts as closely as possible.
+- Keep language clear and unambiguous.`;
+
+export function buildQuizGenerateUserPrompt(args: {
+  title: string;
+  week: number;
+  questionCount: number;
+  counts: { easy: number; medium: number; hard: number };
+  types: string[];
+  bloomHint?: string;
+  sourceExcerpts: Array<{ path: string; text: string }>;
+}): string {
+  const src = args.sourceExcerpts
+    .map((s) => `### ${s.path}\n${s.text}`)
+    .join('\n\n');
+  return [
+    `Title: ${args.title}`,
+    `Week: ${args.week}`,
+    `Question count: ${args.questionCount}`,
+    `Difficulty targets: easy=${args.counts.easy}, medium=${args.counts.medium}, hard=${args.counts.hard}`,
+    `Allowed types: ${args.types.join(', ')}`,
+    args.bloomHint ? `Bloom hint: ${args.bloomHint}` : null,
+    '',
+    'Source excerpts:',
+    src || '(none)',
+  ]
+    .filter((l) => l != null)
+    .join('\n');
+}
