@@ -82,6 +82,10 @@ import type { SnapshotInput } from './tools/snapshot/types.js';
 import { draftStudentRubric } from './tools/workflows/draft_student_rubric.js';
 import type { DraftStudentRubricInput } from './tools/rubric/types.js';
 import { reviewCanvasRubric, type ReviewCanvasRubricInput } from './tools/workflows/review_canvas_rubric.js';
+import { checkShellReadiness } from './tools/workflows/check_shell_readiness.js';
+import type { CheckShellReadinessInput } from './tools/shell_ready/types.js';
+import { setupSpotCheck } from './tools/workflows/setup_spot_check.js';
+import type { SetupSpotCheckInput } from './tools/shell_ready/types.js';
 import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
@@ -677,6 +681,54 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'check_shell_readiness',
+      description:
+        'Advisory spot-check of a LIVE Canvas course shell. Run anytime (manual). ' +
+        'Optional weekly cadence is opt-in via setup_spot_check (recommends Saturday). ' +
+        'Weeks: infer Week N from module titles + termStartMonday; weekMapOverrides win. ' +
+        'Thorough = week beginning in ~2 weeks; lighter = ~1 week. Cross-checks due/unlock/lock. ' +
+        'Emits quizCallouts for validate_quiz (sibling; validate-first). Read-only. setup_canvas required.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseId'],
+        properties: {
+          courseId: { type: 'string', description: 'Canvas course id.' },
+          asOfDate: { type: 'string', description: 'YYYY-MM-DD (default today). Manual anytime.' },
+          trigger: { type: 'string', enum: ['manual', 'weekly-suggested'] },
+          termStartMonday: { type: 'string', description: 'YYYY-MM-DD Week 1 Monday.' },
+          weekMapOverrides: { type: 'array', items: { type: 'object' } },
+          packs: { type: 'array', items: { type: 'string' } },
+          senseCheck: { type: 'string', enum: ['heuristics', 'llm'] },
+          confirm: { type: 'boolean' },
+          courseDir: { type: 'string' },
+          linkProbeBudget: { type: 'number' },
+          secondaryLinkProbeBudget: { type: 'number' },
+          moduleIds: { type: 'array', items: { type: 'number' } },
+          forceWeekRole: { type: 'string', enum: ['primary', 'secondary'] },
+        },
+      },
+    },
+    {
+      name: 'setup_spot_check',
+      description:
+        'Opt in/out of a weekly shell (+ quiz validate) spot-check reminder day. ' +
+        'Recommends Saturday. Persists weeklyCheckEnabled + weeklyCheckDay under ' +
+        '~/.command-and-control/spot-check.json (no secrets). Manual check_shell_readiness always works. ' +
+        'Does not install OS cron (fast-follow).',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['enabled'],
+        properties: {
+          enabled: { type: 'boolean' },
+          day: {
+            type: 'string',
+            enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+            description: 'Default saturday when enabling.',
+          },
+        },
+      },
+    },
+    {
       name: 'accessibility_review_queue',
       description:
         'The per-course "near the edge" accessibility worklist: pages with borderline findings, needs-human-review criteria, or acknowledged publishes. Lists open entries worst-margin first with live Canvas URLs for human-eyes verification; resolve marks a page reviewed. The professor is the final arbiter.',
@@ -1019,6 +1071,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'review_canvas_rubric':
         result = await reviewCanvasRubric(args as unknown as ReviewCanvasRubricInput);
+        break;
+      case 'check_shell_readiness':
+        result = await checkShellReadiness(args as unknown as CheckShellReadinessInput);
+        break;
+      case 'setup_spot_check':
+        result = setupSpotCheck(args as unknown as SetupSpotCheckInput);
         break;
       case 'accessibility_review_queue':
         result = await accessibilityReviewQueue(args as unknown as Parameters<typeof accessibilityReviewQueue>[0]);

@@ -52,7 +52,64 @@ npx canvas-toolchain   # smoke: starts the MCP server (Ctrl+C to stop)
 ```
 
 > Requires Node ≥ 20. If your checkout lives in a folder with spaces (e.g.
-> `C:\Users\you\Documents\Canvas Toolchain`), quote the path anywhere it appears in JSON config.
+> `~/Documents/Canvas Toolchain`), quote the path anywhere it appears in JSON config.
+
+### What you'll see during `npm install`
+
+`npm install` prints two kinds of warning. Neither is a failure on its own, but the second
+one can leave you with a broken build, so it's worth knowing them apart.
+
+#### `npm warn deprecated …` — ignore these
+
+```text
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead …
+npm warn deprecated prebuild-install@7.1.3: No longer maintained …
+```
+
+These are *transitive* dependencies — packages our dependencies pull in, not ones we list.
+`whatwg-encoding` comes in via `jsdom` (test-only), `prebuild-install` is what fetches
+`better-sqlite3`'s prebuilt native binary. Nothing in this repo can silence them; they go
+away when the upstream packages update. The install still succeeded.
+
+#### `npm warn install-scripts …` — this one needs action
+
+```text
+npm warn install-scripts 3 packages have install scripts not yet covered by allowScripts:
+npm warn install-scripts   better-sqlite3@12.11.1 (install: prebuild-install || node-gyp rebuild --release)
+npm warn install-scripts   esbuild@0.28.1 (postinstall: node install.js)
+```
+
+**npm 12 blocks dependency install scripts by default.** Those scripts were *skipped*, not
+run — and this toolchain needs both of them:
+
+| Package | What its script does | What breaks without it |
+| --- | --- | --- |
+| `esbuild` | Places the platform-specific `esbuild` binary | `npm run build` fails — and since `install` *is* the build here, the install leaves you with no compiled output |
+| `better-sqlite3` | Builds/fetches the native SQLite addon | Command & Control throws at runtime when it opens its database |
+
+This repo ships an `allowScripts` policy in the root `package.json` covering exactly those
+two packages, so a fresh clone on npm 12 should not see this warning. You'll still hit it if
+your checkout predates that policy, or if a new dependency adds an install script. The fix:
+
+```bash
+npm install-scripts ls                              # review what's blocked, and why
+npm install-scripts approve better-sqlite3 esbuild  # record approval in package.json
+npm rebuild                                         # actually run the newly-approved scripts
+npm run build                                       # confirm the build completes
+```
+
+`approve` only records permission — `npm rebuild` is what executes the scripts. Skipping the
+rebuild is the usual reason "I approved it but it's still broken."
+
+> **Approve deliberately.** An install script runs arbitrary code on your machine at install
+> time; that's the whole reason npm started blocking them. Approve packages you recognize as
+> build tooling, not whatever the warning happens to list. Use `npm install-scripts deny <pkg>`
+> to block one permanently.
+
+**On npm 11 or earlier** you will never see this warning — scripts still run automatically,
+and the `allowScripts` field is simply ignored. Check with `npm -v` if you're comparing
+behavior across two machines.
 
 ### Wire it into your client
 
