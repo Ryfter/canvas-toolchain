@@ -1214,3 +1214,222 @@ git commit -m "refactor(surface): delete the legacy tool switch and passthrough 
 - **Plan 3 — documentation:** regenerating `AGENTS.md` and `docs/commands-and-credentials.md` (75KB combined) against the new surface.
 
 **Known gap accepted for now:** the parity test proves every operation is *registered*, not that every `inputSchema` was copied faithfully. Schema fidelity is enforced by review during Task 3, not by a test. Building a schema-diff test would require parsing the old literals out of `index.ts`, which stops being possible after Task 10 — so if that guarantee matters, it must be added as part of Task 3, not later.
+
+---
+
+### Task 11: Harden the sidecar seams
+
+Added during execution after a cross-family (Grok) review of the whole surface found six issues that five task-scoped reviews had each been too narrow to see. Two were confirmed by executing against the real registry. **Execute this BEFORE Task 9** — after the cutover these are live defects rather than latent ones.
+
+**Files:**
+- Modify: `packages/command-and-control/src/surface/advanced.ts`
+- Modify: `packages/command-and-control/src/surface/module_adapter.ts`
+- Test: `packages/command-and-control/tests/surface-advanced.test.ts`
+- Test: `packages/command-and-control/tests/surface-module-adapter.test.ts`
+- Test: `packages/command-and-control/tests/surface-invariants.test.ts` (create)
+
+**Interfaces:**
+- Consumes: `Operation`, `SECTION_IDS`, `buildRegistry`, `adaptModuleTools`, `runAdvanced`
+- Produces: no new exports; behaviour changes to `runAdvanced` and `adaptModuleTools`
+
+- [ ] **Step 1: Write the failing tests**
+
+```ts
+// tests/surface-advanced.test.ts — append
+import { adaptModuleTools } from '../src/surface/module_adapter.js';
+
+it('returns a tool error for an unknown section', async () => {
+  const res = await runAdvanced(buildRegistry(), { action: 'describe', section: 'a11y' as never });
+  expect(res.isError).toBe(true);
+  const body = JSON.parse(res.content[0].text as string);
+  expect(body.validSections).toContain('accessibility');
+});
+
+it('does not double-wrap a module handler result', async () => {
+  const reg = buildRegistry();
+  const failing = {
+    schema: { name: 'boom', description: 'fails', inputSchema: { type: 'object' } },
+    handler: async () => ({ content: [{ type: 'text' as const, text: 'module blew up' }], isError: true }),
+  };
+  for (const op of adaptModuleTools('video', [failing as never])) reg.set(op.id, op);
+  const res = await runAdvanced(reg, { action: 'run', operation: 'video.boom', params: {} });
+  expect(res.isError).toBe(true);                       // inner failure must surface
+  expect(res.content[0].text).toBe('module blew up');   // not a stringified envelope
+});
+
+it('rejects a non-object params', async () => {
+  const res = await runAdvanced(buildRegistry(), {
+    action: 'run', operation: 'wave_deep_check', params: 'not an object' as never,
+  });
+  expect(res.isError).toBe(true);
+});
+
+it('rejects params missing a required field', async () => {
+  const res = await runAdvanced(buildRegistry(), {
+    action: 'run', operation: 'wave_deep_check', params: {},
+  });
+  expect(res.isError).toBe(true);
+  const body = JSON.parse(res.content[0].text as string);
+  expect(JSON.stringify(body)).toMatch(/required/i);
+});
+
+it('calls the operation handler with the given params', async () => {
+  const reg = buildRegistry();
+  let seen: unknown = null;
+  reg.set('stub_op', {
+    id: 'stub_op', section: 'admin', description: 'stub', inputSchema: { type: 'object' },
+    handler: (args) => { seen = args; return { ok: true }; },
+    taskCategory: 'none', exposure: 'advanced',
+  });
+  await runAdvanced(reg, { action: 'run', operation: 'stub_op', params: { a: 1 } });
+  expect(seen).toEqual({ a: 1 });
+});
+```
+
+```ts
+// tests/surface-module-adapter.test.ts — append
+it('throws on duplicate tool names within one module', () => {
+  const t = (name: string) => ({
+    schema: { name, description: 'd', inputSchema: { type: 'object' } },
+    handler: async () => ({ content: [] }),
+  });
+  expect(() => adaptModuleTools('video', [t('dup'), t('dup')] as never)).toThrow(/dup/);
+});
+```
+
+```ts
+// tests/surface-invariants.test.ts — create
+import { describe, expect, it } from 'vitest';
+import { buildRegistry } from '../src/surface/registry.js';
+import { runAdvanced } from '../src/surface/advanced.js';
+
+describe('whole-surface invariants', () => {
+  it('gives no non-intent operation intent fields', () => {
+    for (const op of buildRegistry().values()) {
+      if (op.exposure === 'intent') continue;
+      expect(op.intentTool, `${op.id}`).toBeUndefined();
+      expect(op.intentAction, `${op.id}`).toBeUndefined();
+    }
+  });
+
+  it('exposes exactly the advanced operations through ct_advanced', async () => {
+    const reg = buildRegistry();
+    const res = await runAdvanced(reg, { action: 'run', operation: 'nope', params: {} });
+    const valid: string[] = JSON.parse(res.content[0].text as string).validOperations;
+    const advanced = [...reg.values()].filter((o) => o.exposure === 'advanced').map((o) => o.id);
+    expect(valid.sort()).toEqual(advanced.sort());
+  });
+
+  it('makes an internal operation indistinguishable from a nonexistent one', async () => {
+    const reg = buildRegistry();
+    const a = await runAdvanced(reg, { action: 'run', operation: 'reembed_course_index', params: {} });
+    const b = await runAdvanced(reg, { action: 'run', operation: 'definitely_not_real', params: {} });
+    const norm = (r: typeof a) =>
+      JSON.parse(r.content[0].text as string).error.replace(/reembed_course_index|definitely_not_real/, 'X');
+    expect(norm(a)).toEqual(norm(b));
+    expect(a.isError).toBe(b.isError);
+  });
+
+  it('keeps the exposure split at 50 / 29 / 3', () => {
+    const c = { intent: 0, advanced: 0, internal: 0 };
+    for (const op of buildRegistry().values()) c[op.exposure] += 1;
+    expect(c).toEqual({ intent: 50, advanced: 29, internal: 3 });
+  });
+
+  it('gives every operation an object inputSchema and a non-empty description', () => {
+    for (const op of buildRegistry().values()) {
+      expect((op.inputSchema as { type?: string }).type, `${op.id}`).toBe('object');
+      expect(op.description.length, `${op.id}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps core ids free of dots so module ids cannot collide', () => {
+    for (const id of buildRegistry().keys()) expect(id).not.toContain('.');
+  });
+});
+```
+
+- [ ] **Step 2: Run them to verify they fail**
+
+Run: `npm test -- surface-advanced surface-module-adapter surface-invariants`
+Expected: FAIL — unknown section returns no `isError`; the module result is double-wrapped; `params` is unvalidated; `adaptModuleTools` does not throw on duplicates.
+
+- [ ] **Step 3: Implement**
+
+In `src/surface/advanced.ts`:
+
+1. Validate `section` before use — if `args.section` is set and not in `SECTION_IDS`, return `json({ error: ..., validSections: SECTION_IDS }, true)`.
+2. Validate `params` before calling the handler: reject a non-object (`typeof !== 'object'` or `Array.isArray`), then check every name in `op.inputSchema.required` is present, returning `json({ error: ..., missing: [...], inputSchema: op.inputSchema }, true)` when not. Returning the schema lets the model self-correct without a second `describe` round-trip.
+3. Stop double-wrapping. After awaiting the handler, if the result already looks like a `CallToolResult` — an object with a `content` array — return it **unchanged**, preserving its `isError`. Otherwise `json(result)`.
+4. Use one wording for both unknown-operation messages so `describe` and `run` read the same.
+
+In `src/surface/module_adapter.ts`: throw on a duplicate `schema.name` within one module, naming the offending id — matching `buildRegistry()`'s existing behaviour for core ids.
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `npm test && npm run build`
+Expected: all PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/surface/advanced.ts src/surface/module_adapter.ts tests/
+git commit -m "fix(surface): harden ct_advanced seams and lock whole-surface invariants"
+```
+
+---
+
+### Task 12: Repoint stale cross-references in operation descriptions
+
+Execute AFTER Task 10.
+
+Descriptions were copied verbatim from the old flat tools, so several instruct the model to call a sibling operation by its old top-level name — and some of those are now a different exposure, so `ct_advanced` refuses them. Known sites: `registry.ts` lines 191, 212, 426, 542, 563, 692, 727.
+
+**Ruling that governs this task:** schema *structure* (properties, `required`, enums, types) stays verbatim — that is the guarantee the 82/82 fidelity verification bought, and it is not up for renegotiation. Description *text* may deviate from source exactly where it names another operation's address, because the address genuinely changed. Fidelity to a stale pointer is not fidelity.
+
+**Files:**
+- Modify: `packages/command-and-control/src/surface/registry.ts` (description strings only)
+- Test: `packages/command-and-control/tests/surface-invariants.test.ts`
+
+- [ ] **Step 1: Write the failing test**
+
+```ts
+it('never points a description at another operation by a stale address', () => {
+  const reg = buildRegistry();
+  const byId = new Map([...reg.values()].map((o) => [o.id, o]));
+  const offenders: string[] = [];
+  for (const op of reg.values()) {
+    for (const [id, other] of byId) {
+      if (id === op.id) continue;
+      // A bare mention of another op id is only safe when both are advanced,
+      // because only then is that id a valid ct_advanced run target.
+      const bare = new RegExp(`\\b${id}\\b`);
+      if (bare.test(op.description) && !(op.exposure === 'advanced' && other.exposure === 'advanced')) {
+        offenders.push(`${op.id} -> ${id}`);
+      }
+    }
+  }
+  expect(offenders, offenders.join('; ')).toEqual([]);
+});
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+Run: `npm test -- surface-invariants`
+Expected: FAIL listing the offending pairs, including `show_canvas_capabilities -> preview_canvas_pattern` and `open_dashboard -> set_courses_root`.
+
+- [ ] **Step 3: Rewrite each offending reference to the new address**
+
+For an operation now on an intent tool, write the tool and action (`ct_build` action `preview_pattern`). For one still on the sidecar, write `ct_advanced` run `<id>`. For a name that is only a module tool after adaptation, write the namespaced form (`video.setup_panopto`). Change nothing but the referring phrase.
+
+- [ ] **Step 4: Run tests**
+
+Run: `npm test && npm run build`
+Expected: all PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/surface/registry.ts tests/surface-invariants.test.ts
+git commit -m "fix(surface): repoint operation descriptions at their new addresses"
+```
