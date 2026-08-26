@@ -222,7 +222,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'none',
     exposure: 'intent',
     intentTool: 'ct_build',
-    intentAction: 'layout',
+    intentAction: 'preview_pattern',
   },
   {
     id: 'set_active_llm_provider',
@@ -432,9 +432,7 @@ export const CORE_OPERATIONS: Operation[] = [
     },
     handler: (args) => openDashboard(args as never),
     taskCategory: 'none',
-    exposure: 'intent',
-    intentTool: 'ct_setup',
-    intentAction: 'status',
+    exposure: 'advanced',
   },
   {
     id: 'get_cc_status',
@@ -557,7 +555,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'none',
     exposure: 'intent',
     intentTool: 'ct_import',
-    intentAction: 'transcripts',
+    intentAction: 'transcripts_panopto',
   },
   {
     id: 'enrich_panopto_transcripts',
@@ -739,8 +737,8 @@ export const CORE_OPERATIONS: Operation[] = [
     handler: (args) => setupLectureAnswers(args as never),
     taskCategory: 'none',
     exposure: 'intent',
-    intentTool: 'ct_ask',
-    intentAction: 'index',
+    intentTool: 'ct_setup',
+    intentAction: 'lecture_answers',
   },
   {
     id: 'index_course_for_answers',
@@ -1068,7 +1066,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'none',
     exposure: 'intent',
     intentTool: 'ct_build',
-    intentAction: 'layout',
+    intentAction: 'paste_layout',
   },
   {
     id: 'save_layout_as_template',
@@ -1151,7 +1149,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'none',
     exposure: 'intent',
     intentTool: 'ct_import',
-    intentAction: 'canvas_archive',
+    intentAction: 'canvas_archive_ingest',
   },
   {
     id: 'list_assignments',
@@ -1268,7 +1266,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'none',
     exposure: 'intent',
     intentTool: 'ct_import',
-    intentAction: 'transcripts',
+    intentAction: 'transcripts_ingest',
   },
   {
     id: 'map_transcripts_to_weeks',
@@ -1305,7 +1303,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'fast',
     exposure: 'intent',
     intentTool: 'ct_analyze',
-    intentAction: 'topics',
+    intentAction: 'extract_topics',
   },
   {
     id: 'find_off_syllabus_topics',
@@ -1396,7 +1394,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'judgment',
     exposure: 'intent',
     intentTool: 'ct_analyze',
-    intentAction: 'topics',
+    intentAction: 'suggest_topics',
   },
   {
     id: 'score_topic_currency',
@@ -1651,7 +1649,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'none',
     exposure: 'intent',
     intentTool: 'ct_import',
-    intentAction: 'canvas_archive',
+    intentAction: 'canvas_archive_download',
   },
   {
     id: 'download_transcripts',
@@ -1669,7 +1667,7 @@ export const CORE_OPERATIONS: Operation[] = [
     taskCategory: 'none',
     exposure: 'intent',
     intentTool: 'ct_import',
-    intentAction: 'transcripts',
+    intentAction: 'transcripts_download',
   },
   // ── Core: Canvas Design Studio passthrough (src/passthrough/design_tools.ts) ──
   {

@@ -12,6 +12,17 @@ describe('operation registry', () => {
     expect(ids.length).toBe(new Set(ids).size);
   });
 
+  it('never lets two intent operations share an action', () => {
+    const seen = new Map<string, string>();
+    for (const op of buildRegistry().values()) {
+      if (op.exposure !== 'intent') continue;
+      const key = `${op.intentTool}:${op.intentAction}`;
+      const prior = seen.get(key);
+      expect(prior, `${key} claimed by both ${prior} and ${op.id}`).toBeUndefined();
+      seen.set(key, op.id);
+    }
+  });
+
   // Subset, not equality: Task 2 registers zero internal operations, so an
   // equality assertion would fail here. Task 3 adds the exact-equality check
   // once all 82 operations exist.
