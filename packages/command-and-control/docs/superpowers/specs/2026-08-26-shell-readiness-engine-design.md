@@ -1,7 +1,7 @@
 # Course Shell Readiness Engine — Design
 
 **Date:** 2026-08-26
-**Status:** **Approved for planning** (Kevin 2026-08-26 ~02:14). Do **not** deep-implement until the implementation plan is written (`writing-plans`). Tiny scaffold only if the plan says so.
+**Status:** **Implemented on branch `WT-ct-shell-ready`** (plan + code; not merged to main). Spec was Approved for planning 2026-08-26 ~02:14; plan executed same day.
 **Approved decisions:** **A** (C&C workflow) · **B** (live Canvas) · horizon **C+D** · week-map **Hybrid C** · quiz **validate-first C** · fire **opt-in weekly day + manual anytime**.
 **Job:** `mj-e07ae1c4209a` · worktree `WT-ct-shell-ready` · claim **disjoint from quiz engine**
 **Packages:** `packages/command-and-control` only.
