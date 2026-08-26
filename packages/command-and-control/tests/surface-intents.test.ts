@@ -28,6 +28,15 @@ describe('intent tools', () => {
     expect(body.validActions).toContain('canvas');
   });
 
+  it('returns a clean tool error for an unknown tool name, with no "undefined" leakage', async () => {
+    const res = await runIntent(buildRegistry(), 'not_a_real_tool', { action: 'nope' });
+    expect(res.isError).toBe(true);
+    const text = res.content[0].text as string;
+    expect(text).not.toContain('undefined');
+    const body = JSON.parse(text);
+    expect(JSON.stringify(body)).not.toContain('undefined');
+  });
+
   it('every registered intent action is reachable', async () => {
     const reg = buildRegistry();
     const schemas = intentToolSchemas(reg);

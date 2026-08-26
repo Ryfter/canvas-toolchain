@@ -53,6 +53,13 @@ export function intentToolSchemas(reg: Registry): Tool[] {
 export async function runIntent(
   reg: Registry, toolName: string, rawArgs: unknown,
 ): Promise<CallToolResult> {
+  const meta = INTENT_TOOLS[toolName as IntentToolId];
+  if (!meta) {
+    return json({
+      error: `Unknown tool "${toolName}"`,
+      validTools: INTENT_IDS,
+    }, true);
+  }
   const args = (rawArgs ?? {}) as { action?: string; params?: unknown };
   const ops = actionsFor(reg, toolName as IntentToolId);
   const op = ops.find((o) => o.intentAction === args.action);
@@ -60,7 +67,7 @@ export async function runIntent(
     return json({
       error: `Unknown action "${args.action}" for ${toolName}`,
       validActions: ops.map((o) => o.intentAction),
-      hint: `Less common operations live in ct_advanced section "${INTENT_TOOLS[toolName as IntentToolId]?.extendedBy}".`,
+      hint: `Less common operations live in ct_advanced section "${meta.extendedBy}".`,
     }, true);
   }
   return json(await op.handler(args.params ?? {}));
