@@ -204,12 +204,25 @@ All 97 operations, each with its verdict and destination. **No operation is dele
 
 | Verdict | Count |
 | --- | --- |
-| merge | 52 |
-| demote | 42 |
+| merge | 51 |
+| demote | 43 |
 | internal | 3 |
 | **delete** | **0** |
 
 > **Provenance.** The mechanical mapping was drafted by `openrouter-ox-alpha` (bulk fleet worker) and reviewed row-by-row before acceptance, per that worker's `UNBENCHMARKED ... never as a finisher` seating. Four rows were corrected: `discover_tools` (proposed *delete* — the rationale misread it as MCP tool enumeration when it scans the Canvas instance for institutional tooling), and `show_canvas_capabilities`, `enrich_panopto_transcripts`, `fetch_academic_calendar` (each proposed *internal*, each restored to *demote* because they are useful standalone). Only the three pre-approved internals stand.
+
+> **Amendment 2026-08-26 (during implementation).** The table as first written assigned six
+> `(intentTool, intentAction)` pairs to 13 different operations — `ct_build:layout`,
+> `ct_setup:status`, `ct_import:transcripts`, `ct_ask:index`, `ct_import:canvas_archive`, and
+> `ct_analyze:topics`. Because action resolution is a lookup by name, 7 operations would have
+> been silently shadowed: the same defect class as the `list_modules` collision this design
+> exists to fix. The rows below are the corrected ones. Each colliding operation was given a
+> distinct action (rename preferred over demotion), except two moved because they sat in the
+> wrong tool by domain: `open_dashboard` (launching a dashboard is not a setup step) and
+> `setup_lecture_answers` (configuration, not indexing). A registry invariant test now fails if
+> any two intent operations share an action pair. The original review of this table checked the
+> `delete` and `internal` rows for capability loss but never checked that `merge` destinations
+> were unique — that gap is what this amendment closes.
 
 
 ### Core — inline (`src/index.ts`) (51)
@@ -221,7 +234,7 @@ All 97 operations, each with its verdict and destination. **No operation is dele
 | `setup_canvas` | merge | `ct_setup:canvas` | Direct canvas setup action match. |
 | `setup_ollama` | merge | `ct_setup:ollama` | Direct ollama setup action match. |
 | `show_canvas_capabilities` | demote | `advanced:design` | Canvas-safe pattern catalog; useful as a standalone lookup. |
-| `preview_canvas_pattern` | merge | `ct_build:layout` | Pattern preview belongs with layout building. |
+| `preview_canvas_pattern` | merge | `ct_build:preview_pattern` | Pattern preview belongs with layout building. |
 | `set_active_llm_provider` | demote | `advanced:admin` | Runtime provider toggle; infrequent admin control. |
 | `set_module_enabled` | demote | `advanced:modules` | Plug-in enablement lives in modules sidecar. |
 | `list_modules` | demote | `advanced:modules` | Lists toolchain plug-ins per consolidation note. |
@@ -233,13 +246,13 @@ All 97 operations, each with its verdict and destination. **No operation is dele
 | `submit_usage_feedback` | demote | `advanced:admin` | Non-core feedback channel. |
 | `set_course_aias_default` | demote | `advanced:admin` | Per-course defaults are admin settings. |
 | `set_courses_root` | merge | `ct_setup:courses_root` | Exact courses_root action match. |
-| `open_dashboard` | merge | `ct_setup:status` | Dashboard view equals status reporting. |
+| `open_dashboard` | demote | `advanced:admin` | Dashboard view equals status reporting. |
 | `get_cc_status` | merge | `ct_setup:status` | Direct status action match. |
 | `analyze_course` | merge | `ct_analyze:course` | Exact course analysis action match. |
 | `plan_next_semester` | merge | `ct_plan:semester` | Exact semester planning action match. |
 | `update_course_materials` | merge | `ct_build:materials` | Direct materials action match. |
 | `full_pipeline` | merge | `ct_build:full_pipeline` | Exact full_pipeline action match. |
-| `bulk_fetch_panopto_transcripts` | merge | `ct_import:transcripts` | Transcript acquisition is import action. |
+| `bulk_fetch_panopto_transcripts` | merge | `ct_import:transcripts_panopto` | Transcript acquisition is import action. |
 | `enrich_panopto_transcripts` | demote | `advanced:transcripts` | Costly LLM step; must be re-runnable on its own. |
 | `setup_transcript_source` | merge | `ct_setup:transcripts` | Direct transcripts setup action match. |
 | `compare_transcripts` | demote | `advanced:transcripts` | Niche comparison kept callable in sidecar. |
@@ -248,7 +261,7 @@ All 97 operations, each with its verdict and destination. **No operation is dele
 | `rollback_course_publish` | merge | `ct_publish:rollback` | Direct rollback action match. |
 | `list_publish_snapshots` | merge | `ct_publish:snapshots` | Snapshot listing folds into snapshots action. |
 | `prune_publish_snapshots` | demote | `advanced:snapshots` | Housekeeping rarely needed at top level. |
-| `setup_lecture_answers` | merge | `ct_ask:index` | Answer-engine setup is index configuration. |
+| `setup_lecture_answers` | merge | `ct_setup:lecture_answers` | Answer-engine setup is index configuration. |
 | `index_course_for_answers` | merge | `ct_ask:index` | Direct index action match. |
 | `ask_course` | merge | `ct_ask:ask` | Direct ask action match. |
 | `reembed_course_index` | internal | `inside:ct_ask:index` | Pre-decided reindex step inside indexing. |
@@ -265,7 +278,7 @@ All 97 operations, each with its verdict and destination. **No operation is dele
 | `uninstall_resource` | demote | `advanced:registry` | Registry removal operation. |
 | `search_registry` | demote | `advanced:registry` | Registry search operation. |
 | `install_resources_from_lockfile` | demote | `advanced:registry` | Batch lockfile install is registry work. |
-| `paste_layout` | merge | `ct_build:layout` | Layout application matches build layout action. |
+| `paste_layout` | merge | `ct_build:paste_layout` | Layout application matches build layout action. |
 | `save_layout_as_template` | demote | `advanced:design` | Template storage is design sidecar concern. |
 
 ### Core — `passthrough/ci_tools.ts` (26)
@@ -274,20 +287,20 @@ All 97 operations, each with its verdict and destination. **No operation is dele
 | --- | --- | --- | --- |
 | `setup_course` | merge | `ct_setup:course` | Direct course setup action match. |
 | `get_course_state` | merge | `ct_inspect:state` | Direct state inspection action match. |
-| `ingest_canvas_archive` | merge | `ct_import:canvas_archive` | Direct archive import action match. |
+| `ingest_canvas_archive` | merge | `ct_import:canvas_archive_ingest` | Direct archive import action match. |
 | `list_assignments` | merge | `ct_inspect:assignments` | Direct assignments inspection match. |
 | `list_pages` | merge | `ct_inspect:pages` | Direct pages inspection match. |
 | `list_modules` | merge | `ct_inspect:canvas_modules` **(was shadowed — now reachable)** | Per note: lists Canvas course modules. |
 | `list_resources` | merge | `ct_inspect:resources` | Direct resources inspection match. |
 | `diff_semesters` | merge | `ct_analyze:diff_semesters` | Direct diff_semesters action match. |
-| `ingest_transcripts` | merge | `ct_import:transcripts` | Direct transcripts import action match. |
+| `ingest_transcripts` | merge | `ct_import:transcripts_ingest` | Direct transcripts import action match. |
 | `map_transcripts_to_weeks` | internal | `inside:ct_import:transcripts` | Pre-decided week mapping inside ingestion. |
-| `extract_lecture_topics` | merge | `ct_analyze:topics` | Topic extraction matches topics action. |
+| `extract_lecture_topics` | merge | `ct_analyze:extract_topics` | Topic extraction matches topics action. |
 | `find_off_syllabus_topics` | merge | `ct_analyze:off_syllabus` | Direct off_syllabus action match. |
 | `build_quote_bank` | demote | `advanced:research` | Quote bank is a research asset. |
 | `fetch_news_feed` | demote | `advanced:research` | News gathering is research support. |
 | `scan_recent_developments` | demote | `advanced:research` | Currency scanning joins research sidecar. |
-| `suggest_topics` | merge | `ct_analyze:topics` | Topic suggestion matches topics action. |
+| `suggest_topics` | merge | `ct_analyze:suggest_topics` | Topic suggestion matches topics action. |
 | `score_topic_currency` | merge | `ct_analyze:currency` | Direct currency scoring action match. |
 | `recommend_for_topic` | demote | `advanced:research` | Recommendation lookup is research support. |
 | `generate_ideas_file` | demote | `advanced:research` | Ideation artifact kept beside research outputs. |
@@ -304,8 +317,8 @@ All 97 operations, each with its verdict and destination. **No operation is dele
 | Tool | Verdict | Destination | Rationale |
 | --- | --- | --- | --- |
 | `setup_canvas_backup` | merge | `ct_setup:backup` | Direct backup setup action match. |
-| `download_canvas_archive` | merge | `ct_import:canvas_archive` | Archive retrieval feeds import action. |
-| `download_transcripts` | merge | `ct_import:transcripts` | Transcript retrieval feeds import action. |
+| `download_canvas_archive` | merge | `ct_import:canvas_archive_download` | Archive retrieval feeds import action. |
+| `download_transcripts` | merge | `ct_import:transcripts_download` | Transcript retrieval feeds import action. |
 
 ### Core — `passthrough/design_tools.ts` (2)
 
@@ -320,7 +333,7 @@ All 97 operations, each with its verdict and destination. **No operation is dele
 | --- | --- | --- | --- |
 | `setup_panopto` | demote | `advanced:transcripts` | Panopto credentials live with transcript sources. |
 | `setup_panopto_vocab` | demote | `advanced:transcripts` | Vocabulary tuning sits with transcript tooling. |
-| `video_embed` | merge | `ct_build:materials` | Embedding video while assembling materials. |
+| `video_embed` | merge | `ct_build:embed_video` | Embedding video while assembling materials. |
 | `video_fetch_captions` | demote | `advanced:transcripts` | Caption fetching joins transcript sidecar. |
 | `video_search` | demote | `advanced:transcripts` | Lecture-video search sits with transcripts. |
 
