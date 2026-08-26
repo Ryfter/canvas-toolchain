@@ -57,7 +57,7 @@
 **Interfaces:**
 - Produces: `resolveCourseWeeks`, `resolveSpotCheckWeeks`, `CourseWeekResolved`, `ShellResolvedWeek`, all report types from spec.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/tools/shell_ready/weeks.test.ts
@@ -121,12 +121,12 @@ describe('resolveSpotCheckWeeks', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd packages/command-and-control && npx vitest run tests/tools/shell_ready/weeks.test.ts`
 Expected: FAIL — cannot find module `weeks.js`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Implement `types.ts` (all types from spec § Input/output contracts) and `weeks.ts`:
 - `WEEK_TITLE_RE = /week\s*0*(\d+)/i`
@@ -134,11 +134,11 @@ Implement `types.ts` (all types from spec § Input/output contracts) and `weeks.
 - `resolveCourseWeeks`: infer from titles, then apply overrides (replace entire week)
 - `resolveSpotCheckWeeks`: current = week containing `asOfDate`; secondary = +1; primary = +2; empty `moduleIds` when week unknown (do not invent modules)
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/tools/shell_ready/weeks.test.ts` → PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/command-and-control/src/tools/shell_ready/types.ts \
@@ -170,7 +170,7 @@ EOF
 - Consumes: `SpotCheckPreference`, `ShellWeekday`, `SetupSpotCheckInput` from types
 - Produces: `loadSpotCheckPreference()`, `saveSpotCheckPreference()`, `setupSpotCheck()`, `GetCcStatusResult.spotCheck`
 
-- [ ] **Step 1: Write failing preference tests**
+- [x] **Step 1: Write failing preference tests**
 
 ```ts
 // tests/tools/shell_ready/spot_check_preference.test.ts
@@ -213,9 +213,9 @@ describe('spot_check_preference', () => {
 });
 ```
 
-- [ ] **Step 2: Run — expect FAIL (module missing)**
+- [x] **Step 2: Run — expect FAIL (module missing)**
 
-- [ ] **Step 3: Implement preference**
+- [x] **Step 3: Implement preference**
 
 ```ts
 // src/tools/shell_ready/spot_check_preference.ts
@@ -264,7 +264,7 @@ export function saveSpotCheckPreference(
 }
 ```
 
-- [ ] **Step 4: setup_spot_check workflow + tests**
+- [x] **Step 4: setup_spot_check workflow + tests**
 
 ```ts
 // src/tools/workflows/setup_spot_check.ts
@@ -298,7 +298,7 @@ export function setupSpotCheck(input: SetupSpotCheckInput): SetupSpotCheckResult
 }
 ```
 
-- [ ] **Step 5: Extend get_cc_status**
+- [x] **Step 5: Extend get_cc_status**
 
 Add to `GetCcStatusResult`:
 
@@ -324,7 +324,7 @@ spotCheck: {
 
 Test: after saving preference, `spotCheck.configured === true`; `JSON.stringify(status)` must not contain secrets (extend existing assertion file — spot-check has no secrets but assert `day` is weekday string only).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -382,7 +382,7 @@ export interface ShellGraph {
 }
 ```
 
-- [ ] **Step 1: Failing fetch tests** — injectable `fetchFn`; modules+items; refuse off-origin next Link; same-origin pagination concatenates.
+- [x] **Step 1: Failing fetch tests** — injectable `fetchFn`; modules+items; refuse off-origin next Link; same-origin pagination concatenates.
 
 Pattern (copy from `snapshot/fetch_snapshot.ts` `assertSameOrigin`):
 
@@ -406,9 +406,9 @@ Endpoints (GET, Bearer):
 - For graded enrichment (assignments): `/api/v1/courses/:id/assignments?per_page=100` (map by id onto items)
 - Optional front page: `/api/v1/courses/:id/front_page` (404 → null)
 
-- [ ] **Step 2: Implement fetch_graph.ts**
+- [x] **Step 2: Implement fetch_graph.ts**
 
-- [ ] **Step 3: Pack tests + impl**
+- [x] **Step 3: Pack tests + impl**
 
 | Pack | Key findings |
 | --- | --- |
@@ -418,7 +418,7 @@ Endpoints (GET, Bearer):
 
 Each pack: `(ctx: { week: ShellResolvedWeek; graph: ShellGraph; depth }) => ShellFinding[]`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -446,7 +446,7 @@ EOF
 - Consumes: weeks, preference, fetchShellGraph, packs
 - Produces: `checkShellReadiness(input, deps?)` → `CheckShellReadinessResult`
 
-- [ ] **Step 1: Failing orchestrator test**
+- [x] **Step 1: Failing orchestrator test**
 
 ```ts
 it('manual run returns primary/secondary weeks with empty findings when packs empty', async () => {
@@ -490,7 +490,7 @@ it('missing termStartMonday returns structured error', async () => {
 });
 ```
 
-- [ ] **Step 2: Implement orchestrator**
+- [x] **Step 2: Implement orchestrator**
 
 ```ts
 export interface CheckShellReadinessDeps {
@@ -517,11 +517,11 @@ Default `fetchGraph`: `loadInstitutionConfig()` → `fetchShellGraph`.
 
 Cadence note: if preference enabled and `asOfDate` weekday ≠ `weeklyCheckDay`, set `cadenceNote`.
 
-- [ ] **Step 3: quiz_callouts.ts**
+- [x] **Step 3: quiz_callouts.ts**
 
 For each of primary/secondary, collect item `type === 'Quiz'` content ids (or item ids) in scoped modules → `{ weekRole, weekIndex, quizIds, hint: 'Run validate_quiz (validate-first) for these quiz ids.' }`. Always return array (may be empty entries omitted or empty quizIds — prefer omit empty; report field always present as `[]` if none).
 
-- [ ] **Step 4: Register in `src/index.ts`**
+- [x] **Step 4: Register in `src/index.ts`**
 
 Add tool defs after `review_canvas_rubric`:
 - `check_shell_readiness` — description covers manual anytime, `setup_spot_check`, Hybrid weeks, live Canvas
@@ -529,14 +529,14 @@ Add tool defs after `review_canvas_rubric`:
 
 Dispatch cases calling `checkShellReadiness` / `setupSpotCheck`.
 
-- [ ] **Step 5: Run tests + build**
+- [x] **Step 5: Run tests + build**
 
 ```bash
 npx vitest run tests/tools/shell_ready tests/tools/workflows/check_shell_readiness.test.ts tests/tools/workflows/setup_spot_check.test.ts tests/tools/get_cc_status.test.ts
 npm run build --workspace=packages/command-and-control
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git commit -m "$(cat <<'EOF'
