@@ -8,22 +8,14 @@ export function collectQuizCallouts(
 ): ShellQuizCallout[] {
   const out: ShellQuizCallout[] = [];
   for (const week of [primary, secondary]) {
+    // Classic Quizzes API ids only — module item type "Quiz" contentId.
+    // Do NOT add assignment.id for isQuiz rows (assignment id ≠ quiz id).
     const quizIds = new Set<number>();
     for (const mod of graph.modules) {
       if (!week.moduleIds.includes(mod.id)) continue;
       for (const item of mod.items) {
-        if (/quiz/i.test(item.type) && item.contentId != null) quizIds.add(item.contentId);
-      }
-    }
-    for (const a of graph.assignments) {
-      if (a.isQuiz && week.moduleIds.length >= 0) {
-        // Include quizzes dated in window or already via module; content id = assignment id for quiz assignments
-        const due = a.dueAt?.slice(0, 10);
-        const inWindow = due && due >= week.monday && due <= week.sunday;
-        if (inWindow || week.moduleIds.some(mid =>
-          graph.modules.find(m => m.id === mid)?.items.some(i => i.contentId === a.id),
-        )) {
-          quizIds.add(a.id);
+        if (/^quiz$/i.test(item.type.trim()) && item.contentId != null) {
+          quizIds.add(item.contentId);
         }
       }
     }
@@ -32,7 +24,7 @@ export function collectQuizCallouts(
         weekRole: week.role,
         weekIndex: week.index,
         quizIds: [...quizIds],
-        hint: `Run validate_quiz for these Canvas quiz/assignment ids (validate-first; generate_quiz is separate).`,
+        hint: `Run validate_quiz({ courseId, quizId }) for these Classic Quiz ids (validate-first; generate_quiz is separate).`,
       });
     }
   }

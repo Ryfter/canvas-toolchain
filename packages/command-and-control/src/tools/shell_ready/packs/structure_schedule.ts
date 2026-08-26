@@ -162,24 +162,34 @@ export function runMismatchPack(
     }
   }
 
-  // Orphans: dated in window but not on map
+  // Orphans: due/unlock/lock in window but not on map
   for (const a of graph.assignments) {
     if (mappedAssignmentIds.has(a.id)) continue;
     const due = ymdFromIso(a.dueAt);
-    if (due && dateInWeekWindow(due, week)) {
-      out.push({
-        id: `orphan-dated:${a.id}:w${week.index}`,
-        pack: 'mismatch',
-        severity: 'suggestion',
-        message: `"${a.name}" has due_at in Week ${week.index} window but is not on the week map.`,
-        weekRole: week.role,
-        depth: week.depth,
-        weekIndex: week.index,
-        itemId: a.id,
-        itemTitle: a.name,
-        canvasDates: { due_at: a.dueAt, unlock_at: a.unlockAt, lock_at: a.lockAt },
-      });
-    }
+    const unlock = ymdFromIso(a.unlockAt);
+    const lock = ymdFromIso(a.lockAt);
+    const inWindow =
+      dateInWeekWindow(due, week)
+      || dateInWeekWindow(unlock, week)
+      || dateInWeekWindow(lock, week);
+    if (!inWindow) continue;
+    const which = [
+      due && dateInWeekWindow(due, week) ? 'due_at' : null,
+      unlock && dateInWeekWindow(unlock, week) ? 'unlock_at' : null,
+      lock && dateInWeekWindow(lock, week) ? 'lock_at' : null,
+    ].filter(Boolean).join('/');
+    out.push({
+      id: `orphan-dated:${a.id}:w${week.index}`,
+      pack: 'mismatch',
+      severity: 'suggestion',
+      message: `"${a.name}" has ${which} in Week ${week.index} window but is not on the week map.`,
+      weekRole: week.role,
+      depth: week.depth,
+      weekIndex: week.index,
+      itemId: a.id,
+      itemTitle: a.name,
+      canvasDates: { due_at: a.dueAt, unlock_at: a.unlockAt, lock_at: a.lockAt },
+    });
   }
   return out;
 }

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { LlmClient } from '@canvas-toolchain/shared-llm';
+import { parseFrontMatter } from '../../lib/front_matter.js';
 import { loadInstitutionConfig, type InstitutionConfigBridge } from '../publish/canvas_config_bridge.js';
 import type {
   CheckShellReadinessInput,
@@ -13,7 +14,7 @@ import type {
 } from '../shell_ready/types.js';
 import { loadSpotCheckPreference } from '../shell_ready/spot_check_preference.js';
 import { resolveCourseWeeks, resolveSpotCheckWeeks } from '../shell_ready/weeks.js';
-import { fetchShellGraph, type ShellGraph } from '../shell_ready/fetch_graph.js';
+import { fetchShellGraph, type ShellGraph, type ShellGraphPage } from '../shell_ready/fetch_graph.js';
 import {
   runMismatchPack,
   runSchedulePack,
@@ -39,21 +40,52 @@ function todayYmd(): string {
   return `${y}-${m}-${day}`;
 }
 
-function readCourseConfigWeekFields(courseDir: string): {
+/** Parse Hybrid C week fields from course-config.md front matter. */
+export function readCourseConfigWeekFields(courseDir: string): {
   termStartMonday?: string;
   weekMapOverrides?: ShellWeekMapOverride[];
 } {
   const path = join(courseDir, 'course-config.md');
   if (!existsSync(path)) return {};
   const text = readFileSync(path, 'utf-8');
-  const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!fm) return {};
-  const block = fm[1];
-  const term = block.match(/^termStartMonday:\s*['"]?([^'"\n]+)['"]?\s*$/m);
-  // Minimal YAML-ish: only support tool-passed overrides primarily; course-config termStartMonday is enough for v1
-  return {
-    termStartMonday: term?.[1]?.trim(),
-  };
+  const { data } = parseFrontMatter(text);
+  const termStartMonday =
+    typeof data.termStartMonday === 'string' ? data.termStartMonday.trim() : undefined;
+
+  let weekMapOverrides: ShellWeekMapOverride[] | undefined;
+  if (Array.isArray(data.weekMapOverrides)) {
+    weekMapOverrides = [];
+    for (const raw of data.weekMapOverrides) {
+      if (!raw || typeof raw !== 'object') continue;
+      const o = raw as Record<string, unknown>;
+      const index = typeof o.index === 'number' ? o.index : Number(o.index);
+      if (!Number.isFinite(index) || index < 1) continue;
+      const entry: ShellWeekMapOverride = { index };
+      if (typeof o.label === 'string') entry.label = o.label;
+      if (typeof o.monday === 'string') entry.monday = o.monday;
+      if (typeof o.sunday === 'string') entry.sunday = o.sunday;
+      if (Array.isArray(o.moduleIds)) {
+        entry.moduleIds = o.moduleIds
+          .map((id) => (typeof id === 'number' ? id : Number(id)))
+          .filter((id) => Number.isFinite(id));
+      }
+      weekMapOverrides.push(entry);
+    }
+    if (weekMapOverrides.length === 0) weekMapOverrides = undefined;
+  }
+
+  return { termStartMonday, weekMapOverrides };
+}
+
+/** Pages attached to modules in the resolved week (by Page/WikiPage item title). */
+function pagesForWeek(graph: ShellGraph, week: ShellResolvedWeek): ShellGraphPage[] {
+  const titles = new Set<string>();
+  for (const mod of modulesForWeek(graph, week)) {
+    for (const item of mod.items) {
+      if (/page|wiki/i.test(item.type)) titles.add(item.title);
+    }
+  }
+  return graph.pages.filter((p) => Boolean(p.body) && titles.has(p.title));
 }
 
 function countBySev(findings: ShellFinding[], role: 'primary' | 'secondary') {
@@ -197,8 +229,7 @@ export async function checkShellReadiness(
         .filter(a => mappedAssignIds.has(a.id)
           || (a.dueAt && a.dueAt.slice(0, 10) >= week.monday && a.dueAt.slice(0, 10) <= week.sunday))
         .map(a => ({ id: a.id, title: a.name, body: a.description, points: a.pointsPossible }));
-      const pageItems = graph.pages
-        .filter(p => p.body && mods.some(m => m.items.some(i => i.title === p.title)))
+      const pageItems = pagesForWeek(graph, week)
         .map((p, i) => ({ id: 10_000 + i, title: p.title, body: p.body, points: 0 }));
       findings.push(...runInstructionsPack({
         week,
@@ -210,15 +241,15 @@ export async function checkShellReadiness(
       const budget = week.role === 'primary'
         ? (input.linkProbeBudget ?? 100)
         : (input.secondaryLinkProbeBudget ?? 25);
+      // Always scope to the resolved week — never all course pages (burns budget / mislabels findings).
       const htmlBodies = [
         ...graph.assignments
           .filter(a => mappedAssignIds.has(a.id) && a.description)
           .map(a => ({ id: `a${a.id}`, title: a.name, html: a.description! })),
-        ...graph.pages
-          .filter(p => p.body)
+        ...pagesForWeek(graph, week)
           .map(p => ({ id: `p-${p.url}`, title: p.title, html: p.body! })),
       ];
-      // Secondary: only module-mapped assignment bodies
+      // Secondary (lighter): assignment bodies only; primary includes in-week pages too.
       const bodies = week.depth === 'thorough'
         ? htmlBodies
         : htmlBodies.filter(b => b.id.startsWith('a'));
