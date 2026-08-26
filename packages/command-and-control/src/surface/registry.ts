@@ -73,6 +73,9 @@ import { generateRecommendedOutline } from '@canvas-toolchain/curriculum-intelli
 import { draftAssignmentBrief } from '@canvas-toolchain/curriculum-intelligence/dist/tools/draft_assignment_brief.js';
 import { CI_TOOLS } from '../passthrough/ci_tools.js';
 import { exportCourseFolder } from '@canvas-toolchain/curriculum-intelligence/dist/tools/export_course_folder.js';
+import { DOWNLOADER_TOOLS, downloadCanvasArchive } from '../passthrough/downloader_tools.js';
+import { importCourse } from '@canvas-toolchain/canvas-design-studio/dist/tools/import-course.js';
+import { DESIGN_TOOLS } from '../passthrough/design_tools.js';
 
 /**
  * Reuse a pass-through tool's existing handler by reference. Used for the few
@@ -1588,6 +1591,123 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_inspect',
     intentAction: 'export',
+  },
+  // ── Core: Canvas Backup passthrough (src/passthrough/downloader_tools.ts) ──
+  {
+    id: 'setup_canvas_backup',
+    section: 'admin',
+    description:
+      '[canvas-backup] Generate a Canvas Backup config from the Canvas connection already ' +
+      'configured in Command and Control. Writes ~/.command-and-control/canvas-backup.generated.toml ' +
+      '(token stays out of the file; passed via CANVAS_TOKEN at archive time). Run this once per ' +
+      'semester so download_canvas_archive can find base_url / archive root / year / semester.',
+    inputSchema: {
+      type: 'object',
+      required: ['semester'],
+      properties: {
+        root: {
+          type: 'string',
+          description: 'Archive root directory. Defaults to ~/CanvasArchive.',
+        },
+        year: {
+          type: 'string',
+          description: 'Archive year folder (e.g. "2026"). Defaults to the current calendar year.',
+        },
+        semester: {
+          type: 'string',
+          description:
+            'Archive semester folder (e.g. "Fall", "Spring", "Summer"). Required — never guessed.',
+        },
+        downloadWorkers: {
+          type: 'number',
+          description: 'Concurrent Canvas file downloads. Defaults to 6.',
+        },
+      },
+    },
+    handler: passthroughHandler(DOWNLOADER_TOOLS, 'setup_canvas_backup'),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'backup',
+  },
+  {
+    id: 'download_canvas_archive',
+    section: 'admin',
+    description: '[canvas-backup] Archive a Canvas course shell locally by invoking the Canvas Backup CLI.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId'],
+      properties: {
+        courseId: { type: 'string' },
+        configPath: { type: 'string', description: 'Optional path to config.local.toml.' },
+        year: { type: 'string', description: 'Archive year folder override.' },
+        semester: { type: 'string', description: 'Archive semester folder override.' },
+        root: { type: 'string', description: 'Archive root override.' },
+        shellName: { type: 'string', description: 'Folder name override for combined-section shells.' },
+        downloadWorkers: { type: 'number', description: 'Concurrent Canvas file downloads.' },
+      },
+    },
+    handler: (args) => downloadCanvasArchive(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_import',
+    intentAction: 'canvas_archive',
+  },
+  {
+    id: 'download_transcripts',
+    section: 'transcripts',
+    description: '[canvas-backup] Placeholder for future bulk Panopto transcript download.',
+    inputSchema: {
+      type: 'object',
+      required: ['courseId', 'semesterId'],
+      properties: {
+        courseId: { type: 'string' },
+        semesterId: { type: 'string' },
+      },
+    },
+    handler: passthroughHandler(DOWNLOADER_TOOLS, 'download_transcripts'),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_import',
+    intentAction: 'transcripts',
+  },
+  // ── Core: Canvas Design Studio passthrough (src/passthrough/design_tools.ts) ──
+  {
+    id: 'import_course',
+    section: 'design',
+    description: '[@canvas-toolchain/canvas-design-studio] Import a Canvas Backup archive into a Canvas Design Studio course folder.',
+    inputSchema: {
+      type: 'object',
+      required: ['archivePath', 'outputDir'],
+      properties: {
+        archivePath: { type: 'string', description: 'Absolute path to a Canvas Backup archive folder.' },
+        outputDir: { type: 'string', description: 'Canvas Design Studio course folder to create or update.' },
+        weekNumber: { type: 'number', description: 'Optional. Import only one module/week.' },
+        assignmentName: { type: 'string', description: 'Optional. Import one assignment by exact title.' },
+      },
+    },
+    handler: (args) => importCourse(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_import',
+    intentAction: 'course',
+  },
+  {
+    id: 'generate_course',
+    section: 'design',
+    description: '[@canvas-toolchain/canvas-design-studio] Generate Canvas-safe HTML for every page in a Canvas Design Studio course folder.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        courseDir: { type: 'string', description: 'Canvas Design Studio course folder. Defaults to ./course.' },
+        outputDir: { type: 'string', description: 'Output folder for generated HTML. Defaults to <courseDir>/output.' },
+      },
+    },
+    handler: passthroughHandler(DESIGN_TOOLS, 'generate_course'),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_build',
+    intentAction: 'course',
   },
 ];
 
