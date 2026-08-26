@@ -1,6 +1,6 @@
 // src/tools/quiz/generate.ts
 import { mkdirSync, renameSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, relative, isAbsolute } from 'node:path';
 import type { LlmClient } from '@canvas-toolchain/shared-llm';
 import type {
   DifficultyMix,
@@ -17,6 +17,21 @@ import { validateQuizItems } from './validate.js';
 
 const MAX_SOURCE_CHARS = 12_000;
 const MAX_QUESTION_COUNT = 25;
+
+/** Resolve a path under courseDir; refuse escape / absolute outside roots. */
+export function resolveUnderCourseDir(courseDir: string, maybeRel: string): string | { error: string; message: string; fix: string } {
+  const root = resolve(courseDir);
+  const abs = isAbsolute(maybeRel) ? resolve(maybeRel) : resolve(root, maybeRel);
+  const rel = relative(root, abs);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    return {
+      error: 'QUIZ_PATH_ESCAPE',
+      message: `Path escapes courseDir: ${maybeRel}`,
+      fix: 'Pass paths relative to courseDir only.',
+    };
+  }
+  return abs;
+}
 
 export interface GenerateQuizDraftInput {
   courseDir: string;
@@ -116,7 +131,12 @@ function loadSources(
   const excerpts: Array<{ path: string; text: string }> = [];
   let budget = MAX_SOURCE_CHARS;
   for (const src of sources) {
-    const abs = src.startsWith('/') ? src : join(courseDir, src);
+    const resolved = resolveUnderCourseDir(courseDir, src);
+    if (typeof resolved !== 'string') {
+      warnings.push(resolved.message);
+      continue;
+    }
+    const abs = resolved;
     let text = sourceTexts?.[src] ?? sourceTexts?.[abs];
     if (text == null) {
       try {
@@ -183,7 +203,12 @@ export async function generateQuizDraft(
     'quizzes',
     `${slugTitle(title)}-draft.md`,
   );
-  const outputPath = input.outputPath ?? defaultOut;
+  let outputPath = defaultOut;
+  if (input.outputPath) {
+    const resolvedOut = resolveUnderCourseDir(input.courseDir, input.outputPath);
+    if (typeof resolvedOut !== 'string') return resolvedOut;
+    outputPath = resolvedOut;
+  }
 
   if (!input.overwrite && existsSync(outputPath)) {
     return {

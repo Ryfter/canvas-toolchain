@@ -89,4 +89,25 @@ describe('generateQuizDraft', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('refuses paths that escape courseDir', async () => {
+    const llm: LlmClient = { complete: vi.fn() };
+    const dir = mkdtempSync(join(tmpdir(), 'quiz-gen-'));
+    try {
+      const r = await generateQuizDraft(
+        {
+          courseDir: dir,
+          week: 1,
+          sources: ['ok.md'],
+          outputPath: '../evil.md',
+          sourceTexts: { 'ok.md': 'enough source text for a quiz draft' },
+        },
+        { llm },
+      );
+      expect('error' in r && r.error).toBe('QUIZ_PATH_ESCAPE');
+      expect(llm.complete).not.toHaveBeenCalled();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
