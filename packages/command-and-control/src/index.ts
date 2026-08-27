@@ -86,6 +86,8 @@ import { checkShellReadiness } from './tools/workflows/check_shell_readiness.js'
 import type { CheckShellReadinessInput } from './tools/shell_ready/types.js';
 import { setupSpotCheck } from './tools/workflows/setup_spot_check.js';
 import type { SetupSpotCheckInput } from './tools/shell_ready/types.js';
+import { validateQuiz, type ValidateQuizInput } from './tools/workflows/validate_quiz.js';
+import { generateQuiz, type GenerateQuizInput } from './tools/workflows/generate_quiz.js';
 import { brainstormInteractive } from './tools/workflows/brainstorm_interactive.js';
 import type { BrainstormInteractiveInput } from './tools/brainstorm/types.js';
 import { accessibilityReviewQueue } from './tools/workflows/accessibility_review_queue.js';
@@ -729,6 +731,64 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'validate_quiz',
+      description:
+        'Advisory live-Canvas quiz quality check (Classic Quizzes questions API): missing keys, empty stems, duplicate stems, points mismatch, week-map date mismatches, optional LLM triage for ambiguous keys / weak distractors. Pass courseId+quizId for spot-check (source of truth = Canvas). Optional local quizPath/quizMarkdown is authoring pre-check only. Manual anytime — does not require weeklyCheckEnabled. Usable from shell readiness call-out for primary/secondary weeks. Run setup_canvas first for live mode. Does not write to Canvas or gate publish.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          courseId: { type: 'string', description: 'Canvas course id (with quizId for live validate).' },
+          quizId: { type: 'string', description: 'Canvas quiz id.' },
+          quizPath: { type: 'string', description: 'Local draft markdown path (authoring pre-check; xor with quizMarkdown).' },
+          quizMarkdown: { type: 'string', description: 'Local draft markdown body (authoring pre-check).' },
+          asOfDate: { type: 'string', description: 'YYYY-MM-DD reference date for reporting.' },
+          weekNumber: { type: 'number', description: 'Professor week map index being checked.' },
+          weekStartMonday: { type: 'string', description: 'YYYY-MM-DD Monday of the week window for WEEK_MAP_MISMATCH.' },
+          weekProvenance: { type: 'string', enum: ['inferred', 'override'], description: 'How the week was established.' },
+          horizonPass: { type: 'string', enum: ['primary', 'secondary'], description: 'primary=thorough (+LLM); secondary=lighter.' },
+          llmTriage: { type: 'boolean', description: 'Force LLM triage on/off. Default: on for primary when LLM configured.' },
+          topicHints: { type: 'array', items: { type: 'string' }, description: 'Optional coverage hints for triage.' },
+        },
+      },
+    },
+    {
+      name: 'generate_quiz',
+      description:
+        'Author a local quiz draft markdown from course materials (books/slides/lectures) with difficulty-mix knobs. Writes under week-NN/quizzes/ (temp+rename). Manual anytime — not required for the weekly shell spot-check (use validate_quiz for live Canvas). Requires an active LLM (setup_anthropic or Ollama). Does not publish to Canvas Quizzes.',
+      inputSchema: {
+        type: 'object' as const,
+        required: ['courseDir', 'week', 'sources'],
+        properties: {
+          courseDir: { type: 'string', description: 'CDS course folder absolute path.' },
+          week: { type: 'number', description: 'Week number for output path and front matter.' },
+          sources: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Paths to materials (absolute or courseDir-relative).',
+          },
+          title: { type: 'string' },
+          pageType: { type: 'string', enum: ['weekly-quiz', 'reading-quiz'] },
+          difficultyMix: {
+            type: 'object',
+            properties: {
+              easy: { type: 'number' },
+              medium: { type: 'number' },
+              hard: { type: 'number' },
+            },
+            description: 'Must sum to ~1.0 (default 0.4/0.4/0.2).',
+          },
+          questionCount: { type: 'number', description: 'Default 10, max 25.' },
+          types: {
+            type: 'array',
+            items: { type: 'string', enum: ['multiple_choice', 'true_false'] },
+          },
+          outputPath: { type: 'string' },
+          overwrite: { type: 'boolean', description: 'Default false.' },
+          bloomHint: { type: 'string' },
+        },
+      },
+    },
+    {
       name: 'accessibility_review_queue',
       description:
         'The per-course "near the edge" accessibility worklist: pages with borderline findings, needs-human-review criteria, or acknowledged publishes. Lists open entries worst-margin first with live Canvas URLs for human-eyes verification; resolve marks a page reviewed. The professor is the final arbiter.',
@@ -1077,6 +1137,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
         break;
       case 'setup_spot_check':
         result = setupSpotCheck(args as unknown as SetupSpotCheckInput);
+        break;
+      case 'validate_quiz':
+        result = await validateQuiz(args as unknown as ValidateQuizInput);
+        break;
+      case 'generate_quiz':
+        result = await generateQuiz(args as unknown as GenerateQuizInput);
         break;
       case 'accessibility_review_queue':
         result = await accessibilityReviewQueue(args as unknown as Parameters<typeof accessibilityReviewQueue>[0]);
