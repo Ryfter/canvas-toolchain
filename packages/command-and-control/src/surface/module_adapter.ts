@@ -11,13 +11,19 @@ import type { Operation } from './operation.js';
  * that is what structurally prevents the `list_modules` collision class.
  */
 export function adaptModuleTools(moduleId: string, tools: ModuleTool[]): Operation[] {
-  return tools.map((t) => ({
-    id: `${moduleId}.${t.schema.name}`,
-    section: 'modules' as const,
-    description: t.schema.description ?? `${moduleId} operation.`,
-    inputSchema: (t.schema.inputSchema ?? { type: 'object' }) as Record<string, unknown>,
-    handler: t.handler,
-    taskCategory: 'none' as const,
-    exposure: 'advanced' as const,
-  }));
+  const seen = new Set<string>();
+  return tools.map((t) => {
+    const id = `${moduleId}.${t.schema.name}`;
+    if (seen.has(t.schema.name)) throw new Error(`duplicate operation id: ${id}`);
+    seen.add(t.schema.name);
+    return {
+      id,
+      section: 'modules' as const,
+      description: t.schema.description ?? `${moduleId} operation.`,
+      inputSchema: (t.schema.inputSchema ?? { type: 'object' }) as Record<string, unknown>,
+      handler: t.handler,
+      taskCategory: 'none' as const,
+      exposure: 'advanced' as const,
+    };
+  });
 }

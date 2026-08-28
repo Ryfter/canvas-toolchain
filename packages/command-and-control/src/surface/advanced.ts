@@ -15,6 +15,24 @@ function advancedOps(reg: Registry): Operation[] {
   return [...reg.values()].filter((o) => o.exposure === 'advanced');
 }
 
+/** One wording for describe and run so an unknown id reads the same either way. */
+function unknownOperation(operation: string | undefined, ops: Operation[]): CallToolResult {
+  return json({
+    error: `Unknown operation: ${operation}`,
+    validOperations: ops.map((o) => o.id),
+  }, true);
+}
+
+function isCallToolResult(value: unknown): value is CallToolResult {
+  return typeof value === 'object' && value !== null && Array.isArray((value as { content?: unknown }).content);
+}
+
+function requiredNames(schema: Record<string, unknown>): string[] {
+  return Array.isArray(schema.required)
+    ? schema.required.filter((n): n is string => typeof n === 'string')
+    : [];
+}
+
 /**
  * The description carries section and operation NAMES only — never schemas.
  * That is the whole context saving: names are cheap, schemas are not.
@@ -51,13 +69,17 @@ export async function runAdvanced(reg: Registry, rawArgs: unknown): Promise<Call
   };
   const ops = advancedOps(reg);
 
+  if (args.section !== undefined && !(SECTION_IDS as string[]).includes(args.section)) {
+    return json({
+      error: `Unknown section: ${args.section}`,
+      validSections: SECTION_IDS,
+    }, true);
+  }
+
   if (args.action === 'describe') {
     if (args.operation) {
       const op = ops.find((o) => o.id === args.operation);
-      if (!op) {
-        return json({ error: `Unknown operation: ${args.operation}`,
-                      validOperations: ops.map((o) => o.id) }, true);
-      }
+      if (!op) return unknownOperation(args.operation, ops);
       return json({ operations: { [op.id]: { description: op.description, inputSchema: op.inputSchema } } });
     }
     if (args.section) {
@@ -82,10 +104,30 @@ export async function runAdvanced(reg: Registry, rawArgs: unknown): Promise<Call
     // Internal operations run as steps inside other operations and are not
     // callable. Report them like any unknown id so the model self-corrects.
     if (!op || op.exposure !== 'advanced') {
-      return json({ error: `Unknown or non-callable operation: ${args.operation}`,
-                    validOperations: ops.map((o) => o.id) }, true);
+      return unknownOperation(args.operation, ops);
     }
-    const result = await op.handler(args.params ?? {});
+
+    const params = args.params ?? {};
+    if (typeof params !== 'object' || Array.isArray(params)) {
+      return json({
+        error: 'params must be an object',
+        inputSchema: op.inputSchema,
+      }, true);
+    }
+
+    const missing = requiredNames(op.inputSchema).filter(
+      (name) => !(name in (params as Record<string, unknown>)),
+    );
+    if (missing.length > 0) {
+      return json({
+        error: `Missing required field${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`,
+        missing,
+        inputSchema: op.inputSchema,
+      }, true);
+    }
+
+    const result = await op.handler(params);
+    if (isCallToolResult(result)) return result;
     return json(result);
   }
 

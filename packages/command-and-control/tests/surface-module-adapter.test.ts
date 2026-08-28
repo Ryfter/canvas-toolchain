@@ -26,4 +26,12 @@ describe('module adapter', () => {
   it('returns an empty array for a module with no tools', () => {
     expect(adaptModuleTools('roster', [])).toEqual([]);
   });
+
+  it('throws on duplicate tool names within one module', () => {
+    const t = (name: string) => ({
+      schema: { name, description: 'd', inputSchema: { type: 'object' } },
+      handler: async () => ({ content: [] }),
+    });
+    expect(() => adaptModuleTools('video', [t('dup'), t('dup')] as never)).toThrow(/dup/);
+  });
 });
