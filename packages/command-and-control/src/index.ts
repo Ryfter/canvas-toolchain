@@ -91,6 +91,11 @@ import { waveDeepCheckTool } from './tools/wave_deep_check.js';
 import { loadModules } from './modules/registry.js';
 import { checkChannelNotices, getChannelNotices } from './channel/notices.js';
 import { browseModuleCatalog, installModuleTool, uninstallModuleTool } from './tools/module_channel_tools.js';
+import { buildRegistry } from './surface/registry.js';
+import { adaptModuleTools } from './surface/module_adapter.js';
+import { listTools } from './surface/list_tools.js';
+import { dispatchSurface } from './surface/dispatch.js';
+import type { Operation } from './surface/operation.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -109,8 +114,78 @@ const loadedModules = await loadModules();
 void checkForUpdates();
 void checkChannelNotices();
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
+// ── The operation registry ──────────────────────────────────────────────────
+// 82 core operations plus every enabled module's tools. Module operation ids are
+// namespaced by the HOST as `<moduleId>.<toolName>`, so a module can never
+// collide with a core id.
+const registry = buildRegistry();
+for (const [id, mod] of loadedModules.byId) {
+  try {
+    for (const op of adaptModuleTools(id, mod.tools)) registry.set(op.id, op);
+  } catch (err) {
+    // Fail-soft, exactly as loadModules() is: a malformed module (e.g. duplicate
+    // tool names) is skipped with a warning and never stops the host booting.
+    console.error(
+      `[modules] '${id}' produced an unusable operation set; its tools are not exposed. ` +
+      `${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+/**
+ * The Task 9 cutover switch. `false` serves the ten-tool registry surface;
+ * `true` restores the pre-registry surface kept below, so the cutover is
+ * revertible with a one-line change. Task 10 deletes the legacy path and this
+ * constant together.
+ */
+const SERVE_LEGACY_TOOL_SURFACE = false;
+
+/**
+ * Progress streaming. Two operations emit `notifications/progress`, but
+ * `Operation.handler` takes args only. Widening that signature would touch all
+ * 82 operations and every consumer of the type, so the two special cases stay
+ * here in index.ts: their progress-aware handlers are overlaid onto a per-request
+ * COPY of the registry (the shared registry is never mutated). Intent routing,
+ * required-field validation, and the single catch boundary still run through
+ * dispatchSurface untouched.
+ */
+function withProgressHandlers(
+  reg: Map<string, Operation>,
+  notify: ((message: string) => void) | undefined,
+): Map<string, Operation> {
+  if (!notify) return reg;
+  const out = new Map(reg);
+
+  const bulk = out.get('bulk_fetch_panopto_transcripts');
+  if (bulk) {
+    const onProgress: ProgressCallback = (event) => {
+      const icon =
+        event.type === 'session-complete' ? '✓'
+        : event.type === 'session-failed' ? '✗'
+        : '→';
+      notify(`[${event.index + 1}/${event.total}] ${icon} ${event.title}${
+        event.reason ? ` — ${event.reason}` : ''
+      }`);
+    };
+    out.set(bulk.id, {
+      ...bulk,
+      handler: (args) => bulkFetchPanoptoTranscripts(args as BulkFetchPanoptoTranscriptsInput, onProgress),
+    });
+  }
+
+  const archive = out.get('download_canvas_archive');
+  if (archive) {
+    out.set(archive.id, {
+      ...archive,
+      handler: (args) => downloadCanvasArchive(args as DownloadCanvasArchiveInput, notify),
+    });
+  }
+
+  return out;
+}
+
+// ── Legacy tool surface (retained for the Task 9 revert path; Task 10 deletes it) ──
+const LEGACY_TOOL_LIST = [
     // ── Observability & config ──────────────────────────────────────────────
     {
       name: 'setup_cc',
@@ -863,10 +938,39 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     })),
     // ── Module tools (e.g. video) ───────────────────────────────────────────
     ...loadedModules.tools,
-  ],
+];
+
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: SERVE_LEGACY_TOOL_SURFACE ? LEGACY_TOOL_LIST : listTools(registry),
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+  if (!SERVE_LEGACY_TOOL_SURFACE) {
+    // The progress token is per-request, so the progress-aware overlay is too.
+    // This is the same notification-emitting code the legacy switch used.
+    const progressToken = extra._meta?.progressToken;
+    let progressCount = 0;
+    const notify = progressToken != null
+      ? (message: string) => {
+          progressCount++;
+          void extra.sendNotification({
+            method: 'notifications/progress',
+            params: { progressToken, progress: progressCount, message },
+          });
+        }
+      : undefined;
+
+    const result = await dispatchSurface(
+      withProgressHandlers(registry, notify),
+      request.params.name,
+      request.params.arguments,
+    );
+    const notice = (getUpdateNotice() ?? '') + (getChannelNotices() ?? '');
+    if (!notice) return result;
+    return { ...result, content: [...result.content, { type: 'text' as const, text: notice }] };
+  }
+
+  // ── Legacy dispatch (retained for the Task 9 revert path; Task 10 deletes it) ──
   // Module-handler precedence, the module-tool error net, the notice append, and
   // the bottom catch live in dispatchCallTool (src/lib/call_tool_dispatch.ts) so
   // they are unit-testable without a stdio transport (#123). Only the core tool
