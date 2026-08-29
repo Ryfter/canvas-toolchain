@@ -1433,3 +1433,100 @@ Expected: all PASS.
 git add src/surface/registry.ts tests/surface-invariants.test.ts
 git commit -m "fix(surface): repoint operation descriptions at their new addresses"
 ```
+
+---
+
+### Task 13: Make intent-operation schemas discoverable, and harden `runIntent`
+
+Added during execution after a Codex review of the intent boundary — the half a Grok review had explicitly not examined. **Execute BEFORE Task 9.** The Critical item is a design hole, not an implementation slip: Section 2 of the spec specified schemas-on-demand for the sidecar and never specified the equivalent for the intent side.
+
+**The problem.** Each intent tool's schema is `{ action: enum, params: object }`, discarding every operation's `inputSchema`. `ct_advanced.describe` cannot recover them because it filters `exposure === 'advanced'`. So all 50 intent operations — 43 of which require parameters — have no discoverable parameter contract. `ct_publish:publish` requires `snapshotId` and a structured `approvals` map (`registry.ts:638-665`) that nothing in the surface reveals. That defeats the no-capability-loss goal.
+
+**The chosen fix, and the one rejected.** Add `describe` as an action on every intent tool, mirroring `ct_advanced`'s contract — names in the enum, schemas on request. *Rejected:* embedding a `oneOf` branch per action with the full schema, which restores most of the context cost this project exists to remove (the intent half is already 12,626 of the 14,431-char surface).
+
+**Files:**
+- Modify: `packages/command-and-control/src/surface/intents/index.ts`
+- Test: `packages/command-and-control/tests/surface-intents.test.ts`
+
+- [ ] **Step 1: Write the failing tests**
+
+```ts
+it('offers a describe action on every intent tool', () => {
+  for (const t of intentToolSchemas(buildRegistry())) {
+    const actions = (t.inputSchema as { properties: { action: { enum: string[] } } }).properties.action.enum;
+    expect(actions, `${t.name}`).toContain('describe');
+  }
+});
+
+it('describe returns the inputSchema for one action', async () => {
+  const res = await runIntent(buildRegistry(), 'ct_publish', { action: 'describe', params: { of: 'publish' } });
+  expect(res.isError).toBeFalsy();
+  const body = JSON.parse(res.content[0].text as string);
+  expect(body.operations.publish.inputSchema).toBeDefined();
+  expect(JSON.stringify(body.operations.publish.inputSchema)).toContain('snapshotId');
+});
+
+it('describe with no target lists every action of that tool with its schema', async () => {
+  const res = await runIntent(buildRegistry(), 'ct_ask', { action: 'describe' });
+  const body = JSON.parse(res.content[0].text as string);
+  expect(Object.keys(body.operations).length).toBeGreaterThan(0);
+  for (const v of Object.values(body.operations) as { inputSchema?: unknown }[]) {
+    expect(v.inputSchema).toBeDefined();
+  }
+});
+
+it('rejects a non-object params', async () => {
+  const res = await runIntent(buildRegistry(), 'ct_setup', { action: 'canvas', params: 7 as never });
+  expect(res.isError).toBe(true);
+});
+
+it('rejects params missing a required field and returns the schema', async () => {
+  const res = await runIntent(buildRegistry(), 'ct_setup', { action: 'canvas', params: {} });
+  expect(res.isError).toBe(true);
+  const body = JSON.parse(res.content[0].text as string);
+  expect(JSON.stringify(body)).toMatch(/required/i);
+  expect(body.inputSchema).toBeDefined();   // model self-corrects without a second round-trip
+});
+
+it('does not double-wrap a handler that already returns a CallToolResult', async () => {
+  const reg = buildRegistry();
+  reg.set('wrapped_op', {
+    id: 'wrapped_op', section: 'admin', description: 'x', inputSchema: { type: 'object' },
+    handler: async () => ({ content: [{ type: 'text' as const, text: 'inner failed' }], isError: true }),
+    taskCategory: 'none', exposure: 'intent', intentTool: 'ct_setup', intentAction: 'wrapped',
+  });
+  const res = await runIntent(reg, 'ct_setup', { action: 'wrapped', params: {} });
+  expect(res.isError).toBe(true);
+  expect(res.content[0].text).toBe('inner failed');
+});
+```
+
+- [ ] **Step 2: Run them to verify they fail**
+
+Run: `npm test -- surface-intents`
+Expected: FAIL — no `describe` action exists; `params` is unvalidated; the `CallToolResult` is stringified.
+
+- [ ] **Step 3: Implement**
+
+1. **`describe` action.** Add `'describe'` to every intent tool's action enum, and handle it in `runIntent` before the operation lookup. With `params.of` naming an action, return that one operation's `description` + `inputSchema`; with no target, return every action of that tool with its schema. Shape the payload like `ct_advanced.describe`'s so the two read the same.
+2. **Validate `params`,** reusing the same approach Task 11 applied in `advanced.ts`: reject non-objects (including arrays), then check each name in `op.inputSchema.required` is present. Include the operation's `inputSchema` in the failure payload.
+3. **Stop double-wrapping:** if the handler's result is already an object with a `content` array, return it unchanged, preserving `isError`; otherwise `json(result)`. Keep this identical to `advanced.ts` so there is one result invariant across the surface, not two.
+4. Name `describe` in each tool's description text so the model knows the schemas are obtainable.
+
+Do NOT set `additionalProperties: false` on the intent envelope in this task — Codex flagged flattened arguments as a related risk, but tightening the envelope changes what currently-valid calls do and belongs with the dispatch work in Task 8.
+
+- [ ] **Step 4: Run tests**
+
+Run: `npm test && npm run build`
+Expected: all PASS.
+
+- [ ] **Step 5: Re-measure the surface**
+
+The `describe` actions add to the intent schemas. Re-run the surface measurement and record the new total; if the surface has grown past ~20,000 chars, report it rather than absorbing it silently — the whole project is a context-cost argument.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/surface/intents/index.ts tests/surface-intents.test.ts
+git commit -m "fix(surface): make intent operation schemas discoverable and harden runIntent"
+```
