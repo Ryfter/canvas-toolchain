@@ -1,0 +1,29 @@
+import { describe, expect, it } from 'vitest';
+import { dispatchSurface } from '../src/surface/dispatch.js';
+import { buildRegistry } from '../src/surface/registry.js';
+
+describe('dispatch', () => {
+  it('routes an unknown tool name to a tool error, not a throw', async () => {
+    const res = await dispatchSurface(buildRegistry(), 'nope', {});
+    expect(res.isError).toBe(true);
+    const body = JSON.parse(res.content[0].text as string);
+    expect(body.validTools).toContain('ct_advanced');
+  });
+
+  it('routes ct_advanced to the sidecar', async () => {
+    const res = await dispatchSurface(buildRegistry(), 'ct_advanced', { action: 'describe' });
+    expect(res.isError).toBeFalsy();
+  });
+
+  it('surfaces a handler throw as a tool error rather than propagating', async () => {
+    const reg = buildRegistry();
+    reg.set('boom', {
+      id: 'boom', section: 'admin', description: 'x', inputSchema: { type: 'object' },
+      handler: () => { throw new Error('kaboom'); },
+      taskCategory: 'none', exposure: 'intent', intentTool: 'ct_setup', intentAction: 'boom',
+    });
+    const res = await dispatchSurface(reg, 'ct_setup', { action: 'boom', params: {} });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain('kaboom');
+  });
+});
