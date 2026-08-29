@@ -69,6 +69,16 @@ export async function runAdvanced(reg: Registry, rawArgs: unknown): Promise<Call
   };
   const ops = advancedOps(reg);
 
+  // Mirrors the missing-action guard at the top of runIntent (intents/index.ts):
+  // an absent action must not fall through to the bottom fallback, which would
+  // interpolate the literal string "undefined" into the error message.
+  if (args.action === undefined) {
+    return json({
+      error: 'Missing required field "action" for ct_advanced',
+      validActions: ['describe', 'run'],
+    }, true);
+  }
+
   if (args.section !== undefined && !(SECTION_IDS as string[]).includes(args.section)) {
     return json({
       error: `Unknown section: ${args.section}`,

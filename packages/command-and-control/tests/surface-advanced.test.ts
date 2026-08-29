@@ -64,6 +64,28 @@ describe('ct_advanced', () => {
     expect(text.toLowerCase()).toContain('missing');
   });
 
+  // Coordinator re-review, Finding 3 (fourth door): action itself can be
+  // omitted entirely, not just "run" with a missing operation. That falls
+  // through past the action==='run' branch to the bottom fallback, which
+  // interpolated `undefined` into the error message.
+  it('returns a clean tool error for a missing action entirely, with no "undefined" leakage', async () => {
+    const res = await runAdvanced(buildRegistry(), {});
+    expect(res.isError).toBe(true);
+    const text = res.content[0].text as string;
+    expect(text).not.toContain('undefined');
+    const body = JSON.parse(text);
+    expect(body.validActions ?? body.validTools).toBeDefined();
+  });
+
+  it('returns a clean tool error when action is omitted but operation is given, with no "undefined" leakage', async () => {
+    const res = await runAdvanced(buildRegistry(), { operation: 'reembed_course_index' });
+    expect(res.isError).toBe(true);
+    const text = res.content[0].text as string;
+    expect(text).not.toContain('undefined');
+    const body = JSON.parse(text);
+    expect(body.validActions ?? body.validTools).toBeDefined();
+  });
+
   it('returns a tool error for an unknown section', async () => {
     const res = await runAdvanced(buildRegistry(), { action: 'describe', section: 'a11y' as never });
     expect(res.isError).toBe(true);
