@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { listTools } from '../src/surface/list_tools.js';
 import { buildRegistry } from '../src/surface/registry.js';
 import { adaptModuleTools } from '../src/surface/module_adapter.js';
+import { runAdvanced } from '../src/surface/advanced.js';
 
 describe('tools/list', () => {
   it('returns exactly ten tools', () => {
@@ -24,14 +25,29 @@ describe('tools/list', () => {
     expect(listTools(reg)).toHaveLength(10);
   });
 
-  it('leaves no operation orphaned', () => {
+  it('makes every non-internal operation reachable through the exposed surface', async () => {
     const reg = buildRegistry();
-    const orphans = [...reg.values()].filter(
-      (o) => o.exposure !== 'intent' && o.exposure !== 'advanced' && o.exposure !== 'internal',
-    );
-    expect(orphans).toEqual([]);
+    const tools = listTools(reg);
+
+    // The sidecar's own catalogue — the only way an advanced op is reachable.
+    const cat = await runAdvanced(reg, { action: 'describe' });
+    const sections = JSON.parse(cat.content[0].text as string).sections as
+      Record<string, { operations: string[] }>;
+    const advertised = new Set(Object.values(sections).flatMap((s) => s.operations));
+
+    const unreachable: string[] = [];
     for (const op of reg.values()) {
-      if (op.exposure === 'intent') expect(op.intentTool).toBeTruthy();
+      if (op.exposure === 'internal') continue;
+      if (op.exposure === 'intent') {
+        const tool = tools.find((t) => t.name === op.intentTool);
+        const actions =
+          (tool?.inputSchema as { properties?: { action?: { enum?: string[] } } })
+            ?.properties?.action?.enum ?? [];
+        if (!actions.includes(op.intentAction as string)) unreachable.push(op.id);
+      } else if (!advertised.has(op.id)) {
+        unreachable.push(op.id);
+      }
     }
+    expect(unreachable, `unreachable: ${unreachable.join(', ')}`).toEqual([]);
   });
 });
