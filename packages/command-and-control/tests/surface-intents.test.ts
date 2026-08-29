@@ -49,4 +49,53 @@ describe('intent tools', () => {
       expect(actions, `${op.id} action not exposed`).toContain(op.intentAction);
     }
   });
+
+  it('offers a describe action on every intent tool', () => {
+    for (const t of intentToolSchemas(buildRegistry())) {
+      const actions = (t.inputSchema as { properties: { action: { enum: string[] } } }).properties.action.enum;
+      expect(actions, `${t.name}`).toContain('describe');
+    }
+  });
+
+  it('describe returns the inputSchema for one action', async () => {
+    const res = await runIntent(buildRegistry(), 'ct_publish', { action: 'describe', params: { of: 'publish' } });
+    expect(res.isError).toBeFalsy();
+    const body = JSON.parse(res.content[0].text as string);
+    expect(body.operations.publish.inputSchema).toBeDefined();
+    expect(JSON.stringify(body.operations.publish.inputSchema)).toContain('snapshotId');
+  });
+
+  it('describe with no target lists every action of that tool with its schema', async () => {
+    const res = await runIntent(buildRegistry(), 'ct_ask', { action: 'describe' });
+    const body = JSON.parse(res.content[0].text as string);
+    expect(Object.keys(body.operations).length).toBeGreaterThan(0);
+    for (const v of Object.values(body.operations) as { inputSchema?: unknown }[]) {
+      expect(v.inputSchema).toBeDefined();
+    }
+  });
+
+  it('rejects a non-object params', async () => {
+    const res = await runIntent(buildRegistry(), 'ct_setup', { action: 'canvas', params: 7 as never });
+    expect(res.isError).toBe(true);
+  });
+
+  it('rejects params missing a required field and returns the schema', async () => {
+    const res = await runIntent(buildRegistry(), 'ct_setup', { action: 'canvas', params: {} });
+    expect(res.isError).toBe(true);
+    const body = JSON.parse(res.content[0].text as string);
+    expect(JSON.stringify(body)).toMatch(/required/i);
+    expect(body.inputSchema).toBeDefined();   // model self-corrects without a second round-trip
+  });
+
+  it('does not double-wrap a handler that already returns a CallToolResult', async () => {
+    const reg = buildRegistry();
+    reg.set('wrapped_op', {
+      id: 'wrapped_op', section: 'admin', description: 'x', inputSchema: { type: 'object' },
+      handler: async () => ({ content: [{ type: 'text' as const, text: 'inner failed' }], isError: true }),
+      taskCategory: 'none', exposure: 'intent', intentTool: 'ct_setup', intentAction: 'wrapped',
+    });
+    const res = await runIntent(reg, 'ct_setup', { action: 'wrapped', params: {} });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toBe('inner failed');
+  });
 });
