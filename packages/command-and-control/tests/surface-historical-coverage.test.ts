@@ -6,29 +6,22 @@ import { buildRegistry } from '../src/surface/registry.js';
 
 const pkgDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-function namesIn(relPath: string, indent: string): string[] {
-  const src = readFileSync(join(pkgDir, relPath), 'utf8');
-  const re = new RegExp(`^${indent}name: '([a-z_0-9]+)'`, 'gm');
-  return [...src.matchAll(re)].map((m) => m[1]);
-}
+/**
+ * The 82 pre-migration core tool names, frozen from the legacy list in
+ * src/index.ts plus the three src/passthrough/*_tools.ts files before those
+ * literals were deleted. `list_modules` appears twice: plug-in modules (C&C)
+ * and Canvas course modules (CI). The registry splits them into
+ * `list_modules` and `list_canvas_modules`.
+ */
+const HISTORICAL = JSON.parse(
+  readFileSync(join(pkgDir, 'tests', 'fixtures', 'historical-core-tools.json'), 'utf8'),
+) as string[];
 
-/** Every tool the server exposes today, from source. */
-function currentCoreTools(): string[] {
-  return [
-    ...namesIn('src/index.ts', '      '),
-    ...namesIn('src/passthrough/ci_tools.ts', '    '),
-    ...namesIn('src/passthrough/downloader_tools.ts', '    '),
-    ...namesIn('src/passthrough/design_tools.ts', '    '),
-  ];
-}
-
-describe('registry parity with the current surface', () => {
-  it('registers every tool that exists today', () => {
+describe('registry coverage of the pre-migration surface', () => {
+  it('covers every historical core tool name (with list_modules split)', () => {
+    expect(HISTORICAL).toHaveLength(82);
     const reg = buildRegistry();
-    // `list_modules` is registered twice today with two distinct meanings; the
-    // registry splits them into `list_modules` (plug-ins) and
-    // `list_canvas_modules` (Canvas course modules).
-    const expected = new Set(currentCoreTools());
+    const expected = new Set(HISTORICAL);
     expected.delete('list_modules');
     const missing = [...expected].filter((n) => !reg.has(n));
     expect(missing, `not in registry: ${missing.join(', ')}`).toEqual([]);

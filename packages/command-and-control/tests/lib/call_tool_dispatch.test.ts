@@ -1,66 +1,44 @@
 import { describe, it, expect } from 'vitest';
-import { dispatchCallTool, type CallToolDispatchDeps } from '../../src/lib/call_tool_dispatch.js';
+import { appendNotice } from '../../src/lib/append_notice.js';
+import { dispatchSurface } from '../../src/surface/dispatch.js';
+import { buildRegistry } from '../../src/surface/registry.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-function deps(overrides: Partial<CallToolDispatchDeps> = {}): CallToolDispatchDeps {
-  return {
-    moduleHandlers: new Map(),
-    runCoreTool: async () => ({ handled: false }),
-    getNotice: () => '',
-    ...overrides,
-  };
-}
-
-describe('dispatchCallTool (#123)', () => {
-  it('returns a module handler result untouched (no notice appended)', async () => {
-    const moduleResult: CallToolResult = { content: [{ type: 'text', text: 'module says hi' }] };
-    const res = await dispatchCallTool('mod_tool', {}, deps({
-      moduleHandlers: new Map([['mod_tool', async () => moduleResult]]),
-      getNotice: () => '\n\nUpdate available!',
-    }));
-    expect(res).toBe(moduleResult);
+describe('appendNotice (shipped CallTool notice)', () => {
+  it('appends the notice as an extra content block on a success result, including module-tool results', () => {
+    const result: CallToolResult = { content: [{ type: 'text', text: 'module says hi' }] };
+    const out = appendNotice(result, '\n\nUpdate available!');
+    expect(out).not.toBe(result);
+    expect(out.isError).toBeUndefined();
+    expect(out.content).toEqual([
+      { type: 'text', text: 'module says hi' },
+      { type: 'text', text: '\n\nUpdate available!' },
+    ]);
   });
 
-  it('degrades a throwing module tool to a structured error, not a protocol error', async () => {
-    const res = await dispatchCallTool('mod_tool', {}, deps({
-      moduleHandlers: new Map([['mod_tool', async () => { throw new Error('CANVAS_NOT_CONFIGURED: run setup_canvas'); }]]),
-    }));
-    expect(res.isError).toBe(true);
-    expect(JSON.parse((res.content[0] as { text: string }).text).error).toContain('CANVAS_NOT_CONFIGURED');
+  it('appends the notice to an isError result, preserving isError', () => {
+    const result: CallToolResult = {
+      content: [{ type: 'text', text: JSON.stringify({ error: 'Unknown tool: nope' }) }],
+      isError: true,
+    };
+    const out = appendNotice(result, 'NOTICE');
+    expect(out.isError).toBe(true);
+    expect((out.content[0] as { text: string }).text).toContain('Unknown tool: nope');
+    expect(out.content[1]).toEqual({ type: 'text', text: 'NOTICE' });
   });
 
-  it('appends the notice to core tool results', async () => {
-    const res = await dispatchCallTool('core_tool', {}, deps({
-      runCoreTool: async () => ({ handled: true, result: { ok: true } }),
-      getNotice: () => '\n\nUpdate available!',
-    }));
-    expect(res.isError).toBeUndefined();
-    const text = (res.content[0] as { text: string }).text;
-    expect(text).toContain('"ok": true');
-    expect(text.endsWith('Update available!')).toBe(true);
+  it('returns the original result when there is no notice', () => {
+    const result: CallToolResult = { content: [{ type: 'text', text: 'ok' }], isError: true };
+    expect(appendNotice(result, '')).toBe(result);
   });
 
-  it('returns a structured Unknown tool error without the notice', async () => {
-    const res = await dispatchCallTool('nope', {}, deps({ getNotice: () => 'NOTICE' }));
-    expect(res.isError).toBe(true);
-    const text = (res.content[0] as { text: string }).text;
-    expect(JSON.parse(text).error).toBe('Unknown tool: nope');
-    expect(text).not.toContain('NOTICE');
-  });
-
-  it('degrades a throwing core tool to a structured error', async () => {
-    const res = await dispatchCallTool('core_tool', {}, deps({
-      runCoreTool: async () => { throw new Error('boom'); },
-    }));
-    expect(res.isError).toBe(true);
-    expect(JSON.parse((res.content[0] as { text: string }).text).error).toBe('boom');
-  });
-
-  it('passes name and args through to the core switch', async () => {
-    const seen: Array<[string, unknown]> = [];
-    await dispatchCallTool('core_tool', { a: 1 }, deps({
-      runCoreTool: async (name, args) => { seen.push([name, args]); return { handled: true, result: null }; },
-    }));
-    expect(seen).toEqual([['core_tool', { a: 1 }]]);
+  it('an unknown-tool dispatchSurface result still receives the notice', async () => {
+    const dispatched = await dispatchSurface(buildRegistry(), 'nope', {});
+    expect(dispatched.isError).toBe(true);
+    const out = appendNotice(dispatched, 'NOTICE');
+    expect(out.isError).toBe(true);
+    const texts = out.content.map((c) => ('text' in c ? c.text : ''));
+    expect(texts.some((t) => t.includes('Unknown tool: nope'))).toBe(true);
+    expect(texts[texts.length - 1]).toBe('NOTICE');
   });
 });
