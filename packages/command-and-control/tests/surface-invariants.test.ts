@@ -21,18 +21,18 @@ describe('whole-surface invariants', () => {
 
   it('makes an internal operation indistinguishable from a nonexistent one', async () => {
     const reg = buildRegistry();
-    const a = await runAdvanced(reg, { action: 'run', operation: 'reembed_course_index', params: {} });
+    const a = await runAdvanced(reg, { action: 'run', operation: 'map_transcripts_to_weeks', params: {} });
     const b = await runAdvanced(reg, { action: 'run', operation: 'definitely_not_real', params: {} });
     const norm = (r: typeof a) =>
-      JSON.parse(r.content[0].text as string).error.replace(/reembed_course_index|definitely_not_real/, 'X');
+      JSON.parse(r.content[0].text as string).error.replace(/map_transcripts_to_weeks|definitely_not_real/, 'X');
     expect(norm(a)).toEqual(norm(b));
     expect(a.isError).toBe(b.isError);
   });
 
-  it('keeps the exposure split at 50 / 29 / 3', () => {
+  it('keeps the exposure split at 50 / 31 / 1', () => {
     const c = { intent: 0, advanced: 0, internal: 0 };
     for (const op of buildRegistry().values()) c[op.exposure] += 1;
-    expect(c).toEqual({ intent: 50, advanced: 29, internal: 3 });
+    expect(c).toEqual({ intent: 50, advanced: 31, internal: 1 });
   });
 
   it('gives every operation an object inputSchema and a non-empty description', () => {

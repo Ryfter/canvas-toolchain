@@ -34,9 +34,34 @@ describe('ct_advanced', () => {
 
   it('refuses to run an internal operation', async () => {
     const res = await runAdvanced(buildRegistry(), {
-      action: 'run', operation: 'reembed_course_index', params: {},
+      action: 'run', operation: 'map_transcripts_to_weeks', params: {},
     });
     expect(res.isError).toBe(true);
+  });
+
+  // Final review, Finding 1: reembed_course_index and snapshot_course were
+  // wrongly marked internal (their claimed "runs inside X" parents were
+  // false) and are now reachable advanced operations, not deleted
+  // capabilities.
+  it('runs reembed_course_index and snapshot_course as ordinary advanced operations', async () => {
+    for (const operation of ['reembed_course_index', 'snapshot_course']) {
+      const res = await runAdvanced(buildRegistry(), { action: 'run', operation, params: {} });
+      // Missing required fields, not "unknown operation" -- proves the
+      // operation is recognized and reachable through ct_advanced.
+      expect(res.isError).toBe(true);
+      const body = JSON.parse(res.content[0].text as string);
+      expect(body.error).toMatch(/^Missing required field/);
+    }
+  });
+
+  // Final review, Finding 3: an omitted `operation` for action="run" must
+  // not render as the literal string "undefined" in the error message.
+  it('returns a clean tool error for a missing operation, with no "undefined" leakage', async () => {
+    const res = await runAdvanced(buildRegistry(), { action: 'run', params: {} });
+    expect(res.isError).toBe(true);
+    const text = res.content[0].text as string;
+    expect(text).not.toContain('undefined');
+    expect(text.toLowerCase()).toContain('missing');
   });
 
   it('returns a tool error for an unknown section', async () => {

@@ -37,6 +37,35 @@ describe('intent tools', () => {
     expect(JSON.stringify(body)).not.toContain('undefined');
   });
 
+  // Final review, Finding 2: `INTENT_TOOLS[toolName]` truthy-lookup matches
+  // inherited Object.prototype keys ('toString', 'constructor', ...).
+  // dispatchSurface already gates with Object.hasOwn before ever calling
+  // runIntent, so a test that only goes through dispatchSurface (see
+  // surface-dispatch.test.ts) cannot exercise this hole — it must call
+  // runIntent directly, since runIntent is itself callable independently
+  // and must enforce the same contract on its own.
+  it.each(['toString', 'constructor'])(
+    'treats prototype key %s as an unknown tool when calling runIntent directly',
+    async (name) => {
+      const res = await runIntent(buildRegistry(), name, { action: 'x' });
+      expect(res.isError).toBe(true);
+      const text = res.content[0].text as string;
+      expect(text).not.toContain('undefined');
+      const body = JSON.parse(text);
+      expect(body.validTools).toBeDefined();
+    },
+  );
+
+  // Final review, Finding 3: an omitted `action` must not render as the
+  // literal string "undefined" in the error message.
+  it('returns a clean tool error for a missing action, with no "undefined" leakage', async () => {
+    const res = await runIntent(buildRegistry(), 'ct_setup', {});
+    expect(res.isError).toBe(true);
+    const text = res.content[0].text as string;
+    expect(text).not.toContain('undefined');
+    expect(text.toLowerCase()).toContain('missing');
+  });
+
   it('every registered intent action is reachable', async () => {
     const reg = buildRegistry();
     const schemas = intentToolSchemas(reg);

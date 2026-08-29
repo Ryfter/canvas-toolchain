@@ -33,12 +33,12 @@ describe('registry coverage of the pre-migration surface', () => {
     expect(buildRegistry().size).toBe(82);
   });
 
-  it('marks internal exactly the three pre-approved operations', () => {
+  it('marks internal exactly the one pre-approved operation', () => {
     const internal = [...buildRegistry().values()]
       .filter((o) => o.exposure === 'internal')
       .map((o) => o.id);
     expect(internal.sort()).toEqual([
-      'map_transcripts_to_weeks', 'reembed_course_index', 'snapshot_course',
+      'map_transcripts_to_weeks',
     ]);
   });
 });

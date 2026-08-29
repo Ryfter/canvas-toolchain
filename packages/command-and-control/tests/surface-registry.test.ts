@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildRegistry } from '../src/surface/registry.js';
 
 const INTERNAL_ALLOWLIST = [
-  'map_transcripts_to_weeks', 'reembed_course_index', 'snapshot_course',
+  'map_transcripts_to_weeks',
 ];
 
 describe('operation registry', () => {

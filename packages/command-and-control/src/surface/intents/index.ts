@@ -76,15 +76,26 @@ export function intentToolSchemas(reg: Registry): Tool[] {
 export async function runIntent(
   reg: Registry, toolName: string, rawArgs: unknown,
 ): Promise<CallToolResult> {
-  const meta = INTENT_TOOLS[toolName as IntentToolId];
-  if (!meta) {
+  // Object.hasOwn (not truthy lookup) so prototype keys like 'toString' or
+  // 'constructor' can never be mistaken for a real intent tool name — mirrors
+  // the same hardening in dispatch.ts, since runIntent is callable directly.
+  if (!Object.hasOwn(INTENT_TOOLS, toolName)) {
     return json({
       error: `Unknown tool "${toolName}"`,
       validTools: INTENT_IDS,
     }, true);
   }
+  const meta = INTENT_TOOLS[toolName as IntentToolId];
   const args = (rawArgs ?? {}) as { action?: string; params?: unknown };
   const ops = actionsFor(reg, toolName as IntentToolId);
+
+  if (args.action === undefined) {
+    return json({
+      error: `Missing required field "action" for ${toolName}`,
+      validActions: [...ops.map((o) => o.intentAction), 'describe'],
+      hint: `Less common operations live in ct_advanced section "${meta.extendedBy}".`,
+    }, true);
+  }
 
   if (args.action === 'describe') {
     const target = (args.params as { of?: string } | undefined)?.of;

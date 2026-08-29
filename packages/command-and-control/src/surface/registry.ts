@@ -799,7 +799,7 @@ export const CORE_OPERATIONS: Operation[] = [
     },
     handler: (args) => reembedCourseIndex(args as never),
     taskCategory: 'none',
-    exposure: 'internal',
+    exposure: 'advanced',
   },
   {
     id: 'snapshot_course',
@@ -815,7 +815,7 @@ export const CORE_OPERATIONS: Operation[] = [
     },
     handler: (args) => snapshotCourse(args as never),
     taskCategory: 'none',
-    exposure: 'internal',
+    exposure: 'advanced',
   },
   {
     id: 'draft_student_rubric',

@@ -100,7 +100,14 @@ export async function runAdvanced(reg: Registry, rawArgs: unknown): Promise<Call
   }
 
   if (args.action === 'run') {
-    const op = reg.get(args.operation ?? '');
+    if (args.operation === undefined) {
+      return json({
+        error: 'Missing required field "operation" for action="run"',
+        validOperations: ops.map((o) => o.id),
+      }, true);
+    }
+
+    const op = reg.get(args.operation);
     // Internal operations run as steps inside other operations and are not
     // callable. Report them like any unknown id so the model self-corrects.
     if (!op || op.exposure !== 'advanced') {
