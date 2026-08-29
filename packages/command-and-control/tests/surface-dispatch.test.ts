@@ -42,4 +42,21 @@ describe('dispatch', () => {
     expect(res.isError).toBe(true);
     expect(res.content[0].text).toContain('kaboom-adv');
   });
+
+  // Controller-directed fix verification (2026-08-28 review, Minor finding):
+  // `name in INTENT_TOOLS` on a plain object literal matches inherited
+  // Object.prototype keys ('toString', 'constructor', 'hasOwnProperty', ...).
+  // dispatchSurface is the boundary that receives arbitrary, untrusted tool
+  // names, so a prototype-chain hole here must not route into runIntent.
+  it.each(['toString', 'constructor'])(
+    'treats prototype key %s as an unknown tool, not a routable one',
+    async (name) => {
+      const res = await dispatchSurface(buildRegistry(), name, {});
+      expect(res.isError).toBe(true);
+      const text = res.content[0].text as string;
+      const body = JSON.parse(text);
+      expect(body.validTools).toBeDefined();
+      expect(text).not.toContain('undefined');
+    },
+  );
 });

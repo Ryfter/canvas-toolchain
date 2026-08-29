@@ -20,7 +20,10 @@ export async function dispatchSurface(
 ): Promise<CallToolResult> {
   try {
     if (name === 'ct_advanced') return await runAdvanced(reg, args);
-    if (name in INTENT_TOOLS) return await runIntent(reg, name, args);
+    // Object.hasOwn (not `in`) so prototype keys like 'toString' or
+    // 'constructor' can never be mistaken for a real intent tool name —
+    // dispatchSurface receives arbitrary, untrusted tool names by design.
+    if (Object.hasOwn(INTENT_TOOLS, name)) return await runIntent(reg, name, args);
     return {
       content: [{ type: 'text', text: JSON.stringify({ error: `Unknown tool: ${name}`, validTools: TOOL_NAMES }) }],
       isError: true,
