@@ -1179,6 +1179,29 @@ describe('legacy surface removal', () => {
 Run: `npm test -- surface-no-legacy`
 Expected: FAIL — `ALL_PASSTHROUGH` is still present and the file is ~1100 lines.
 
+**Before deleting anything, deal with the notice-append tests.** The cutover re-inlined the
+update/channel notice logic into `src/index.ts`, where nothing covers it, and three tests in
+`tests/lib/call_tool_dispatch.test.ts` now assert behaviour that is FALSE in production — verified
+live during the Task 9 review. `:15` claims a module handler result comes back untouched with no
+notice; `:43` claims an unknown-tool error returns without the notice. Both now get a notice block
+appended.
+
+These are green tests describing dead behaviour. Deleting `call_tool_dispatch.ts` removes the only
+tests that *appear* to cover notice behaviour — and they were already lying — leaving the shipped
+logic with zero coverage.
+
+So in this task: extract the notice-append into a small exported helper beside the `dispatchSurface`
+call site, unit-test it against both a success and an `isError` result, and **rewrite**
+`tests/lib/call_tool_dispatch.test.ts` to match what actually ships rather than deleting it wholesale.
+Module-tool results now carry the notice too, which is a behaviour change from the legacy path — assert
+the behaviour you want rather than preserving the old claim.
+
+**Also freeze the parity fixture first.** `tests/surface-parity.test.ts` reads tool-name literals out
+of `src/index.ts`; this task deletes them, so per the controller ruling the test is deleted too. Before
+deleting it, write the 82 historical tool names into a static fixture and assert the registry still
+covers them. That assertion is the only thing tying the registry to the pre-migration surface, and it
+is worth keeping once its source of truth is a fixture rather than a file being deleted.
+
 - [ ] **Step 3: Delete the dead code**
 
 **Delete `tests/surface-parity.test.ts` in this task.** It reads tool-name literals out of
