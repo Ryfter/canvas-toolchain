@@ -34,6 +34,10 @@ export function knownModuleIds(
 export interface LoadedModules {
   tools: Tool[];
   handlers: Map<string, (args: unknown) => Promise<CallToolResult>>;
+  /** The active modules keyed by module id. The operation registry namespaces
+   *  module operations as `<moduleId>.<toolName>`, which needs the id that the
+   *  flattened `tools`/`handlers` views throw away. */
+  byId: Map<string, CanvasToolchainModule>;
 }
 
 /** Load installed channel artifacts: enabled + re-hash verified + contract checked.
@@ -158,5 +162,5 @@ export async function loadModules(
       handlers.set(t.schema.name, t.handler);
     }
   }
-  return { tools, handlers };
+  return { tools, handlers, byId: active };
 }

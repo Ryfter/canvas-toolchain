@@ -207,34 +207,6 @@ export const DOWNLOADER_TOOLS: PassthroughTool[] = [
   {
     name: 'setup_canvas_backup',
     taskCategory: 'none',
-    description:
-      '[canvas-backup] Generate a Canvas Backup config from the Canvas connection already ' +
-      'configured in Command and Control. Writes ~/.command-and-control/canvas-backup.generated.toml ' +
-      '(token stays out of the file; passed via CANVAS_TOKEN at archive time). Run this once per ' +
-      'semester so download_canvas_archive can find base_url / archive root / year / semester.',
-    inputSchema: {
-      type: 'object',
-      required: ['semester'],
-      properties: {
-        root: {
-          type: 'string',
-          description: 'Archive root directory. Defaults to ~/CanvasArchive.',
-        },
-        year: {
-          type: 'string',
-          description: 'Archive year folder (e.g. "2026"). Defaults to the current calendar year.',
-        },
-        semester: {
-          type: 'string',
-          description:
-            'Archive semester folder (e.g. "Fall", "Spring", "Summer"). Required — never guessed.',
-        },
-        downloadWorkers: {
-          type: 'number',
-          description: 'Concurrent Canvas file downloads. Defaults to 6.',
-        },
-      },
-    },
     handler: (args) => {
       const prefs = args as CanvasBackupPrefs;
       const { path, baseUrl } = writeManagedCanvasBackupConfig(prefs);
@@ -251,37 +223,14 @@ export const DOWNLOADER_TOOLS: PassthroughTool[] = [
   {
     name: 'download_canvas_archive',
     taskCategory: 'none',
-    description: '[canvas-backup] Archive a Canvas course shell locally by invoking the Canvas Backup CLI.',
-    inputSchema: {
-      type: 'object',
-      required: ['courseId'],
-      properties: {
-        courseId: { type: 'string' },
-        configPath: { type: 'string', description: 'Optional path to config.local.toml.' },
-        year: { type: 'string', description: 'Archive year folder override.' },
-        semester: { type: 'string', description: 'Archive semester folder override.' },
-        root: { type: 'string', description: 'Archive root override.' },
-        shellName: { type: 'string', description: 'Folder name override for combined-section shells.' },
-        downloadWorkers: { type: 'number', description: 'Concurrent Canvas file downloads.' },
-      },
-    },
-    // Note: index.ts handles download_canvas_archive specially so it can attach MCP progress
-    // notifications when the client provides a progressToken. This handler is a fallback
-    // used only if the tool is somehow routed through the generic passthrough path.
+    // Note: index.ts overlays download_canvas_archive with MCP progress
+    // notifications when the client provides a progressToken. This handler is
+    // the fallback used if the tool is routed through the generic passthrough path.
     handler: async (args) => downloadCanvasArchive(args as DownloadCanvasArchiveInput),
   },
   {
     name: 'download_transcripts',
     taskCategory: 'none',
-    description: '[canvas-backup] Placeholder for future bulk Panopto transcript download.',
-    inputSchema: {
-      type: 'object',
-      required: ['courseId', 'semesterId'],
-      properties: {
-        courseId: { type: 'string' },
-        semesterId: { type: 'string' },
-      },
-    },
     handler: () => ({
       error:
         'Bulk Panopto transcript download is not implemented in Canvas Backup yet. ' +
