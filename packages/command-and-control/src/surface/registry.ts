@@ -188,7 +188,7 @@ export const CORE_OPERATIONS: Operation[] = [
       "Returns the catalog of Canvas-safe design patterns. Optionally filter by category " +
       "(layout, information, interactive, pedagogical, branded) or supportStatus " +
       "(supported, partial, aspirational). Use this to discover what patterns exist; " +
-      "then call preview_canvas_pattern to see any specific pattern rendered.",
+      "then call `ct_build` action `preview_pattern` to see any specific pattern rendered.",
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -209,7 +209,7 @@ export const CORE_OPERATIONS: Operation[] = [
     section: 'design',
     description:
       "Renders a specific Canvas capability pattern to a standalone HTML file " +
-      "that can be opened in any browser. Use this after show_canvas_capabilities " +
+      "that can be opened in any browser. Use this after browsing the pattern catalog via `ct_advanced` " +
       "to actually see a pattern in action.",
     inputSchema: {
       type: 'object' as const,
@@ -423,7 +423,7 @@ export const CORE_OPERATIONS: Operation[] = [
     section: 'admin',
     description:
       "Start the local Canvas Toolchain dashboard (read-only course health view). " +
-      "Returns a localhost URL the professor can open in a browser. Requires set_courses_root first.",
+      "Returns a localhost URL the professor can open in a browser. Requires `ct_setup` action `courses_root` first.",
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -512,7 +512,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'full_pipeline',
     section: 'admin',
-    description: 'Run analyze_course → plan_next_semester → update_course_materials end-to-end. Returns results from all three phases.',
+    description: 'Run `ct_analyze` action `course` → `ct_plan` action `semester` → `ct_build` action `materials` end-to-end. Returns results from all three phases.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'sourceSemesterId', 'newSemesterId', 'archivePath'],
@@ -539,7 +539,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'bulk_fetch_panopto_transcripts',
     section: 'transcripts',
-    description: 'Download all Panopto transcripts for a folder as VTT files. Optionally auto-ingests into Curriculum Intelligence. Requires setup_panopto to be run first.',
+    description: 'Download all Panopto transcripts for a folder as VTT files. Optionally auto-ingests into Curriculum Intelligence. Requires video.setup_panopto to be run first.',
     inputSchema: {
       type: 'object' as const,
       required: ['folderId', 'outputPath'],
@@ -560,7 +560,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'enrich_panopto_transcripts',
     section: 'transcripts',
-    description: 'Generate enriched markdown from downloaded Panopto VTT files. Adds Week/Date headers, deep links every 5 minutes, strips filler words, applies vocab corrections, and highlights key statements as blockquotes. Requires bulk_fetch_panopto_transcripts to have been run first.',
+    description: 'Generate enriched markdown from downloaded Panopto VTT files. Adds Week/Date headers, deep links every 5 minutes, strips filler words, applies vocab corrections, and highlights key statements as blockquotes. Requires `ct_import` action `transcripts_panopto` to have been run first.',
     inputSchema: {
       type: 'object' as const,
       required: ['transcriptsPath'],
@@ -599,7 +599,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'compare_transcripts',
     section: 'transcripts',
-    description: 'Opt-in: transcribe Panopto lecture audio locally with Whisper and compare it against the Panopto VTT. Writes a .comparison.md per session ranking disagreements, and returns suggested vocab corrections for you to approve (nothing is written to panopto-vocab.json automatically). Needs audio — auto-fetched when available, otherwise follow the returned guided web-download instructions. Requires bulk_fetch_panopto_transcripts first.',
+    description: 'Opt-in: transcribe Panopto lecture audio locally with Whisper and compare it against the Panopto VTT. Writes a .comparison.md per session ranking disagreements, and returns suggested vocab corrections for you to approve (nothing is written to panopto-vocab.json automatically). Needs audio — auto-fetched when available, otherwise follow the returned guided web-download instructions. Requires `ct_import` action `transcripts_panopto` first.',
     inputSchema: {
       type: 'object' as const,
       required: ['transcriptsPath'],
@@ -689,7 +689,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'list_publish_snapshots',
     section: 'snapshots',
-    description: 'List all publish snapshots for a course in oldest-to-newest order, showing which is currently live in Canvas and which can be rolled back to / rolled forward to. Pipe the snapshotId from a row into rollback_course_publish to restore that version.',
+    description: 'List all publish snapshots for a course in oldest-to-newest order, showing which is currently live in Canvas and which can be rolled back to / rolled forward to. Pipe the snapshotId from a row into `ct_publish` action `rollback` to restore that version.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'courseDir'],
@@ -707,7 +707,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'prune_publish_snapshots',
     section: 'snapshots',
-    description: 'Apply retention policy to a course\'s publish snapshots. Removes snapshots older than the configured retention window AND beyond the configured retention count (defaults: keep 3 most-recent, keep anything ≤ 30 days old). Never removes the currently-live snapshot. When dryRun is true, lists what would be pruned without taking action. Auto-pruning also runs after every successful publish_course.',
+    description: 'Apply retention policy to a course\'s publish snapshots. Removes snapshots older than the configured retention window AND beyond the configured retention count (defaults: keep 3 most-recent, keep anything ≤ 30 days old). Never removes the currently-live snapshot. When dryRun is true, lists what would be pruned without taking action. Auto-pruning also runs after every successful `ct_publish` action `publish`.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'courseDir'],
@@ -724,7 +724,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'setup_lecture_answers',
     section: 'admin',
-    description: 'First-run configuration for the lecture answers bot. Auto-detects Ollama on localhost:11434. When Ollama is absent, returns guidance to either install Ollama or re-call with provider="transformers-js" (in-process; requires installing @xenova/transformers in command-and-control first) or provider="voyage" (cloud, requires voyageApiKey). The bot is opt-in — until this tool succeeds, ask_course and index_course_for_answers report NO_CONFIG.',
+    description: 'First-run configuration for the lecture answers bot. Auto-detects Ollama on localhost:11434. When Ollama is absent, returns guidance to either install Ollama or re-call with provider="transformers-js" (in-process; requires installing @xenova/transformers in command-and-control first) or provider="voyage" (cloud, requires voyageApiKey). The bot is opt-in — until this tool succeeds, `ct_ask` action `ask` and `ct_ask` action `index` report NO_CONFIG.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -784,7 +784,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'reembed_course_index',
     section: 'admin',
-    description: 'Switch embedding providers and rebuild the per-course index in one call. Convenience wrapper over setup_lecture_answers + index_course_for_answers --rebuild. Use when migrating from Ollama to Voyage (or vice versa), since vector dimensions are not interchangeable.',
+    description: 'Switch embedding providers and rebuild the per-course index in one call. Convenience wrapper over `ct_setup` action `lecture_answers` + `ct_ask` action `index` --rebuild. Use when migrating from Ollama to Voyage (or vice versa), since vector dimensions are not interchangeable.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'courseDir'],
@@ -820,7 +820,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'draft_student_rubric',
     section: 'design',
-    description: 'Take a faculty-facing rubric and use the Anthropic API to produce a student-facing rewrite plus worked examples per criterion. Writes a markdown file matching the CDS rubric page-type schema so generate_course can render it as a Canvas page + downloadable .md for students to paste into an LLM. Run setup_anthropic first if not configured.',
+    description: 'Take a faculty-facing rubric and use the Anthropic API to produce a student-facing rewrite plus worked examples per criterion. Writes a markdown file matching the CDS rubric page-type schema so `ct_build` action `course` can render it as a Canvas page + downloadable .md for students to paste into an LLM. Run `ct_setup` action `anthropic` first if not configured.',
     inputSchema: {
       type: 'object' as const,
       required: ['facultyRubricText', 'outputPath'],
@@ -844,7 +844,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'review_canvas_rubric',
     section: 'design',
-    description: 'Pull a rubric from Canvas (the assignment\'s attached rubric first; falls back to the course rubric list), detect whether it changed since your last student rewrite, and run a smart triage (acceptable / needs-update / needs-review) with specific flagged criteria. Read-only — writes nothing. When the verdict is needs-update it proposes a revised faculty rubric for your approval; feed the approved rubric to draft_student_rubric. Run setup_canvas and setup_anthropic first.',
+    description: 'Pull a rubric from Canvas (the assignment\'s attached rubric first; falls back to the course rubric list), detect whether it changed since your last student rewrite, and run a smart triage (acceptable / needs-update / needs-review) with specific flagged criteria. Read-only — writes nothing. When the verdict is needs-update it proposes a revised faculty rubric for your approval; feed the approved rubric to `ct_build` action `rubric`. Run `ct_setup` action `canvas` and `ct_setup` action `anthropic` first.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId'],
@@ -949,7 +949,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'brainstorm_interactive',
     section: 'research',
-    description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via setup_anthropic.',
+    description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via `ct_setup` action `anthropic`.',
     inputSchema: {
       type: 'object' as const,
       required: ['topic', 'learningGoal'],
@@ -1598,7 +1598,7 @@ export const CORE_OPERATIONS: Operation[] = [
       '[canvas-backup] Generate a Canvas Backup config from the Canvas connection already ' +
       'configured in Command and Control. Writes ~/.command-and-control/canvas-backup.generated.toml ' +
       '(token stays out of the file; passed via CANVAS_TOKEN at archive time). Run this once per ' +
-      'semester so download_canvas_archive can find base_url / archive root / year / semester.',
+      'semester so `ct_import` action `canvas_archive_download` can find base_url / archive root / year / semester.',
     inputSchema: {
       type: 'object',
       required: ['semester'],

@@ -45,4 +45,29 @@ describe('whole-surface invariants', () => {
   it('keeps core ids free of dots so module ids cannot collide', () => {
     for (const id of buildRegistry().keys()) expect(id).not.toContain('.');
   });
+
+  it('never points a description at another operation by a stale address', () => {
+    const reg = buildRegistry();
+    const byId = new Map([...reg.values()].map((o) => [o.id, o]));
+    const offenders: string[] = [];
+    for (const op of reg.values()) {
+      for (const [id, other] of byId) {
+        if (id === op.id) continue;
+        // A bare mention of another op id is only safe when both are advanced,
+        // because only then is that id a valid ct_advanced run target.
+        const bare = new RegExp(`\\b${id}\\b`);
+        if (bare.test(op.description) && !(op.exposure === 'advanced' && other.exposure === 'advanced')) {
+          offenders.push(`${op.id} -> ${id}`);
+        }
+      }
+    }
+    expect(offenders, offenders.join('; ')).toEqual([]);
+  });
+
+  it('never gives an intent operation the reserved action name "describe"', () => {
+    for (const op of buildRegistry().values()) {
+      if (op.exposure !== 'intent') continue;
+      expect(op.intentAction, `${op.id}`).not.toBe('describe');
+    }
+  });
 });
