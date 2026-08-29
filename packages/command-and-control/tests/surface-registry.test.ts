@@ -25,7 +25,7 @@ describe('operation registry', () => {
 
   // Subset, not equality: Task 2 registers zero internal operations, so an
   // equality assertion would fail here. Task 3 adds the exact-equality check
-  // once all 82 operations exist.
+  // once the full operation set exists.
   it('never marks an operation internal outside the allowlist', () => {
     const reg = buildRegistry();
     const internal = [...reg.values()].filter((o) => o.exposure === 'internal').map((o) => o.id);

@@ -29,10 +29,10 @@ describe('whole-surface invariants', () => {
     expect(a.isError).toBe(b.isError);
   });
 
-  it('keeps the exposure split at 50 / 31 / 1', () => {
+  it('keeps the exposure split at 54 / 31 / 1', () => {
     const c = { intent: 0, advanced: 0, internal: 0 };
     for (const op of buildRegistry().values()) c[op.exposure] += 1;
-    expect(c).toEqual({ intent: 50, advanced: 31, internal: 1 });
+    expect(c).toEqual({ intent: 54, advanced: 31, internal: 1 });
   });
 
   it('gives every operation an object inputSchema and a non-empty description', () => {

@@ -29,8 +29,11 @@ describe('registry coverage of the pre-migration surface', () => {
     expect(reg.has('list_canvas_modules')).toBe(true);
   });
 
-  it('registers 82 core operations', () => {
-    expect(buildRegistry().size).toBe(82);
+  // The fixture is a frozen historical record, never a live inventory: the
+  // registry may legitimately grow past it (PRs #164/#165 added four
+  // operations). Coverage of the 82 is the invariant; the total is not.
+  it('registers 86 core operations', () => {
+    expect(buildRegistry().size).toBe(86);
   });
 
   it('marks internal exactly the one pre-approved operation', () => {

@@ -5,6 +5,7 @@ import { getCcHomePath, loadConfig } from '../kb/config.js';
 import type { CcConfig, Mode, ProviderName } from '../types.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
 import { loadAnthropicConfig } from './setup_anthropic.js';
+import { loadSpotCheckPreference } from './shell_ready/spot_check_preference.js';
 
 const localRequire = createRequire(import.meta.url);
 
@@ -24,6 +25,12 @@ export interface GetCcStatusResult {
     canvasConfig: boolean;
     llmProvider: boolean;
     canvasBackupToml: boolean;
+  };
+  /** Presence-only weekly spot-check preference (shell readiness). */
+  spotCheck: {
+    configured: boolean;
+    enabled: boolean;
+    day: string | null;
   };
   routing: { fast: ProviderName; judgment: ProviderName };
   lastRun: CcConfig['lastRun'];
@@ -80,6 +87,7 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
 
   const ciInstalled = isPackageInstalled('@canvas-toolchain/curriculum-intelligence');
   const designStudioInstalled = isPackageInstalled('@canvas-toolchain/canvas-design-studio');
+  const spotPref = loadSpotCheckPreference();
 
   return {
     mode: config.mode,
@@ -100,6 +108,9 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
       llmProvider: configFilePresent('llm-provider.json'),
       canvasBackupToml: configFilePresent('canvas-backup.generated.toml'),
     },
+    spotCheck: spotPref
+      ? { configured: true, enabled: spotPref.weeklyCheckEnabled, day: spotPref.weeklyCheckDay }
+      : { configured: false, enabled: false, day: null },
     routing: config.routing,
     lastRun: config.lastRun,
   };

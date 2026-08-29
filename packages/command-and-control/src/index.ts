@@ -38,7 +38,7 @@ void checkForUpdates();
 void checkChannelNotices();
 
 // ── The operation registry ──────────────────────────────────────────────────
-// 82 core operations plus every enabled module's tools. Module operation ids are
+// 86 core operations plus every enabled module's tools. Module operation ids are
 // namespaced by the HOST as `<moduleId>.<toolName>`, so a module can never
 // collide with a core id.
 const registry = buildRegistry();
@@ -58,7 +58,7 @@ for (const [id, mod] of loadedModules.byId) {
 /**
  * Progress streaming. Two operations emit `notifications/progress`, but
  * `Operation.handler` takes args only. Widening that signature would touch all
- * 82 operations and every consumer of the type, so the two special cases stay
+ * 86 operations and every consumer of the type, so the two special cases stay
  * here in index.ts: their progress-aware handlers are overlaid onto a per-request
  * COPY of the registry (the shared registry is never mutated). Intent routing,
  * required-field validation, and the single catch boundary still run through

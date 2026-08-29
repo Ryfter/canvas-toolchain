@@ -37,6 +37,10 @@ import { reembedCourseIndex } from '../tools/workflows/reembed_course_index.js';
 import { snapshotCourse } from '../tools/workflows/snapshot_course.js';
 import { draftStudentRubric } from '../tools/workflows/draft_student_rubric.js';
 import { reviewCanvasRubric } from '../tools/workflows/review_canvas_rubric.js';
+import { checkShellReadiness } from '../tools/workflows/check_shell_readiness.js';
+import { setupSpotCheck } from '../tools/workflows/setup_spot_check.js';
+import { validateQuiz } from '../tools/workflows/validate_quiz.js';
+import { generateQuiz } from '../tools/workflows/generate_quiz.js';
 import { accessibilityReviewQueue } from '../tools/workflows/accessibility_review_queue.js';
 import { auditCourseAccessibility } from '../tools/workflows/audit_course_accessibility.js';
 import { reviewAccessibilityPolicy } from '../tools/review_accessibility_policy.js';
@@ -861,6 +865,136 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_review',
     intentAction: 'rubric',
+  },
+  {
+    id: 'check_shell_readiness',
+    section: 'admin',
+    description:
+      'Advisory spot-check of a LIVE Canvas course shell. Run anytime (manual). ' +
+      'Optional weekly cadence is opt-in via `ct_setup` action `spot_check` (recommends Saturday). ' +
+      'Weeks: infer Week N from module titles + termStartMonday; weekMapOverrides win. ' +
+      'Thorough = week beginning in ~2 weeks; lighter = ~1 week. Cross-checks due/unlock/lock. ' +
+      'Emits quizCallouts for `ct_review` action `quiz` (sibling; validate-first). Read-only. `ct_setup` action `canvas` required.',
+    inputSchema: {
+      type: 'object' as const,
+      required: ['courseId'],
+      properties: {
+        courseId: { type: 'string', description: 'Canvas course id.' },
+        asOfDate: { type: 'string', description: 'YYYY-MM-DD (default today). Manual anytime.' },
+        trigger: { type: 'string', enum: ['manual', 'weekly-suggested'] },
+        termStartMonday: { type: 'string', description: 'YYYY-MM-DD Week 1 Monday.' },
+        weekMapOverrides: { type: 'array', items: { type: 'object' } },
+        packs: { type: 'array', items: { type: 'string' } },
+        senseCheck: { type: 'string', enum: ['heuristics', 'llm'] },
+        confirm: { type: 'boolean' },
+        courseDir: { type: 'string' },
+        linkProbeBudget: { type: 'number' },
+        secondaryLinkProbeBudget: { type: 'number' },
+        moduleIds: { type: 'array', items: { type: 'number' } },
+        forceWeekRole: { type: 'string', enum: ['primary', 'secondary'] },
+      },
+    },
+    handler: (args) => checkShellReadiness(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_review',
+    intentAction: 'shell_readiness',
+  },
+  {
+    id: 'setup_spot_check',
+    section: 'admin',
+    description:
+      'Opt in/out of a weekly shell (+ quiz validate) spot-check reminder day. ' +
+      'Recommends Saturday. Persists weeklyCheckEnabled + weeklyCheckDay under ' +
+      '~/.command-and-control/spot-check.json (no secrets). Manual `ct_review` action `shell_readiness` always works. ' +
+      'Does not install OS cron (fast-follow).',
+    inputSchema: {
+      type: 'object' as const,
+      required: ['enabled'],
+      properties: {
+        enabled: { type: 'boolean' },
+        day: {
+          type: 'string',
+          enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+          description: 'Default saturday when enabling.',
+        },
+      },
+    },
+    handler: (args) => setupSpotCheck(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'spot_check',
+  },
+  {
+    id: 'validate_quiz',
+    section: 'admin',
+    description:
+      'Advisory live-Canvas quiz quality check (Classic Quizzes questions API): missing keys, empty stems, duplicate stems, points mismatch, week-map date mismatches, optional LLM triage for ambiguous keys / weak distractors. Pass courseId+quizId for spot-check (source of truth = Canvas). Optional local quizPath/quizMarkdown is authoring pre-check only. Manual anytime — does not require weeklyCheckEnabled. Usable from shell readiness call-out for primary/secondary weeks. Run `ct_setup` action `canvas` first for live mode. Does not write to Canvas or gate publish.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        courseId: { type: 'string', description: 'Canvas course id (with quizId for live validate).' },
+        quizId: { type: 'string', description: 'Canvas quiz id.' },
+        quizPath: { type: 'string', description: 'Local draft markdown path (authoring pre-check; xor with quizMarkdown).' },
+        quizMarkdown: { type: 'string', description: 'Local draft markdown body (authoring pre-check).' },
+        asOfDate: { type: 'string', description: 'YYYY-MM-DD reference date for reporting.' },
+        weekNumber: { type: 'number', description: 'Professor week map index being checked.' },
+        weekStartMonday: { type: 'string', description: 'YYYY-MM-DD Monday of the week window for WEEK_MAP_MISMATCH.' },
+        weekProvenance: { type: 'string', enum: ['inferred', 'override'], description: 'How the week was established.' },
+        horizonPass: { type: 'string', enum: ['primary', 'secondary'], description: 'primary=thorough (+LLM); secondary=lighter.' },
+        llmTriage: { type: 'boolean', description: 'Force LLM triage on/off. Default: on for primary when LLM configured.' },
+        topicHints: { type: 'array', items: { type: 'string' }, description: 'Optional coverage hints for triage.' },
+      },
+    },
+    handler: (args) => validateQuiz(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_review',
+    intentAction: 'quiz',
+  },
+  {
+    id: 'generate_quiz',
+    section: 'design',
+    description:
+      'Author a local quiz draft markdown from course materials (books/slides/lectures) with difficulty-mix knobs. Writes under week-NN/quizzes/ (temp+rename). Manual anytime — not required for the weekly shell spot-check (use `ct_review` action `quiz` for live Canvas). Requires an active LLM (`ct_setup` action `anthropic` or Ollama). Does not publish to Canvas Quizzes.',
+    inputSchema: {
+      type: 'object' as const,
+      required: ['courseDir', 'week', 'sources'],
+      properties: {
+        courseDir: { type: 'string', description: 'CDS course folder absolute path.' },
+        week: { type: 'number', description: 'Week number for output path and front matter.' },
+        sources: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Paths to materials (absolute or courseDir-relative).',
+        },
+        title: { type: 'string' },
+        pageType: { type: 'string', enum: ['weekly-quiz', 'reading-quiz'] },
+        difficultyMix: {
+          type: 'object',
+          properties: {
+            easy: { type: 'number' },
+            medium: { type: 'number' },
+            hard: { type: 'number' },
+          },
+          description: 'Must sum to ~1.0 (default 0.4/0.4/0.2).',
+        },
+        questionCount: { type: 'number', description: 'Default 10, max 25.' },
+        types: {
+          type: 'array',
+          items: { type: 'string', enum: ['multiple_choice', 'true_false'] },
+        },
+        outputPath: { type: 'string' },
+        overwrite: { type: 'boolean', description: 'Default false.' },
+        bloomHint: { type: 'string' },
+      },
+    },
+    handler: (args) => generateQuiz(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_build',
+    intentAction: 'quiz',
   },
   {
     id: 'accessibility_review_queue',
