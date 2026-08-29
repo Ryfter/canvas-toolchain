@@ -26,4 +26,20 @@ describe('dispatch', () => {
     expect(res.isError).toBe(true);
     expect(res.content[0].text).toContain('kaboom');
   });
+
+  // Added on controller instruction beyond the brief's 3-test scope: the
+  // catch boundary in dispatchSurface protects both the intent path (above)
+  // and the advanced path (here) — a mechanism-level guarantee should have
+  // a committed regression test on each path it protects.
+  it('surfaces a handler throw via ct_advanced as a tool error rather than propagating', async () => {
+    const reg = buildRegistry();
+    reg.set('boom-adv', {
+      id: 'boom-adv', section: 'admin', description: 'x', inputSchema: { type: 'object' },
+      handler: () => { throw new Error('kaboom-adv'); },
+      taskCategory: 'none', exposure: 'advanced',
+    });
+    const res = await dispatchSurface(reg, 'ct_advanced', { action: 'run', operation: 'boom-adv', params: {} });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain('kaboom-adv');
+  });
 });
