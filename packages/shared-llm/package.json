@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/shared-llm",
   "license": "MIT",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Shared Anthropic LLM client extracted from C&C tools/rubric and tools/brainstorm",
   "type": "module",
   "main": "dist/index.js",

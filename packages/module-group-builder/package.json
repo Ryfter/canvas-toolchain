@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/module-group-builder",
   "license": "MIT",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Group Creator/Maintainer module for canvas-toolchain",
   "type": "module",
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@canvas-toolchain/module-contract": "2.2.1",
+    "@canvas-toolchain/module-contract": "2.3.0",
     "@modelcontextprotocol/sdk": "^1.10.0"
   },
   "devDependencies": {

@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@canvas-toolchain/module-contract": "2.2.1",
+    "@canvas-toolchain/module-contract": "2.3.0",
     "@modelcontextprotocol/sdk": "^1.10.0"
   },
   "devDependencies": {
