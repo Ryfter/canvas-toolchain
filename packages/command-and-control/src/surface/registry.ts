@@ -209,7 +209,7 @@ export const CORE_OPERATIONS: Operation[] = [
     section: 'design',
     description:
       "Renders a specific Canvas capability pattern to a standalone HTML file " +
-      "that can be opened in any browser. Use this after browsing the pattern catalog via `ct_advanced` " +
+      "that can be opened in any browser. Use this after `ct_advanced` run `show_canvas_capabilities` " +
       "to actually see a pattern in action.",
     inputSchema: {
       type: 'object' as const,
@@ -539,7 +539,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'bulk_fetch_panopto_transcripts',
     section: 'transcripts',
-    description: 'Download all Panopto transcripts for a folder as VTT files. Optionally auto-ingests into Curriculum Intelligence. Requires video.setup_panopto to be run first.',
+    description: 'Download all Panopto transcripts for a folder as VTT files. Optionally auto-ingests into Curriculum Intelligence. Requires `video.setup_panopto` to be run first.',
     inputSchema: {
       type: 'object' as const,
       required: ['folderId', 'outputPath'],

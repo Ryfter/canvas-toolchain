@@ -53,10 +53,12 @@ describe('whole-surface invariants', () => {
     for (const op of reg.values()) {
       for (const [id, other] of byId) {
         if (id === op.id) continue;
-        // A bare mention of another op id is only safe when both are advanced,
-        // because only then is that id a valid ct_advanced run target.
+        // A bare mention of another op id is only safe when the target is
+        // advanced, because only then is that id a valid ct_advanced run
+        // target — `ct_advanced` run `<id>` is resolvable from anywhere, so
+        // the citing operation's own exposure has no bearing on this.
         const bare = new RegExp(`\\b${id}\\b`);
-        if (bare.test(op.description) && !(op.exposure === 'advanced' && other.exposure === 'advanced')) {
+        if (bare.test(op.description) && other.exposure !== 'advanced') {
           offenders.push(`${op.id} -> ${id}`);
         }
       }
