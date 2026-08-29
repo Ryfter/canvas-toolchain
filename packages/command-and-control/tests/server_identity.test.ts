@@ -13,6 +13,17 @@ describe('server identity', () => {
     expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
+  // `canvas-toolchain` is the name every professor's mcp.json keys on, so a rename
+  // to the package or directory name would silently break every existing client
+  // config. `server` is not exported and `serverInfo` has no accessor, so the source
+  // literal is the only cheap hook — tests/server_boot.test.ts asserts the same name
+  // for real, off a live stdio handshake.
+  it('registers as canvas-toolchain, not as the package or directory name', () => {
+    const src = readFileSync(join(pkgDir, 'src', 'index.ts'), 'utf8');
+    expect(src).toContain("name: 'canvas-toolchain'");
+    expect(src).not.toContain("name: 'command-and-control'");
+  });
+
   it('exposes exactly the ten-tool surface', () => {
     const names = listTools(buildRegistry()).map((t) => t.name);
     expect(names).toHaveLength(10);
