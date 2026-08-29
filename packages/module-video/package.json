@@ -1,7 +1,7 @@
 {
   "name": "@canvas-toolchain/module-video",
   "license": "MIT",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Lecture Video module for canvas-toolchain (Panopto provider)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@canvas-toolchain/curriculum-intelligence": "2.2.1",
-    "@canvas-toolchain/module-contract": "2.2.1",
+    "@canvas-toolchain/curriculum-intelligence": "2.3.0",
+    "@canvas-toolchain/module-contract": "2.3.0",
     "@modelcontextprotocol/sdk": "^1.10.0"
   },
   "devDependencies": {
