@@ -75,6 +75,40 @@ export function deterministicFindings(input: ValidateQuizItemsInput): QuizFindin
     });
   }
 
+  // Inverse of NEW_QUIZZES_LIMITED: Classic-only advisory about Canvas auto-migration.
+  if (live && !live.newQuizzesLimited) {
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i]!;
+      const qid = it.id ?? String(i + 1);
+      if (it.type === 'multiple_dropdowns_question') {
+        findings.push({
+          code: 'MIGRATION_RISK',
+          severity: 'warning',
+          questionId: qid,
+          message: `Question ${qid} is Multiple Dropdowns. After Canvas migrates this quiz to New Quizzes, it will display as Fill in the Blank.`,
+          fixHint: 'Rebuild this question as Fill in the Blank before migrating.',
+        });
+      }
+      if (it.type === 'fill_in_multiple_blanks_question') {
+        findings.push({
+          code: 'MIGRATION_RISK',
+          severity: 'warning',
+          questionId: qid,
+          message: `Question ${qid} is Fill in Multiple Blanks. Third-party reports (not Instructure's official guide) say this becomes Fill in the Blank after migration — less certain than Multiple Dropdowns.`,
+          fixHint: 'Rebuild this question as Fill in the Blank before migrating if you need to keep control of the wording.',
+        });
+      }
+    }
+    if ((meta?.quizType ?? '').toLowerCase() === 'practice_quiz') {
+      findings.push({
+        code: 'MIGRATION_RISK',
+        severity: 'warning',
+        message: 'This is a practice quiz. After migration to New Quizzes it becomes zero points possible and is hidden from the Gradebook and Grades page.',
+        fixHint: 'If students need to see scores in Grades, change it to a graded quiz before migrating.',
+      });
+    }
+  }
+
   if (live && !live.itemsAvailable) {
     findings.push({
       code: 'ITEMS_UNAVAILABLE',
