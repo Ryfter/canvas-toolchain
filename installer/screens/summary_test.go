@@ -30,6 +30,46 @@ func TestBuildSnippet_ReflectsInstallDir(t *testing.T) {
 	}
 }
 
+// The manual snippet must point at the same bundled Node the install tasks use,
+// on every platform. Hardcoding .node/bin/node sent Windows users a path that
+// does not exist — the runtime unpacks node.exe directly under .node. Marshal
+// is required, not cosmetic: a Windows path holds backslashes, which must be
+// JSON-escaped or the pasted config is malformed.
+func TestBuildSnippet_UsesTheBundledNodePerGOOS(t *testing.T) {
+	cases := []struct{ goos, installDir string }{
+		{"windows", `C:\Users\prof\canvas-toolchain`},
+		{"darwin", "/Users/prof/canvas-toolchain"},
+		{"linux", "/opt/canvas-toolchain"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.goos, func(t *testing.T) {
+			st := NewState("2.3.0")
+			st.InstallDir = tc.installDir
+
+			snippet := buildSnippetForGOOS(st, tc.goos)
+			var doc struct {
+				McpServers map[string]struct {
+					Command string   `json:"command"`
+					Args    []string `json:"args"`
+				} `json:"mcpServers"`
+			}
+			if err := json.Unmarshal([]byte(snippet), &doc); err != nil {
+				t.Fatalf("snippet is not valid JSON: %v\n%s", err, snippet)
+			}
+			entry, ok := doc.McpServers["canvas-toolchain"]
+			if !ok {
+				t.Fatalf("snippet is missing the canvas-toolchain server: %s", snippet)
+			}
+			if want := tasks.NodeBinaryPath(tc.installDir, tc.goos); entry.Command != want {
+				t.Errorf("command = %q, want the bundled Node %q", entry.Command, want)
+			}
+			if len(entry.Args) != 1 || !strings.Contains(entry.Args[0], "command-and-control/dist/index.js") {
+				t.Errorf("unexpected args: %#v", entry.Args)
+			}
+		})
+	}
+}
+
 func TestNewSummaryScreen_RendersWithoutPanic(t *testing.T) {
 	a := test.NewApp()
 	defer a.Quit()

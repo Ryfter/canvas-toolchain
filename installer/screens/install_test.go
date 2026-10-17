@@ -2,6 +2,7 @@ package screens
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -281,6 +282,80 @@ func TestInstallSteps_WriteNoCredentialFiles(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(ccHome, name)); !os.IsNotExist(err) {
 			t.Errorf("the install wrote %s; credentials belong to the first chat", name)
 		}
+	}
+}
+
+// An update skips the workflows screen, so the installer has no workflow answer
+// to record — st.WorkflowPanopto is left at its zero value. Writing that would
+// disable the video module (and drop activeProvider) on every upgrade, so the
+// manifest step must not run on an update. The file has to survive byte for
+// byte: this is a professor's own configuration.
+func TestInstallSteps_UpdateLeavesModulesManifestUntouched(t *testing.T) {
+	_, ccHome, _ := fakeUserHome(t)
+
+	const seed = `{
+  "modules": {
+    "video": { "enabled": true, "activeProvider": "panopto" },
+    "announcements": { "enabled": true }
+  }
+}`
+	path := filepath.Join(ccHome, "modules.json")
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	st := NewState("2.3.0")
+	st.InstallDir = t.TempDir()
+	st.Mode = ModeUpdate
+	steps := payloadFreeSteps(t, buildSteps(st, func(string) {}))
+	(&tasks.Runner{Steps: steps}).Run(context.Background())
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("the update deleted modules.json: %v", err)
+	}
+	if string(got) != seed {
+		t.Errorf("the update rewrote modules.json:\nbefore: %s\nafter:  %s", seed, got)
+	}
+
+	var doc map[string]any
+	if err := json.Unmarshal(got, &doc); err != nil {
+		t.Fatalf("modules.json is not valid JSON after the update: %v", err)
+	}
+	modules, _ := doc["modules"].(map[string]any)
+	video, _ := modules["video"].(map[string]any)
+	if video == nil {
+		t.Fatalf("the video entry was lost: %#v", doc)
+	}
+	if video["enabled"] != true || video["activeProvider"] != "panopto" {
+		t.Errorf("the update changed the video entry: %#v", video)
+	}
+}
+
+// The counter-case to the update guard: a fresh install does have a workflow
+// answer, so the choice must still reach modules.json.
+func TestInstallSteps_FreshInstallRecordsPanoptoChoice(t *testing.T) {
+	_, ccHome, _ := fakeUserHome(t)
+
+	st := NewState("2.3.0")
+	st.InstallDir = t.TempDir()
+	st.Mode = ModeFresh
+	st.WorkflowPanopto = true
+	steps := payloadFreeSteps(t, buildSteps(st, func(string) {}))
+	(&tasks.Runner{Steps: steps}).Run(context.Background())
+
+	raw, err := os.ReadFile(filepath.Join(ccHome, "modules.json"))
+	if err != nil {
+		t.Fatalf("the fresh install did not write modules.json: %v", err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("modules.json is not valid JSON: %v", err)
+	}
+	modules, _ := doc["modules"].(map[string]any)
+	video, _ := modules["video"].(map[string]any)
+	if video == nil || video["enabled"] != true || video["activeProvider"] != "panopto" {
+		t.Errorf("the Panopto workflow choice was not recorded: %#v", doc)
 	}
 }
 

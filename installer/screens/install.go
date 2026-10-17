@@ -181,7 +181,11 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 		{Name: "Install runtime dependencies", Run: func(ctx context.Context) error {
 			return tasks.RunNPM(ctx, np, st.InstallDir, []string{"ci", "--omit=dev"}, logFn)
 		}},
-		{Name: "Write module manifest", Warn: true, Run: func(ctx context.Context) error {
+		// An update skips the workflows screen, so st.WorkflowPanopto is at its
+		// zero value here — writing it would disable the professor's video
+		// module and drop activeProvider on every upgrade. Only a fresh install
+		// (an explicit workflow choice) may change this entry.
+		{Name: "Write module manifest", Warn: true, Skip: func() bool { return st.Mode == ModeUpdate }, Run: func(ctx context.Context) error {
 			return tasks.WriteModulesManifest(tasks.CcHomePath(), st.WorkflowPanopto)
 		}},
 		{Name: "Record requested modules", Warn: true, Run: func(ctx context.Context) error {

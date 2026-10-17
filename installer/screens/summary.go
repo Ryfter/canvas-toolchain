@@ -1,6 +1,7 @@
 package screens
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 
@@ -180,18 +181,33 @@ func checkRow(check tasks.DoctorCheck) fyne.CanvasObject {
 }
 
 func buildSnippet(st *State) string {
-	suffix := ""
-	if runtime.GOOS == "windows" {
-		suffix = ".exe"
+	return buildSnippetForGOOS(st, runtime.GOOS)
+}
+
+// buildSnippetForGOOS is the copy-paste config for MCP hosts the installer does
+// not auto-wire. The command is the bundled Node the install tasks use, so the
+// path is right on every platform — Windows keeps node.exe directly under
+// <InstallDir>/.node, not .node/bin. Marshal rather than template: a Windows
+// path holds backslashes, which must be JSON-escaped to stay copy-pasteable.
+func buildSnippetForGOOS(st *State, goos string) string {
+	config := map[string]any{
+		"mcpServers": map[string]any{
+			"canvas-toolchain": mcpSnippetEntry{
+				Command: tasks.NodeBinaryPath(st.InstallDir, goos),
+				Args:    []string{st.InstallDir + "/packages/command-and-control/dist/index.js"},
+			},
+		},
 	}
-	return fmt.Sprintf(`{
-  "mcpServers": {
-    "canvas-toolchain": {
-      "command": "%s/.node/bin/node%s",
-      "args": ["%s/packages/command-and-control/dist/index.js"]
-    }
-  }
-}`, st.InstallDir, suffix, st.InstallDir)
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+type mcpSnippetEntry struct {
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
 }
 
 var launchClaudeDesktop = func() error { return nil }
