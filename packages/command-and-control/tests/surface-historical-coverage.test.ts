@@ -32,10 +32,10 @@ describe('registry coverage of the pre-migration surface', () => {
   // The fixture is a frozen historical record, never a live inventory: the
   // registry may legitimately grow past it (PRs #164/#165 added four
   // operations, R6a added setup_lmstudio, R6b added setup_llm_provider,
-  // #151 R3 added get_started). Coverage of the 82 is the invariant; the total
-  // is not.
-  it('registers 90 core operations', () => {
-    expect(buildRegistry().size).toBe(90);
+  // #151 R3 added get_started, R8b added apply_setup). Coverage of the 82 is
+  // the invariant; the total is not.
+  it('registers 91 core operations', () => {
+    expect(buildRegistry().size).toBe(91);
   });
 
   it('marks internal exactly the one pre-approved operation', () => {

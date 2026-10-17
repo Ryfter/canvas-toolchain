@@ -2,14 +2,14 @@
 id: "ct_setup"
 kind: "intent"
 description: "Configure credentials, providers, and paths. Run first."
-ops: 15
+ops: 16
 related: [admin]
 ---
 # ct_setup (intent tool)
 
 Configure credentials, providers, and paths. Run first.
 
-## Operations (15)
+## Operations (16)
 
 - [[setup_cc]] — Configure Command & Control: set mode (easy/advanced), Anthropic model, Ollama base URL and model, and routing preferences. Run this first.
 - [[setup_anthropic]] — Configure the Anthropic API key used by all AI tools. Validates it against the Anthropic API before saving, then stores it locally with 0o600 permissions.
@@ -26,6 +26,7 @@ Configure credentials, providers, and paths. Run first.
 - [[setup_spot_check]] — Opt in/out of a weekly shell + quiz spot-check reminder day (recommends Saturday). Persists the setting only; no OS cron installed. Manual ct_review shell_readiness always works.
 - [[setup_course]] — Register a new course in Curriculum Intelligence. Creates a course folder on disk and records its location in the app config so other tools can find it by id alone.
 - [[setup_canvas_backup]] — [canvas-backup] Generate the Canvas Backup config from your Canvas connection. Writes the toml without the token (passed via CANVAS_TOKEN). Run once per semester so canvas_archive_download works.
+- [[apply_setup]] — Run several setup steps from one patch (courses root, Canvas, LLM provider, activation, transcripts, embeddings, spot check, backup), continuing past a failed step, then report the doctor.
 
 ## Concepts (1)
 

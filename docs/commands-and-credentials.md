@@ -62,6 +62,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `show_canvas_capabilities` | *category*, *supportStatus* | Return the Canvas design-pattern catalog as markdown. |
 | `preview_canvas_pattern` | **patternId** | Render one pattern to a standalone HTML preview (file:// URL). |
 | `get_started` | *journey* (local-authoring/canvas-connected/ai-assisted/full) | First-run orientation (`ct_setup` action `get_started`): which capabilities are ready and the exact call to finish each step. Read-only, no network. **Different tool** from Design Studio's standalone `get_started` (§2.11). |
+| `apply_setup` | *coursesRoot*, *canvas* (**host**, **token**, *test*), *anthropic* (**apiKey**, *model*, *test*), *ollama* (*baseUrl*, **model**), *lmstudio* (*baseUrl*, **model**), *llmProvider*, *transcripts*, *lectureAnswers*, *spotCheck*, *backup*, *dryRun* | One-call setup (`ct_setup` action `apply`): every present section delegates to the action that owns that write, in a fixed safe order — courses root, Canvas, the LLM provider configs, provider activation, then the rest. A failing section is reported and skipped, not fatal; each result is `{ok, code, message, fix}` (never a token or key), and the call ends with the doctor's readiness plus the remaining warn/fail checks. `dryRun: true` validates and writes nothing. |
 
 ### 2.2 Command & Control — plug-in modules & institution discovery
 

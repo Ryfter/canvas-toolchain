@@ -481,6 +481,20 @@ function renderCall(call: SetupCall): string {
     : `${call.tool} action ${call.action} ${args}`;
 }
 
+/**
+ * The one-call alternative to a list of steps (#151 R8b): when the guide asks
+ * for more than one call, `ct_setup` action `apply` takes several of these
+ * sections at once. It stays a note rather than a step — the per-step calls are
+ * still the precise path, and a batch patch needs every value at the same time.
+ */
+function applyHint(steps: SetupStep[]): string | null {
+  if (steps.length < 2) return null;
+  return (
+    'Faster: ct_setup action apply takes several of these sections in one call ' +
+    '(ask ct_setup action describe for { of: "apply" }).'
+  );
+}
+
 function renderText(guide: Omit<GetStartedGuide, 'text'>): string {
   const lines: string[] = [guide.greeting, ''];
   const ready = guide.capabilities.filter((c) => c.ready).map((c) => c.label);
@@ -504,6 +518,9 @@ function renderText(guide: Omit<GetStartedGuide, 'text'>): string {
       lines.push(`   or: ${renderCall(alternative)}`);
     }
   });
+
+  const hint = applyHint(guide.steps);
+  if (hint) lines.push('', hint);
 
   return lines.join('\n');
 }

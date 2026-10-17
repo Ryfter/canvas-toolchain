@@ -348,6 +348,24 @@ describe('getStarted renders calls its own dispatcher accepts', () => {
     });
     expect(result.isError).toBeFalsy();
   });
+
+  it('points at the one-call apply action when more than one step is left', async () => {
+    const guide = await getStarted();
+
+    expect(guide.steps.length).toBeGreaterThan(1);
+    expect(guide.text).toContain('ct_setup action apply');
+
+    // One remaining step is already a single call, so the note would be noise.
+    const coursesRoot = join(ccHome, 'courses');
+    mkdirSync(coursesRoot, { recursive: true });
+    seed('config.json', { coursesRoot });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
+    seed('llm-provider.json', { provider: 'ollama' });
+
+    const one = await getStarted();
+    expect(one.steps.map((s) => s.id)).toEqual(['canvas']);
+    expect(one.text).not.toContain('ct_setup action apply');
+  });
 });
 
 describe('getStarted on a fully configured home', () => {

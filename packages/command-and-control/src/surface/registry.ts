@@ -1,5 +1,5 @@
 import type { Operation } from './operation.js';
-import type { PassthroughTool } from '../passthrough/ci_tools.js';
+import { passthroughHandler, type PassthroughTool } from '../passthrough/ci_tools.js';
 import { setupCc } from '../tools/setup_cc.js';
 import { setupAnthropic } from '../tools/setup_anthropic.js';
 import { setupCanvas } from '../tools/setup_canvas.js';
@@ -21,6 +21,7 @@ import { openDashboard } from '../tools/open_dashboard.js';
 import { getCcStatus } from '../tools/get_cc_status.js';
 import { runDoctor } from '../setup/doctor.js';
 import { getStarted } from '../setup/get_started.js';
+import { buildApplySetupOperation } from '../setup/apply.js';
 import { analyzeCourse } from '../tools/workflows/analyze_course.js';
 import { planNextSemester } from '../tools/workflows/plan_next_semester.js';
 import { updateCourseMaterials } from '../tools/workflows/update_course_materials.js';
@@ -86,20 +87,9 @@ import { importCourse } from '@canvas-toolchain/canvas-design-studio/dist/tools/
 import { DESIGN_TOOLS } from '../passthrough/design_tools.js';
 
 /**
- * Reuse a pass-through tool's existing handler by reference. Used for the few
- * pass-through handlers that are more than a bare delegation, so their logic is
- * never copied or reimplemented here.
- */
-function passthroughHandler(tools: PassthroughTool[], name: string): PassthroughTool['handler'] {
-  const tool = tools.find((t) => t.name === name);
-  if (!tool) throw new Error(`pass-through tool not found: ${name}`);
-  return tool.handler;
-}
-
-/**
- * Every core operation the server can perform, with the exposure that decides
- * whether it surfaces as an intent-tool action, in the `ct_advanced` sidecar, or
- * only as a step inside another operation.
+ * Every hand-written core operation, with the exposure that decides whether it
+ * surfaces as an intent-tool action, in the `ct_advanced` sidecar, or only as a
+ * step inside another operation.
  *
  * Descriptions and input schemas are copied verbatim from the tool definitions in
  * `src/index.ts` and `src/passthrough/*.ts`; handlers re-address the existing
@@ -107,7 +97,7 @@ function passthroughHandler(tools: PassthroughTool[], name: string): Passthrough
  * disposition table in
  * `docs/superpowers/specs/2026-08-26-mcp-tool-consolidation-design.md`.
  */
-export const CORE_OPERATIONS: Operation[] = [
+const BASE_OPERATIONS: Operation[] = [
   // ── Core: inline tools (src/index.ts) ──────────────────────────────────
   {
     id: 'setup_cc',
@@ -1907,6 +1897,17 @@ export const CORE_OPERATIONS: Operation[] = [
     intentTool: 'ct_build',
     intentAction: 'course',
   },
+];
+
+/**
+ * Every core operation the server can perform. `apply_setup` is appended from
+ * the operations above rather than written by hand: its section arguments ARE
+ * theirs, and `buildApplySetupOperation` refuses to build if that stops being
+ * true (#151 R8b).
+ */
+export const CORE_OPERATIONS: Operation[] = [
+  ...BASE_OPERATIONS,
+  buildApplySetupOperation(BASE_OPERATIONS),
 ];
 
 export function buildRegistry(): Map<string, Operation> {

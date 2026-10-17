@@ -2,14 +2,14 @@
 id: "admin"
 kind: "section"
 description: "Institution profile, dashboard, feedback, defaults."
-ops: 38
+ops: 39
 related: [ct_setup, ct_import, ct_inspect, ct_analyze, ct_plan, ct_build, ct_review, ct_ask, ct_advanced]
 ---
 # admin section
 
 Institution profile, dashboard, feedback, defaults.
 
-## Operations (38)
+## Operations (39)
 
 - [[setup_cc]] — Configure Command & Control: set mode (easy/advanced), Anthropic model, Ollama base URL and model, and routing preferences. Run this first.
 - [[setup_anthropic]] — Configure the Anthropic API key used by all AI tools. Validates it against the Anthropic API before saving, then stores it locally with 0o600 permissions.
@@ -49,6 +49,7 @@ Institution profile, dashboard, feedback, defaults.
 - [[export_course_folder]] — Strip CI fields and write CDS course/ format; one folder per section.
 - [[setup_canvas_backup]] — [canvas-backup] Generate the Canvas Backup config from your Canvas connection. Writes the toml without the token (passed via CANVAS_TOKEN). Run once per semester so canvas_archive_download works.
 - [[download_canvas_archive]] — [canvas-backup] Archive a Canvas course shell locally by invoking the Canvas Backup CLI.
+- [[apply_setup]] — Run several setup steps from one patch (courses root, Canvas, LLM provider, activation, transcripts, embeddings, spot check, backup), continuing past a failed step, then report the doctor.
 
 ## Concepts (4)
 
