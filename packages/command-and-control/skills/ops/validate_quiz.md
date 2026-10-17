@@ -1,6 +1,6 @@
 ---
 id: "validate_quiz"
-description: "Advisory quiz check (Classic Quizzes): missing keys, empty/dup stems, points mismatch, week-map dates, optional LLM triage. Live via courseId+quizId, else local pre-check. Read-only; needs Canvas."
+description: "Advisory quiz check (Classic Quizzes): missing keys, empty/dup stems, points mismatch, week-map dates, optional LLM triage. Live via courseId+quizId (Canvas) or local quizPath/quizMarkdown. Read-only."
 section: "admin"
 intent_tool: "ct_review"
 intent_action: "quiz"

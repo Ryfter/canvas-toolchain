@@ -1,6 +1,6 @@
 ---
 id: "review_canvas_rubric"
-description: "Pull a Canvas rubric (attached, else course list), diff since last rewrite, triage acceptable/needs-update/needs-review. Read-only; needs-update proposes a revised rubric. Needs Canvas+Anthropic."
+description: "Pull a Canvas rubric (attached, else course list), diff since last rewrite, triage acceptable/needs-update/needs-review. Read-only; needs-update proposes a rubric for ct_build rubric. Needs Canvas+AI."
 section: "design"
 intent_tool: "ct_review"
 intent_action: "rubric"

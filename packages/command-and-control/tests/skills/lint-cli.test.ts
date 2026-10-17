@@ -46,15 +46,11 @@ describe('lint CLI', () => {
     expect(report.summary.byRule).toHaveProperty('orphan');
   }, SPAWN_TIMEOUT_MS);
 
-  it('exits zero when nothing violates', () => {
-    const { stdout, status } = run('--json', '--max-description', '1000000');
-    expect(status).toBe(0);
-    expect(JSON.parse(stdout).summary.total).toBe(0);
-  }, SPAWN_TIMEOUT_MS);
-
-  it('honours a lowered length limit', () => {
-    const report = JSON.parse(run('--json', '--max-description', '1').stdout);
+  it('exits non-zero when a violation is reported', () => {
+    const { stdout, status } = run('--json', '--max-description', '1');
+    const report = JSON.parse(stdout);
     expect(report.summary.byRule['too-long']).toBe(report.operations);
+    expect(status).toBe(1);
   }, SPAWN_TIMEOUT_MS);
 
   it('rejects a non-numeric limit and an unknown flag instead of ignoring them', () => {

@@ -1,6 +1,6 @@
 ---
 id: "check_shell_readiness"
-description: "Spot-check a LIVE Canvas shell: infer Week N from module titles + termStartMonday (overrides win), cross-check due/unlock/lock, emit quiz callouts for ct_review quiz. Read-only; needs canvas setup."
+description: "LIVE Canvas shell check: Week N from module titles+termStartMonday (overrides win); ~2w thorough, ~1w lighter; cross-check due/unlock/lock; ct_review quiz callouts. Anytime. Read-only; needs Canvas."
 section: "admin"
 intent_tool: "ct_review"
 intent_action: "shell_readiness"

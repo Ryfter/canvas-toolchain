@@ -1,6 +1,6 @@
 ---
 id: "compare_transcripts"
-description: "Opt-in: Whisper-transcribe lecture audio, diff it against the Panopto VTT. Writes .comparison.md per session; returns vocab corrections for approval (none auto-written). Needs audio, prior fetch."
+description: "Opt-in: local Whisper-transcribe audio, diff vs Panopto VTT. Writes .comparison.md per session; returns vocab fixes for approval (none auto-written). Needs audio + prior transcripts_panopto run."
 section: "transcripts"
 intent_tool: ""
 intent_action: ""

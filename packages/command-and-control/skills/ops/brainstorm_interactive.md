@@ -1,6 +1,6 @@
 ---
 id: "brainstorm_interactive"
-description: "Propose interactive Canvas widget concepts for a topic + learning goal: 2-3 specs (kind, purpose, content schema, sample data, accessibility notes) with rationale. Returns SPECS only. Needs an LLM."
+description: "Propose interactive Canvas widget concepts for a topic + learning goal: 2-3 specs (kind, purpose, content schema, sample data, accessibility notes) with rationale. Returns SPECS only. Needs Anthropic."
 section: "research"
 intent_tool: ""
 intent_action: ""

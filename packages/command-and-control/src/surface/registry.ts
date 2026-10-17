@@ -189,7 +189,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'show_canvas_capabilities',
     section: 'design',
     description:
-      "Return the catalog of Canvas-safe design patterns, filterable by category (layout, information, interactive, pedagogical, branded) or supportStatus. Discover here, then preview_pattern to render one.",
+      "Canvas-safe pattern catalog: filter by category (layout, information, interactive, pedagogical, branded) or supportStatus (supported/partial/aspirational). Then ct_build preview_pattern renders one.",
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -596,7 +596,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'compare_transcripts',
     section: 'transcripts',
-    description: 'Opt-in: Whisper-transcribe lecture audio, diff it against the Panopto VTT. Writes .comparison.md per session; returns vocab corrections for approval (none auto-written). Needs audio, prior fetch.',
+    description: 'Opt-in: local Whisper-transcribe audio, diff vs Panopto VTT. Writes .comparison.md per session; returns vocab fixes for approval (none auto-written). Needs audio + prior transcripts_panopto run.',
     inputSchema: {
       type: 'object' as const,
       required: ['transcriptsPath'],
@@ -721,7 +721,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'setup_lecture_answers',
     section: 'admin',
-    description: 'First-run setup for the lecture answers bot: auto-detects Ollama on localhost:11434, else install it or pick transformers-js/voyage (voyage needs a key). Until then ct_ask ask/index report NO_CONFIG.',
+    description: 'Lecture answers bot setup: auto-detects Ollama on localhost:11434, else install or pick transformers-js (in-process, needs @xenova/transformers) or voyage (cloud, key). Else ct_ask reports NO_CONFIG.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -841,7 +841,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'review_canvas_rubric',
     section: 'design',
-    description: 'Pull a Canvas rubric (attached, else course list), diff since last rewrite, triage acceptable/needs-update/needs-review. Read-only; needs-update proposes a revised rubric. Needs Canvas+Anthropic.',
+    description: 'Pull a Canvas rubric (attached, else course list), diff since last rewrite, triage acceptable/needs-update/needs-review. Read-only; needs-update proposes a rubric for ct_build rubric. Needs Canvas+AI.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId'],
@@ -863,7 +863,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'check_shell_readiness',
     section: 'admin',
     description:
-      'Spot-check a LIVE Canvas shell: infer Week N from module titles + termStartMonday (overrides win), cross-check due/unlock/lock, emit quiz callouts for ct_review quiz. Read-only; needs canvas setup.',
+      'LIVE Canvas shell check: Week N from module titles+termStartMonday (overrides win); ~2w thorough, ~1w lighter; cross-check due/unlock/lock; ct_review quiz callouts. Anytime. Read-only; needs Canvas.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId'],
@@ -916,7 +916,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'validate_quiz',
     section: 'admin',
     description:
-      'Advisory quiz check (Classic Quizzes): missing keys, empty/dup stems, points mismatch, week-map dates, optional LLM triage. Live via courseId+quizId, else local pre-check. Read-only; needs Canvas.',
+      'Advisory quiz check (Classic Quizzes): missing keys, empty/dup stems, points mismatch, week-map dates, optional LLM triage. Live via courseId+quizId (Canvas) or local quizPath/quizMarkdown. Read-only.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -1069,7 +1069,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'brainstorm_interactive',
     section: 'research',
-    description: 'Propose interactive Canvas widget concepts for a topic + learning goal: 2-3 specs (kind, purpose, content schema, sample data, accessibility notes) with rationale. Returns SPECS only. Needs an LLM.',
+    description: 'Propose interactive Canvas widget concepts for a topic + learning goal: 2-3 specs (kind, purpose, content schema, sample data, accessibility notes) with rationale. Returns SPECS only. Needs Anthropic.',
     inputSchema: {
       type: 'object' as const,
       required: ['topic', 'learningGoal'],

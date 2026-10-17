@@ -1,6 +1,6 @@
 ---
 id: "setup_lecture_answers"
-description: "First-run setup for the lecture answers bot: auto-detects Ollama on localhost:11434, else install it or pick transformers-js/voyage (voyage needs a key). Until then ct_ask ask/index report NO_CONFIG."
+description: "Lecture answers bot setup: auto-detects Ollama on localhost:11434, else install or pick transformers-js (in-process, needs @xenova/transformers) or voyage (cloud, key). Else ct_ask reports NO_CONFIG."
 section: "admin"
 intent_tool: "ct_setup"
 intent_action: "lecture_answers"

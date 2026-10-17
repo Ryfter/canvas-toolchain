@@ -11,7 +11,7 @@ Less common operations, reached through ct_advanced describe/run.
 
 ## Operations (31)
 
-- [[show_canvas_capabilities]] — Return the catalog of Canvas-safe design patterns, filterable by category (layout, information, interactive, pedagogical, branded) or supportStatus. Discover here, then preview_pattern to render one.
+- [[show_canvas_capabilities]] — Canvas-safe pattern catalog: filter by category (layout, information, interactive, pedagogical, branded) or supportStatus (supported/partial/aspirational). Then ct_build preview_pattern renders one.
 - [[set_active_llm_provider]] — Set the active generation LLM provider. Must be anthropic or ollama. Refuses to set a provider whose config file is absent.
 - [[set_module_enabled]] — Enable or disable a plug-in module (e.g. video) by writing modules.json. Always available so a disabled module can be re-enabled. Takes effect after the MCP client reconnects/restarts.
 - [[list_modules]] — List all known plug-in modules with their id, name, enabled state, active provider, and the provider/tool types they handle.
@@ -24,12 +24,12 @@ Less common operations, reached through ct_advanced describe/run.
 - [[set_course_aias_default]] — Set the course-wide AI Assessment Scale default for a CDS course folder, writing defaultAiasLevel (and optional defaultAiasNote) into course-config.md. Per-page aiasLevel overrides at render.
 - [[open_dashboard]] — Start the local Canvas Toolchain dashboard (read-only course health view). Returns a localhost URL the professor can open in a browser. Requires `ct_setup` action `courses_root` first.
 - [[enrich_panopto_transcripts]] — Enrich Panopto VTT into markdown: Week/Date headers, deep links every 5 min, filler stripped, vocab corrections, key statements as blockquotes. Requires a prior transcripts_panopto run.
-- [[compare_transcripts]] — Opt-in: Whisper-transcribe lecture audio, diff it against the Panopto VTT. Writes .comparison.md per session; returns vocab corrections for approval (none auto-written). Needs audio, prior fetch.
+- [[compare_transcripts]] — Opt-in: local Whisper-transcribe audio, diff vs Panopto VTT. Writes .comparison.md per session; returns vocab fixes for approval (none auto-written). Needs audio + prior transcripts_panopto run.
 - [[prune_publish_snapshots]] — Apply retention to publish snapshots: drops those past the window and count (default keep 3, keep ≤30 days), never the live one. dryRun lists only; also runs after every successful publish.
 - [[reembed_course_index]] — Switch embedding providers and rebuild the course index in one call (ct_setup lecture_answers + ct_ask index --rebuild). Use when migrating providers — vector dimensions are not interchangeable.
 - [[snapshot_course]] — Write/update a course reference doc (identifiers, assignment groups, modules, append-only Update Log). Re-runs regenerate the AUTO:start/AUTO:end sections but preserve hand-edited prose around them.
 - [[wave_deep_check]] — Deep a11y check of a PUBLIC page via the paid WAVE API. Spend gate: preview (~2 credits) first, then confirm:true. Auth-gated Canvas URLs refused — use the free extension. apiKey saved on first use.
-- [[brainstorm_interactive]] — Propose interactive Canvas widget concepts for a topic + learning goal: 2-3 specs (kind, purpose, content schema, sample data, accessibility notes) with rationale. Returns SPECS only. Needs an LLM.
+- [[brainstorm_interactive]] — Propose interactive Canvas widget concepts for a topic + learning goal: 2-3 specs (kind, purpose, content schema, sample data, accessibility notes) with rationale. Returns SPECS only. Needs Anthropic.
 - [[install_resource]] — Install a template, theme, prompt, or adapter-config resource from github://, ryfter://, or file:// into the local registry.
 - [[list_installed_resources]] — List resources installed in the local registry, optionally filtered by kind.
 - [[uninstall_resource]] — Remove a resource from the local registry by kind and id. Bundle entries also remove their included resources.
