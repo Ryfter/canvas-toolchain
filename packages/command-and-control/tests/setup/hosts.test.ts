@@ -713,6 +713,50 @@ describe('detectHostWiring TOML (Codex CLI)', () => {
     expect(hostOf(detect(), 'codex').parseError).toBe(false);
   });
 
+  it('does not open a multi-line string on a triple quote inside a single-line value', () => {
+    const script = seedScript();
+    seedFile(
+      join(root, '.codex', 'config.toml'),
+      [
+        'developer_instructions = "use \'\'\' when quoting"',
+        '',
+        '[mcp_servers.canvas-toolchain]',
+        'command = "/usr/local/bin/node"',
+        `args = ["${tomlString(script)}"]`,
+        '',
+      ].join('\n'),
+    );
+
+    const codex = hostOf(detect(), 'codex');
+
+    expect(codex.wired).toBe(true);
+    expect(codex.parseError).toBe(false);
+    expect(codex.scriptPath).toBe(collapsed(script));
+  });
+
+  it('skips a line naming our own table when it sits inside a multi-line string', () => {
+    const script = seedScript();
+    seedFile(
+      join(root, '.codex', 'config.toml'),
+      [
+        '[mcp_servers.canvas-toolchain]',
+        'command = "/usr/local/bin/node"',
+        `args = ["${tomlString(script)}"]`,
+        '',
+        'developer_instructions = """',
+        'The entry is documented as',
+        '[mcp_servers.canvas-toolchain',
+        '"""',
+        '',
+      ].join('\n'),
+    );
+
+    const codex = hostOf(detect(), 'codex');
+
+    expect(codex.wired).toBe(true);
+    expect(codex.parseError).toBe(false);
+  });
+
   it('does not let a broken unrelated section hide our entry', () => {
     const script = seedScript();
     seedFile(
@@ -803,13 +847,20 @@ describe('detectHostWiring JSONC (Zed, VS Code)', () => {
   });
 
   it('never strips a brace-looking comma that sits inside a string', () => {
+    // The comma in `weird,}name.js` is followed by `}` inside a string, so a
+    // naive comma-before-brace regex would rewrite the value. Asserting the
+    // reported path catches that; a bare parse/wired check would not, because
+    // the mangled file is still valid JSON.
+    const script = seedScript(join('ct', 'weird,}name.js'));
     seedFile(
       join(root, '.config', 'zed', 'settings.json'),
       [
         '// Zed settings',
         '{',
         '  "note": "a,}b",',
-        '  "context_servers": { "canvas-toolchain": { "command": "npx", "args": ["-y", "canvas-toolchain"] } }',
+        '  "context_servers": {',
+        `    "canvas-toolchain": { "command": "/usr/local/bin/node", "args": ["${script.replace(/\\/g, '\\\\')}"], },`,
+        '  },',
         '}',
         '',
       ].join('\n'),
@@ -819,6 +870,7 @@ describe('detectHostWiring JSONC (Zed, VS Code)', () => {
 
     expect(zed.parseError).toBe(false);
     expect(zed.wired).toBe(true);
+    expect(zed.scriptPath).toBe(collapsed(script));
   });
 
   it('still reports a genuinely corrupt config', () => {

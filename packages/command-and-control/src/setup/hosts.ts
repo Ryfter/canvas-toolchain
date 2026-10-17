@@ -543,22 +543,40 @@ interface TomlServer {
   args: string[];
 }
 
-type TomlMultiline = '"""' | "'''" | null;
+type TomlDelimiter = '"""' | "'''";
+type TomlMultiline = TomlDelimiter | null;
 
 /**
  * The multi-line-string state after a line. A line that opens `"""` or `'''`
  * without closing it starts a string; the later line that closes it ends one.
  * Lines in between are string content and must not be read as TOML.
+ *
+ * A delimiter only opens a string when it is not the content of an ordinary
+ * quoted value, so the `'''` in `description = "use ''' here"` opens nothing and
+ * the table below it is still read. When `open` is set the line is raw content,
+ * not comment-stripped, so scanning it as TOML would be wrong.
  */
 function multilineStateAfter(line: string, open: TomlMultiline): TomlMultiline {
   if (open !== null) return line.includes(open) ? null : open;
-  for (const delimiter of ['"""', "'''"] as const) {
-    let at = line.indexOf(delimiter);
-    while (at !== -1) {
-      const closes = line.indexOf(delimiter, at + 3);
-      if (closes === -1) return delimiter;
-      at = line.indexOf(delimiter, closes + 3);
+
+  let i = 0;
+  while (i < line.length) {
+    const ch = line[i];
+    if (ch === '"' || ch === "'") {
+      const delimiter: TomlDelimiter = ch === '"' ? '"""' : "'''";
+      if (line.startsWith(delimiter, i)) {
+        const close = line.indexOf(delimiter, i + 3);
+        if (close === -1) return delimiter;
+        i = close + 3;
+        continue;
+      }
+      // A single-line value: step over it, since its content is not TOML.
+      const read = readTomlString(line, i);
+      if (!read) return null;
+      i = read.next;
+      continue;
     }
+    i++;
   }
   return null;
 }
