@@ -2,7 +2,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isMain, parseArgs, runMain, SELECTION_FLAGS } from './lib/cli.mjs';
-import { REPO_ROOT, SKILLS_ROOT, loadSurfaceProbe } from './lib/registry.mjs';
+import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource, loadSurfaceProbe } from './lib/registry.mjs';
 
 const FIXTURES = join(REPO_ROOT, 'packages/command-and-control/tests/skills/selection.fixtures.json');
 const DEFAULT_OUT = '/tmp/ct-selection';
@@ -42,11 +42,32 @@ export function renderAsksBlock(fixtures) {
 }
 
 /**
+ * The addresses a model can name an operation by without knowing its id, both
+ * taken from what the old surface advertises: `<intentTool>.<intentAction>` for
+ * an intent-tool action, and `ct_advanced.<op id>` for an operation ct_advanced
+ * can actually run (`exposure: 'advanced'` — `runAdvanced` refuses anything
+ * else, so an intent or internal op never gets that address).
+ */
+export function buildAddressIndex(operations) {
+  const index = new Map();
+  for (const op of operations) {
+    if (op.exposure === 'intent' && op.intentTool && op.intentAction) {
+      index.set(`${op.intentTool}.${op.intentAction}`, op.id);
+    }
+    if (op.exposure === 'advanced') index.set(`ct_advanced.${op.id}`, op.id);
+  }
+  return index;
+}
+
+/**
  * Score a model's answers against the fixtures. `expectedOp` plus anything in
  * `alsoAcceptable` counts as correct, exactly as selection-fixtures.test.ts
- * documents. Pure: no network, no model call, no filesystem.
+ * documents. An answer may arrive as an op id or as one of the old surface's
+ * addresses, so each answer is resolved through `addressIndex` before the
+ * comparison and a miss records both the raw answer and what it mapped to.
+ * Pure: no network, no model call, no filesystem.
  */
-export function scoreAnswers(fixtures, answers) {
+export function scoreAnswers(fixtures, answers, { addressIndex } = {}) {
   const byAsk = new Map();
   for (const answer of answers?.answers ?? []) {
     byAsk.set(Number(answer.ask), answer.op);
@@ -57,13 +78,16 @@ export function scoreAnswers(fixtures, answers) {
   fixtures.forEach((fixture, index) => {
     const ask = index + 1;
     const got = byAsk.get(ask);
+    const mapped = typeof got === 'string' ? addressIndex?.get(got) : undefined;
+    const resolved = mapped ?? got;
     const acceptable = new Set([fixture.expectedOp, ...(fixture.alsoAcceptable ?? [])]);
-    if (got !== undefined && acceptable.has(got)) correct += 1;
+    if (resolved !== undefined && acceptable.has(resolved)) correct += 1;
     else {
       misses.push({
         ask,
         question: fixture.ask,
         got: got ?? null,
+        mapped: mapped ?? null,
         expected: fixture.expectedOp,
         alsoAcceptable: fixture.alsoAcceptable ?? [],
       });
@@ -160,7 +184,8 @@ function printScore(result) {
   console.log(`eval-selection: ${result.correct}/${result.total} correct`);
   for (const miss of result.misses) {
     const accepted = [miss.expected, ...miss.alsoAcceptable].join(' | ');
-    console.log(`  miss ${miss.ask}: "${miss.question}" -> got ${miss.got ?? '(none)'}, expected ${accepted}`);
+    const mapped = miss.mapped ? ` (mapped: ${miss.mapped})` : '';
+    console.log(`  miss ${miss.ask}: "${miss.question}" -> got ${miss.got ?? '(none)'}${mapped}, expected ${accepted}`);
   }
 }
 
@@ -169,7 +194,10 @@ async function main() {
 
   if (args.score) {
     const answers = JSON.parse(readFileSync(args.score, 'utf8'));
-    const result = scoreAnswers(loadFixtures(), answers);
+    // The answer may be written in the old surface's vocabulary, so the score is
+    // taken against the built registry's addresses, not just the raw answer.
+    const { operations } = await loadRegistrySource({ repoRoot: args.repoRoot ?? REPO_ROOT });
+    const result = scoreAnswers(loadFixtures(), answers, { addressIndex: buildAddressIndex(operations) });
     if (args.json) console.log(JSON.stringify(result, null, 2));
     else printScore(result);
     return;

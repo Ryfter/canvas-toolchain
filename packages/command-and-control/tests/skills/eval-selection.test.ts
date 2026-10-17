@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { scoreAnswers } from '../../../../scripts/skills/eval-selection.mjs';
+import { buildAddressIndex, scoreAnswers } from '../../../../scripts/skills/eval-selection.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
 const HARNESS = join(REPO_ROOT, 'scripts/skills/eval-selection.mjs');
@@ -74,7 +74,78 @@ describe('scoreAnswers', () => {
   });
 });
 
-describe('eval-selection CLI scoring', () => {
+describe('buildAddressIndex', () => {
+  const operations = [
+    { id: 'validate_quiz', exposure: 'intent', intentTool: 'ct_review', intentAction: 'quiz' },
+    { id: 'prune_publish_snapshots', exposure: 'advanced' },
+    { id: 'map_transcripts_to_weeks', exposure: 'internal' },
+  ];
+
+  it('maps an intent-tool address and a ct_advanced op id onto their operation ids', () => {
+    const index = buildAddressIndex(operations);
+    expect(index.get('ct_review.quiz')).toBe('validate_quiz');
+    expect(index.get('ct_advanced.prune_publish_snapshots')).toBe('prune_publish_snapshots');
+  });
+
+  it('gives no address to an op ct_advanced cannot run, nor to one with a half-declared pair', () => {
+    const index = buildAddressIndex([
+      ...operations,
+      { id: 'half', exposure: 'intent', intentTool: 'ct_setup' },
+    ]);
+    expect(index.has('ct_advanced.validate_quiz')).toBe(false);
+    expect(index.has('ct_advanced.map_transcripts_to_weeks')).toBe(false);
+    expect(index.has('ct_setup.undefined')).toBe(false);
+  });
+});
+
+describe('scoreAnswers with an address index', () => {
+  const fixtures = [
+    { ask: 'check a quiz', expectedOp: 'validate_quiz' },
+    { ask: 'prune snapshots', expectedOp: 'prune_publish_snapshots' },
+    { ask: 'ask the course', expectedOp: 'ask_course' },
+  ];
+  const addressIndex = buildAddressIndex([
+    { id: 'validate_quiz', exposure: 'intent', intentTool: 'ct_review', intentAction: 'quiz' },
+    { id: 'prune_publish_snapshots', exposure: 'advanced' },
+    { id: 'ask_course', exposure: 'intent', intentTool: 'ct_ask', intentAction: 'ask' },
+  ]);
+
+  it('scores an address as the operation it names, in both address forms', () => {
+    const result = scoreAnswers(fixtures, {
+      answers: [
+        { ask: 1, op: 'ct_review.quiz' },
+        { ask: 2, op: 'ct_advanced.prune_publish_snapshots' },
+        { ask: 3, op: 'ask_course' },
+      ],
+    }, { addressIndex });
+
+    expect(result.correct).toBe(3);
+    expect(result.misses).toEqual([]);
+  });
+
+  it('reports the raw answer and the mapping when an address resolves to the wrong op', () => {
+    const result = scoreAnswers(fixtures, {
+      answers: [
+        { ask: 1, op: 'ct_review.quiz' },
+        { ask: 2, op: 'ct_advanced.prune_publish_snapshots' },
+        { ask: 3, op: 'ct_advanced.ask_course' },
+      ],
+    }, { addressIndex });
+
+    expect(result.correct).toBe(2);
+    expect(result.misses).toEqual([
+      expect.objectContaining({ ask: 3, got: 'ct_advanced.ask_course', mapped: null, expected: 'ask_course' }),
+    ]);
+  });
+
+  it('leaves the raw answer unmapped when no index is supplied', () => {
+    const result = scoreAnswers(fixtures, { answers: [{ ask: 1, op: 'ct_review.quiz' }] });
+    expect(result.correct).toBe(0);
+    expect(result.misses[0]).toMatchObject({ got: 'ct_review.quiz', mapped: null });
+  });
+});
+
+describe.skipIf(!HAS_DIST)('eval-selection CLI scoring', () => {
   it('prints correct/18 and the misses for an answers file', () => {
     const answers = join(tempRoot(), 'answers.json');
     writeFileSync(answers, JSON.stringify({
@@ -86,7 +157,7 @@ describe('eval-selection CLI scoring', () => {
     expect(stdout).toContain('17/18 correct');
     expect(stdout).toContain('miss 3');
     expect(stdout).toContain(fixtures[2].ask);
-  });
+  }, SPAWN_TIMEOUT_MS);
 
   it('emits the same result as JSON', () => {
     const answers = join(tempRoot(), 'answers.json');
@@ -97,7 +168,31 @@ describe('eval-selection CLI scoring', () => {
     const report = JSON.parse(run('--score', answers, '--json').stdout);
     expect(report).toMatchObject({ command: 'eval-selection', mode: 'score', total: 18, correct: 18 });
     expect(report.misses).toEqual([]);
-  });
+  }, SPAWN_TIMEOUT_MS);
+
+  it('scores an answer given in the old surface\'s address form as the op it names', () => {
+    const answers = join(tempRoot(), 'answers.json');
+    // Ask 3 expects rollback_course_publish; answer with the address the old
+    // surface advertises for it (`ct_publish` action `rollback`).
+    writeFileSync(answers, JSON.stringify({
+      answers: fixtures.map((fixture, i) => ({ ask: i + 1, op: i === 2 ? 'ct_publish.rollback' : fixture.expectedOp })),
+    }));
+
+    const { stdout, status } = run('--score', answers);
+    expect(status).toBe(0);
+    expect(stdout).toContain('18/18 correct');
+  }, SPAWN_TIMEOUT_MS);
+
+  it('prints the raw address and the op it mapped to when the address names the wrong op', () => {
+    const answers = join(tempRoot(), 'answers.json');
+    writeFileSync(answers, JSON.stringify({
+      answers: fixtures.map((fixture, i) => ({ ask: i + 1, op: i === 2 ? 'ct_publish.snapshots' : fixture.expectedOp })),
+    }));
+
+    const { stdout } = run('--score', answers);
+    expect(stdout).toContain('17/18 correct');
+    expect(stdout).toContain('got ct_publish.snapshots (mapped: list_publish_snapshots)');
+  }, SPAWN_TIMEOUT_MS);
 });
 
 describe.skipIf(!HAS_DIST)('eval-selection prompts', () => {
