@@ -1,11 +1,13 @@
 import { AnthropicLlmClient, type AnthropicConfig, type LlmClient } from './index.js';
 import { OllamaLlmClient, type OllamaConfig } from './ollama.js';
+import { LmStudioLlmClient, type LmStudioConfig } from './lmstudio.js';
 import { LlmProviderError } from './errors.js';
 
 export interface ResolveInput {
-  provider: 'anthropic' | 'ollama';
+  provider: 'anthropic' | 'ollama' | 'lmstudio';
   anthropic?: AnthropicConfig;
   ollama?: OllamaConfig;
+  lmstudio?: LmStudioConfig;
 }
 
 export function resolveLlmClient(input: ResolveInput): LlmClient {
@@ -31,10 +33,23 @@ export function resolveLlmClient(input: ResolveInput): LlmClient {
     }
     return new OllamaLlmClient(input.ollama);
   }
+  if (input.provider === 'lmstudio') {
+    if (!input.lmstudio) {
+      throw new LlmProviderError(
+        'LLM_PROVIDER_CONFIG_MISSING',
+        'Active provider is lmstudio but lmstudio config was not supplied',
+        'lmstudio',
+        ['Run setup_lmstudio'],
+      );
+    }
+    return new LmStudioLlmClient(input.lmstudio);
+  }
   throw new LlmProviderError(
     'LLM_PROVIDER_NOT_SET',
     `Unknown provider: ${String(input.provider)}`,
     'unknown',
-    ['Run set_active_llm_provider to choose anthropic or ollama'],
+    // This package is provider-agnostic and cannot import the caller's
+    // PREFERRED_PROVIDER_ORDER, so the list is mirrored here in that order.
+    ['Run set_active_llm_provider to choose lmstudio, ollama or anthropic'],
   );
 }

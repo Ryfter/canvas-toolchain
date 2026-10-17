@@ -1,5 +1,7 @@
 import { readSetupState } from './read_state.js';
+import { PREFERRED_PROVIDER_ORDER } from '../tools/set_active_llm_provider.js';
 import type {
+  ActiveProvider,
   DoctorCheck,
   DoctorCheckId,
   DoctorReport,
@@ -19,6 +21,7 @@ const ALL_CHECKS: DoctorCheckId[] = [
   'transcripts.source',
   'backup.sidecar',
   'modules.pending',
+  'hosts.wiring',
 ];
 
 /**
@@ -189,28 +192,56 @@ function canvasCredentialsCheck(state: SetupState): DoctorCheck {
   };
 }
 
+/**
+ * Lines the professor needs beyond the verdict: where the bridge last put a file
+ * it rewrote, and the fact that Design Studio has not collected a name and
+ * colors yet. Both are diagnostics the check surfaces rather than its reason.
+ */
+function storeNotes(state: SetupState): string[] {
+  const notes: string[] = [];
+  const migration = state.canvasStoreMigration;
+  if (migration) {
+    notes.push(`Last Canvas store migration (${migration.at}, ${migration.action}): ${migration.detail}`);
+    if (migration.backupPath) notes.push(`Backup of the previous file: ${migration.backupPath}`);
+  }
+  if (state.designStudio.brandSetupPending) {
+    notes.push(
+      'Canvas Design Studio still needs its institution name and brand colors — run ' +
+      'setup_institution there to finish its brand setup.',
+    );
+  }
+  return notes;
+}
+
 function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
-  const { canvas, designStudio } = state;
+  const { canvasConfig, designStudio } = state;
   // A Canvas connection needs a host *and* a token. A local/brand-only
-  // institution.json (brand colors, a WAVE key) is a store, not a connection,
-  // so it must never be mistaken for one side of the split.
+  // institution.json (brand colors, a WAVE key) is a store, not a connection, so
+  // it must never be mistaken for one side of the split. Both sides are read RAW
+  // from disk: Canvas Design Studio's loadConfig() overlays the canonical
+  // credentials, which would hide a disagreement the next save has to reconcile.
   const cdsConnected = designStudio.host !== null && designStudio.hasApiToken;
+  const ccConnected = canvasConfig.host !== null && canvasConfig.hasApiToken;
+  const notes = storeNotes(state);
   const fix = {
     tool: 'ct_setup' as const,
     action: 'canvas',
     hint:
-      'Keep ~/.command-and-control/canvas-config.json as the source of truth; Canvas Design ' +
-      'Studio reads its own ~/.canvas-design-mcp/institution.json, which only the standalone ' +
-      'setup_institution wizard writes.',
+      'Re-run ct_setup action canvas (or restart Command & Control) to reconcile ' +
+      '~/.command-and-control/canvas-config.json with Canvas Design Studio\'s ' +
+      '~/.canvas-design-mcp/institution.json.',
   };
 
-  if (!canvas.configured && !cdsConnected) {
+  // Neither store names a Canvas host: nothing to reconcile, even when one file
+  // holds brand settings or a WAVE key.
+  if (canvasConfig.host === null && designStudio.host === null) {
     return {
       id: 'canvas.store_sync',
       status: 'ok',
       summary: designStudio.configured
         ? 'Canvas Design Studio has an institution.json but no Canvas connection, and Command & Control has no Canvas store.'
         : 'Neither Canvas store exists yet.',
+      ...(notes.length > 0 && { detail: notes }),
     };
   }
   if (!cdsConnected) {
@@ -224,16 +255,22 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
       detail: [
         institutionFile.present ? institutionFile.path : `${institutionFile.path} (missing)`,
         state.files['canvas-config'].path,
+        ...notes,
       ],
       fix,
     };
   }
-  if (!canvas.configured) {
+  if (!ccConnected) {
+    const canvasFile = state.files['canvas-config'];
     return {
       id: 'canvas.store_sync',
       status: 'warn',
       summary: 'Canvas Design Studio has a Canvas connection that Command & Control does not.',
-      detail: [state.files['institution-config'].path, `${state.files['canvas-config'].path} (missing)`],
+      detail: [
+        state.files['institution-config'].path,
+        canvasFile.present ? canvasFile.path : `${canvasFile.path} (missing)`,
+        ...notes,
+      ],
       fix,
     };
   }
@@ -242,14 +279,16 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
       id: 'canvas.store_sync',
       status: 'warn',
       summary:
-        `The two Canvas stores point at different hosts (${canvas.host} vs ${designStudio.host}).`,
+        `The two Canvas stores point at different hosts (${canvasConfig.host} vs ${designStudio.host}).`,
+      ...(notes.length > 0 && { detail: notes }),
       fix,
     };
   }
   return {
     id: 'canvas.store_sync',
     status: 'ok',
-    summary: `Both Canvas stores agree on ${canvas.host}.`,
+    summary: `Both Canvas stores agree on ${canvasConfig.host}.`,
+    ...(notes.length > 0 && { detail: notes }),
   };
 }
 
@@ -258,9 +297,14 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
   const providerFile = state.files['llm-provider'];
   const anthropicFileConfigured = state.llm.anthropic.source === 'file' || state.llm.anthropic.source === 'both';
   const ollamaConfigured = state.llm.ollama.configured;
+  const lmstudioConfigured = state.llm.lmstudio.configured;
 
   if (activeProvider !== null) {
-    const backingConfigured = activeProvider === 'anthropic' ? anthropicFileConfigured : ollamaConfigured;
+    const backingConfigured = activeProvider === 'anthropic'
+      ? anthropicFileConfigured
+      : activeProvider === 'ollama'
+        ? ollamaConfigured
+        : lmstudioConfigured;
     if (backingConfigured) {
       return {
         id: 'llm.active_provider',
@@ -287,25 +331,52 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
       summary: 'llm-provider.json is corrupt, so no active LLM provider can be resolved.',
       detail: [providerFile.path],
       fix: {
-        tool: 'ct_advanced',
-        action: 'set_active_llm_provider',
-        hint: 'Re-run ct_advanced action set_active_llm_provider (operation set_active_llm_provider).',
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint: 'Run ct_setup action llm_provider to choose one of your configured providers.',
       },
     };
   }
 
-  if (anthropicFileConfigured || ollamaConfigured) {
-    const configured = anthropicFileConfigured ? 'anthropic' : 'ollama';
+  // Several providers can be configured at once. With no active provider this is
+  // a genuine choice, so name them all and suggest, in preference order, without
+  // ever picking one: the doctor writes nothing.
+  const configured: ActiveProvider[] = PREFERRED_PROVIDER_ORDER.filter((provider) =>
+    provider === 'anthropic'
+      ? anthropicFileConfigured
+      : provider === 'ollama'
+        ? ollamaConfigured
+        : lmstudioConfigured);
+
+  if (configured.length === 1) {
+    const only = configured[0];
     return {
       id: 'llm.active_provider',
       status: 'warn',
       summary:
-        `${configured} is configured but no active provider is set, so AI tools fail with ` +
+        `${only} is configured but no active provider is set, so AI tools fail with ` +
         'LLM_PROVIDER_NOT_SET.',
       fix: {
-        tool: 'ct_advanced',
-        action: 'set_active_llm_provider',
-        hint: `Activate ${configured} (provider: "${configured}").`,
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint: `Activate it: ct_setup action llm_provider with provider "${only}".`,
+      },
+    };
+  }
+
+  if (configured.length > 1) {
+    return {
+      id: 'llm.active_provider',
+      status: 'warn',
+      summary:
+        `Multiple LLM providers are configured (${configured.join(', ')}) but no active provider ` +
+        'is set, so AI tools fail with LLM_PROVIDER_NOT_SET.',
+      fix: {
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint:
+          `Run ct_setup action llm_provider with provider "${configured[0]}" to choose one of ` +
+          `your configured providers: ${configured.join(', ')}.`,
       },
     };
   }
@@ -318,9 +389,9 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
 }
 
 function llmCredentialsCheck(state: SetupState): DoctorCheck {
-  const { anthropic } = state.llm;
-  const corrupt = (key: 'anthropic-config' | 'ollama-config' | 'lecture-answers-config',
-    action: 'anthropic' | 'ollama' | 'lecture_answers'): DoctorCheck => ({
+  const { anthropic, activeProvider } = state.llm;
+  const corrupt = (key: 'anthropic-config' | 'ollama-config' | 'lmstudio-config' | 'lecture-answers-config',
+    action: 'anthropic' | 'ollama' | 'lmstudio' | 'lecture_answers'): DoctorCheck => ({
     id: 'llm.credentials',
     status: 'warn',
     summary: `${key}.json is corrupt.`,
@@ -352,11 +423,14 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
   if (state.files['ollama-config'].present && !state.files['ollama-config'].validJson) {
     return corrupt('ollama-config', 'ollama');
   }
+  if (state.files['lmstudio-config'].present && !state.files['lmstudio-config'].validJson) {
+    return corrupt('lmstudio-config', 'lmstudio');
+  }
   if (state.files['lecture-answers-config'].present && !state.files['lecture-answers-config'].validJson) {
     return corrupt('lecture-answers-config', 'lecture_answers');
   }
 
-  if (!anthropic.configured && !state.llm.ollama.configured) {
+  if (!anthropic.configured && !state.llm.ollama.configured && !state.llm.lmstudio.configured) {
     return {
       id: 'llm.credentials',
       status: 'warn',
@@ -364,7 +438,7 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
       fix: {
         tool: 'ct_setup',
         action: 'anthropic',
-        hint: 'Add an Anthropic API key, or configure a local model with ct_setup action ollama.',
+        hint: 'Add an Anthropic API key, or configure a local model with ct_setup action lmstudio or ollama.',
       },
     };
   }
@@ -384,9 +458,31 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
     };
   }
 
+  const lmStudioProbe = state.llm.lmstudio.probe;
+  if (
+    activeProvider === 'lmstudio' &&
+    lmStudioProbe?.attempted &&
+    !lmStudioProbe.reachable
+  ) {
+    const reason = lmStudioProbe.status !== undefined
+      ? `HTTP ${lmStudioProbe.status}`
+      : lmStudioProbe.errorCode ?? 'unreachable';
+    return {
+      id: 'llm.credentials',
+      status: 'warn',
+      summary: `LM Studio at ${state.llm.lmstudio.host ?? 'the configured URL'} is not reachable (${reason}).`,
+      fix: {
+        tool: 'ct_setup',
+        action: 'lmstudio',
+        hint: 'Open LM Studio and click Developer > Start Server, then run ct_setup action lmstudio again.',
+      },
+    };
+  }
+
   const configured = [
-    anthropic.configured && `Anthropic (${anthropic.source === 'both' ? 'environment and file' : 'file'})`,
+    state.llm.lmstudio.configured && `LM Studio (${state.llm.lmstudio.model ?? 'model unknown'})`,
     state.llm.ollama.configured && `Ollama (${state.llm.ollama.model ?? 'model unknown'})`,
+    anthropic.configured && `Anthropic (${anthropic.source === 'both' ? 'environment and file' : 'file'})`,
   ].filter((line): line is string => typeof line === 'string');
 
   return {
@@ -483,6 +579,66 @@ function modulesCheck(state: SetupState): DoctorCheck {
   };
 }
 
+/**
+ * Whether the AI client the professor is talking through can reach the
+ * toolchain. It is the one check whose fix is not a tool call — wiring a host is
+ * the installer's job — so the remedy lives in the summary rather than in a
+ * `fix` that would have to name an operation that does not exist.
+ */
+function hostsWiringCheck(state: SetupState): DoctorCheck {
+  const wiring = state.hosts;
+  if (wiring === null) {
+    return {
+      id: 'hosts.wiring',
+      status: 'ok',
+      summary: 'MCP host detection was turned off for this report, so no host was checked.',
+    };
+  }
+
+  const wired = wiring.hosts.filter((host) => host.wired);
+  const stale = wired.filter((host) => host.stalePath);
+  const remedy =
+    'Re-run the canvas-toolchain installer to wire your AI client, or see the setup docs for ' +
+    '`npx canvas-toolchain`.';
+
+  if (stale.length > 0) {
+    return {
+      id: 'hosts.wiring',
+      status: 'warn',
+      summary:
+        `${stale.length} MCP host(s) point canvas-toolchain at a file that no longer exists ` +
+        `(${stale.map((host) => host.displayName).join(', ')}). ${remedy}`,
+      detail: stale.map((host) => `${host.displayName}: ${host.scriptPath ?? 'script'} (missing)`),
+    };
+  }
+
+  if (wired.length === 0) {
+    const detail = [
+      ...wiring.hosts
+        .filter((host) => host.parseError)
+        .map((host) => `${host.displayName}: config present but unreadable`),
+      ...wiring.hosts
+        .filter((host) => !host.parseError && (host.installed || host.configFound))
+        .map((host) => `${host.displayName}: installed but not wired`),
+    ];
+    return {
+      id: 'hosts.wiring',
+      status: 'warn',
+      summary: `No MCP host on this machine is wired to run canvas-toolchain. ${remedy}`,
+      ...(detail.length > 0 ? { detail } : {}),
+    };
+  }
+
+  return {
+    id: 'hosts.wiring',
+    status: 'ok',
+    summary: `canvas-toolchain is wired into ${wired.map((host) => host.displayName).join(', ')}.`,
+    detail: wired
+      .filter((host) => host.scriptPath !== null)
+      .map((host) => `${host.displayName}: ${host.scriptPath}`),
+  };
+}
+
 /** Apply a journey's blockers to warnings, so an explicit ask is answered plainly. */
 function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): DoctorCheck[] {
   const blockers = JOURNEY_BLOCKERS[journey];
@@ -499,7 +655,8 @@ function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): Docto
  */
 export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorReport> {
   const journey = opts.journey ?? 'full';
-  const state = opts.state ?? (await readSetupState({ probe: opts.probe === true }));
+  const state = opts.state ??
+    (await readSetupState({ probe: opts.probe === true, hosts: opts.hosts !== false }));
 
   const checks = escalateForJourney([
     coursesRootCheck(state),
@@ -511,6 +668,7 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
     transcriptCheck(state),
     backupCheck(state),
     modulesCheck(state),
+    hostsWiringCheck(state),
   ], journey);
 
   const considered = new Set(JOURNEY_CHECKS[journey]);
@@ -521,21 +679,27 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
       'ok',
     );
 
-  const { activeProvider, anthropic, ollama } = state.llm;
+  const { activeProvider, anthropic, ollama, lmstudio } = state.llm;
   // A failed live probe means the key on disk does not work, so an active
   // Anthropic provider is not yet usable even though the file looks complete.
   const anthropicProbeFailed = anthropic.probe?.attempted === true && anthropic.probe.reachable === false;
+  const lmstudioProbeFailed = lmstudio.probe?.attempted === true && lmstudio.probe.reachable === false;
   const activeProviderReady = activeProvider !== null &&
     (activeProvider === 'anthropic'
       ? (anthropic.source === 'file' || anthropic.source === 'both') && !anthropicProbeFailed
-      : ollama.configured);
+      : activeProvider === 'ollama'
+        ? ollama.configured
+        : lmstudio.configured && !lmstudioProbeFailed);
 
   return {
     overallStatus,
     journey,
     // Read off the state, not the option: a caller-supplied state is the truth
     // about whether probes actually ran.
-    probed: state.canvas.probe !== undefined || state.llm.anthropic.probe !== undefined,
+    probed:
+      state.canvas.probe !== undefined ||
+      state.llm.anthropic.probe !== undefined ||
+      state.llm.lmstudio.probe !== undefined,
     checkedAt: new Date().toISOString(),
     checks,
     readyJourneys: {

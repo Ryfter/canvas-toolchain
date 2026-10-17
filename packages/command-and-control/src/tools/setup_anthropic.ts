@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
+import { autoActivateProvider, type AutoActivateResult } from './set_active_llm_provider.js';
 
 const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 
@@ -26,6 +27,8 @@ export interface SetupAnthropicResult {
   message?: string;
   error?: string;
   fix?: string[];
+  /** What the post-setup auto-activation did. Absent on failure. */
+  activation?: AutoActivateResult;
 }
 
 function getAnthropicConfigPath(): string {
@@ -114,12 +117,16 @@ export async function setupAnthropic(input: SetupAnthropicInput): Promise<SetupA
   writeFileSync(tmpPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmpPath, configPath);
 
+  const activation = autoActivateProvider('anthropic');
+
   return {
     configured: true,
     model,
     ...(test && { validatedAt: now }),
-    message: test
-      ? `Anthropic API key configured and validated against ${model}.`
-      : `Anthropic API key configured (not tested).`,
+    message:
+      `${test
+        ? `Anthropic API key configured and validated against ${model}.`
+        : 'Anthropic API key configured (not tested).'} ${activation.note}`,
+    activation,
   };
 }

@@ -2,7 +2,13 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
 import { join } from 'node:path';
-import { setActiveLlmProvider, loadActiveProvider } from '../../src/tools/set_active_llm_provider.js';
+import {
+  setActiveLlmProvider,
+  loadActiveProvider,
+  PREFERRED_PROVIDER_ORDER,
+  VALID_PROVIDERS,
+  formatProviderList,
+} from '../../src/tools/set_active_llm_provider.js';
 
 let ccHomeDir: string;
 const ORIGINAL_CC_HOME = process.env.CC_HOME;
@@ -25,6 +31,34 @@ function seedAnthropicConfig() {
 function seedOllamaConfig() {
   writeFileSync(join(ccHomeDir, 'ollama-config.json'), JSON.stringify({ baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' }));
 }
+
+function seedLmStudioConfig() {
+  writeFileSync(
+    join(ccHomeDir, 'lmstudio-config.json'),
+    JSON.stringify({ baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' }),
+  );
+}
+
+describe('provider preference order', () => {
+  it('is the single source for the order: LM Studio, then Ollama, then Anthropic', () => {
+    expect(PREFERRED_PROVIDER_ORDER).toEqual(['lmstudio', 'ollama', 'anthropic']);
+    // The accepted set is the same three, kept in that order so every list a
+    // user or the model reads agrees.
+    expect(VALID_PROVIDERS).toEqual(['lmstudio', 'ollama', 'anthropic']);
+    expect(formatProviderList()).toBe('lmstudio, ollama or anthropic');
+  });
+
+  it('never reorders an explicit selection: activation writes what it is given', async () => {
+    seedAnthropicConfig();
+    seedLmStudioConfig();
+    const result = await setActiveLlmProvider({ provider: 'anthropic' });
+
+    expect(result.ok).toBe(true);
+    expect(JSON.parse(readFileSync(join(ccHomeDir, 'llm-provider.json'), 'utf-8'))).toEqual({
+      provider: 'anthropic',
+    });
+  });
+});
 
 describe('setActiveLlmProvider', () => {
   it('writes llm-provider.json with provider=anthropic when anthropic-config.json exists', async () => {
@@ -50,6 +84,15 @@ describe('setActiveLlmProvider', () => {
     expect(JSON.parse(readFileSync(join(ccHomeDir, 'llm-provider.json'), 'utf-8'))).toEqual({ provider: 'ollama' });
   });
 
+  it('writes llm-provider.json with provider=lmstudio when lmstudio-config.json exists', async () => {
+    seedLmStudioConfig();
+    const result = await setActiveLlmProvider({ provider: 'lmstudio' });
+
+    expect(result.ok).toBe(true);
+    expect(result.provider).toBe('lmstudio');
+    expect(JSON.parse(readFileSync(join(ccHomeDir, 'llm-provider.json'), 'utf-8'))).toEqual({ provider: 'lmstudio' });
+  });
+
   it('returns PROVIDER_NOT_CONFIGURED when anthropic chosen but config missing', async () => {
     const result = await setActiveLlmProvider({ provider: 'anthropic' });
     expect(result.ok).toBe(false);
@@ -63,6 +106,14 @@ describe('setActiveLlmProvider', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBe('PROVIDER_NOT_CONFIGURED');
     expect(result.fix).toEqual(['Run setup_ollama first']);
+    expect(existsSync(join(ccHomeDir, 'llm-provider.json'))).toBe(false);
+  });
+
+  it('returns PROVIDER_NOT_CONFIGURED when lmstudio chosen but config missing', async () => {
+    const result = await setActiveLlmProvider({ provider: 'lmstudio' });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('PROVIDER_NOT_CONFIGURED');
+    expect(result.fix).toEqual(['Run setup_lmstudio first']);
     expect(existsSync(join(ccHomeDir, 'llm-provider.json'))).toBe(false);
   });
 
@@ -83,6 +134,12 @@ describe('loadActiveProvider', () => {
     mkdirSync(ccHomeDir, { recursive: true });
     writeFileSync(join(ccHomeDir, 'llm-provider.json'), JSON.stringify({ provider: 'ollama' }));
     expect(loadActiveProvider()).toBe('ollama');
+  });
+
+  it('accepts lmstudio as a saved provider', () => {
+    mkdirSync(ccHomeDir, { recursive: true });
+    writeFileSync(join(ccHomeDir, 'llm-provider.json'), JSON.stringify({ provider: 'lmstudio' }));
+    expect(loadActiveProvider()).toBe('lmstudio');
   });
 
   it('throws when file is corrupt', () => {

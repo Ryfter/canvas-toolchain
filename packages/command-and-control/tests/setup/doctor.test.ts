@@ -1,8 +1,9 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { runDoctor } from '../../src/setup/doctor.js';
+import { readSetupState } from '../../src/setup/read_state.js';
 import { buildRegistry } from '../../src/surface/registry.js';
 import { dispatchSurface } from '../../src/surface/dispatch.js';
 
@@ -16,15 +17,20 @@ const CHECK_IDS = [
   'transcripts.source',
   'backup.sidecar',
   'modules.pending',
+  'hosts.wiring',
 ];
 
 let ccHome: string;
 let cdsHome: string;
+let hostHome: string;
 const ORIGINAL = {
   ccHome: process.env.CC_HOME,
   cdsHome: process.env.CANVAS_DESIGN_HOME,
   backupCommand: process.env.CANVAS_BACKUP_COMMAND,
   anthropicKey: process.env.ANTHROPIC_API_KEY,
+  home: process.env.HOME,
+  userProfile: process.env.USERPROFILE,
+  appData: process.env.APPDATA,
 };
 
 /** Seed a config file, 0600 like every writer in the repo, under either home. */
@@ -32,6 +38,30 @@ function seed(name: string, value: unknown, home: string = ccHome): string {
   const path = join(home, name);
   writeFileSync(path, JSON.stringify(value, null, 2), { encoding: 'utf-8', mode: 0o600 });
   return path;
+}
+
+/**
+ * A wired MCP host, in the shape the installer writes: Cursor's config is
+ * home-relative on every platform, so this fixture needs no per-OS branching.
+ */
+function seedWiredHost(scriptExists = true): string {
+  const script = join(hostHome, 'packages', 'command-and-control', 'dist', 'index.js');
+  if (scriptExists) {
+    mkdirSync(dirname(script), { recursive: true });
+    writeFileSync(script, '// canvas-toolchain mcp entry\n', 'utf-8');
+  }
+  mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+  writeFileSync(
+    join(hostHome, '.cursor', 'mcp.json'),
+    JSON.stringify({
+      mcpServers: {
+        'canvas-toolchain': { command: '/usr/local/bin/node', args: [script] },
+        other: { command: 'npx', args: ['-y', 'other-server'], env: { OTHER_TOKEN: 'other-env-secret' } },
+      },
+    }, null, 2),
+    'utf-8',
+  );
+  return script;
 }
 
 function check(report: Awaited<ReturnType<typeof runDoctor>>, id: string) {
@@ -43,8 +73,14 @@ function check(report: Awaited<ReturnType<typeof runDoctor>>, id: string) {
 beforeEach(() => {
   ccHome = mkdtempSync(join(tmpdir(), 'cc-home-'));
   cdsHome = mkdtempSync(join(tmpdir(), 'cds-home-'));
+  hostHome = mkdtempSync(join(tmpdir(), 'host-home-'));
   process.env.CC_HOME = ccHome;
   process.env.CANVAS_DESIGN_HOME = cdsHome;
+  // Host detection reads the OS home, so point it at a temp dir: otherwise the
+  // doctor would report on whatever this machine really has configured.
+  process.env.HOME = hostHome;
+  process.env.USERPROFILE = hostHome;
+  process.env.APPDATA = join(hostHome, 'AppData', 'Roaming');
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.CANVAS_BACKUP_COMMAND;
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network call in test'))));
@@ -53,11 +89,15 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(ccHome, { recursive: true, force: true });
   rmSync(cdsHome, { recursive: true, force: true });
+  rmSync(hostHome, { recursive: true, force: true });
   for (const [key, value] of Object.entries({
     CC_HOME: ORIGINAL.ccHome,
     CANVAS_DESIGN_HOME: ORIGINAL.cdsHome,
     CANVAS_BACKUP_COMMAND: ORIGINAL.backupCommand,
     ANTHROPIC_API_KEY: ORIGINAL.anthropicKey,
+    HOME: ORIGINAL.home,
+    USERPROFILE: ORIGINAL.userProfile,
+    APPDATA: ORIGINAL.appData,
   })) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
@@ -67,7 +107,7 @@ afterEach(() => {
 });
 
 describe('runDoctor on an empty home', () => {
-  it('returns all nine checks without throwing, and makes no network call', async () => {
+  it('returns all ten checks without throwing, and makes no network call', async () => {
     const report = await runDoctor();
 
     expect(report.checks.map((c) => c.id)).toEqual(CHECK_IDS);
@@ -117,7 +157,7 @@ describe('runDoctor checks', () => {
 
     expect(active.status).toBe('warn');
     expect(active.fix).toEqual({
-      tool: 'ct_advanced', action: 'set_active_llm_provider', hint: expect.any(String),
+      tool: 'ct_setup', action: 'llm_provider', hint: expect.any(String),
     });
     expect(check(report, 'llm.credentials').status).toBe('ok');
     expect(report.readyJourneys.aiAssisted).toBe(false);
@@ -126,6 +166,90 @@ describe('runDoctor checks', () => {
   it('reports an active provider whose file is missing as broken', async () => {
     seed('llm-provider.json', { provider: 'ollama' });
     expect(check(await runDoctor(), 'llm.active_provider').status).toBe('warn');
+  });
+
+  it('accepts LM Studio as an active provider', async () => {
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+    seed('llm-provider.json', { provider: 'lmstudio' });
+
+    const report = await runDoctor();
+
+    expect(check(report, 'llm.active_provider').status).toBe('ok');
+    expect(check(report, 'llm.credentials').status).toBe('ok');
+    expect(check(report, 'llm.credentials').summary).toMatch(/LM Studio/);
+    expect(report.readyJourneys.aiAssisted).toBe(true);
+  });
+
+  it('warns when LM Studio is configured but no provider is active', async () => {
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    expect(active.fix).toEqual({
+      tool: 'ct_setup', action: 'llm_provider', hint: expect.stringContaining('lmstudio'),
+    });
+  });
+
+  it('lists every configured provider, in preference order, and points the fix at LM Studio', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    // Every provider is still named — nothing is silently dropped.
+    expect(active.summary).toContain('(lmstudio, ollama, anthropic)');
+    expect(active.fix).toEqual({
+      tool: 'ct_setup', action: 'llm_provider',
+      hint: expect.stringContaining('with provider "lmstudio"'),
+    });
+    // Pointing at one is a suggestion, not a choice: nothing was written.
+    expect(existsSync(join(ccHome, 'llm-provider.json'))).toBe(false);
+  });
+
+  it('points the fix at the next provider in order when LM Studio is not configured', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    expect(active.summary).toContain('(ollama, anthropic)');
+    expect(active.fix?.hint).toContain('with provider "ollama"');
+    expect(active.fix?.hint).not.toContain('lmstudio');
+    expect(existsSync(join(ccHome, 'llm-provider.json'))).toBe(false);
+  });
+
+  it('still points at the single configured provider when no active provider is set', async () => {
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    expect(active.summary).toContain('ollama');
+    expect(active.fix?.hint).toContain('with provider "ollama"');
+  });
+
+  it('lists configured credentials in preference order', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+
+    const credentials = check(await runDoctor(), 'llm.credentials');
+
+    expect(credentials.status).toBe('ok');
+    expect(credentials.summary).toMatch(/LM Studio.*Ollama.*Anthropic/);
+  });
+
+  it('reports a corrupt lmstudio-config.json instead of throwing', async () => {
+    writeFileSync(join(ccHome, 'lmstudio-config.json'), '{ nope', 'utf-8');
+
+    const credentials = check(await runDoctor(), 'llm.credentials');
+
+    expect(credentials.status).toBe('warn');
+    expect(credentials.summary.toLowerCase()).toContain('lmstudio-config.json');
   });
 
   it('reports a corrupt llm-provider.json instead of throwing', async () => {
@@ -146,21 +270,58 @@ describe('runDoctor checks', () => {
     expect(JSON.stringify(report)).not.toContain('sk-ant-env');
   });
 
-  it('warns when Canvas credentials are present but the C&C store disagrees with Design Studio', async () => {
+  // #151 R7 review fix 6: the doctor reads the two stores RAW. Canvas Design
+  // Studio's loadConfig() overlays the canonical host and token, which made this
+  // disagreement invisible (and the warn branch unreachable) even though the raw
+  // files still disagree until the next save or restart reconciles them.
+  it('warns when the raw stores point at different hosts, naming both', async () => {
     seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     seed('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'cds-tok' }, cdsHome);
 
     const sync = check(await runDoctor(), 'canvas.store_sync');
 
     expect(sync.status).toBe('warn');
-    expect(sync.fix).toEqual({ tool: 'ct_setup', action: 'canvas', hint: expect.any(String) });
+    expect(sync.summary).toContain('example.instructure.com');
+    expect(sync.summary).toContain('other.instructure.com');
+    expect(sync.fix?.tool).toBe('ct_setup');
+    expect(sync.fix?.action).toBe('canvas');
+    expect(sync.fix?.hint).toMatch(/ct_setup action canvas/);
+    expect(sync.fix?.hint).toMatch(/restart/i);
     expect(JSON.stringify(sync)).not.toContain('tok-secret');
   });
 
-  it('warns when only one of the two Canvas stores exists', async () => {
+  // #151 R7 review fix 10: the bridge's outcome (a rewrite, a corrupt store, the
+  // backup it left) used to go only to stderr, which an MCP host swallows.
+  it('surfaces the last Canvas store migration, including the backup path', async () => {
+    const backupPath = join(cdsHome, 'institution.json.bak-2026-10-17T09-40-00-000Z');
     seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
-    expect(check(await runDoctor(), 'canvas.store_sync').status).toBe('warn');
-    expect(check(await runDoctor(), 'canvas.credentials').status).toBe('ok');
+    seed('institution.json', { canvasUrl: 'https://example.instructure.com', apiToken: 'cds-tok' }, cdsHome);
+    seed('canvas-store-migration.json', {
+      at: '2026-10-17T09:40:00.000Z',
+      action: 'canvas-config-wins',
+      detail: 'Both stores held different Canvas credentials, so canvas-config.json won.',
+      backupPath,
+    });
+
+    const sync = check(await runDoctor(), 'canvas.store_sync');
+
+    const notes = sync.detail?.join('\n') ?? '';
+    expect(notes).toContain('canvas-config-wins');
+    expect(notes).toContain(backupPath);
+    expect(notes).not.toContain('tok-secret');
+    expect(notes).not.toContain('cds-tok');
+  });
+
+  it('notes that Design Studio still owes its brand setup', async () => {
+    seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+    seed('institution.json', {
+      institution: '', canvasUrl: 'https://example.instructure.com', apiToken: 'tok-secret', brandSetupPending: true,
+    }, cdsHome);
+
+    const sync = check(await runDoctor(), 'canvas.store_sync');
+
+    expect(sync.status).toBe('ok');
+    expect(sync.detail?.join(' ')).toMatch(/setup_institution/);
   });
 
   it('reports two stores that agree as ok', async () => {
@@ -223,15 +384,30 @@ describe('runDoctor checks', () => {
     expect(JSON.stringify(report)).not.toContain('wave-secret');
   });
 
-  it('warns when Canvas Design Studio has the host but no API token', async () => {
-    seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+  // #151 R7 review fix 6: with both stores read raw, this is a real state — a
+  // Design Studio host saved without a token, while Command & Control has none
+  // either. It cannot authenticate, so it is a warning with a fix, not "ok".
+  it('warns when an institution.json has a host but no token anywhere', async () => {
     seed('institution.json', { canvasUrl: 'https://example.instructure.com' }, cdsHome);
 
     const sync = check(await runDoctor(), 'canvas.store_sync');
 
     expect(sync.status).toBe('warn');
-    expect(sync.summary.toLowerCase()).toContain('token');
-    expect(sync.fix).toEqual({ tool: 'ct_setup', action: 'canvas', hint: expect.any(String) });
+    expect(sync.summary).toContain('example.instructure.com');
+    expect(sync.summary).toMatch(/no API token/);
+    expect(sync.fix?.action).toBe('canvas');
+  });
+
+  it('warns when Command & Control has Canvas and Design Studio has no store at all', async () => {
+    seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+
+    const sync = check(await runDoctor(), 'canvas.store_sync');
+
+    expect(sync.status).toBe('warn');
+    expect(sync.summary).toMatch(/Canvas Design Studio/);
+    expect(sync.fix?.hint).toMatch(/ct_setup action canvas/);
+    // The Canvas connection itself is fine; only the mirror is missing.
+    expect(check(await runDoctor(), 'canvas.credentials').status).toBe('ok');
   });
 });
 
@@ -285,6 +461,7 @@ describe('runDoctor journeys', () => {
     seed('institution.json', { canvasUrl: 'https://example.instructure.com', apiToken: 'cds-tok' }, cdsHome);
     seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
     seed('llm-provider.json', { provider: 'anthropic' });
+    seedWiredHost();
 
     const report = await runDoctor();
 
@@ -293,6 +470,80 @@ describe('runDoctor journeys', () => {
     expect(report.readyJourneys).toEqual({
       localAuthoring: true, canvasConnected: true, aiAssisted: true,
     });
+  });
+});
+
+describe('runDoctor host wiring', () => {
+  it('warns when no MCP host is wired, naming the installer and npx as the remedy', async () => {
+    const wiring = check(await runDoctor(), 'hosts.wiring');
+
+    expect(wiring.status).toBe('warn');
+    expect(wiring.summary).toMatch(/canvas-toolchain/);
+    expect(wiring.summary).toMatch(/installer/);
+    expect(wiring.summary).toMatch(/npx canvas-toolchain/);
+  });
+
+  it('reports ok when a host runs canvas-toolchain from a path that exists', async () => {
+    seedWiredHost();
+
+    const wiring = check(await runDoctor(), 'hosts.wiring');
+
+    expect(wiring.status).toBe('ok');
+    expect(wiring.summary).toContain('Cursor');
+    // The script path is home-relative, so no absolute home path is reported.
+    expect(wiring.detail?.join(' ')).toContain('~');
+    expect(wiring.detail?.join(' ')).toContain('command-and-control');
+    expect(wiring.detail?.join(' ')).not.toContain(hostHome);
+  });
+
+  it('names the host whose wired script is gone', async () => {
+    seedWiredHost(false);
+
+    const report = await runDoctor();
+    const wiring = check(report, 'hosts.wiring');
+
+    expect(wiring.status).toBe('warn');
+    expect(wiring.summary).toContain('Cursor');
+    expect(wiring.detail?.join(' ')).toContain('(missing)');
+  });
+
+  it('reads the hosts when the caller asks for it', async () => {
+    seedWiredHost();
+    expect(check(await runDoctor({ hosts: true }), 'hosts.wiring').status).toBe('ok');
+  });
+
+  it('skips host detection when the caller turns it off', async () => {
+    seedWiredHost();
+
+    const wiring = check(await runDoctor({ hosts: false }), 'hosts.wiring');
+
+    expect(wiring.status).toBe('ok');
+    expect(wiring.summary).toMatch(/turned off/i);
+  });
+
+  it('reports an unreadable host config, and still warns that nothing is wired', async () => {
+    mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+    writeFileSync(join(hostHome, '.cursor', 'mcp.json'), '{ nope', 'utf-8');
+
+    const wiring = check(await runDoctor(), 'hosts.wiring');
+
+    expect(wiring.status).toBe('warn');
+    expect(wiring.detail?.join(' ')).toContain('Cursor');
+    expect(wiring.detail?.join(' ')).toMatch(/unreadable/);
+  });
+
+  it('names no host on a machine that has none installed', async () => {
+    expect(check(await runDoctor(), 'hosts.wiring').detail).toBeUndefined();
+  });
+
+  it('never surfaces another server from a host config it read', async () => {
+    seedWiredHost();
+
+    const dumped = JSON.stringify(await runDoctor());
+
+    expect(dumped).toContain('Cursor');
+    expect(dumped).not.toContain('other-env-secret');
+    expect(dumped).not.toContain('other-server');
   });
 });
 
@@ -324,6 +575,15 @@ describe('runDoctor probe', () => {
     expect(report.probed).toBe(false);
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(check(report, 'canvas.credentials').status).toBe('ok');
+  });
+
+  it('reports probed when only the LM Studio probe ran', async () => {
+    const state = await readSetupState();
+    state.llm.lmstudio.probe = { attempted: true, reachable: true, status: 200 };
+
+    const report = await runDoctor({ state });
+
+    expect(report.probed).toBe(true);
   });
 
   it('reports an unreachable Canvas when probe is on', async () => {
@@ -376,6 +636,21 @@ describe('runDoctor probe', () => {
 
     expect(check(report, 'llm.credentials').status).toBe('ok');
     expect(report.readyJourneys.aiAssisted).toBe(true);
+  });
+
+  it('reports an LM Studio probe that cannot reach the server, and drops ai-assisted readiness', async () => {
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+    seed('llm-provider.json', { provider: 'lmstudio' });
+    vi.stubGlobal('fetch', vi.fn(async () => { throw Object.assign(new Error('x'), { code: 'ECONNREFUSED' }); }));
+
+    const report = await runDoctor({ probe: true });
+    const credentials = check(report, 'llm.credentials');
+
+    expect(credentials.status).toBe('warn');
+    expect(credentials.summary).toMatch(/LM Studio/);
+    expect(credentials.summary).toMatch(/ECONNREFUSED/);
+    expect(credentials.fix?.action).toBe('lmstudio');
+    expect(report.readyJourneys.aiAssisted).toBe(false);
   });
 });
 

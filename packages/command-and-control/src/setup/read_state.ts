@@ -1,12 +1,15 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
-import { normalizeCanvasHost } from '@canvas-toolchain/shared-types';
-import { loadConfig as loadInstitutionConfig } from '@canvas-toolchain/canvas-design-studio/dist/config.js';
+import {
+  normalizeCanvasHost, readCanvasStoreJournal,
+} from '@canvas-toolchain/shared-types';
+import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
 import { getCcHomePath, loadConfig } from '../kb/config.js';
 import { loadCanvasConfig } from '../tools/setup_canvas.js';
 import { loadAnthropicConfig } from '../tools/setup_anthropic.js';
 import { loadOllamaConfig } from '../tools/setup_ollama.js';
+import { loadLmStudioConfig } from '../tools/setup_lmstudio.js';
 import { loadActiveProvider } from '../tools/set_active_llm_provider.js';
 import { loadTranscriptConfig } from '../tools/setup_transcript_source.js';
 import { loadLectureAnswersConfig } from '../tools/answers/config.js';
@@ -17,7 +20,9 @@ import { loadInstalledModules } from '../channel/installed.js';
 import { loadPendingRequests } from '../channel/pending.js';
 import { managedCanvasBackupConfigExists } from '../passthrough/canvas_backup_config.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
+import { detectHostWiring } from './hosts.js';
 import type {
+  CanvasStoreMigrationRecord,
   ConfigFileKey,
   ProbeResult,
   ReadSetupStateOptions,
@@ -43,6 +48,7 @@ function filePaths(): Record<ConfigFileKey, string> {
     ),
     'anthropic-config': join(ccHome, 'anthropic-config.json'),
     'ollama-config': join(ccHome, 'ollama-config.json'),
+    'lmstudio-config': join(ccHome, 'lmstudio-config.json'),
     'llm-provider': join(ccHome, 'llm-provider.json'),
     'transcript-config': join(ccHome, 'transcript-config.json'),
     'lecture-answers-config': lectureAnswersConfigPath(),
@@ -100,6 +106,40 @@ function safeHost(value: unknown): string | null {
   return typeof value === 'string' && value ? normalizeCanvasHost(value) : null;
 }
 
+/** The Canvas store bridge's last recorded outcome, or null. Diagnostics only —
+ *  an unreadable journal must never take the readiness read down with it. */
+function safelyJournal(): CanvasStoreMigrationRecord | null {
+  try {
+    const record = readCanvasStoreJournal();
+    if (!record) return null;
+    return {
+      at: record.at,
+      action: record.action,
+      detail: record.detail,
+      ...(record.backupPath !== undefined && { backupPath: record.backupPath }),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The file's parsed JSON object, or undefined when it is absent, unparseable, or
+ * not an object. Read raw — no overlaid view, and nothing but the fields named
+ * here is ever kept.
+ */
+function readRawJson(path: string): Record<string, unknown> | undefined {
+  if (!existsSync(path)) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path, 'utf-8'));
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function nonEmpty(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -137,6 +177,24 @@ async function probeRequest(url: string, headers: Record<string, string>): Promi
 }
 
 /**
+ * Guarded LM Studio reachability check (`GET {baseUrl}/models`). The endpoint is
+ * user-supplied, so it re-runs the SSRF guard before the request; a refused or
+ * unresolvable endpoint is reduced to a machine code, never a message. A
+ * remote/LAN server may require Bearer auth; the key comes from the environment
+ * and is sent as a header only.
+ */
+async function probeLmStudio(baseUrl: string): Promise<ProbeResult> {
+  let url: string;
+  try {
+    url = `${(await assertEndpointAllowed(baseUrl)).url}/models`;
+  } catch {
+    return { attempted: true, reachable: false, errorCode: 'ENDPOINT_BLOCKED' };
+  }
+  const apiKey = process.env.LMSTUDIO_API_KEY;
+  return probeRequest(url, apiKey ? { authorization: `Bearer ${apiKey}` } : {});
+}
+
+/**
  * One read-only pass over the machine's setup. Never throws, never returns a
  * secret, and makes no network call unless `probe` is explicitly true.
  */
@@ -150,25 +208,39 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
   const coursesRoot = config?.coursesRoot ?? null;
 
   const canvas = safely(loadCanvasConfig);
-  const institution = safely(loadInstitutionConfig);
 
+  // The two Canvas stores are read RAW, here and not through Canvas Design
+  // Studio's loadConfig(): that loader overlays the canonical host and token, so
+  // going through it hid a disagreement between the files — and the doctor's
+  // whole job is to report what is on disk, including the token a save would
+  // silently replace.
+  const rawCanvas = readRawJson(paths['canvas-config']);
+  const rawInstitution = readRawJson(paths['institution-config']);
+
+  const canvasConfig = {
+    host: safeHost(rawCanvas?.host),
+    hasApiToken: nonEmpty(rawCanvas?.token),
+  };
+  const institutionName = rawInstitution?.institution;
   const designStudio = {
-    configured: institution !== undefined,
-    host: safeHost(institution?.canvasUrl),
-    hasApiToken: nonEmpty(institution?.apiToken),
-    hasWaveApiKey: nonEmpty(institution?.waveApiKey),
-    institutionName: institution?.institution ?? null,
+    configured: rawInstitution !== undefined,
+    host: safeHost(rawInstitution?.canvasUrl),
+    hasApiToken: nonEmpty(rawInstitution?.apiToken),
+    hasWaveApiKey: nonEmpty(rawInstitution?.waveApiKey),
+    institutionName: nonEmpty(institutionName) ? String(institutionName) : null,
+    brandSetupPending: rawInstitution?.brandSetupPending === true,
   };
 
-  // In sync means the two stores agree, or neither exists. A store present on
-  // only one side is the split that strands C&C's policy and WAVE tools.
-  const canvasHost = canvas?.host ?? null;
+  // In sync means the two stores agree on a host, or neither exists. A store
+  // present on only one side is the split that strands C&C's policy and WAVE
+  // tools.
   const storesInSync =
-    (canvasHost === null && designStudio.host === null) ||
-    (canvasHost !== null && canvasHost === designStudio.host);
+    (canvasConfig.host === null && designStudio.host === null) ||
+    (canvasConfig.host !== null && canvasConfig.host === designStudio.host);
 
   const anthropic = safely(loadAnthropicConfig);
   const ollama = safely(loadOllamaConfig);
+  const lmstudio = safely(loadLmStudioConfig);
   const answers = loadLectureAnswersConfig();
   const envKeyPresent = nonEmpty(process.env.ANTHROPIC_API_KEY);
   const anthropicSource =
@@ -181,10 +253,14 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
   const manifest = loadModuleManifest();
   const installedModules = loadInstalledModules();
 
+  // Only files that hold a secret ON DISK, read raw. Canvas Design Studio's
+  // loadConfig() overlay made this list lie: institution.json was flagged for the
+  // canonical token it does not contain, and canvas-config.json for a token it
+  // only had a host of.
   const secretBearingFiles: ConfigFileKey[] = [];
   if (nonEmpty(config?.registry?.token)) secretBearingFiles.push('cc-config');
-  if (nonEmpty(canvas?.token)) secretBearingFiles.push('canvas-config');
-  if (nonEmpty(institution?.apiToken) || nonEmpty(institution?.waveApiKey)) {
+  if (canvasConfig.hasApiToken) secretBearingFiles.push('canvas-config');
+  if (designStudio.hasApiToken || designStudio.hasWaveApiKey) {
     secretBearingFiles.push('institution-config');
   }
   if (nonEmpty(anthropic?.apiKey)) secretBearingFiles.push('anthropic-config');
@@ -198,11 +274,13 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
     secretBearingFiles,
     canvas: {
       configured: canvas !== undefined,
-      host: canvasHost,
+      host: canvas?.host ?? null,
       configuredAt: canvas?.configuredAt || null,
     },
     designStudio,
+    canvasConfig,
     storesInSync,
+    canvasStoreMigration: safelyJournal(),
     llm: {
       activeProvider: safely(loadActiveProvider) ?? null,
       anthropic: {
@@ -214,6 +292,11 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
         configured: ollama !== undefined,
         host: ollama?.baseUrl ?? null,
         model: ollama?.model ?? null,
+      },
+      lmstudio: {
+        configured: lmstudio !== undefined,
+        host: lmstudio?.baseUrl ?? null,
+        model: lmstudio?.model ?? null,
       },
       lectureAnswers: {
         configured: answers !== null,
@@ -240,6 +323,9 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
       })),
       pendingRequests: loadPendingRequests().modules,
     },
+    // Read-only, and the only part of this read that looks outside the CC home.
+    // Opt-out, so a caller that must not touch another app's files can say so.
+    hosts: opts.hosts === false ? null : detectHostWiring(),
   };
 
   if (opts.probe === true) {
@@ -253,6 +339,9 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
           'x-api-key': anthropic.apiKey,
           'anthropic-version': '2023-06-01',
         })
+      : { attempted: false, reachable: false };
+    state.llm.lmstudio.probe = lmstudio
+      ? await probeLmStudio(lmstudio.baseUrl)
       : { attempted: false, reachable: false };
   }
 

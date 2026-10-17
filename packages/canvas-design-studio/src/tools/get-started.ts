@@ -29,6 +29,29 @@ function noConfigText(): string {
   ].join('\n');
 }
 
+function brandSetupText(config: InstitutionConfig): string {
+  const lines: string[] = [
+    '## Canvas Design Studio — institution setup needed',
+    '',
+    'Your Canvas host and token are in place (they come from Command & Control\'s',
+    '`ct_setup canvas`), but this app still has no institution name and only',
+    'placeholder brand colors, so the pages it generates would not look like your',
+    'school\'s.',
+    '',
+    '**Your first step:**',
+    'Run setup_institution to set your institution name and brand colors — it takes',
+    'about 2 minutes and only needs to run once.',
+  ];
+  if (config.canvasUrl) lines.push(`Canvas URL already on file: ${config.canvasUrl}`);
+  lines.push(
+    '',
+    '> **Tip:** Fill out `setup-worksheet.md` before running the wizard — call `get_setup_worksheet` to get the blank template.',
+    '',
+    CONTEXT7_HINT,
+  );
+  return lines.join('\n');
+}
+
 function partialConfigText(config: InstitutionConfig): string {
   const hasPanopto = !!config.panopto?.domain;
   return [
@@ -85,6 +108,7 @@ function fullConfigText(config: InstitutionConfig): string {
 export function getStarted(): string {
   if (!configExists()) return noConfigText();
   const config = loadConfig();
+  if (config.brandSetupPending === true) return brandSetupText(config);
   if (!config.apiToken?.trim()) return partialConfigText(config);
   return fullConfigText(config);
 }

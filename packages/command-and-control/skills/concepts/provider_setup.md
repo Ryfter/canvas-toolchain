@@ -80,15 +80,20 @@ reaches the result has effectively leaked.
 
 Two consequences worth remembering:
 
-- **`keyPresent` is true for either surface** — the `ANTHROPIC_API_KEY`
-  environment variable *or* `anthropic-config.json`. A status tool that checked
-  only the environment variable would tell a correctly-configured professor they
-  have no key, which is the misdiagnosis the current implementation exists to
-  prevent.
-- **Reachability is probed, not assumed.** Ollama is reported as reachable only
-  when a live request succeeds, so "configured" and "actually working" stay
-  distinct fields. The probe reads the `providers.ollama` block that [[setup_cc]]
-  writes, not `ollama-config.json`.
+- **`keyPresent` tracks the file the runtime reads** — `anthropic-config.json`,
+  and nothing else. An environment-only `ANTHROPIC_API_KEY` reports
+  `keyPresent: false`, `source: "env"`, plus a `note`; the status tool must
+  report what the runtime will actually do, not what is present somewhere.
+  `source` is `file` / `env` / `both` / `none`.
+- **Reachability is probed only when Ollama is configured.** Ollama is reported
+  as reachable only when a live request succeeds, so "configured" and "actually
+  working" stay distinct fields. The probe reads `ollama-config.json` (via
+  `readSetupState` in `src/setup/read_state.ts`), never the legacy
+  `providers.ollama` block in `config.json`; when Ollama is not configured the
+  tool makes no network call at all.
+
+The status tool is a projection of `readSetupState`; its `diagnostics` field
+points at `ct_setup` action `doctor` for the full report.
 
 ## Pitfalls
 

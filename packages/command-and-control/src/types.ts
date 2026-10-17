@@ -1,5 +1,5 @@
 export type TaskCategory = 'none' | 'fast' | 'judgment';
-export type ProviderName = 'anthropic' | 'ollama';
+export type ProviderName = 'anthropic' | 'ollama' | 'lmstudio';
 export type Mode = 'easy' | 'advanced';
 
 export interface AnthropicProviderConfig {

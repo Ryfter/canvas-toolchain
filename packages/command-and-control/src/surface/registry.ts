@@ -1,12 +1,15 @@
 import type { Operation } from './operation.js';
+import { deprecation } from './deprecation.js';
 import type { PassthroughTool } from '../passthrough/ci_tools.js';
 import { setupCc } from '../tools/setup_cc.js';
 import { setupAnthropic } from '../tools/setup_anthropic.js';
 import { setupCanvas } from '../tools/setup_canvas.js';
 import { setupOllama } from '../tools/setup_ollama.js';
+import { setupLmStudio } from '../tools/setup_lmstudio.js';
+import { setupLlmProvider } from '../tools/setup_llm_provider.js';
 import { showCanvasCapabilities } from '../tools/showcase/show_canvas_capabilities.js';
 import { previewCanvasPattern } from '../tools/showcase/preview_canvas_pattern.js';
-import { setActiveLlmProvider } from '../tools/set_active_llm_provider.js';
+import { PREFERRED_PROVIDER_ORDER, setActiveLlmProvider } from '../tools/set_active_llm_provider.js';
 import { setModuleEnabled } from '../tools/set_module_enabled.js';
 import { listModules } from '../tools/list_modules.js';
 import { browseModuleCatalog, installModuleTool, uninstallModuleTool } from '../tools/module_channel_tools.js';
@@ -18,6 +21,7 @@ import { setCoursesRoot } from '../tools/set_courses_root.js';
 import { openDashboard } from '../tools/open_dashboard.js';
 import { getCcStatus } from '../tools/get_cc_status.js';
 import { runDoctor } from '../setup/doctor.js';
+import { getStarted } from '../setup/get_started.js';
 import { analyzeCourse } from '../tools/workflows/analyze_course.js';
 import { planNextSemester } from '../tools/workflows/plan_next_semester.js';
 import { updateCourseMaterials } from '../tools/workflows/update_course_materials.js';
@@ -117,8 +121,8 @@ export const CORE_OPERATIONS: Operation[] = [
         anthropicModel: { type: 'string', description: 'Anthropic model name, e.g. "claude-sonnet-4-6".' },
         ollamaBaseUrl: { type: 'string', description: 'Ollama server URL, e.g. "http://localhost:11434".' },
         ollamaModel: { type: 'string', description: 'Ollama model name, e.g. "llama3.2".' },
-        routingFast: { type: 'string', enum: ['anthropic', 'ollama'] },
-        routingJudgment: { type: 'string', enum: ['anthropic', 'ollama'] },
+        routingFast: { type: 'string', enum: [...PREFERRED_PROVIDER_ORDER] },
+        routingJudgment: { type: 'string', enum: [...PREFERRED_PROVIDER_ORDER] },
         downloaderPath: { type: 'string', description: 'Absolute path to the canvas-backup executable (or canvas-backup.exe). Persisted in config — professors set this once instead of managing env vars.' },
         registryToken: { type: 'string', description: 'Premium registry token for ryfter:// resources. Stored locally and never echoed back.' },
         premiumRegistryBaseUrl: { type: 'string', description: 'Optional premium registry API base URL override.' },
@@ -130,6 +134,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'cc',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'cc' }),
   },
   {
     id: 'setup_anthropic',
@@ -149,6 +154,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'anthropic',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'anthropic' }),
   },
   {
     id: 'setup_canvas',
@@ -168,6 +174,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'canvas',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'canvas' }),
   },
   {
     id: 'setup_ollama',
@@ -185,6 +192,45 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'ollama',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'ollama' }),
+  },
+  {
+    id: 'setup_lmstudio',
+    section: 'admin',
+    description: 'Configure LM Studio (OpenAI-compatible local server) as the generation LLM. Discovery mode lists loaded models from the running server; commit mode validates the model and writes lmstudio-config.json.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        baseUrl: { type: 'string', description: 'LM Studio base URL. Default http://localhost:1234/v1.' },
+        model: { type: 'string', description: 'Model ID to activate. Omit for discovery mode.' },
+      },
+    },
+    handler: (args) => setupLmStudio(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'lmstudio',
+  },
+  {
+    id: 'setup_llm_provider',
+    section: 'admin',
+    description:
+      'Report the active and configured LLM providers, best first (LM Studio, Ollama, Anthropic); with no arguments it also probes the local servers. Pass provider to activate a configured one.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        provider: {
+          type: 'string',
+          enum: [...PREFERRED_PROVIDER_ORDER],
+          description: 'Provider to activate. Omit to report the active and configured providers.',
+        },
+      },
+    },
+    handler: (args) => setupLlmProvider(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'llm_provider',
   },
   {
     id: 'show_canvas_capabilities',
@@ -227,12 +273,12 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'set_active_llm_provider',
     section: 'admin',
-    description: 'Set the active generation LLM provider. Must be anthropic or ollama. Refuses to set a provider whose config file is absent.',
+    description: 'Set the active generation LLM provider. Must be lmstudio, ollama or anthropic. Refuses to set a provider whose config file is absent.',
     inputSchema: {
       type: 'object' as const,
       required: ['provider'],
       properties: {
-        provider: { type: 'string', enum: ['anthropic', 'ollama'], description: 'anthropic or ollama' },
+        provider: { type: 'string', enum: [...PREFERRED_PROVIDER_ORDER], description: 'lmstudio, ollama or anthropic' },
       },
     },
     handler: (args) => setActiveLlmProvider(args as never),
@@ -415,6 +461,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'courses_root',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'courses_root' }),
   },
   {
     id: 'open_dashboard',
@@ -442,11 +489,12 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'status',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'status' }),
   },
   {
     id: 'setup_doctor',
     section: 'admin',
-    description: 'Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic checks.',
+    description: 'Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic probes; detects MCP host wiring.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -456,6 +504,7 @@ export const CORE_OPERATIONS: Operation[] = [
           enum: ['local-authoring', 'canvas-connected', 'ai-assisted', 'full'],
           description: 'Which capability the verdict is for. A narrower journey ignores unconfigured checks it does not need. Default full.',
         },
+        hosts: { type: 'boolean', description: 'Read the other MCP clients\' config files (never write) to report whether canvas-toolchain is wired into each. Default true.' },
       },
     },
     handler: (args) => runDoctor(args as never),
@@ -463,6 +512,26 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'doctor',
+  },
+  {
+    id: 'get_started',
+    section: 'admin',
+    description: 'First-run guidance built from the setup doctor: which capabilities are ready and the exact ct_setup or ct_advanced call that finishes each one. Read-only and offline.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        journey: {
+          type: 'string',
+          enum: ['local-authoring', 'canvas-connected', 'ai-assisted', 'full'],
+          description: 'Which capability to guide toward. Default full: courses root required, Canvas and AI optional.',
+        },
+      },
+    },
+    handler: (args) => getStarted(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'get_started',
   },
   {
     id: 'analyze_course',
@@ -614,6 +683,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'transcripts',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'transcripts' }),
   },
   {
     id: 'compare_transcripts',
@@ -758,6 +828,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'lecture_answers',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'lecture_answers' }),
   },
   {
     id: 'index_course_for_answers',
@@ -933,6 +1004,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'spot_check',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'spot_check' }),
   },
   {
     id: 'validate_quiz',
@@ -1257,6 +1329,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'course',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'course' }),
   },
   {
     id: 'get_course_state',
@@ -1766,6 +1839,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'backup',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'backup' }),
   },
   {
     id: 'download_canvas_archive',

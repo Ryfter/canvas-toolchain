@@ -9,7 +9,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { CanvasApiClient } from './canvas-api.js';
-import { configExists, loadConfig, saveConfig } from './config.js';
+import { loadConfig, needsBrandSetup, saveConfig } from './config.js';
 import { runWizard, formatSetupSummary } from './wizard.js';
 import { formatError } from './utils/errors.js';
 import { getStarted } from './tools/get-started.js';
@@ -54,10 +54,14 @@ import { publishWidget } from './tools/publish-widget.js';
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
 async function main() {
-  if (!configExists()) {
+  // Not `configExists()`: a file the Canvas store bridge synthesized while
+  // setting up Canvas in Command & Control has no institution name or brand
+  // colors, so brand setup must still run (#151 R7 review).
+  if (needsBrandSetup()) {
     if (!process.stdin.isTTY) {
       process.stderr.write(
-        'Error: No institution config found.\n' +
+        'Error: Canvas Design Studio still needs its institution setup (institution\n' +
+        'name and brand colors).\n' +
         'Run the setup wizard on your host machine first:\n\n' +
         '  npx canvas-toolchain-design-studio\n\n' +
         'Then mount the config when running Docker:\n\n' +
@@ -503,19 +507,20 @@ async function main() {
       }
 
       if (name === 'generate_canvas_page') {
-        if (!configExists()) {
+        if (needsBrandSetup()) {
           return {
             content: [{
               type: 'text',
               text: formatError({
                 title: 'Setup Required',
-                message: 'Canvas Design Studio needs institution config before generating pages.',
-                cause: 'No institution.json found at ~/.canvas-design-mcp/institution.json.',
+                message: 'Canvas Design Studio needs your institution setup before generating pages.',
+                cause: 'No complete institution.json found at ~/.canvas-design-mcp/institution.json.',
                 fix: [
-                  'Run setup_institution to save your institution colors, Canvas URL, and optional API token',
+                  'Run setup_institution to set your institution name and brand colors',
+                  'A Canvas host and token from ct_setup canvas are used automatically when present',
                   'The wizard takes about 2 minutes and only needs to run once',
                 ],
-                context: 'generate_canvas_page called with no institution config',
+                context: 'generate_canvas_page called with an incomplete institution config',
               }),
             }],
             isError: true,
@@ -638,19 +643,20 @@ async function main() {
       }
 
       if (name === 'ingest_assignment_folder') {
-        if (!configExists()) {
+        if (needsBrandSetup()) {
           return {
             content: [{
               type: 'text',
               text: formatError({
                 title: 'Setup Required',
-                message: 'Canvas Design Studio needs institution config before generating pages.',
-                cause: 'No institution.json found at ~/.canvas-design-mcp/institution.json.',
+                message: 'Canvas Design Studio needs your institution setup before generating pages.',
+                cause: 'No complete institution.json found at ~/.canvas-design-mcp/institution.json.',
                 fix: [
-                  'Run setup_institution to save your institution colors, Canvas URL, and optional API token',
+                  'Run setup_institution to set your institution name and brand colors',
+                  'A Canvas host and token from ct_setup canvas are used automatically when present',
                   'The wizard takes about 2 minutes and only needs to run once',
                 ],
-                context: 'ingest_assignment_folder called with no institution config',
+                context: 'ingest_assignment_folder called with an incomplete institution config',
               }),
             }],
             isError: true,

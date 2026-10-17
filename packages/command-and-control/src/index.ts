@@ -14,6 +14,7 @@ import {
 } from './tools/workflows/bulk_fetch_panopto_transcripts.js';
 import { checkForUpdates, getUpdateNotice } from './update/check.js';
 import { loadModules } from './modules/registry.js';
+import { migrateActiveProvider } from './tools/set_active_llm_provider.js';
 import { checkChannelNotices, getChannelNotices } from './channel/notices.js';
 import { appendNotice } from './lib/append_notice.js';
 import { buildRegistry } from './surface/registry.js';
@@ -21,6 +22,7 @@ import { adaptModuleTools } from './surface/module_adapter.js';
 import { listTools } from './surface/list_tools.js';
 import { dispatchSurface } from './surface/dispatch.js';
 import type { Operation } from './surface/operation.js';
+import { bridgeCanvasStoresAtStartup } from './setup/canvas_store_boot.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -29,6 +31,15 @@ const server = new Server(
   { capabilities: { tools: {} } }
 );
 
+// Bridge the two Canvas credential stores once at startup (#151 R7, D1):
+// ~/.command-and-control/canvas-config.json is canonical and Canvas Design
+// Studio's institution.json mirrors it, so a professor who configured Canvas in
+// either app has both. Never fatal, never creates Design Studio's file — an
+// unwritable or read-only home must not stop the server booting, and a blank
+// institution.json would switch off Design Studio's own brand setup. What it did
+// (and any backup it took) goes to the migration journal, which the doctor reads.
+bridgeCanvasStoresAtStartup();
+
 // Load enabled modules (e.g. video) before registering handlers so their tool
 // schemas and handlers are available to ListTools/CallTool.
 const loadedModules = await loadModules();
@@ -36,6 +47,27 @@ const loadedModules = await loadModules();
 // Fire-and-forget background check — never blocks startup.
 void checkForUpdates();
 void checkChannelNotices();
+
+/**
+ * Activate a lone configured LLM provider for installs that configured one
+ * before auto-activation existed. Non-fatal: a failure only skips the
+ * convenience, and the doctor still points at ct_setup action llm_provider.
+ * Local file reads only — never the network, never a secret in the log line.
+ */
+function migrateActiveLlmProvider(): void {
+  try {
+    const result = migrateActiveProvider();
+    if (result.activated) {
+      console.error(`[migration] activated the only configured LLM provider: ${result.provider}`);
+    }
+  } catch (err) {
+    console.error(
+      `[migration] could not check the active LLM provider: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+migrateActiveLlmProvider();
 
 // ── The operation registry ──────────────────────────────────────────────────
 // 86 core operations plus every enabled module's tools. Module operation ids are

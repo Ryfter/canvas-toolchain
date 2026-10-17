@@ -9,6 +9,7 @@ import {
   EndpointBlockedError,
 } from '@canvas-toolchain/shared-llm';
 import { getCcHomePath } from '../kb/config.js';
+import { autoActivateProvider, type AutoActivateResult } from './set_active_llm_provider.js';
 
 const DEFAULT_BASE_URL = 'http://localhost:11434';
 const DEFAULT_RECOMMENDATIONS_URL =
@@ -39,6 +40,9 @@ export type SetupOllamaResult =
       baseUrl: string;
       model: string;
       configPath: string;
+      message: string;
+      /** What the post-setup auto-activation did. */
+      activation: AutoActivateResult;
     }
   | {
       mode: 'commit';
@@ -86,11 +90,17 @@ export function loadOllamaConfig(): OllamaConfigFile {
   }
 }
 
-type ProbeResult =
+export type OllamaProbeResult =
   | { ok: true; url: string; tags: string[] }
   | { ok: false; blocked?: EndpointBlockedError };
 
-async function probeTags(baseUrl: string): Promise<ProbeResult> {
+const PROBE_TIMEOUT_MS = 3000;
+
+/** Probe `{baseUrl}/api/tags` through the SSRF guard. Shared with detection. */
+export async function probeTags(
+  baseUrl: string,
+  opts: { timeoutMs?: number } = {},
+): Promise<OllamaProbeResult> {
   // SSRF guard: refuse blocked targets before any request. Re-checked here
   // rather than only at the top of setupOllama so it runs immediately before
   // the outbound call.
@@ -102,7 +112,7 @@ async function probeTags(baseUrl: string): Promise<ProbeResult> {
   }
   try {
     const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 3000);
+    const tid = setTimeout(() => controller.abort(), opts.timeoutMs ?? PROBE_TIMEOUT_MS);
     const response = await fetch(`${endpoint.url}/api/tags`, {
       signal: controller.signal,
       redirect: 'manual',
@@ -189,11 +199,15 @@ export async function setupOllama(input: SetupOllamaInput): Promise<SetupOllamaR
   writeFileSync(tmpPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmpPath, configPath);
 
+  const activation = autoActivateProvider('ollama');
+
   return {
     mode: 'commit',
     ok: true,
     baseUrl: probe.url,
     model: input.model,
     configPath,
+    message: `Ollama configured with ${input.model}. ${activation.note}`,
+    activation,
   };
 }
