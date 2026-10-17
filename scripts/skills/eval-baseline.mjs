@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { isMain, parseArgs, runMain } from './lib/cli.mjs';
 import { mocIdsFor } from './lib/graph.mjs';
+import { DEFAULT_LINT_OPTIONS } from './lib/lint-rules.mjs';
 import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource, loadSurfaceProbe } from './lib/registry.mjs';
 
 const FIXTURES = join(REPO_ROOT, 'packages/command-and-control/tests/skills/selection.fixtures.json');
@@ -143,6 +144,7 @@ export async function evaluate({ repoRoot = REPO_ROOT, skillsRoot = SKILLS_ROOT 
       note: 'No offline tokenizer is available and no dependency may be added; every token number is Math.round(chars/4), reported alongside raw chars. Old-surface text is measured minified (the wire shape) with the pretty-printed form reported separately.',
     },
     operations: source.operations.length,
+    descriptionStats: describeLengths(source.operations),
     indexCap: INDEX_CAP,
     tokens,
     chars,
@@ -157,6 +159,20 @@ export async function evaluate({ repoRoot = REPO_ROOT, skillsRoot = SKILLS_ROOT 
       oldSurfaceMinimalOverMocPath: Number((tokens.oldSurface.minimal / tokens.newPath.mocAverage).toFixed(2)),
     },
     fixtures: perAsk,
+  };
+}
+
+/** Min / median / max description length, measured rather than quoted, so the
+ *  prose in the generated document cannot go stale when descriptions change. */
+function describeLengths(operations) {
+  const lengths = operations.map((op) => op.description.length).sort((a, b) => a - b);
+  const middle = lengths.length / 2;
+  return {
+    min: lengths[0],
+    median: lengths.length % 2 ? lengths[(lengths.length - 1) / 2] : Math.round((lengths[middle - 1] + lengths[middle]) / 2),
+    max: lengths[lengths.length - 1],
+    overBudget: lengths.filter((length) => length > DEFAULT_LINT_OPTIONS.maxDescription).length,
+    budget: DEFAULT_LINT_OPTIONS.maxDescription,
   };
 }
 
@@ -279,9 +295,11 @@ ${rows.join('\n')}
   both surfaces are prose-heavy, so the *ratio* is the more trustworthy number
   than either absolute value.
 * **The index is not free.** \`index.md\` carries all ${report.operations} full
-  descriptions (median 145 characters, max 562), so it costs about as much as the
-  metadata registry dump. The saving over the old path comes from not reading the
-  parameter schemas and not reading the ct_advanced catalog twice.
+  descriptions — min ${report.descriptionStats.min}, median ${report.descriptionStats.median}, max ${report.descriptionStats.max}
+  characters, ${report.descriptionStats.overBudget} over the ${report.descriptionStats.budget}-character budget — so it costs
+  about as much as the metadata registry dump. The saving over the old path comes
+  from not reading the parameter schemas and not reading the ct_advanced catalog
+  twice.
 * **Module operations are excluded.** They exist only at runtime behind
   \`modules.json\`, so the baseline is the core surface (${report.operations} operations).
 * **Reading one op file is an assumption.** An agent that picks from the index

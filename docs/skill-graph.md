@@ -211,21 +211,23 @@ length rule, and any rule that requires an LLM.
 
 | Rule | Violations |
 | --- | --- |
-| `too-long` | 31 |
+| `too-long` | 0 |
 | everything else | 0 |
 
-Description lengths: min 58, median 145, max 562. The nearest near-duplicate
-pair is `list_assignments` ↔ `list_pages` at **0.750** — real, below the 0.8
-threshold, and worth a human look rather than a rewrite.
+Description lengths: min 58, median 144, max 200 — every one inside the
+200-character budget. J7 rewrote the 31 that exceeded it (the previous maximum
+was 562), preserving each operation's constraints, prerequisites, safety
+warnings, and the distinguishing "use this when / not that" clause. The
+per-operation before/after table is in
+[`skill-graph-j7-descriptions.md`](./skill-graph-j7-descriptions.md).
 
-The `too-long` result is the interesting one. These descriptions are
-model-facing tool descriptions, and they are long on purpose (`validate_quiz` at
-562 characters explains live-vs-local mode, prerequisites, and what it does
-*not* do). A 200-character budget would strip exactly the caveats that make
-operation selection correct. **Recommendation for J7: raise the default to 600
-(where the corpus is clean) and treat the 31 as evidence that the budget is
-miscalibrated, not as 31 descriptions to shorten.** Note this is a lint default,
-not a description problem — the descriptions were not modified by this work.
+An earlier reading of this corpus argued the 200-character budget was
+miscalibrated and recommended raising the lint default instead of shortening the
+descriptions. That recommendation was superseded: the J7 rewrite showed the
+caveats fit at 200, so the default stayed and the descriptions moved.
+
+The nearest near-duplicate pair is `list_assignments` ↔ `list_pages` at **0.750** —
+real, below the 0.8 threshold, and worth a human look rather than a rewrite.
 
 ## 7. Generator flow
 
