@@ -59,15 +59,40 @@ export function renderOpFile(op, related = []) {
 }
 
 /**
+ * How long a concept line's description may be, in characters.
+ *
+ * A concept line is a *pointer*, not the note. The map is the routed first read,
+ * so the line carries the id an agent follows plus a scannable hint — not the
+ * note's full (up to 200-character) description, which is read again in the
+ * concept file itself. Measured against the 18 benchmark asks in J9: the full
+ * descriptions cost ~146 tokens on the routed path, the capped ones ~69.
+ */
+export const CONCEPT_LINE_CAP = 60;
+
+/** One compact map line for a concept: the wikilink, then a short description. */
+export function conceptLine(concept) {
+  const description = oneLine(concept.description);
+  const short = description.length <= CONCEPT_LINE_CAP
+    ? description
+    : `${description.slice(0, CONCEPT_LINE_CAP - 3)}...`;
+  return `- [[${concept.id}]] — ${short}`;
+}
+
+/**
  * The concept section a map file carries, or nothing when the map owns none.
  * Omitted rather than emitted empty: a MOC is the routed first read, and a
  * `(none)` heading is read every time for no information.
  */
 function conceptSection(concepts) {
   if (!concepts.length) return [];
+  // Sorted here rather than left to the caller: the index reads concepts off
+  // `readdirSync` while the MOCs get them from `conceptsForMoc`, and the two must
+  // emit the same bytes. Code-unit order, so the sort decides the file and
+  // `--check` agrees everywhere.
+  const ordered = [...concepts].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return [
-    `## Concepts (${concepts.length})`, '',
-    ...concepts.map((concept) => `- [[${concept.id}]] — ${oneLine(concept.description)}`),
+    `## Concepts (${ordered.length})`, '',
+    ...ordered.map(conceptLine),
     '',
   ];
 }

@@ -1,7 +1,7 @@
 ---
 id: "accessibility"
 description: "A concept whose id squats on a map id, making [[accessibility]] ambiguous."
-related: []
+related: [alpha]
 ---
 # accessibility
 

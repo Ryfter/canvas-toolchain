@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { buildIndex } from '../../../../scripts/skills/build-index.mjs';
 import { buildMocs } from '../../../../scripts/skills/moc.mjs';
 import { parseFrontMatter } from '../../../../scripts/skills/lib/frontmatter.mjs';
+import { CONCEPT_LINE_CAP, conceptLine } from '../../../../scripts/skills/lib/render.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../../../../scripts/skills/moc.mjs', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
@@ -194,7 +195,7 @@ describe('moc', () => {
     }
   });
 
-  it('renders a MOC concept line from the concept frontmatter, sorted by id', () => {
+  it('renders a compact MOC concept line from the concept frontmatter, sorted by id', () => {
     const snapshots = readMocs(sharedRoot).find((moc) => moc.id === 'snapshots');
     const ids = conceptIdsIn(snapshots?.body ?? '');
 
@@ -203,7 +204,7 @@ describe('moc', () => {
     for (const id of ids) {
       const concept = readConcepts().find((c) => c.id === id);
       expect(concept, id).toBeDefined();
-      expect(snapshots?.body).toContain(`- [[${id}]] — ${concept?.description}`);
+      expect(snapshots?.body).toContain(conceptLine(concept!));
     }
   });
 
@@ -245,6 +246,21 @@ describe('moc', () => {
     expect(wouldWrite.files.created).toBe(18);
     expect(readdirSync(fresh)).toEqual([]);
     expect(snapshotMocs(root)).toEqual(before);
+  });
+});
+
+describe('conceptLine', () => {
+  it('renders the id plus the description when it fits', () => {
+    expect(conceptLine({ id: 'idea', description: 'A short hint.' })).toBe('- [[idea]] — A short hint.');
+  });
+
+  it('caps a long description so a map line stays compact', () => {
+    const line = conceptLine({ id: 'idea', description: 'x'.repeat(CONCEPT_LINE_CAP + 40) });
+    expect(line).toBe(`- [[idea]] — ${'x'.repeat(CONCEPT_LINE_CAP - 3)}...`);
+  });
+
+  it('flattens a description that contains a newline, so a line is always one line', () => {
+    expect(conceptLine({ id: 'idea', description: 'one\ntwo' })).toBe('- [[idea]] — one two');
   });
 });
 

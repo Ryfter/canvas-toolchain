@@ -1,7 +1,7 @@
 ---
 id: "accessibility_gate"
 description: "How the accessibility gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write to continue."
-related: [accessibility_review_queue, audit_course_accessibility, generate_course, preview_course_publish, publish_course, review_accessibility_policy, wave_deep_check]
+related: [accessibility_review_queue, audit_course_accessibility, preview_course_publish, publish_course, review_accessibility_policy, wave_deep_check]
 ---
 
 # The accessibility gate
@@ -50,7 +50,8 @@ it are returned as `advisories` and can never fail a page.
    output first (`NO_GENERATED_OUTPUT` otherwise).
 3. [[accessibility_review_queue]] — walk the queue with human eyes, then
    `action: "resolve"` to mark a page `reviewed-by-human`. Sorting is worst-margin
-   first, so the pages closest to failing come first.
+   first: the page with the lowest measured/required ratio — the deepest failure —
+   comes first.
 4. [[preview_course_publish]] — classify every entry's warnings. Each a11y
    warning gets `a11yTier: 'borderline' | 'clear'`, plus the `sc` and a
    `marginRatio` when the criterion is measurable.
@@ -59,17 +60,20 @@ it are returned as `advisories` and can never fail a page.
    `ACCESSIBILITY_ACK_REQUIRED`, writes the snapshot's state as `partial`, and
    **stops the publish there** — the same stop-on-first-failure rule as the rest
    of publishing (see [[publish_safety]]).
-6. Acknowledged publishes are appended to `.a11y/acknowledgments.json` under the
-   course folder, which makes the trail auditable later.
+6. An acknowledged publish appends to `.a11y/acknowledgments.json` and upserts
+   (or clears) the same entry's record in `.a11y/review-queue.json`. The
+   assignment branch records the WCAG 2.1 AA baseline rather than the policy's
+   required level.
 
-The engine stack behind steps 2–4 is the same one everywhere: six Canvas-aware
-in-house checks (`packages/canvas-design-studio/src/tools/accessibility.ts`) plus
-axe-core run in jsdom (`src/tools/a11y/axe.ts`), merged and deduped by
-`src/tools/a11y/conformance.ts`. axe's `color-contrast` and `target-size` rules
-are **disabled** because jsdom performs no layout — the in-house contrast check is
-authoritative for 1.4.3. The axe engine never throws: on failure it reports
-nothing covered so criteria honestly fall back to `needs-human-review` rather
-than silently passing.
+Steps 2 and 4 share one engine stack: six Canvas-aware in-house checks
+(`src/tools/a11y/inhouse.ts`, a wrapper over `src/tools/accessibility.ts`) plus
+axe-core in jsdom (`src/tools/a11y/axe.ts`), merged and deduped by
+`src/tools/a11y/conformance.ts`. Step 3 runs no engine —
+`accessibility_review_queue` only reads and sorts the persisted queue. axe's
+`color-contrast` and `target-size` rules are **disabled** because jsdom performs no
+layout — the in-house contrast check is authoritative for 1.4.3. The axe engine
+never throws: on failure it reports nothing covered so criteria honestly fall back
+to `needs-human-review` rather than silently passing.
 
 ## WAVE is a different lever, not a stronger one
 
@@ -105,11 +109,12 @@ tool for what jsdom cannot do — but it is not wired into the gate:
 - **The review queue is a worklist, not a gate.** Resolving an entry records a
   human judgment; it does not lower the required level or pre-approve a publish.
   Re-running the audit *reopens* an entry the moment fresh findings appear.
-- **The gate lives in two places.** `publish_course` is the C&C course path.
-  Page-level `publish_to_canvas` (Canvas Design Studio, not a C&C operation)
-  runs the same two-tier check on one page; C&C's own page rendering routes
-  through `lib/page-renderer.ts`, which runs the in-house audit. All three end at
-  `evaluateAckAgainst`, so the semantics cannot drift apart.
+- **The gate lives in two places.** `publish_course` is the C&C course path
+  (`evaluateEntryA11yGate`); page-level `publish_to_canvas` is the Canvas Design
+  Studio path (`evaluateAcknowledgment`). Both end at `evaluateAckAgainst`, so
+  their semantics cannot drift apart. C&C's own page rendering
+  (`lib/page-renderer.ts`) only runs the in-house audit and tags the page
+  `needs-review` — it evaluates no acknowledgment.
 - **Policy is per-professor runtime data, never repo data.**
   [[review_accessibility_policy]] writes the `accessibilityPolicy` block
   (policy URLs, required level, `recheckWeeks` default 4, the WCAG 3 advisory

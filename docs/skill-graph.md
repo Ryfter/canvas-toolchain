@@ -21,7 +21,8 @@ packages/command-and-control/skills/
 ```
 
 Both map kinds also list the concept notes whose `related:` operations they own
-(§5.2) — the generated operation lines come first, the concept lines after.
+(§5.2) — the generated operation lines come first, the concept lines after, each
+a single compact line (`CONCEPT_LINE_CAP`, lib/render.mjs).
 
 Operation ids are unique across core and module operations (module ids are
 host-namespaced in `src/surface/module_adapter.ts`), so the file name is exactly
@@ -118,7 +119,7 @@ related: [accessibility_review_queue, audit_course_accessibility, publish_course
 | --- | --- | --- |
 | `id` | file name minus `.md` | Must not collide with an operation id, a MOC id, or `index`: link resolution is one flat id space, so a shadowed id makes every `[[id]]` ambiguous. |
 | `description` | hand-written | Required, and held to the same `--max-description` budget as an operation description. |
-| `related` | hand-written | The **operation ids** the note is about. This is the only authored edge: it is what decides which MOCs list the note (§5.2), and a note with no live `related:` id is reachable from nothing. |
+| `related` | hand-written | The **operation ids** the note is about, and they must be operations an agent can call. This is the only authored edge: it is what decides which MOCs list the note (§5.2), and a note with no live `related:` id is reachable from nothing (`concept-related`, §6). |
 
 Concepts are excluded from the operation-id drift rule and from `orphan`; the
 generator reads `related` and never writes the file.
@@ -244,9 +245,18 @@ gets no concept section at all, rather than an empty heading.
 
 The rule is total in both directions: **every concept is listed by at least one
 MOC** (a note whose `related:` names no operation is unreachable, and
-`tests/skills/moc.test.ts` fails on it), and **no concept is listed by a MOC that
+`concept-related` fails the lint on it), and **no concept is listed by a MOC that
 owns none of its operations**. Because the edge is derived, adding a concept note
 is a one-file change: the maps are regenerated, never hand-edited.
+
+A line is deliberately compact — `- [[id]] — <description capped at
+CONCEPT_LINE_CAP>` (`conceptLine` in lib/render.mjs). The map is the routed first
+read, so the line is a pointer carrying the id and a scannable hint; the note's
+full description is read from the concept file itself. J9 measured the difference:
+the uncapped lines cost ~146 tokens on the routed path and pushed the Path C
+average to 1,016, capping them at 60 characters brings it to 940 (thrifty ratio
+4.67x). Only the *line* is shortened — the frontmatter description is still held
+to the full `--max-description` budget by the lint.
 
 `index.md` (the full-catalog fallback) lists every concept once, after the
 per-section operation lists, so the same read that answers "which operation?"
@@ -265,7 +275,8 @@ non-zero; `--json` prints the machine-readable report.
 | `near-duplicate` | ops | Normalized trigram Jaccard ≥ `--similarity` (default 0.8). |
 | `broken-wikilink` | all files | A `[[x]]` body link or a `related:` entry where `x` is not an op, MOC, or concept id. |
 | `orphan` | ops | Op in no MOC (`moc/*.md` no longer mentions it). Concepts get the same guarantee from `conceptsForMoc`, asserted in `tests/skills/moc.test.ts` rather than re-derived here. |
-| `drift` | ops, concepts | Ops — frontmatter `description` ≠ registry, frontmatter `id` ≠ file name, an op file the registry no longer declares, or a registry operation with no op file. Concepts — a frontmatter fence that never closes, or a concept id that collides with an operation id or a map id (`index`, `moc/<name>`). |
+| `drift` | ops, concepts | Ops — frontmatter `description` ≠ registry, frontmatter `id` ≠ file name, an op file the registry no longer declares, or a registry operation with no op file. Concepts — frontmatter `id` ≠ file name, a frontmatter fence that never closes, or a concept id that collides with an operation id or a map id (`index`, `moc/<name>`). |
+| `concept-related` | concepts | A concept `related:` list that is empty (so no MOC can reach the note), or that names an operation with `exposure: 'internal'` (which no agent can call). An id that is not an operation at all is `broken-wikilink`'s to report. |
 | `curated-link` | `data/related.json` | A `from`/`to` id that is not a registered operation, a self link, or a duplicate `from -> to` pair (§5.1). |
 
 `missing-description` short-circuits only the other *description* checks: the id
@@ -316,14 +327,17 @@ non-empty `related:` list. `lint.test.ts` holds the per-rule fixture (an
 unknown `to`, an unknown `from`, a self link, and a duplicate pair).
 
 J9 adds **7 hand-written concept notes**, and the lint reports 0 violations with
-them in scope: 7 concepts, 45 concept links across 17 of the 18 maps
-(`moc/registry.md` owns no operation any concept names, so it gets no concept
-section at all). The concept rules have their own fixtures — a clean note, a
-missing description, an over-budget description, an operation-id collision, a
-map-id collision, and an unclosed frontmatter fence
-(`tests/skills/fixtures/lint/concept-*`). The concept descriptions are
-lint-clean at the same 200-character budget as the 86 operation descriptions,
-which is what lets the maps render a note's line without truncation.
+them in scope: 7 concepts, 32 concept links across 16 of the 18 maps
+(`moc/ct_inspect.md` and `moc/registry.md` own no operation any concept names, so
+they get no concept section at all). Each concept's `related:` list names only the
+operations it governs — no negative foils, no bracket steps, no `exposure:
+'internal'` operations. The concept rules have their own fixtures — a clean note,
+a missing description, an over-budget description, an operation-id collision, a
+map-id collision, an unclosed frontmatter fence, a frontmatter-id drift, an empty
+`related:`, and an internal-only `related:` (`tests/skills/fixtures/lint/concept-*`).
+The concept descriptions are lint-clean at the same 200-character budget as the 86
+operation descriptions; the maps deliberately render only a capped prefix of them
+(§5.2).
 
 ## 7. Generator flow
 

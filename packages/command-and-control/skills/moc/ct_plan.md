@@ -18,7 +18,7 @@ Plan next semester: outlines, date shifts, assignment briefs.
 
 ## Concepts (1)
 
-- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest the old term, analyze it, copy the shell, move every due date onto the new calendar, then rebuild.
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest ...
 <!-- generated:end -->
 
 # Notes

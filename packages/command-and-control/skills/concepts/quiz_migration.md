@@ -1,7 +1,7 @@
 ---
 id: "quiz_migration"
 description: "Classic Quizzes still work, but Canvas is migrating them: what validate_quiz flags in advance, what it can only see on a live quiz, and what the API hides."
-related: [check_shell_readiness, generate_quiz, setup_spot_check, validate_quiz]
+related: [check_shell_readiness, generate_quiz, validate_quiz]
 ---
 
 # Classic Quizzes and the New Quizzes migration
@@ -35,10 +35,10 @@ possible:
 
 - **New Quizzes are only partly readable.** When Canvas returns no question
   bodies for a quiz that should have questions, the tool reports
-  `NEW_QUIZZES_LIMITED` and tells you to review in the Canvas UI — Classic
-  Quizzes are the ones the API exposes fully. That detection is a heuristic on
-  quiz type, item availability, and question count
-  (`packages/command-and-control/src/tools/quiz/canvas_fetch.ts`).
+  `NEW_QUIZZES_LIMITED` (and `ITEMS_UNAVAILABLE` whenever item bodies are missing)
+  and tells you to review in the Canvas UI — Classic Quizzes are the ones the API
+  exposes fully. That detection is a heuristic on quiz type, item availability,
+  and question count (`packages/command-and-control/src/tools/quiz/canvas_fetch.ts`).
 - **`MIGRATION_RISK` fires only on a Classic quiz** — the exact inverse condition.
   It warns per hazard:
   - a **Multiple Dropdowns** question becomes Fill in the Blank after migration;
@@ -49,9 +49,9 @@ possible:
     Gradebook and the Grades page.
 - **The deterministic checks** cover a published-or-dated quiz with no items,
   missing answer keys, empty stems and choices, duplicate stems, choice counts,
-  points mismatch against `pointsPossible`, inconsistent due/unlock/lock order, a
-  published-with-due-date state, and `WEEK_MAP_MISMATCH` when dates fall outside
-  the Monday–Sunday window implied by the week map.
+  points mismatch against `pointsPossible`, inconsistent due/unlock/lock order, an
+  unpublished quiz that carries a due date, and `WEEK_MAP_MISMATCH` when dates
+  fall outside the Monday–Sunday window implied by the week map.
 - **Optional LLM triage** adds `AMBIGUOUS_KEY`, `WEAK_DISTRACTOR`, and
   `COVERAGE_GAP`.
 
@@ -75,7 +75,8 @@ records a preferred reminder day for this routine; it installs no OS cron.
   Absence of `MIGRATION_RISK` on a New Quizzes quiz means "this check does not
   apply", not "you are safe".
 - **Item-level hazards need item bodies.** If Canvas returns none, the per-item
-  checks cannot run even though the quiz-level ones still do.
+  checks cannot run — `POINTS_MISMATCH` also needs items, and the Classic-only
+  `MIGRATION_RISK` block is skipped entirely while the read is limited.
 - **These are advisories, not gates.** `validate_quiz` never writes to Canvas and
   never blocks a publish; it returns findings and a verdict for a human.
 - **Some migration hazards are documented but not implemented.** Question banks

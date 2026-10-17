@@ -20,8 +20,8 @@ Find what is stale: topic currency, semester diffs, off-syllabus drift.
 
 ## Concepts (2)
 
-- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest the old term, analyze it, copy the shell, move every due date onto the new calendar, then rebuild.
-- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, enrichment, a Whisper cross-check, week mapping, and the lecture-answers index built on top.
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest ...
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, ...
 <!-- generated:end -->
 
 # Notes

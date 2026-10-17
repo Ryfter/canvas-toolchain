@@ -1,6 +1,6 @@
 ---
 id: "idea"
-related: []
+related: [alpha]
 ---
 # idea
 

@@ -1,7 +1,7 @@
 ---
 id: "publish_safety"
 description: "The publish safety net: preview captures a rollback baseline, publish stops at the first failure, snapshots make the change reversible, and paste needs no token."
-related: [export_course_folder, generate_course, list_publish_snapshots, preview_course_publish, prune_publish_snapshots, publish_course, rollback_course_publish, snapshot_course]
+related: [list_publish_snapshots, preview_course_publish, prune_publish_snapshots, publish_course, rollback_course_publish, snapshot_course]
 ---
 
 # Publish and rollback safety
@@ -34,10 +34,11 @@ Canvas at all: they produce the HTML and a CDS-ready folder to paste by hand.
 
 ## What makes it safe
 
-**The baseline is never stubbed.** If the current Canvas body cannot be fetched
-during preview, the entry gets a `severity: 'block'` warning and publish refuses
-it. The code deliberately does *not* fall back to storing an empty prior body —
-that would let a later rollback wipe real Canvas content
+**A missing baseline blocks the entry.** If the current Canvas body cannot be
+fetched during preview, the entry gets a `severity: 'block'` warning and publish
+refuses it — but the code still writes an empty `prior/<filename>`; the block
+warning, not the absence of a stub, is what protects a later rollback. A *widget*
+fetch failure is only `severity: 'warn'`
 (`src/tools/workflows/preview_course_publish.ts`).
 
 **Approval is per entry and complete.** The approval map is validated against the
@@ -53,9 +54,10 @@ records `phase: 'partial'` with the one entry that failed. Resume with
 never continues past the first failure.
 
 **State is an explicit phase machine.** Each snapshot's `state.json` moves
-`preview` → `partial` → `published`, or `rolled-back`. Publishing a snapshot
-twice returns `ALREADY_PUBLISHED`; a dirty git tree is refused unless you are
-resuming.
+`preview` → `partial` → `published`, `rolled-back`, or `restored` (a rollback
+target). Publishing a published snapshot returns `ALREADY_PUBLISHED`,
+re-publishing a rolled-back one `ALREADY_ROLLED_BACK`; a dirty git tree is
+refused unless you resume or pass `gitCommit: false`.
 
 **Before overwriting, Canvas gets a breadcrumb.** When a page or widget collides
 with an existing Canvas resource, an `[ARCHIVED] <original title>` copy is created
@@ -67,10 +69,11 @@ cleaned up when their snapshot is pruned.
 **One pointer file decides what is live.** `publish-state-<courseId>.json` in the
 snapshots root holds `currentlyLiveSnapshotId` plus a history whose entries record
 `becameLiveVia: 'publish' | 'rollback' | 'roll-forward'`
-(`src/tools/publish/state_meta.ts`). Snapshots live in
-`<courseDir>/.canvas-toolchain/publish-snapshots/`; read paths keep a fallback to
-the older global `~/.command-and-control/publish-snapshots/`
-(`src/tools/publish/snapshot_location.ts`).
+(`src/tools/publish/state_meta.ts`). Preview writes each snapshot to the legacy
+global root `~/.command-and-control/publish-snapshots/` (`createSnapshotDir`), and
+`publish_course` / `rollback_course_publish` read it back from there
+(`snapshotDir`); only `list_publish_snapshots` and pruning resolve the
+course-local `<courseDir>/.canvas-toolchain/publish-snapshots/` root.
 
 **Rollback reverses what was actually done.** It walks `state.published` in
 reverse and restores each entry's prior body, deleting pages it created
@@ -95,16 +98,17 @@ one, and `rollback_course_publish` does too. So the credential-free path ends at
   updates a course *reference document* (identifiers, assignment groups, an
   append-only Update Log). It neither captures nor restores Canvas state. Both
   live in the same topic map, which is exactly why the confusion happens.
-- **Retention can expire your escape hatch.** Pruning keeps the newest 3 by
-  default and drops anything older than 30 days (both overridable in the Canvas
-  config), and it never deletes the live snapshot. It can absolutely delete the
-  snapshot you were planning to roll back to — run it with `dryRun` before a big
-  change if you care.
+- **Retention can expire your escape hatch.** Pruning never deletes the live
+  snapshot, and it drops a snapshot only when it is **both** beyond the newest 3
+  **and** older than 30 days (both overridable in the Canvas config). It can still
+  delete the snapshot you were planning to roll back to — run it with `dryRun`
+  before a big change if you care.
 - **Drift does not block a rollback.** That is intentional (a hand-edit in Canvas
   must not make the tool unusable), but it means rolling back after editing in
   Canvas silently discards that edit. The drift report is the warning.
-- **A `preview`-phase snapshot is not rollback content.** `canRollForwardTo` is
-  true only for a `rolled-back` snapshot; `canRollBackTo` excludes the live one.
+- **Roll-back and roll-forward are different questions.** `canRollBackTo` is true
+  for any non-live snapshot — including a `preview`-phase one; `canRollForwardTo`
+  is true only for a non-live `rolled-back` snapshot.
 - **Rollback failures are collected, not fatal.** Per-entry restore errors land in
   `restoreFailed` while the rest of the restore continues — so read that array
   rather than trusting the top-level success.
@@ -115,7 +119,7 @@ one, and `rollback_course_publish` does too. So the credential-free path ends at
 ## Sources
 
 - `packages/command-and-control/src/tools/workflows/preview_course_publish.ts` —
-  snapshot contents, prior-body fetch failure as a blocking warning,
+  snapshot contents, the prior-body fetch failure as a blocking warning,
   `MISSING_API_TOKEN`.
 - `packages/command-and-control/src/tools/workflows/publish_course.ts` — approval
   and a11y gates, phase transitions, stop-on-first-failure, pre-publish git

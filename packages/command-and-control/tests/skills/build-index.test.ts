@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -132,6 +132,24 @@ describe('build-index', () => {
 
     const [catalog] = index.split('\n## Concepts (');
     for (const id of listed) expect(catalog ?? '').not.toContain(`[[${id}]]`);
+  });
+
+  it('lists concepts in id order, not filename order', async () => {
+    const root = tempRoot();
+    mkdirSync(join(root, 'concepts'), { recursive: true });
+    // `foo.bar.md` sorts before `foo.md` as a file name ('.' < 'm'), but after it
+    // as an id ('foo' is a prefix of 'foo.bar') — so a filename-ordered read would
+    // disagree with the MOC generator's id sort.
+    for (const id of ['foo.bar', 'foo']) {
+      writeFileSync(
+        join(root, 'concepts', `${id}.md`),
+        `---\nid: "${id}"\ndescription: "Note ${id}."\nrelated: []\n---\n# ${id}\n`,
+      );
+    }
+
+    await buildIndex({ root });
+
+    expect(indexConceptIds(readFileSync(join(root, 'index.md'), 'utf8'))).toEqual(['foo', 'foo.bar']);
   });
 
   it('is idempotent: a second run changes nothing', async () => {

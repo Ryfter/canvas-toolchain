@@ -24,12 +24,10 @@ Canvas pattern catalog, previews, layout templates.
 - [[import_course]] — [@canvas-toolchain/canvas-design-studio] Import a Canvas Backup archive into a Canvas Design Studio course folder.
 - [[generate_course]] — [@canvas-toolchain/canvas-design-studio] Generate Canvas-safe HTML for every page in a Canvas Design Studio course folder.
 
-## Concepts (4)
+## Concepts (2)
 
-- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write to continue.
-- [[publish_safety]] — The publish safety net: preview captures a rollback baseline, publish stops at the first failure, snapshots make the change reversible, and paste needs no token.
-- [[quiz_migration]] — Classic Quizzes still work, but Canvas is migrating them: what validate_quiz flags in advance, what it can only see on a live quiz, and what the API hides.
-- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest the old term, analyze it, copy the shell, move every due date onto the new calendar, then rebuild.
+- [[quiz_migration]] — Classic Quizzes still work, but Canvas is migrating them:...
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest ...
 <!-- generated:end -->
 
 # Notes

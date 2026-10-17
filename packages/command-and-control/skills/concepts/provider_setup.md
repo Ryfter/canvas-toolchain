@@ -1,17 +1,19 @@
 ---
 id: "provider_setup"
-description: "Credentials and model backends: which file each setup tool writes, what it validates before saving, and why the status tool can only ever report presence."
+description: "Credentials and model backends: which file each setup tool writes, what it validates before saving, and what the status tool does and does not report."
 related: [get_cc_status, set_active_llm_provider, setup_anthropic, setup_canvas, setup_canvas_backup, setup_cc, setup_lecture_answers, setup_ollama]
 ---
 
 # Credentials and provider setup
 
-Every credential and preference lives in **one small JSON file** under
-`~/.command-and-control/` (`CC_HOME` overrides it), written atomically —
-temp file plus rename — with mode `0o600`. Nothing is read from a shared
-environment variable that a setup tool does not also accept, and the design
-question for each tool is always the same: *what does it validate before it
-writes, and what does it refuse to do without.*
+Credentials and preferences live in several files under
+`~/.command-and-control/` (`CC_HOME` overrides it) — mostly JSON, plus the TOML
+`canvas-backup.generated.toml`. Most writers save atomically — temp file plus
+rename — at mode `0o600`, but `config.json` is written directly. A few
+environment variables have no setup-tool counterpart (`CANVAS_BACKUP_REPO`,
+`CC_OLLAMA_TIMEOUT_MS`, `BRAVE_SEARCH_API_KEY`). The design question for each tool
+is always the same: *what does it validate before it writes, and what does it
+refuse to do without.*
 
 ## The files
 
@@ -20,7 +22,7 @@ writes, and what does it refuse to do without.*
 | `config.json` | [[setup_cc]] | Mode (easy/advanced), model, routing, downloader path, registry token. The returned config is redacted (`token: '[configured]'`). |
 | `anthropic-config.json` | [[setup_anthropic]] | Validated with a 1-token `POST /v1/messages` before saving; failure is `CREDENTIAL_VALIDATION_FAILED`. |
 | `canvas-config.json` | [[setup_canvas]] | Validated with `GET /api/v1/users/self`; the host is normalized on **write and read**. |
-| `ollama-config.json` | [[setup_ollama]] | Probes `/api/tags` and requires the model to be pulled. |
+| `ollama-config.json` | [[setup_ollama]] | Discovery mode (no `model`) lists recommended models and writes nothing; passing a `model` probes `/api/tags`, requires it to be pulled, then writes. |
 | `llm-provider.json` | [[set_active_llm_provider]] | Which of the two LLM configs is *active*. |
 | `canvas-backup.generated.toml` | [[setup_canvas_backup]] | Canvas Backup config; carries `token_env`, never the token. |
 | `lecture-answers-config.json` | [[setup_lecture_answers]] | Embedding provider for the lecture-answers index. |
@@ -29,8 +31,9 @@ writes, and what does it refuse to do without.*
 
 1. [[setup_cc]] — mode and routing first; a status call is meaningful after it.
 2. **Canvas**, if you want the Canvas-backed features: [[setup_canvas]]. It is a
-   prerequisite for `setup_transcript_source`'s Panopto sibling, for
-   [[setup_canvas_backup]], and for every direct-publish path.
+   prerequisite for [[setup_canvas_backup]] and for every direct-publish path. The
+   Panopto path is not one of them — Panopto credentials live in their own
+   `panopto-config.json`.
 3. **A generation LLM**, if you want the AI-assisted tools:
    [[setup_anthropic]] and/or [[setup_ollama]]. Both may exist at once.
 4. [[set_active_llm_provider]] — pick one. It refuses with
@@ -54,22 +57,26 @@ writes, and what does it refuse to do without.*
   Never hand-edit a token into that TOML.
 - **Two LLM configs can coexist; one pointer decides.** Presence of
   `anthropic-config.json` does not mean Anthropic is active — `llm-provider.json`
-  does, and every LLM-consuming tool resolves through it.
+  records the choice, and tools built through `resolveActiveLlmClient` honor it.
+  Some LLM tools build an Anthropic client straight from `anthropic-config.json`
+  and ignore the pointer.
 - **LLM-dependent operations fail with a named provider error, not a crash.**
   Operations that need a model report the missing configuration rather than
   silently using a different backend.
 
-## Why status reports presence only
+## What the status tool reports
 
-[[get_cc_status]] answers "is this configured and reachable?", never "what is it".
-Its doc comment says presence-only, and the shape backs that up: booleans for
-`configured.canvasConfig` / `llmProvider` / `canvasBackupToml`,
-`providers.anthropic.keyPresent`, and an optional Ollama reachability probe. Its
-test asserts the serialized result does **not** contain the Anthropic key, the
-Canvas token, the Canvas host, or the backup TOML's contents
-(`packages/command-and-control/tests/tools/get_cc_status.test.ts`) — because a
-status result flows straight into a model's context, so a value that reaches the
-result has effectively leaked.
+[[get_cc_status]] answers "is this configured and reachable?" and withholds
+secrets — but it is not value-free: it also reports `mode`,
+`providers.anthropic.model`, `providers.ollama.{baseUrl,model,reachable}`,
+`spotCheck.day`, `routing`, and `lastRun`. The presence-only guarantee covers the
+secret-bearing blocks: booleans for `configured.canvasConfig` / `llmProvider` /
+`canvasBackupToml`, `providers.anthropic.keyPresent`, and an optional Ollama
+reachability probe. Its test asserts the serialized result does **not** contain
+the Anthropic key, the Canvas token, the Canvas host, or the backup TOML's
+contents (`packages/command-and-control/tests/tools/get_cc_status.test.ts`) —
+because a status result flows straight into a model's context, so a value that
+reaches the result has effectively leaked.
 
 Two consequences worth remembering:
 
@@ -80,14 +87,16 @@ Two consequences worth remembering:
   prevent.
 - **Reachability is probed, not assumed.** Ollama is reported as reachable only
   when a live request succeeds, so "configured" and "actually working" stay
-  distinct fields.
+  distinct fields. The probe reads the `providers.ollama` block that [[setup_cc]]
+  writes, not `ollama-config.json`.
 
 ## Pitfalls
 
-- **A malformed config file reads as "no config", not an error.** The loaders
-  treat a corrupt file as absent and the fix is to re-run the setup tool. If a
-  tool behaves as if unconfigured right after a successful setup, read the file
-  before assuming the credential is wrong.
+- **A malformed config file surfaces as a named not-configured error.** Most
+  loaders (`*_NOT_CONFIGURED`, `LLM_PROVIDER_NOT_SET`) throw and tell you to
+  re-run the setup tool rather than reading the file as absent. If a tool behaves
+  as if unconfigured right after a successful setup, read the file before
+  assuming the credential is wrong.
 - **Validation is on by default and can be turned off.** `setup_anthropic` and
   `setup_canvas` both accept a `test` flag (default true). Skipping it writes the
   credential without a network check, so a typo surfaces at the first real call.
@@ -100,15 +109,18 @@ Two consequences worth remembering:
 ## Sources
 
 - `packages/command-and-control/src/tools/{setup_cc,setup_anthropic,setup_canvas,setup_ollama,set_active_llm_provider,get_cc_status}.ts`
-  — the validations, the file each writes, the error codes, and the presence-only
-  status shape.
-- `packages/command-and-control/src/kb/config.ts` — `getCcHomePath` and the
-  `CC_HOME` override.
+  — the validations, the file each writes, the error codes, and the status shape.
+- `packages/command-and-control/src/kb/config.ts` — `getCcHomePath`, the
+  `CC_HOME` override, and the direct (non-atomic) `config.json` write.
 - `packages/shared-types/src/canvas-host.ts` — `normalizeCanvasHost`,
   `canvasBaseUrl`, `CANVAS_HOST_INVALID`.
-- `packages/command-and-control/src/passthrough/canvas_backup_config.ts` and
-  `passthrough/downloader_tools.ts` — `token_env`, the `0o600` write, and the
-  child-environment token injection.
+- `packages/command-and-control/src/passthrough/{canvas_backup_config,downloader_tools}.ts`
+  — `token_env`, the `0o600` write, the child-environment token injection, and the
+  `CANVAS_BACKUP_REPO` override.
+- `packages/command-and-control/src/llm/resolve.ts` — `resolveActiveLlmClient` and
+  `CC_OLLAMA_TIMEOUT_MS`; `workflows/draft_student_rubric.ts`, `rubric/triage.ts`,
+  and `workflows/brainstorm_interactive.ts` — the tools that read
+  `anthropic-config.json` directly.
 - `packages/command-and-control/src/tools/answers/{config,paths}.ts` — the
   lecture-answers config file and its `0o600` write.
 - `packages/command-and-control/tests/tools/get_cc_status.test.ts` — the

@@ -11,7 +11,7 @@ export const DEFAULT_LINT_OPTIONS = { maxDescription: 200, similarity: 0.8 };
 
 export const RULES = [
   'missing-description', 'too-long', 'duplicate', 'near-duplicate',
-  'broken-wikilink', 'orphan', 'drift', 'curated-link',
+  'broken-wikilink', 'orphan', 'drift', 'concept-related', 'curated-link',
 ];
 
 /** Lowercase, drop the co-package prefix several pass-through descriptions
@@ -132,6 +132,13 @@ export function lintSkills(tree, operations, options = {}) {
       } else if (description.length > opts.maxDescription) {
         add('too-long', concept.path, concept.id, `${description.length} characters (max ${opts.maxDescription})`);
       }
+
+      // The file name is the id every link resolves against, so a frontmatter id
+      // that disagrees renames the note out from under its own links.
+      const declaredId = String(concept.frontMatter.id ?? '');
+      if (declaredId !== concept.id) {
+        add('drift', concept.path, concept.id, `frontmatter id "${declaredId}" does not match the file name`);
+      }
     }
 
     // A concept id that shadows an operation or a map id makes every `[[id]]`
@@ -140,6 +147,23 @@ export function lintSkills(tree, operations, options = {}) {
       add('drift', concept.path, concept.id, `concept id "${concept.id}" collides with an operation id`);
     } else if (mocIds.has(concept.id) || concept.id === 'index') {
       add('drift', concept.path, concept.id, `concept id "${concept.id}" collides with a map id`);
+    }
+
+    // `related:` is the note's only authored edge, and it has to name operations
+    // an agent can actually call: an empty list reaches no map at all, and an
+    // internal operation is uncallable however the note is filed. A target that
+    // is not an operation at all is left to `broken-wikilink`, which reports it
+    // against the same id set.
+    if (!concept.frontMatterUnparsed) {
+      const related = relatedList(concept.frontMatter);
+      if (!related.length) {
+        add('concept-related', concept.path, concept.id, 'concept lists no operations, so no map can reach it');
+      }
+      for (const target of related) {
+        if (registry.get(target)?.exposure === 'internal') {
+          add('concept-related', concept.path, concept.id, `related:[${target}] is an internal operation and cannot be called`, { target });
+        }
+      }
     }
   }
 

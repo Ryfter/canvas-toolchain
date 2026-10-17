@@ -20,7 +20,7 @@ Plug-in module discovery, install, enable/disable.
 
 ## Concepts (1)
 
-- [[module_channel]] — Plug-in modules and Canvas modules share a word, not a system: installing and enabling a tool bundle is nothing like reading a Canvas course's modules.
+- [[module_channel]] — Plug-in modules and Canvas modules share a word, not a sy...
 <!-- generated:end -->
 
 # Notes

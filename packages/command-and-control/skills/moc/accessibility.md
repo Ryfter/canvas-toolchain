@@ -18,7 +18,7 @@ Deep accessibility checks beyond the standard audit.
 
 ## Concepts (1)
 
-- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write to continue.
+- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas pu...
 <!-- generated:end -->
 
 # Notes

@@ -16,7 +16,7 @@ Index a course and answer questions from its own materials.
 
 ## Concepts (1)
 
-- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, enrichment, a Whisper cross-check, week mapping, and the lecture-answers index built on top.
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, ...
 <!-- generated:end -->
 
 # Notes

@@ -20,8 +20,8 @@ Publish snapshot listing and pruning.
 
 ## Concepts (2)
 
-- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write to continue.
-- [[publish_safety]] — The publish safety net: preview captures a rollback baseline, publish stops at the first failure, snapshots make the change reversible, and paste needs no token.
+- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas pu...
+- [[publish_safety]] — The publish safety net: preview captures a rollback basel...
 <!-- generated:end -->
 
 # Notes
