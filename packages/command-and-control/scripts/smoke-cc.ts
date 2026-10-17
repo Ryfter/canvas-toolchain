@@ -36,7 +36,7 @@ try {
 
   // Step 1: setup
   setupCourse({ id: COURSE_ID, title: 'ITM 370 — AI-Augmented Projects' });
-  setupCc({ mode: 'easy' });
+  await setupCc({ mode: 'easy' });
   console.log('✓ setup_course + setup_cc');
 
   // Step 2: status

@@ -1,3 +1,4 @@
+import { assertEndpointAllowed, EndpointBlockedError } from '@canvas-toolchain/shared-llm';
 import { loadConfig, saveConfig } from '../kb/config.js';
 import type { CcConfig, Mode, ProviderName } from '../types.js';
 
@@ -21,17 +22,35 @@ export interface SetupCcInput {
 export interface SetupCcResult {
   config: CcConfig;
   message: string;
+  /** Set when an input was refused; nothing is written in that case. */
+  error?: string;
+  fix?: string[];
 }
 
-export function setupCc(input: SetupCcInput): SetupCcResult {
+export async function setupCc(input: SetupCcInput): Promise<SetupCcResult> {
   const config = loadConfig();
+
+  // SSRF guard: config.json is read by get_cc_status and by every Ollama
+  // consumer, so validate (and canonicalize) the endpoint before it lands on
+  // disk — and never echo the raw value back.
+  let ollamaBaseUrl = input.ollamaBaseUrl;
+  if (input.ollamaBaseUrl) {
+    try {
+      ollamaBaseUrl = (await assertEndpointAllowed(input.ollamaBaseUrl)).url;
+    } catch (err) {
+      if (err instanceof EndpointBlockedError) {
+        return { config: redactSecrets(config), error: 'ENDPOINT_BLOCKED', message: err.message, fix: err.fix };
+      }
+      throw err;
+    }
+  }
 
   if (input.mode !== undefined) config.mode = input.mode;
   if (input.anthropicModel) config.providers.anthropic.model = input.anthropicModel;
 
-  if (input.ollamaBaseUrl || input.ollamaModel) {
+  if (ollamaBaseUrl || input.ollamaModel) {
     config.providers.ollama = {
-      baseUrl: input.ollamaBaseUrl ?? config.providers.ollama?.baseUrl ?? 'http://localhost:11434',
+      baseUrl: ollamaBaseUrl ?? config.providers.ollama?.baseUrl ?? 'http://localhost:11434',
       model: input.ollamaModel ?? config.providers.ollama?.model ?? 'llama3.2',
     };
   }
