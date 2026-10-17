@@ -61,6 +61,20 @@ export interface ProbeResult {
 }
 
 /**
+ * What the Canvas store bridge did the last time it ran, as recorded in
+ * ~/.command-and-control/canvas-store-migration.json. `detail` and `backupPath`
+ * are what a professor needs to find a file the bridge set aside; neither holds a
+ * token.
+ */
+export interface CanvasStoreMigrationRecord {
+  at: string;
+  /** Bridge action id, e.g. 'canvas-config-wins', 'corrupt', 'in-sync'. */
+  action: string;
+  detail: string;
+  backupPath?: string;
+}
+
+/**
  * One read-only pass over the machine's setup. Discriminated by concern, not by
  * file, so a check reads the concern it owns.
  */
@@ -91,10 +105,26 @@ export interface SetupState {
     hasApiToken: boolean;
     hasWaveApiKey: boolean;
     institutionName: string | null;
+    /** The store still has no institution name or brand colors: the Canvas store
+     *  bridge created it, and Canvas Design Studio must keep prompting. */
+    brandSetupPending: boolean;
   };
 
-  /** The two Canvas stores agree, or neither exists. */
+  /** Fingerprint of canvas-config.json exactly as it is on disk. The doctor
+   *  compares the two RAW stores, because Canvas Design Studio's loadConfig()
+   *  overlays the canonical credentials and would hide a disagreement that still
+   *  has to be reconciled. */
+  canvasConfig: {
+    host: string | null;
+    hasApiToken: boolean;
+  };
+
+  /** The two Canvas stores agree on their host, or neither has one. */
   storesInSync: boolean;
+
+  /** The last Canvas store bridge outcome, or null when it has never acted.
+   *  No secrets: this is what the doctor shows the professor. */
+  canvasStoreMigration: CanvasStoreMigrationRecord | null;
 
   llm: {
     activeProvider: ActiveProvider | null;

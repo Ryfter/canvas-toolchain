@@ -179,21 +179,58 @@ describe('runDoctor checks', () => {
     expect(JSON.stringify(report)).not.toContain('sk-ant-env');
   });
 
-  it('warns when Canvas credentials are present but the C&C store disagrees with Design Studio', async () => {
+  // #151 R7 review fix 6: the doctor reads the two stores RAW. Canvas Design
+  // Studio's loadConfig() overlays the canonical host and token, which made this
+  // disagreement invisible (and the warn branch unreachable) even though the raw
+  // files still disagree until the next save or restart reconciles them.
+  it('warns when the raw stores point at different hosts, naming both', async () => {
     seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     seed('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'cds-tok' }, cdsHome);
 
     const sync = check(await runDoctor(), 'canvas.store_sync');
 
     expect(sync.status).toBe('warn');
-    expect(sync.fix).toEqual({ tool: 'ct_setup', action: 'canvas', hint: expect.any(String) });
+    expect(sync.summary).toContain('example.instructure.com');
+    expect(sync.summary).toContain('other.instructure.com');
+    expect(sync.fix?.tool).toBe('ct_setup');
+    expect(sync.fix?.action).toBe('canvas');
+    expect(sync.fix?.hint).toMatch(/ct_setup action canvas/);
+    expect(sync.fix?.hint).toMatch(/restart/i);
     expect(JSON.stringify(sync)).not.toContain('tok-secret');
   });
 
-  it('warns when only one of the two Canvas stores exists', async () => {
+  // #151 R7 review fix 10: the bridge's outcome (a rewrite, a corrupt store, the
+  // backup it left) used to go only to stderr, which an MCP host swallows.
+  it('surfaces the last Canvas store migration, including the backup path', async () => {
+    const backupPath = join(cdsHome, 'institution.json.bak-2026-10-17T09-40-00-000Z');
     seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
-    expect(check(await runDoctor(), 'canvas.store_sync').status).toBe('warn');
-    expect(check(await runDoctor(), 'canvas.credentials').status).toBe('ok');
+    seed('institution.json', { canvasUrl: 'https://example.instructure.com', apiToken: 'cds-tok' }, cdsHome);
+    seed('canvas-store-migration.json', {
+      at: '2026-10-17T09:40:00.000Z',
+      action: 'canvas-config-wins',
+      detail: 'Both stores held different Canvas credentials, so canvas-config.json won.',
+      backupPath,
+    });
+
+    const sync = check(await runDoctor(), 'canvas.store_sync');
+
+    const notes = sync.detail?.join('\n') ?? '';
+    expect(notes).toContain('canvas-config-wins');
+    expect(notes).toContain(backupPath);
+    expect(notes).not.toContain('tok-secret');
+    expect(notes).not.toContain('cds-tok');
+  });
+
+  it('notes that Design Studio still owes its brand setup', async () => {
+    seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+    seed('institution.json', {
+      institution: '', canvasUrl: 'https://example.instructure.com', apiToken: 'tok-secret', brandSetupPending: true,
+    }, cdsHome);
+
+    const sync = check(await runDoctor(), 'canvas.store_sync');
+
+    expect(sync.status).toBe('ok');
+    expect(sync.detail?.join(' ')).toMatch(/setup_institution/);
   });
 
   it('reports two stores that agree as ok', async () => {
@@ -256,15 +293,30 @@ describe('runDoctor checks', () => {
     expect(JSON.stringify(report)).not.toContain('wave-secret');
   });
 
-  it('warns when Canvas Design Studio has the host but no API token', async () => {
-    seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+  // #151 R7 review fix 6: with both stores read raw, this is a real state — a
+  // Design Studio host saved without a token, while Command & Control has none
+  // either. It cannot authenticate, so it is a warning with a fix, not "ok".
+  it('warns when an institution.json has a host but no token anywhere', async () => {
     seed('institution.json', { canvasUrl: 'https://example.instructure.com' }, cdsHome);
 
     const sync = check(await runDoctor(), 'canvas.store_sync');
 
     expect(sync.status).toBe('warn');
-    expect(sync.summary.toLowerCase()).toContain('token');
-    expect(sync.fix).toEqual({ tool: 'ct_setup', action: 'canvas', hint: expect.any(String) });
+    expect(sync.summary).toContain('example.instructure.com');
+    expect(sync.summary).toMatch(/no API token/);
+    expect(sync.fix?.action).toBe('canvas');
+  });
+
+  it('warns when Command & Control has Canvas and Design Studio has no store at all', async () => {
+    seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+
+    const sync = check(await runDoctor(), 'canvas.store_sync');
+
+    expect(sync.status).toBe('warn');
+    expect(sync.summary).toMatch(/Canvas Design Studio/);
+    expect(sync.fix?.hint).toMatch(/ct_setup action canvas/);
+    // The Canvas connection itself is fine; only the mirror is missing.
+    expect(check(await runDoctor(), 'canvas.credentials').status).toBe('ok');
   });
 });
 

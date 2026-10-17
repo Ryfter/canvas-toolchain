@@ -1,9 +1,10 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
-import { normalizeCanvasHost } from '@canvas-toolchain/shared-types';
+import {
+  normalizeCanvasHost, readCanvasStoreJournal,
+} from '@canvas-toolchain/shared-types';
 import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
-import { loadConfig as loadInstitutionConfig } from '@canvas-toolchain/canvas-design-studio/dist/config.js';
 import { getCcHomePath, loadConfig } from '../kb/config.js';
 import { loadCanvasConfig } from '../tools/setup_canvas.js';
 import { loadAnthropicConfig } from '../tools/setup_anthropic.js';
@@ -20,6 +21,7 @@ import { loadPendingRequests } from '../channel/pending.js';
 import { managedCanvasBackupConfigExists } from '../passthrough/canvas_backup_config.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
 import type {
+  CanvasStoreMigrationRecord,
   ConfigFileKey,
   ProbeResult,
   ReadSetupStateOptions,
@@ -103,6 +105,40 @@ function safeHost(value: unknown): string | null {
   return typeof value === 'string' && value ? normalizeCanvasHost(value) : null;
 }
 
+/** The Canvas store bridge's last recorded outcome, or null. Diagnostics only —
+ *  an unreadable journal must never take the readiness read down with it. */
+function safelyJournal(): CanvasStoreMigrationRecord | null {
+  try {
+    const record = readCanvasStoreJournal();
+    if (!record) return null;
+    return {
+      at: record.at,
+      action: record.action,
+      detail: record.detail,
+      ...(record.backupPath !== undefined && { backupPath: record.backupPath }),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The file's parsed JSON object, or undefined when it is absent, unparseable, or
+ * not an object. Read raw — no overlaid view, and nothing but the fields named
+ * here is ever kept.
+ */
+function readRawJson(path: string): Record<string, unknown> | undefined {
+  if (!existsSync(path)) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path, 'utf-8'));
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function nonEmpty(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -171,22 +207,35 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
   const coursesRoot = config?.coursesRoot ?? null;
 
   const canvas = safely(loadCanvasConfig);
-  const institution = safely(loadInstitutionConfig);
 
+  // The two Canvas stores are read RAW, here and not through Canvas Design
+  // Studio's loadConfig(): that loader overlays the canonical host and token, so
+  // going through it hid a disagreement between the files — and the doctor's
+  // whole job is to report what is on disk, including the token a save would
+  // silently replace.
+  const rawCanvas = readRawJson(paths['canvas-config']);
+  const rawInstitution = readRawJson(paths['institution-config']);
+
+  const canvasConfig = {
+    host: safeHost(rawCanvas?.host),
+    hasApiToken: nonEmpty(rawCanvas?.token),
+  };
+  const institutionName = rawInstitution?.institution;
   const designStudio = {
-    configured: institution !== undefined,
-    host: safeHost(institution?.canvasUrl),
-    hasApiToken: nonEmpty(institution?.apiToken),
-    hasWaveApiKey: nonEmpty(institution?.waveApiKey),
-    institutionName: institution?.institution ?? null,
+    configured: rawInstitution !== undefined,
+    host: safeHost(rawInstitution?.canvasUrl),
+    hasApiToken: nonEmpty(rawInstitution?.apiToken),
+    hasWaveApiKey: nonEmpty(rawInstitution?.waveApiKey),
+    institutionName: nonEmpty(institutionName) ? String(institutionName) : null,
+    brandSetupPending: rawInstitution?.brandSetupPending === true,
   };
 
-  // In sync means the two stores agree, or neither exists. A store present on
-  // only one side is the split that strands C&C's policy and WAVE tools.
-  const canvasHost = canvas?.host ?? null;
+  // In sync means the two stores agree on a host, or neither exists. A store
+  // present on only one side is the split that strands C&C's policy and WAVE
+  // tools.
   const storesInSync =
-    (canvasHost === null && designStudio.host === null) ||
-    (canvasHost !== null && canvasHost === designStudio.host);
+    (canvasConfig.host === null && designStudio.host === null) ||
+    (canvasConfig.host !== null && canvasConfig.host === designStudio.host);
 
   const anthropic = safely(loadAnthropicConfig);
   const ollama = safely(loadOllamaConfig);
@@ -203,10 +252,14 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
   const manifest = loadModuleManifest();
   const installedModules = loadInstalledModules();
 
+  // Only files that hold a secret ON DISK, read raw. Canvas Design Studio's
+  // loadConfig() overlay made this list lie: institution.json was flagged for the
+  // canonical token it does not contain, and canvas-config.json for a token it
+  // only had a host of.
   const secretBearingFiles: ConfigFileKey[] = [];
   if (nonEmpty(config?.registry?.token)) secretBearingFiles.push('cc-config');
-  if (nonEmpty(canvas?.token)) secretBearingFiles.push('canvas-config');
-  if (nonEmpty(institution?.apiToken) || nonEmpty(institution?.waveApiKey)) {
+  if (canvasConfig.hasApiToken) secretBearingFiles.push('canvas-config');
+  if (designStudio.hasApiToken || designStudio.hasWaveApiKey) {
     secretBearingFiles.push('institution-config');
   }
   if (nonEmpty(anthropic?.apiKey)) secretBearingFiles.push('anthropic-config');
@@ -220,11 +273,13 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
     secretBearingFiles,
     canvas: {
       configured: canvas !== undefined,
-      host: canvasHost,
+      host: canvas?.host ?? null,
       configuredAt: canvas?.configuredAt || null,
     },
     designStudio,
+    canvasConfig,
     storesInSync,
+    canvasStoreMigration: safelyJournal(),
     llm: {
       activeProvider: safely(loadActiveProvider) ?? null,
       anthropic: {
