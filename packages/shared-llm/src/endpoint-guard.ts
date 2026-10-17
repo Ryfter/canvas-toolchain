@@ -286,6 +286,13 @@ export function classifyIpAddress(ip: string): IpClassification {
   if (bytes.slice(0, 12).every((b) => b === 0)) {
     return classifyIpAddress(v4FromBytes(bytes.slice(12)));
   }
+  // NAT64 well-known prefix 64:ff9b::/96 also wraps an IPv4 address.
+  if (
+    bytes[0] === 0x00 && bytes[1] === 0x64 && bytes[2] === 0xff && bytes[3] === 0x9b
+    && bytes.slice(4, 12).every((b) => b === 0)
+  ) {
+    return classifyIpAddress(v4FromBytes(bytes.slice(12)));
+  }
   if ((bytes[0]! & 0xfe) === 0xfc) {
     // fd00:ec2::254 — the AWS IMDS IPv6 endpoint, inside the ULA range.
     const isEc2Metadata = bytes.every((b, i) => b === EC2_METADATA_V6[i]);

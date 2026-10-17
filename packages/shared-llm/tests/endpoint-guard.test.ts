@@ -109,6 +109,7 @@ describe('assertEndpointAllowed — blocked targets', () => {
     await expectBlocked('http://0xA9FEA9FE/', 'metadata');
     await expectBlocked('http://[::ffff:169.254.169.254]/', 'metadata');
     await expectBlocked('http://[::ffff:a9fe:a9fe]/', 'metadata');
+    await expectBlocked('http://[64:ff9b::a9fe:a9fe]/', 'metadata');
   });
 
   it('rejects plain http to a public host but allows https', async () => {
@@ -174,6 +175,9 @@ describe('classifyIpAddress', () => {
     ['::', 'unspecified'],
     ['::ffff:7f00:1', 'loopback'],
     ['::ffff:a9fe:a9fe', 'metadata'],
+    ['::ffff:169.254.169.254', 'metadata'],
+    ['64:ff9b::a9fe:a9fe', 'metadata'],
+    ['64:ff9b::808:808', 'public'],
     ['::7f00:1', 'loopback'],
     ['239.1.1.1', 'multicast'],
     ['ff02::1', 'multicast'],
