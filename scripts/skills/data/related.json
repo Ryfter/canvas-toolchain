@@ -7,6 +7,10 @@
     { "from": "set_active_llm_provider", "to": "setup_ollama", "reason": "Pull and configure the local model before activating Ollama." },
     { "from": "set_active_llm_provider", "to": "get_cc_status", "reason": "Check which providers are actually configured before switching." },
     { "from": "get_cc_status", "to": "set_active_llm_provider", "reason": "Switch the active provider when the snapshot shows a key or local model missing." },
+    { "from": "setup_doctor", "to": "get_cc_status", "reason": "The presence-only snapshot: installed packages, key present, config files present." },
+    { "from": "get_cc_status", "to": "setup_doctor", "reason": "The fuller readiness report when the snapshot shows a gap but not what to do about it." },
+    { "from": "setup_doctor", "to": "set_active_llm_provider", "reason": "Its llm.active_provider fix activates a provider that is configured but not yet active." },
+    { "from": "set_active_llm_provider", "to": "setup_doctor", "reason": "Confirms a configured-but-unactivated provider was why AI tools were failing." },
     { "from": "set_courses_root", "to": "open_dashboard", "reason": "The dashboard scans the courses root; set it first." },
     { "from": "open_dashboard", "to": "set_courses_root", "reason": "Point the dashboard at your courses before opening it." },
 
