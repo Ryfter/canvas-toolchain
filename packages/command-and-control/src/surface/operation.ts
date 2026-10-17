@@ -10,6 +10,30 @@ export type SectionId =
 
 export type Exposure = 'intent' | 'advanced' | 'internal';
 
+/** The supported call that replaces a deprecated operation. */
+export interface DeprecatedReplacement {
+  tool: IntentToolId;
+  action: string;
+}
+
+/**
+ * Present on an operation kept one release as a warning wrapper. Its legacy id
+ * still runs through `ct_advanced`, but the replacement is the supported path.
+ *
+ * `marker` and `notice` carry the human wording. They live on the operation
+ * rather than in each renderer so the `ct_advanced` help, the run result, and
+ * the generated skill op files can never disagree about it.
+ */
+export interface Deprecation {
+  replacement: DeprecatedReplacement;
+  /** The release the legacy id disappears in. */
+  removeIn: string;
+  /** Short form for listings: `Deprecated — use ct_setup {action: "canvas"}`. */
+  marker: string;
+  /** Full form for run results and skill files: `marker` plus the removal release. */
+  notice: string;
+}
+
 export interface Operation {
   /** Unique across core and module operations. Module ops are host-namespaced. */
   id: string;
@@ -22,4 +46,6 @@ export interface Operation {
   /** Required when exposure === 'intent'. */
   intentTool?: IntentToolId;
   intentAction?: string;
+  /** Set on a legacy operation kept as a warning wrapper for one release. */
+  deprecated?: Deprecation;
 }

@@ -58,6 +58,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `setup_ollama` | *baseUrl*, *model* | Configure local Ollama as a generation provider. No-model call returns recommended-models markdown; with a model it validates and saves. |
 | `set_active_llm_provider` | **provider** (anthropic/ollama) | Switch the active generation provider; refuses if that provider's config is absent. |
 | `get_cc_status` | — | Health snapshot: installed packages, Anthropic/Ollama availability, routing config, last-run timestamps. |
+| `setup_doctor` | *probe*, *journey* | Read-only readiness check (reached as `ct_setup {action: "doctor"}`): what is configured, what is broken, and the `ct_setup` action that fixes each item, plus per-capability `readyJourneys` (local-authoring / canvas-connected / ai-assisted). No credentials needed; no network unless `probe: true`, which adds live Canvas (`/api/v1/users/self`) and Anthropic probes (Ollama is never probed). Reports presence, validity, and permissions only — never secret values. |
 | `show_canvas_capabilities` | *category*, *supportStatus* | Return the Canvas design-pattern catalog as markdown. |
 | `preview_canvas_pattern` | **patternId** | Render one pattern to a standalone HTML preview (file:// URL). |
 | `get_started` | *journey* (local-authoring/canvas-connected/ai-assisted/full) | First-run orientation (`ct_setup` action `get_started`): which capabilities are ready and the exact call to finish each step. Read-only, no network. **Different tool** from Design Studio's standalone `get_started` (§2.11). |

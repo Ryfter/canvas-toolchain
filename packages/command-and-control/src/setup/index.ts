@@ -9,6 +9,7 @@ export type {
   SetupCall,
   SetupStep,
 } from './get_started.js';
+export { detectHostWiring } from './hosts.js';
 export type {
   ActiveProvider,
   ConfigFileKey,
@@ -17,6 +18,10 @@ export type {
   DoctorFix,
   DoctorReport,
   DoctorStatus,
+  HostWiringOptions,
+  HostWiringReport,
+  McpHostId,
+  McpHostWiring,
   ProbeResult,
   ReadSetupStateOptions,
   RunDoctorOptions,

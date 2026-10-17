@@ -14,6 +14,7 @@ const CC_DIST = (repoRoot) => join(repoRoot, 'packages/command-and-control/dist'
  */
 const OPERATION_KEYS = [
   'id', 'section', 'description', 'taskCategory', 'exposure', 'intentTool', 'intentAction',
+  'deprecated',
 ];
 
 export function plainOperation(op) {
