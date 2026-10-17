@@ -8,15 +8,20 @@ import { isIP } from 'node:net';
  * setting into an SSRF primitive (cloud metadata, link-local services).
  *
  * Policy:
- *  - http and https only; no userinfo (user:pass@); host required.
+ *  - http and https only; no userinfo (user:pass@); host required. A single
+ *    trailing dot on a hostname ("localhost.") is stripped during normalization.
  *  - A path is allowed (LM Studio serves under /v1); query and fragment are
  *    dropped from the canonical URL.
  *  - Loopback, RFC1918, CGNAT (100.64/10, Tailscale) and IPv6 ULA are allowed
  *    over http or https.
- *  - Link-local, cloud metadata, unspecified, multicast, broadcast and
- *    reserved addresses are refused, including their IPv4-mapped/compatible
- *    IPv6 spellings.
+ *  - Link-local, cloud metadata, unspecified, multicast, broadcast, reserved
+ *    and IANA special-purpose addresses are refused, including their
+ *    IPv4-mapped/compatible/translated, NAT64 and 6to4 IPv6 spellings.
  *  - Globally routable addresses are allowed over https only.
+ *
+ * IPv6 is default-deny: only global unicast (2000::/3, minus the IANA
+ * special-purpose blocks inside it) classifies as `public`; anything else in
+ * IPv6 space that is not explicitly allowlisted is `reserved`.
  *
  * Callers MUST use the returned `url` to build requests, and MUST re-check
  * immediately before every outbound request (DNS can change between the setup
@@ -170,19 +175,112 @@ export function parseEndpointUrl(rawUrl: string): ParsedEndpointUrl {
     throw block('host-missing', 'Local inference endpoint URL is missing a host.');
   }
 
+  // WHATWG keeps a fully-qualified trailing dot ("localhost."); drop a single
+  // one so the host resolves and classifies like its undotted spelling. An
+  // IPv6 literal is bracketed and never carries a name suffix.
+  const isIpv6Literal = u.hostname.startsWith('[');
+  let hostname = isIpv6Literal ? u.hostname.slice(1, -1) : u.hostname;
+  if (!isIpv6Literal && hostname.endsWith('.')) hostname = hostname.slice(0, -1);
+  if (hostname === '') {
+    throw block('host-missing', 'Local inference endpoint URL is missing a host.');
+  }
+
   const path = u.pathname === '/' ? '' : u.pathname.replace(/\/+$/, '');
   const protocol = u.protocol as 'http:' | 'https:';
+  const host = isIpv6Literal ? `[${hostname}]` : hostname;
   return {
-    url: `${protocol}//${u.host}${path}`,
+    url: `${protocol}//${host}${u.port ? `:${u.port}` : ''}${path}`,
     protocol,
-    hostname: u.hostname.startsWith('[') ? u.hostname.slice(1, -1) : u.hostname,
+    hostname,
     port: u.port ? Number(u.port) : protocol === 'https:' ? 443 : 80,
   };
 }
 
-/** True for `localhost` and any RFC 6761 `*.localhost` name. */
-function isLocalhostName(hostname: string): boolean {
-  return hostname === 'localhost' || hostname.endsWith('.localhost');
+/**
+ * Classify one IPv4 address held as four octets. Pure — no network.
+ *
+ * Ranges that are not globally reachable are `reserved` (RFC 6890): the
+ * 240.0.0.0/4 block above, plus the TEST-NET/documentation blocks
+ * (192.0.0.0/24, 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24), the 6to4
+ * relay anycast block (192.88.99.0/24) and the benchmarking block
+ * (198.18.0.0/15).
+ */
+function classifyIpv4(octets: number[]): IpClassification {
+  const [a, b, c] = octets as [number, number, number, number];
+  const dotted = octets.join('.');
+  if (a === 0) return 'unspecified';
+  if (a === 127) return 'loopback';
+  if (a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return 'private';
+  if (a === 100 && b >= 64 && b <= 127) {
+    return dotted === '100.100.100.200' ? 'metadata' : 'cgnat';
+  }
+  if (a === 169 && b === 254) {
+    return dotted === '169.254.169.254' ? 'metadata' : 'link-local';
+  }
+  if (a >= 224 && a <= 239) return 'multicast';
+  if (a >= 240) return dotted === '255.255.255.255' ? 'broadcast' : 'reserved';
+  if (a === 192 && b === 0 && (c === 0 || c === 2)) return 'reserved';
+  if (a === 192 && b === 88 && c === 99) return 'reserved';
+  if (a === 198 && (b === 18 || b === 19)) return 'reserved';
+  if (a === 198 && b === 51 && c === 100) return 'reserved';
+  if (a === 203 && b === 0 && c === 113) return 'reserved';
+  return 'public';
+}
+
+/**
+ * Classify one IPv6 address held as 16 bytes. Pure — no network.
+ *
+ * Any IPv6 form that embeds an IPv4 address (mapped `::ffff:0:0/96`,
+ * translated/SIIT `::ffff:0:0:0/96`, compatible `::/96`, NAT64
+ * `64:ff9b::/96` and `64:ff9b:1::/48`, 6to4 `2002::/16`) is classified by the
+ * IPv4 it carries, so a blocked IPv4 cannot be smuggled through a transition
+ * prefix. Everything else is default-deny: only global unicast (2000::/3,
+ * minus the IANA special-purpose blocks inside it) is `public`.
+ */
+function classifyIpv6(bytes: number[]): IpClassification {
+  const b = bytes;
+  if (b.every((x) => x === 0)) return 'unspecified';
+  if (b.slice(0, 15).every((x) => x === 0) && b[15] === 1) return 'loopback';
+
+  // IPv4-mapped ::ffff:0:0/96 — the embedded IPv4 sits in bytes 12..15.
+  if (b.slice(0, 10).every((x) => x === 0) && b[10] === 0xff && b[11] === 0xff) {
+    return classifyIpv4(b.slice(12));
+  }
+  // IPv4-translated (SIIT, RFC 2765) ::ffff:0:0:0/96 — ffff at bytes 8..9.
+  if (b.slice(0, 8).every((x) => x === 0) && b[8] === 0xff && b[9] === 0xff && b[10] === 0 && b[11] === 0) {
+    return classifyIpv4(b.slice(12));
+  }
+  // IPv4-compatible ::/96 — also embeds an IPv4 in bytes 12..15.
+  if (b.slice(0, 12).every((x) => x === 0)) return classifyIpv4(b.slice(12));
+  // NAT64: well-known 64:ff9b::/96 and local-use 64:ff9b:1::/48 (RFC 8215).
+  if (b[0] === 0x00 && b[1] === 0x64 && b[2] === 0xff && b[3] === 0x9b) {
+    const wellKnown = b.slice(4, 12).every((x) => x === 0);
+    const localUse = b[4] === 0x00 && b[5] === 0x01 && b.slice(6, 12).every((x) => x === 0);
+    if (wellKnown || localUse) return classifyIpv4(b.slice(12));
+  }
+  // 6to4 (RFC 3056) 2002::/16 — the IPv4 sits in bytes 2..5.
+  if (b[0] === 0x20 && b[1] === 0x02) return classifyIpv4(b.slice(2, 6));
+
+  if ((b[0]! & 0xfe) === 0xfc) {
+    // fd00:ec2::254 — the AWS IMDS IPv6 endpoint, inside the ULA range.
+    const isEc2Metadata = bytes.every((x, i) => x === EC2_METADATA_V6[i]);
+    return isEc2Metadata ? 'metadata' : 'ula';
+  }
+  if (b[0] === 0xfe && (b[1]! & 0xc0) === 0x80) return 'link-local';
+  if (b[0] === 0xff) return 'multicast';
+
+  // IANA special-purpose blocks inside global unicast that are never routable:
+  // 2001::/23 IETF protocol assignments (Teredo 2001::/32, benchmarking
+  // 2001:2::/48, ORCHID 2001:10::/28 and 2001:20::/28), the documentation
+  // prefix 2001:db8::/32, and 3fff::/20 (RFC 9637). Everything else outside
+  // 2000::/3 — 100::/64 discard-only, 5f00::/16 SRv6, fec0::/10 deprecated
+  // site-local — is caught by the default-deny below.
+  if (b[0] === 0x20 && b[1] === 0x01 && (b[2]! & 0xfe) === 0x00) return 'reserved';
+  if (b[0] === 0x20 && b[1] === 0x01 && b[2] === 0x0d && b[3] === 0xb8) return 'reserved';
+  if (b[0] === 0x3f && b[1] === 0xff && (b[2]! & 0xf0) === 0x00) return 'reserved';
+
+  if ((b[0]! & 0xe0) === 0x20) return 'public';
+  return 'reserved';
 }
 
 function parseIpv4(s: string): number[] | null {
@@ -247,60 +345,18 @@ function parseIpv6ToBytes(input: string): number[] | null {
   return bytes.length === 16 ? bytes : null;
 }
 
-function v4FromBytes(bytes: number[]): string {
-  return bytes.join('.');
-}
-
 /** fd00:ec2::254 (AWS IMDS) expanded to 16 bytes. */
 const EC2_METADATA_V6 = [0xfd, 0x00, 0x0e, 0xc2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02, 0x54];
 
 /** Classify one numeric address. Pure — no network. */
 export function classifyIpAddress(ip: string): IpClassification {
   if (isIP(ip) === 4) {
-    const octets = ip.split('.').map(Number);
-    const [a, b] = octets as [number, number, number, number];
-    if (a === 0) return 'unspecified';
-    if (a === 127) return 'loopback';
-    if (a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return 'private';
-    if (a === 100 && b >= 64 && b <= 127) {
-      return ip === '100.100.100.200' ? 'metadata' : 'cgnat';
-    }
-    if (a === 169 && b === 254) {
-      return ip === '169.254.169.254' ? 'metadata' : 'link-local';
-    }
-    if (a >= 224 && a <= 239) return 'multicast';
-    if (a >= 240) return ip === '255.255.255.255' ? 'broadcast' : 'reserved';
-    return 'public';
+    const octets = parseIpv4(ip);
+    return octets ? classifyIpv4(octets) : 'invalid';
   }
-
   if (isIP(ip) !== 6) return 'invalid';
   const bytes = parseIpv6ToBytes(ip);
-  if (!bytes) return 'invalid';
-
-  if (bytes.every((b) => b === 0)) return 'unspecified';
-  if (bytes.slice(0, 15).every((b) => b === 0) && bytes[15] === 1) return 'loopback';
-  // IPv4-mapped ::ffff:0:0/96 and IPv4-compatible ::/96 — classify the embedded v4.
-  if (bytes.slice(0, 10).every((b) => b === 0) && bytes[10] === 0xff && bytes[11] === 0xff) {
-    return classifyIpAddress(v4FromBytes(bytes.slice(12)));
-  }
-  if (bytes.slice(0, 12).every((b) => b === 0)) {
-    return classifyIpAddress(v4FromBytes(bytes.slice(12)));
-  }
-  // NAT64 well-known prefix 64:ff9b::/96 also wraps an IPv4 address.
-  if (
-    bytes[0] === 0x00 && bytes[1] === 0x64 && bytes[2] === 0xff && bytes[3] === 0x9b
-    && bytes.slice(4, 12).every((b) => b === 0)
-  ) {
-    return classifyIpAddress(v4FromBytes(bytes.slice(12)));
-  }
-  if ((bytes[0]! & 0xfe) === 0xfc) {
-    // fd00:ec2::254 — the AWS IMDS IPv6 endpoint, inside the ULA range.
-    const isEc2Metadata = bytes.every((b, i) => b === EC2_METADATA_V6[i]);
-    return isEc2Metadata ? 'metadata' : 'ula';
-  }
-  if (bytes[0] === 0xfe && (bytes[1]! & 0xc0) === 0x80) return 'link-local';
-  if (bytes[0] === 0xff) return 'multicast';
-  return 'public';
+  return bytes ? classifyIpv6(bytes) : 'invalid';
 }
 
 async function defaultLookup(hostname: string): Promise<string[]> {
@@ -348,7 +404,11 @@ export async function assertEndpointAllowed(
   const { hostname } = parsed;
 
   let addresses: string[];
-  if (isLocalhostName(hostname)) {
+  // Only the exact name "localhost" is short-circuited. A `*.localhost` name is
+  // resolved like any other host, because `fetch()` resolves it through the OS
+  // (getaddrinfo) too — synthesizing 127.0.0.1 here could disagree with what
+  // the socket actually connects to.
+  if (hostname === 'localhost') {
     addresses = ['127.0.0.1'];
   } else if (isIP(hostname) !== 0) {
     addresses = [hostname];

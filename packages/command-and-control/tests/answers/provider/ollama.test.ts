@@ -45,4 +45,29 @@ describe('OllamaEmbeddingProvider', () => {
     expect(await OllamaEmbeddingProvider.isAvailable('http://169.254.169.254/')).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('refuses to follow a 3xx from /api/embeddings', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('', { status: 302, headers: { location: 'http://169.254.169.254/' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const p = new OllamaEmbeddingProvider({ baseUrl: 'http://localhost:11434', model: 'nomic-embed-text' });
+
+    await expect(p.embed(['x'])).rejects.toMatchObject({
+      code: 'ENDPOINT_BLOCKED',
+      reason: 'redirect',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![1]).toMatchObject({ redirect: 'manual' });
+  });
+
+  it('isAvailable returns false when /api/tags responds with a 3xx', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('', { status: 302, headers: { location: 'http://169.254.169.254/' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await OllamaEmbeddingProvider.isAvailable('http://localhost:11434')).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

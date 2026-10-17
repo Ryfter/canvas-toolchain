@@ -66,7 +66,7 @@ export class OllamaLlmClient implements LlmClient {
       if (e?.cause?.code === 'ECONNREFUSED' || (err instanceof TypeError && /fetch failed/i.test(String(err)))) {
         throw new LlmProviderError(
           'OLLAMA_UNREACHABLE',
-          `Could not reach Ollama at ${this.cfg.baseUrl}`,
+          `Could not reach Ollama at ${endpoint.url}`,
           'ollama',
           [`Start Ollama with 'ollama serve', or switch providers with set_active_llm_provider`],
         );

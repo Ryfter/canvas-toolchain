@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
+import { assertEndpointAllowed, parseEndpointUrl } from '@canvas-toolchain/shared-llm';
 import { getCcHomePath, loadConfig } from '../kb/config.js';
 import type { CcConfig, Mode, ProviderName } from '../types.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
@@ -51,6 +51,16 @@ function configFilePresent(name: string): boolean {
   return existsSync(join(getCcHomePath(), name));
 }
 
+/** Canonical form of a saved base URL. A URL that fails to parse (e.g. one
+ *  carrying user:pass@) is never echoed — status output flows into LLM context. */
+function describeBaseUrl(raw: string): string {
+  try {
+    return parseEndpointUrl(raw).url;
+  } catch {
+    return '(invalid URL)';
+  }
+}
+
 async function pingOllama(baseUrl: string): Promise<boolean> {
   // SSRF guard: a saved config may hold a now-blocked URL — report unreachable
   // rather than crashing the status probe or fetching the blocked target.
@@ -90,6 +100,7 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
   if (config.providers.ollama) {
     ollamaStatus = {
       ...config.providers.ollama,
+      baseUrl: describeBaseUrl(config.providers.ollama.baseUrl),
       reachable: await pingOllama(config.providers.ollama.baseUrl),
     };
   }

@@ -42,6 +42,27 @@ describe('setup_ollama discovery mode', () => {
     expect(result.mode).toBe('discovery');
     expect(result.recommendations).toBe('# Live recommendations\n\n## Tier: 32 GB\n');
   });
+
+  it('echoes the canonical baseUrl, not the raw input', async () => {
+    (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new TypeError('fetch failed'));
+
+    const result = await setupOllama({ baseUrl: 'http://10.0.0.5:11434/?x=1#y' });
+
+    expect(result.mode).toBe('discovery');
+    expect(result.baseUrl).toBe('http://10.0.0.5:11434');
+  });
+
+  it('refuses a non-http baseUrl without fetching or echoing it', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await setupOllama({ baseUrl: 'file:///etc/passwd' });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('ENDPOINT_BLOCKED');
+    expect(result.message).not.toContain('file:///etc/passwd');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('setup_ollama commit mode', () => {
@@ -94,6 +115,30 @@ describe('setup_ollama commit mode', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBe('OLLAMA_UNREACHABLE');
     expect(result.fix).toEqual(expect.arrayContaining([expect.stringMatching(/ollama serve/)]));
+    expect(existsSync(join(ccHomeDir, 'ollama-config.json'))).toBe(false);
+  });
+
+  it('reports OLLAMA_UNREACHABLE with the canonical baseUrl', async () => {
+    (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new TypeError('fetch failed'));
+
+    const result = await setupOllama({ baseUrl: 'http://localhost:11434/?x=1#y', model: 'qwen2.5:14b' });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('OLLAMA_UNREACHABLE');
+    expect(result.message).toBe('Could not reach Ollama at http://localhost:11434/api/tags');
+  });
+
+  it('returns ENDPOINT_BLOCKED when /api/tags redirects — does NOT write config', async () => {
+    (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response('', { status: 302, headers: { location: 'http://169.254.169.254/' } }),
+    );
+
+    const result = await setupOllama({ model: 'qwen2.5:14b' });
+
+    expect(result.mode).toBe('commit');
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('ENDPOINT_BLOCKED');
+    expect(result.message).toMatch(/redirect/i);
     expect(existsSync(join(ccHomeDir, 'ollama-config.json'))).toBe(false);
   });
 

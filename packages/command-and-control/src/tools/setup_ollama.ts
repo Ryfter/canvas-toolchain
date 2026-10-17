@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   fetchRecommendedModels,
+  parseEndpointUrl,
   assertEndpointAllowed,
   redirectBlocked,
   EndpointBlockedError,
@@ -27,6 +28,7 @@ export interface SetupOllamaInput {
 export type SetupOllamaResult =
   | {
       mode: 'discovery';
+      ok: true;
       baseUrl: string;
       recommendations: string;
       nextStep: string;
@@ -42,6 +44,15 @@ export type SetupOllamaResult =
       mode: 'commit';
       ok: false;
       error: string;
+      message: string;
+      fix: string[];
+    }
+  | {
+      /** The supplied baseUrl never passed URL validation (scheme, userinfo,
+       *  host). No request was made and nothing was written. */
+      mode: 'blocked';
+      ok: false;
+      error: 'ENDPOINT_BLOCKED';
       message: string;
       fix: string[];
     };
@@ -110,7 +121,18 @@ async function probeTags(baseUrl: string): Promise<ProbeResult> {
 }
 
 export async function setupOllama(input: SetupOllamaInput): Promise<SetupOllamaResult> {
-  const baseUrl = input.baseUrl ?? DEFAULT_BASE_URL;
+  // SSRF guard, parse pass (all modes): validate + canonicalize the endpoint up
+  // front so every path — discovery included — echoes and persists only a
+  // vetted URL, with any query/fragment/userinfo already stripped.
+  let baseUrl: string;
+  try {
+    baseUrl = parseEndpointUrl(input.baseUrl ?? DEFAULT_BASE_URL).url;
+  } catch (err) {
+    if (err instanceof EndpointBlockedError) {
+      return { mode: 'blocked', ok: false, error: 'ENDPOINT_BLOCKED', message: err.message, fix: err.fix };
+    }
+    throw err;
+  }
   const recommendationsUrl = process.env.CC_RECOMMENDED_MODELS_URL ?? DEFAULT_RECOMMENDATIONS_URL;
 
   if (!input.model) {
@@ -122,6 +144,7 @@ export async function setupOllama(input: SetupOllamaInput): Promise<SetupOllamaR
     });
     return {
       mode: 'discovery',
+      ok: true,
       baseUrl,
       recommendations,
       nextStep: 'Pick a model from above and re-run setup_ollama with { model: "<id>" }.',

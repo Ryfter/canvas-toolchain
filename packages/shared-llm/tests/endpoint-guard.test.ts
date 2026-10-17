@@ -59,6 +59,13 @@ describe('parseEndpointUrl', () => {
     })();
     expect(err?.message).not.toContain('sup3rsecret');
   });
+
+  it('strips a single trailing dot from a hostname', () => {
+    expect(parseEndpointUrl('http://localhost.:11434').hostname).toBe('localhost');
+    expect(parseEndpointUrl('http://localhost.:11434').url).toBe('http://localhost:11434');
+    expect(parseEndpointUrl('http://example.com.').hostname).toBe('example.com');
+    expect(parseEndpointUrl('https://example.com.:443/v1').url).toBe('https://example.com/v1');
+  });
 });
 
 describe('assertEndpointAllowed — allowed targets', () => {
@@ -88,6 +95,76 @@ describe('assertEndpointAllowed — allowed targets', () => {
   it('reports a public host as public', async () => {
     const info = await assertEndpointAllowed('https://1.1.1.1');
     expect(info.public).toBe(true);
+  });
+
+  it('short-circuits DNS only for the exact name "localhost"', async () => {
+    const lookup = vi.fn(async () => ['127.0.0.1']);
+    await assertEndpointAllowed('http://localhost:11434', { lookup });
+    await assertEndpointAllowed('http://localhost.:11434', { lookup });
+    expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it('resolves *.localhost through lookup and classifies the answer', async () => {
+    const lookup = lookupOf('127.0.0.1');
+    await expect(assertEndpointAllowed('http://app.localhost:11434', { lookup })).resolves.toMatchObject({
+      public: false,
+    });
+    expect(lookup).toHaveBeenCalledWith('app.localhost');
+    await expect(assertEndpointAllowed('http://evil.localhost:11434', { lookup: lookupOf('169.254.169.254') }))
+      .rejects.toMatchObject({ code: 'ENDPOINT_BLOCKED', reason: 'metadata' });
+  });
+});
+
+describe('IPv6 transition forms and reserved ranges', () => {
+  it.each([
+    ['2002:a9fe:a9fe::1', 'metadata'], // 6to4 embedding 169.254.169.254
+    ['2002:808:808::1', 'public'], // 6to4 embedding 8.8.8.8
+    ['2001:0:4136:e378:8000:63bf:5601:5601', 'reserved'], // Teredo (RFC 4380)
+    ['64:ff9b:1::a9fe:a9fe', 'metadata'], // NAT64 local-use /48 (RFC 8215)
+    ['64:ff9b:1::808:808', 'public'], // NAT64 local-use over a public v4
+    ['::ffff:0:a9fe:a9fe', 'metadata'], // SIIT IPv4-translated (RFC 2765)
+    ['::ffff:0:808:808', 'public'], // SIIT IPv4-translated over a public v4
+    ['100::1', 'reserved'], // discard-only (RFC 6666)
+    ['2001:db8::1', 'reserved'], // documentation (RFC 3849)
+    ['2001:2::1', 'reserved'], // benchmarking (RFC 5180)
+    ['2001:10::1', 'reserved'], // deprecated ORCHID (RFC 4843)
+    ['3fff::1', 'reserved'], // documentation (RFC 9637)
+    ['fec0::1', 'reserved'], // deprecated site-local (RFC 3879)
+    ['5f00::1', 'reserved'], // SRv6 SIDs (RFC 9602)
+    ['4000::1', 'reserved'], // outside global unicast 2000::/3
+    ['192.0.0.1', 'reserved'],
+    ['192.0.2.1', 'reserved'],
+    ['192.88.99.1', 'reserved'],
+    ['198.18.0.1', 'reserved'],
+    ['198.19.255.255', 'reserved'],
+    ['198.51.100.1', 'reserved'],
+    ['203.0.113.1', 'reserved'],
+    ['240.0.0.1', 'reserved'],
+  ])('classifies %s as %s', (ip, kind) => {
+    expect(classifyIpAddress(ip)).toBe(kind);
+  });
+
+  it.each([
+    ['https://[2002:a9fe:a9fe::1]:11434', 'metadata'],
+    ['https://[2001:0:4136:e378:8000:63bf:5601:5601]:11434', 'reserved'],
+    ['https://[64:ff9b:1::a9fe:a9fe]:11434', 'metadata'],
+    ['https://[::ffff:0:a9fe:a9fe]:11434', 'metadata'],
+    ['http://[100::1]:11434', 'reserved'],
+    ['http://[2001:db8::1]:11434', 'reserved'],
+    ['http://[2001:2::1]:11434', 'reserved'],
+    ['http://[fec0::1]:11434', 'reserved'],
+    ['http://192.0.2.1:11434', 'reserved'],
+    ['http://198.18.0.1:11434', 'reserved'],
+    ['http://203.0.113.1:11434', 'reserved'],
+  ])('refuses %s as %s without fetching', async (url, reason) => {
+    await expectBlocked(url, reason);
+  });
+
+  it('still allows a 6to4 spelling of a private IPv4 target', async () => {
+    // 2002:0a00:0001::/48 embeds 10.0.0.1, which is allowed over http.
+    await expect(assertEndpointAllowed('http://[2002:a00:1::1]:11434')).resolves.toMatchObject({
+      public: false,
+    });
   });
 });
 

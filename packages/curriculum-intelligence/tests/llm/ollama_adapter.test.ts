@@ -49,6 +49,22 @@ describe('OllamaAdapter.complete', () => {
     await expect(adapter.complete('hi')).rejects.toThrow('Ollama request failed: 503');
   });
 
+  it('refuses to follow a 3xx redirect', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('', { status: 302, headers: { location: 'http://169.254.169.254/' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const adapter = new OllamaAdapter('http://localhost:11434', 'llama3.2');
+
+    await expect(adapter.complete('hi')).rejects.toMatchObject({
+      code: 'ENDPOINT_BLOCKED',
+      reason: 'redirect',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![1]).toMatchObject({ redirect: 'manual' });
+  });
+
   it('passes num_predict when maxTokens provided', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
