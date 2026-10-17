@@ -1,18 +1,32 @@
-import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
-import { getCcHomePath, loadConfig } from '../kb/config.js';
-import type { CcConfig, Mode, ProviderName } from '../types.js';
-import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
-import { loadAnthropicConfig } from './setup_anthropic.js';
+import { loadConfig } from '../kb/config.js';
+import { readSetupState } from '../setup/read_state.js';
+import type { ActiveProvider } from '../setup/types.js';
+import { DEFAULT_CONFIG, type CcConfig, type Mode, type ProviderName } from '../types.js';
 import { loadSpotCheckPreference } from './shell_ready/spot_check_preference.js';
 
 const localRequire = createRequire(import.meta.url);
 
+/** Bounded: a status snapshot must not stall when Ollama is configured but down. */
+const OLLAMA_PROBE_TIMEOUT_MS = 2000;
+
+/** Set when ANTHROPIC_API_KEY is present but the runtime will not read it. */
+const ENV_ONLY_ANTHROPIC_NOTE =
+  'ANTHROPIC_API_KEY is set in the environment, but the runtime reads ' +
+  'anthropic-config.json instead — run ct_setup action anthropic to store the key where it is used.';
+
 export interface GetCcStatusResult {
   mode: Mode;
   providers: {
-    anthropic: { model: string; keyPresent: boolean };
+    anthropic: {
+      model: string;
+      /** True only when anthropic-config.json holds a key — the surface the runtime reads. */
+      keyPresent: boolean;
+      /** Where a key exists. 'env' means the runtime ignores it. */
+      source: 'file' | 'env' | 'both' | 'none';
+      /** Present only when an environment key exists that the runtime does not read. */
+      note?: string;
+    };
     ollama?: { baseUrl: string; model: string; reachable: boolean };
   };
   installedPackages: {
@@ -32,30 +46,24 @@ export interface GetCcStatusResult {
     enabled: boolean;
     day: string | null;
   };
+  /** Which LLM provider the AI tools will actually use. */
+  llm: { activeProvider: ActiveProvider | null };
+  /** Where to go for the full readiness report. */
+  diagnostics: {
+    tool: 'ct_setup';
+    action: 'doctor';
+    hint: string;
+  };
   routing: { fast: ProviderName; judgment: ProviderName };
   lastRun: CcConfig['lastRun'];
 }
 
-function anthropicKeyPresent(): boolean {
-  if (process.env.ANTHROPIC_API_KEY) return true;
-  try {
-    loadAnthropicConfig();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function configFilePresent(name: string): boolean {
-  return existsSync(join(getCcHomePath(), name));
-}
-
+/** Called only when `ollama-config.json` says Ollama is configured. */
 async function pingOllama(baseUrl: string): Promise<boolean> {
   try {
-    const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${baseUrl}/api/tags`, { signal: controller.signal });
-    clearTimeout(tid);
+    const res = await fetch(`${baseUrl}/api/tags`, {
+      signal: AbortSignal.timeout(OLLAMA_PROBE_TIMEOUT_MS),
+    });
     return res.ok;
   } catch {
     return false;
@@ -74,44 +82,58 @@ function isPackageInstalled(pkg: string): boolean {
   }
 }
 
+/**
+ * A projection of `readSetupState` in the legacy status shape, plus a pointer to
+ * the doctor. Adds fields; never renames or removes one.
+ */
 export async function getCcStatus(): Promise<GetCcStatusResult> {
   const config = loadConfig();
+  const state = await readSetupState();
+  const { anthropic, ollama } = state.llm;
 
-  let ollamaStatus: { baseUrl: string; model: string; reachable: boolean } | undefined;
-  if (config.providers.ollama) {
-    ollamaStatus = {
-      ...config.providers.ollama,
-      reachable: await pingOllama(config.providers.ollama.baseUrl),
-    };
-  }
+  const ollamaStatus = ollama.configured && ollama.host
+    ? {
+        baseUrl: ollama.host,
+        model: ollama.model ?? '',
+        reachable: await pingOllama(ollama.host),
+      }
+    : undefined;
 
   const ciInstalled = isPackageInstalled('@canvas-toolchain/curriculum-intelligence');
   const designStudioInstalled = isPackageInstalled('@canvas-toolchain/canvas-design-studio');
   const spotPref = loadSpotCheckPreference();
 
   return {
-    mode: config.mode,
+    mode: config.mode ?? DEFAULT_CONFIG.mode,
     providers: {
       anthropic: {
-        model: config.providers.anthropic.model,
-        keyPresent: anthropicKeyPresent(),
+        model: config.providers?.anthropic?.model ?? DEFAULT_CONFIG.providers.anthropic.model,
+        keyPresent: anthropic.source === 'file' || anthropic.source === 'both',
+        source: anthropic.source,
+        ...(anthropic.source === 'env' ? { note: ENV_ONLY_ANTHROPIC_NOTE } : {}),
       },
       ollama: ollamaStatus,
     },
     installedPackages: {
       ci: ciInstalled,
-      downloader: isCanvasBackupConfigured(),
+      downloader: state.backup.executableConfigured,
       designStudio: designStudioInstalled,
     },
     configured: {
-      canvasConfig: configFilePresent('canvas-config.json'),
-      llmProvider: configFilePresent('llm-provider.json'),
-      canvasBackupToml: configFilePresent('canvas-backup.generated.toml'),
+      canvasConfig: state.files['canvas-config'].present,
+      llmProvider: state.files['llm-provider'].present,
+      canvasBackupToml: state.backup.managedTomlPresent,
     },
     spotCheck: spotPref
       ? { configured: true, enabled: spotPref.weeklyCheckEnabled, day: spotPref.weeklyCheckDay }
       : { configured: false, enabled: false, day: null },
-    routing: config.routing,
-    lastRun: config.lastRun,
+    llm: { activeProvider: state.llm.activeProvider },
+    diagnostics: {
+      tool: 'ct_setup',
+      action: 'doctor',
+      hint: 'Run ct_setup action doctor for full diagnostics (probe:true adds live Canvas and Anthropic checks).',
+    },
+    routing: config.routing ?? DEFAULT_CONFIG.routing,
+    lastRun: config.lastRun ?? DEFAULT_CONFIG.lastRun,
   };
 }

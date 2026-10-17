@@ -5,45 +5,59 @@ import { join } from 'node:path';
 import { getCcStatus } from '../../src/tools/get_cc_status.js';
 
 let tmpHome: string;
+const ORIGINAL_KEY = process.env.ANTHROPIC_API_KEY;
 
 beforeEach(() => {
   tmpHome = mkdtempSync(join(tmpdir(), 'cc-home-'));
   process.env.CC_HOME = tmpHome;
+  delete process.env.ANTHROPIC_API_KEY;
   vi.restoreAllMocks();
+  // Hermetic: an unexpected network call fails loudly instead of hanging or
+  // returning real data. A test that wants a probe re-stubs `fetch` itself.
+  vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network call in test'))));
 });
 
 afterEach(() => {
   delete process.env.CC_HOME;
+  if (ORIGINAL_KEY === undefined) delete process.env.ANTHROPIC_API_KEY;
+  else process.env.ANTHROPIC_API_KEY = ORIGINAL_KEY;
   rmSync(tmpHome, { recursive: true, force: true });
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('getCcStatus', () => {
   it('reports anthropic key absent when env var not set', async () => {
-    delete process.env.ANTHROPIC_API_KEY;
     const status = await getCcStatus();
     expect(status.providers.anthropic.keyPresent).toBe(false);
+    expect(status.providers.anthropic.source).toBe('none');
   });
 
-  it('reports anthropic key present when env var set', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test-key';
+  it('reports an environment-only key as not configured, with a note', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-env-only';
     const status = await getCcStatus();
-    expect(status.providers.anthropic.keyPresent).toBe(true);
-    delete process.env.ANTHROPIC_API_KEY;
+    // The runtime reads the file, not the environment, so an env-only key is
+    // NOT usable — reporting it as present is the misdiagnosis this fixes.
+    expect(status.providers.anthropic.keyPresent).toBe(false);
+    expect(status.providers.anthropic.source).toBe('env');
+    expect(status.providers.anthropic.note).toMatch(/ANTHROPIC_API_KEY/);
+    expect(status.providers.anthropic.note).toMatch(/anthropic-config\.json/);
+    expect(JSON.stringify(status)).not.toContain('sk-ant-env-only');
   });
 
-  it('reports anthropic key present when anthropic-config.json supplies a key', async () => {
-    delete process.env.ANTHROPIC_API_KEY;
+  it('reports anthropic configured when anthropic-config.json supplies a key', async () => {
     writeFileSync(
       join(tmpHome, 'anthropic-config.json'),
       JSON.stringify({ apiKey: 'sk-from-file', model: 'claude' }),
     );
     const status = await getCcStatus();
     expect(status.providers.anthropic.keyPresent).toBe(true);
+    expect(status.providers.anthropic.source).toBe('file');
+    expect(status.providers.anthropic.note).toBeUndefined();
     expect(JSON.stringify(status)).not.toContain('sk-from-file');
   });
 
   it('reports anthropic key absent when config file has no apiKey', async () => {
-    delete process.env.ANTHROPIC_API_KEY;
     writeFileSync(join(tmpHome, 'anthropic-config.json'), JSON.stringify({ model: 'claude' }));
     const status = await getCcStatus();
     expect(status.providers.anthropic.keyPresent).toBe(false);
@@ -66,6 +80,12 @@ describe('getCcStatus', () => {
     expect((await getCcStatus()).configured.llmProvider).toBe(false);
     writeFileSync(join(tmpHome, 'llm-provider.json'), JSON.stringify({ provider: 'anthropic' }));
     expect((await getCcStatus()).configured.llmProvider).toBe(true);
+  });
+
+  it('reports the active LLM provider from llm-provider.json', async () => {
+    expect((await getCcStatus()).llm.activeProvider).toBeNull();
+    writeFileSync(join(tmpHome, 'llm-provider.json'), JSON.stringify({ provider: 'ollama' }));
+    expect((await getCcStatus()).llm.activeProvider).toBe('ollama');
   });
 
   it('reports canvas-backup.generated.toml presence without echoing contents', async () => {
@@ -93,5 +113,86 @@ describe('getCcStatus', () => {
   it('reports ci as installed (it is a local dep)', async () => {
     const status = await getCcStatus();
     expect(status.installedPackages.ci).toBe(true);
+  });
+
+  it('points at ct_setup doctor for full diagnostics', async () => {
+    const status = await getCcStatus();
+    expect(status.diagnostics).toEqual({
+      tool: 'ct_setup',
+      action: 'doctor',
+      hint: expect.stringContaining('ct_setup'),
+    });
+  });
+
+  it('contains no secrets from any config file', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-env-only';
+    writeFileSync(join(tmpHome, 'anthropic-config.json'), JSON.stringify({ apiKey: 'sk-ant-secret', model: 'claude' }));
+    writeFileSync(join(tmpHome, 'canvas-config.json'), JSON.stringify({ host: 'example.instructure.com', token: 'tok-secret' }));
+    writeFileSync(join(tmpHome, 'config.json'), JSON.stringify({ coursesRoot: '/courses', registry: { token: 'gh-secret' } }));
+    writeFileSync(join(tmpHome, 'ollama-config.json'), JSON.stringify({ baseUrl: 'http://localhost:11434', model: 'llama3.2' }));
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
+
+    const dumped = JSON.stringify(await getCcStatus());
+
+    for (const secret of ['sk-ant-env-only', 'sk-ant-secret', 'tok-secret', 'gh-secret']) {
+      expect(dumped).not.toContain(secret);
+    }
+  });
+});
+
+describe('getCcStatus Ollama source', () => {
+  it('makes no network call when Ollama is not configured', async () => {
+    const fetchMock = vi.fn(() => Promise.reject(new Error('network call in test')));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const status = await getCcStatus();
+
+    expect(status.providers.ollama).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('reports Ollama configured in ollama-config.json, and probes it', async () => {
+    writeFileSync(
+      join(tmpHome, 'ollama-config.json'),
+      JSON.stringify({ baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' }),
+    );
+    const fetchMock = vi.fn(async () => new Response('{"models":[]}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const status = await getCcStatus();
+
+    expect(status.providers.ollama).toEqual({
+      baseUrl: 'http://localhost:11434',
+      model: 'qwen2.5:14b',
+      reachable: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![0]).toBe('http://localhost:11434/api/tags');
+  });
+
+  it('ignores Ollama fields written into config.json', async () => {
+    writeFileSync(
+      join(tmpHome, 'config.json'),
+      JSON.stringify({ providers: { ollama: { baseUrl: 'http://localhost:9999', model: 'stale' } } }),
+    );
+    const fetchMock = vi.fn(() => Promise.reject(new Error('network call in test')));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const status = await getCcStatus();
+
+    expect(status.providers.ollama).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('reports a configured but unreachable Ollama without throwing', async () => {
+    writeFileSync(
+      join(tmpHome, 'ollama-config.json'),
+      JSON.stringify({ baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' }),
+    );
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('ECONNREFUSED'); }));
+
+    const status = await getCcStatus();
+
+    expect(status.providers.ollama?.reachable).toBe(false);
   });
 });
