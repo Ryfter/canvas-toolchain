@@ -38,4 +38,39 @@ describe('setupLectureAnswers', () => {
     expect(r.configured).toBe(true);
     expect(loadLectureAnswersConfig()?.voyageApiKey).toBe('vk-x');
   });
+
+  it('refuses a blocked ollamaBaseUrl without fetching or writing config', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const r = await setupLectureAnswers({ provider: 'ollama', ollamaBaseUrl: 'http://169.254.169.254' });
+
+    expect(r.configured).toBe(false);
+    expect(r.message).toMatch(/metadata/i);
+    expect(r.fix).toBeDefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(loadLectureAnswersConfig()).toBeNull();
+  });
+
+  it('surfaces the block reason even when no provider was given (guard runs before autoDetect)', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const r = await setupLectureAnswers({ ollamaBaseUrl: 'http://169.254.169.254' });
+
+    expect(r.configured).toBe(false);
+    expect(r.message).toMatch(/metadata/i);
+    expect(r.fix).toBeDefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(loadLectureAnswersConfig()).toBeNull();
+  });
+
+  it('persists the canonical endpoint URL, not the raw input', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+
+    const r = await setupLectureAnswers({ provider: 'ollama', ollamaBaseUrl: 'http://localhost:11434/?x=1#y' });
+
+    expect(r.configured).toBe(true);
+    expect(loadLectureAnswersConfig()?.ollamaBaseUrl).toBe('http://localhost:11434');
+  });
 });

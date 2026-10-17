@@ -1,3 +1,4 @@
+import { assertEndpointAllowed, redirectBlocked } from '@canvas-toolchain/shared-llm';
 import type { LlmClient, LlmOpts } from './client.js';
 
 export class OllamaAdapter implements LlmClient {
@@ -7,7 +8,9 @@ export class OllamaAdapter implements LlmClient {
   ) {}
 
   async complete(prompt: string, opts?: LlmOpts): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/api/generate`, {
+    // SSRF guard on the user-supplied OLLAMA_BASE_URL before any request.
+    const endpoint = await assertEndpointAllowed(this.baseUrl);
+    const response = await fetch(`${endpoint.url}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -16,8 +19,12 @@ export class OllamaAdapter implements LlmClient {
         stream: false,
         ...(opts?.maxTokens ? { options: { num_predict: opts.maxTokens } } : {}),
       }),
+      redirect: 'manual',
     });
 
+    if (response.status >= 300 && response.status < 400) {
+      throw redirectBlocked(`${endpoint.url}/api/generate`);
+    }
     if (!response.ok) {
       throw new Error(`Ollama request failed: ${response.status} ${response.statusText}`);
     }
@@ -28,8 +35,10 @@ export class OllamaAdapter implements LlmClient {
 
   async isReachable(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tags`, {
+      const endpoint = await assertEndpointAllowed(this.baseUrl);
+      const response = await fetch(`${endpoint.url}/api/tags`, {
         signal: AbortSignal.timeout(3000),
+        redirect: 'manual',
       });
       return response.ok;
     } catch {

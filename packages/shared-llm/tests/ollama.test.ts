@@ -116,4 +116,30 @@ describe('OllamaLlmClient', () => {
     const body = JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.options).toBeUndefined();
   });
+
+  it('refuses a blocked endpoint without calling fetch', async () => {
+    const client = new OllamaLlmClient({ baseUrl: 'http://169.254.169.254/', model: 'qwen2.5:14b' });
+
+    await expect(client.complete('sys', 'usr')).rejects.toMatchObject({
+      code: 'ENDPOINT_BLOCKED',
+      reason: 'metadata',
+    });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('sends redirect: manual and refuses to follow a 3xx', async () => {
+    (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Response('', { status: 302, headers: { location: 'http://169.254.169.254/' } }),
+    );
+    const client = new OllamaLlmClient({ baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+
+    await expect(client.complete('sys', 'usr')).rejects.toMatchObject({
+      code: 'ENDPOINT_BLOCKED',
+      reason: 'redirect',
+    });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1]).toMatchObject({
+      redirect: 'manual',
+    });
+  });
 });
