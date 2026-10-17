@@ -79,7 +79,7 @@ related: [generate_quiz, check_shell_readiness]
 | `intent_tool` | `Operation.intentTool` | Empty string when the op is not on an intent tool. |
 | `intent_action` | `Operation.intentAction` | Empty string when absent. |
 | `exposure` | `Operation.exposure` | `intent`, `advanced`, or `internal`. |
-| `related` | seeded, see §5 | Flow sequence of ids. Wikilink targets. |
+| `related` | seeded + curated, see §5 | Flow sequence of ids. Wikilink targets. |
 
 All scalars are written as double-quoted strings except `related`, which is a
 flow sequence of plain scalars. Strings are escaped for `\` and `"`; the
@@ -169,10 +169,39 @@ generator's job is to write, not to delete files a human may have annotated. The
 3. Self is always excluded; the cap keeps a section of 34 admin ops from
    producing unusable link farms.
 
-An LLM may *propose* more links (J8), but only a human merges them, and the
-merge has to survive the next idempotent run — which means a proposed link is
-either (a) folded into the seed rule, or (b) written into the hand-written body,
-never into the generated region.
+An LLM may *propose* more links, but only a human merges them, and the merge has
+to survive the next idempotent run. That is what the curated data file is for.
+
+### 5.1 Curated `related:` links (J8)
+
+`scripts/skills/data/related.json` is the **hand-reviewed source** of the
+intentional cross-tool links. It is not generated output and not part of the
+skills tree, so editing it can never touch a generated region.
+
+```json
+{ "links": [ { "from": "generate_quiz", "to": "validate_quiz", "reason": "Author the draft locally, then check it." } ] }
+```
+
+* **Directed.** `{from, to}` adds `to` to the `related:` list of `from`'s op
+  file. Author both directions when the relationship is useful both ways; the
+  file is not symmetric by construction.
+* **Ids only, deduped.** Every id must be a registered operation, every link
+  carries a short `reason` for the reviewer, and a duplicate pair, a self link,
+  or an unknown id is a `curated-link` lint violation (`node scripts/skills/lint.mjs`).
+* **Merged, not replacing.** `lib/graph.mjs` `mergeRelated` takes the curated
+  links first, fills the remaining slots from the deterministic seed, dedupes,
+  drops self, and **sorts by id** — so the data file's own order is not
+  significant, and reordering it produces a zero diff. The merged list is capped
+  at `MAX_RELATED` (12 = the 8-id seed cap plus the curated budget); the cap
+  drops seed links before any curated link.
+* **Never hand-edit** `skills/ops/*.md` or `skills/moc/*.md`. A link that should
+  outlive a regeneration belongs in this data file.
+
+The curated layer is also what guarantees the plan's floor: **every operation's
+`related:` is non-empty** (the seed alone already covers the core surface; the
+curated layer adds the cross-tool workflow edges the seed cannot know about, such
+as prerequisite/setup → use, publish → rollback, and the
+transcripts ↔ lecture-answers pairs).
 
 ## 6. Lint rules
 
@@ -188,6 +217,7 @@ non-zero; `--json` prints the machine-readable report.
 | `broken-wikilink` | all files | A `[[x]]` body link or a `related:` entry where `x` is not an op, MOC, or concept id. |
 | `orphan` | ops | Op in no MOC (`moc/*.md` no longer mentions it). |
 | `drift` | ops, concepts | Ops — frontmatter `description` ≠ registry, frontmatter `id` ≠ file name, an op file the registry no longer declares, or a registry operation with no op file. Concepts — a frontmatter fence that never closes, or a concept id that collides with an operation id. |
+| `curated-link` | `data/related.json` | A `from`/`to` id that is not a registered operation, a self link, or a duplicate `from -> to` pair (§5.1). |
 
 `missing-description` short-circuits only the other *description* checks: the id
 drift, registry drift, and `related:` link checks still run on an op whose
@@ -229,14 +259,23 @@ caveats fit at 200, so the default stayed and the descriptions moved.
 The nearest near-duplicate pair is `list_assignments` ↔ `list_pages` at **0.750** —
 real, below the 0.8 threshold, and worth a human look rather than a rewrite.
 
+The `curated-link` rule (J8) reports 0 against the committed
+`scripts/skills/data/related.json` — 130 directed links, 86/86 operations with a
+non-empty `related:` list. `related.test.ts` holds the per-rule fixture (an
+unknown `to`, an unknown `from`, a self link, and a duplicate pair).
+
 ## 7. Generator flow
 
 ```text
-                       dist/surface/registry.js
-                                │  (npm run build first)
-                                ▼
-                    lib/registry.mjs  loadOperations()
-                                │  Operation[] (handler stripped)
+                       dist/surface/registry.js        scripts/skills/data/related.json
+                                │  (npm run build first)        │  (hand-reviewed)
+                                ▼                               ▼
+                    lib/registry.mjs  loadOperations()   lib/related.mjs  loadCuratedRelated()
+                                │  Operation[] (handler stripped) │  Map<from, to[]>
+                                └───────────────┬───────────────┘
+                                                ▼
+                              lib/graph.mjs  seedRelated -> mergeRelated
+                                 │ related: Map<opId, opId[]> (sorted)
               ┌─────────────────┼──────────────────┐
               ▼                 ▼                  ▼
    build-index.mjs        moc.mjs            lint.mjs
@@ -253,6 +292,8 @@ real, below the 0.8 threshold, and worth a human look rather than a rewrite.
 | `node scripts/skills/moc.mjs` | `skills/moc/<name>.md` |
 | `node scripts/skills/lint.mjs [--json]` | nothing; exit 1 on violation |
 | `node scripts/skills/eval-baseline.mjs` | `docs/skill-graph-baseline.md` |
+| `node scripts/skills/eval-selection.mjs [--out <dir>]` | `old.md` + `pathc.md` prompts (default `/tmp/ct-selection`) |
+| `node scripts/skills/eval-selection.mjs --score <answers.json>` | nothing; prints `correct/18` and the misses |
 
 Flags on both writers: `--root <dir>` (skills root, default
 `packages/command-and-control/skills`), `--check` (report what would change,
@@ -265,9 +306,11 @@ creates op files; both read the registry directly, so either can run first.
 ## 8. Idempotency and the check mode
 
 A generator run is idempotent when: the op order is the registry order, the
-`related` seed is deterministic, and nothing embeds a timestamp, a version, or
-an absolute path. All three hold. `--check` exists so CI can assert it without a
-dirty tree: it exits non-zero when a regeneration *would* change a file.
+merged `related` list is deterministic (the seed is registry-ordered and the
+curated links are sorted by id, so the data file's own order does not matter),
+and nothing embeds a timestamp, a version, or an absolute path. All three hold.
+`--check` exists so CI can assert it without a dirty tree: it exits non-zero when
+a regeneration *would* change a file.
 
 ## 9. Out of scope for v1
 
