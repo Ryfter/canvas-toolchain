@@ -110,6 +110,27 @@ describe('lintSkills against one fixture per rule', () => {
     expect(violations[0].message).toContain('collides');
   });
 
+  it('reports a concept id that collides with a map id as drift', () => {
+    const { tree, operations } = fixture('concept-map-id-collision');
+    const violations = lintSkills(tree, operations);
+
+    expect(violations.map((v: { rule: string; id: string }) => `${v.rule}:${v.id}`)).toEqual(['drift:accessibility']);
+    expect(violations[0].message).toContain('collides with a map id');
+  });
+
+  it('reports a concept with no description', () => {
+    expect(rulesFor('concept-no-description')).toEqual(['missing-description']);
+  });
+
+  it('reports a concept description over the budget, and nothing at a wider budget', () => {
+    expect(rulesFor('concept-too-long')).toEqual(['too-long']);
+    expect(rulesFor('concept-too-long', { maxDescription: 1000 })).toEqual([]);
+  });
+
+  it('reports nothing for a concept with a description, resolvable links, and a unique id', () => {
+    expect(rulesFor('concept-clean')).toEqual([]);
+  });
+
   it('reports a concept whose frontmatter block never closes as drift', () => {
     const { tree, operations } = fixture('concept-frontmatter');
     const violations = lintSkills(tree, operations);

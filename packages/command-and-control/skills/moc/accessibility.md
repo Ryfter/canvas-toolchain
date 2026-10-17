@@ -15,6 +15,10 @@ Deep accessibility checks beyond the standard audit.
 - [[audit_course_accessibility]] — Run the full WCAG 2.2 stack (in-house + axe-core) over every generated page, report per-page verdicts vs the required level, and refresh the borderline queue. The between-semesters check.
 - [[review_accessibility_policy]] — Accessibility policy anchor: shows policy URLs, required level, cadence, last-verified; confirm:true stamps a re-read. Updates urls/requiredConformance/recheckWeeks/wcag3Advisory. Default WCAG 2.1 AA.
 - [[wave_deep_check]] — Deep a11y check of a PUBLIC page via the paid WAVE API. Spend gate: preview (~2 credits) first, then confirm:true. Auth-gated Canvas URLs refused — use the free extension. apiKey saved on first use.
+
+## Concepts (1)
+
+- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write to continue.
 <!-- generated:end -->
 
 # Notes

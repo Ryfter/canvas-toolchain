@@ -17,6 +17,12 @@ Accessibility and quality gates before students see anything.
 - [[accessibility_review_queue]] — Course "near the edge" a11y worklist: borderline findings, needs-review criteria, and acknowledged publishes, worst-margin first, live Canvas URLs. resolve marks a page reviewed; professor is arbiter.
 - [[audit_course_accessibility]] — Run the full WCAG 2.2 stack (in-house + axe-core) over every generated page, report per-page verdicts vs the required level, and refresh the borderline queue. The between-semesters check.
 - [[review_accessibility_policy]] — Accessibility policy anchor: shows policy URLs, required level, cadence, last-verified; confirm:true stamps a re-read. Updates urls/requiredConformance/recheckWeeks/wcag3Advisory. Default WCAG 2.1 AA.
+
+## Concepts (3)
+
+- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write to continue.
+- [[module_channel]] — Plug-in modules and Canvas modules share a word, not a system: installing and enabling a tool bundle is nothing like reading a Canvas course's modules.
+- [[quiz_migration]] — Classic Quizzes still work, but Canvas is migrating them: what validate_quiz flags in advance, what it can only see on a live quiz, and what the API hides.
 <!-- generated:end -->
 
 # Notes

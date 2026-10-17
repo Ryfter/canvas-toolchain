@@ -59,12 +59,26 @@ export function renderOpFile(op, related = []) {
 }
 
 /**
+ * The concept section a map file carries, or nothing when the map owns none.
+ * Omitted rather than emitted empty: a MOC is the routed first read, and a
+ * `(none)` heading is read every time for no information.
+ */
+function conceptSection(concepts) {
+  if (!concepts.length) return [];
+  return [
+    `## Concepts (${concepts.length})`, '',
+    ...concepts.map((concept) => `- [[${concept.id}]] — ${oneLine(concept.description)}`),
+    '',
+  ];
+}
+
+/**
  * The full-catalog fallback, not the first read: an agent that has already
  * chosen its `ct_*` tool starts at `moc/<intent tool>.md` (path C), and only
  * falls back to this full operation list when it does not yet know which tool it
  * is in. Both route to the same `ops/<id>.md` files.
  */
-export function renderIndexFile(source) {
+export function renderIndexFile(source, concepts = []) {
   const frontMatter = stringifyFrontMatter({
     id: INDEX_ID,
     kind: 'index',
@@ -81,10 +95,11 @@ export function renderIndexFile(source) {
     for (const op of inSection) body.push(`- [[${op.id}]] — ${oneLine(op.description)}`);
     body.push('');
   }
+  body.push(...conceptSection(concepts));
   return frontMatter + body.join('\n');
 }
 
-export function renderMocFile(moc, source) {
+export function renderMocFile(moc, source, concepts = []) {
   const frontMatter = stringifyFrontMatter({
     id: moc.id,
     kind: moc.kind,
@@ -107,5 +122,6 @@ export function renderMocFile(moc, source) {
     }
     body.push('');
   }
+  body.push(...conceptSection(concepts));
   return frontMatter + body.join('\n');
 }

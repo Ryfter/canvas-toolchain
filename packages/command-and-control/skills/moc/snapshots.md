@@ -17,6 +17,11 @@ Publish snapshot listing and pruning.
 - [[list_publish_snapshots]] — List a course's publish snapshots oldest-to-newest, marking the one live in Canvas and which can be rolled back/forward. Feed a row's snapshotId to ct_publish rollback.
 - [[prune_publish_snapshots]] — Apply retention to publish snapshots: drops those past the window and count (default keep 3, keep ≤30 days), never the live one. dryRun lists only; also runs after every successful publish.
 - [[snapshot_course]] — Write/update a course reference doc (identifiers, assignment groups, modules, append-only Update Log). Re-runs regenerate the AUTO:start/AUTO:end sections but preserve hand-edited prose around them.
+
+## Concepts (2)
+
+- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write to continue.
+- [[publish_safety]] — The publish safety net: preview captures a rollback baseline, publish stops at the first failure, snapshots make the change reversible, and paste needs no token.
 <!-- generated:end -->
 
 # Notes

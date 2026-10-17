@@ -42,6 +42,15 @@ Less common operations, reached through ct_advanced describe/run.
 - [[recommend_for_topic]] — Return a KEEP / UPDATE / DROP / ADD verdict for a topic based on its currency class and teaching history.
 - [[generate_ideas_file]] — Write ideas.md with follow-on development ideas based on what the professor used.
 - [[fetch_academic_calendar]] — Parse registrar URL or accept manual dates into calendar.json.
+
+## Concepts (6)
+
+- [[accessibility_gate]] — How the accessibility gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write to continue.
+- [[module_channel]] — Plug-in modules and Canvas modules share a word, not a system: installing and enabling a tool bundle is nothing like reading a Canvas course's modules.
+- [[provider_setup]] — Credentials and model backends: which file each setup tool writes, what it validates before saving, and why the status tool can only ever report presence.
+- [[publish_safety]] — The publish safety net: preview captures a rollback baseline, publish stops at the first failure, snapshots make the change reversible, and paste needs no token.
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest the old term, analyze it, copy the shell, move every due date onto the new calendar, then rebuild.
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, enrichment, a Whisper cross-check, week mapping, and the lecture-answers index built on top.
 <!-- generated:end -->
 
 # Notes

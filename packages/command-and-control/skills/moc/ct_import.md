@@ -18,6 +18,11 @@ Bring course data in: Canvas archives, transcripts, prior shells.
 - [[download_canvas_archive]] — [canvas-backup] Archive a Canvas course shell locally by invoking the Canvas Backup CLI.
 - [[download_transcripts]] — [canvas-backup] Placeholder for future bulk Panopto transcript download.
 - [[import_course]] — [@canvas-toolchain/canvas-design-studio] Import a Canvas Backup archive into a Canvas Design Studio course folder.
+
+## Concepts (2)
+
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest the old term, analyze it, copy the shell, move every due date onto the new calendar, then rebuild.
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, enrichment, a Whisper cross-check, week mapping, and the lecture-answers index built on top.
 <!-- generated:end -->
 
 # Notes

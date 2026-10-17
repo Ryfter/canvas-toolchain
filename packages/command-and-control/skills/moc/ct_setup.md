@@ -22,6 +22,13 @@ Configure credentials, providers, and paths. Run first.
 - [[setup_spot_check]] — Opt in/out of a weekly shell + quiz spot-check reminder day (recommends Saturday). Persists the setting only; no OS cron installed. Manual ct_review shell_readiness always works.
 - [[setup_course]] — Register a new course in Curriculum Intelligence. Creates a course folder on disk and records its location in the app config so other tools can find it by id alone.
 - [[setup_canvas_backup]] — [canvas-backup] Generate the Canvas Backup config from your Canvas connection. Writes the toml without the token (passed via CANVAS_TOKEN). Run once per semester so canvas_archive_download works.
+
+## Concepts (4)
+
+- [[provider_setup]] — Credentials and model backends: which file each setup tool writes, what it validates before saving, and why the status tool can only ever report presence.
+- [[quiz_migration]] — Classic Quizzes still work, but Canvas is migrating them: what validate_quiz flags in advance, what it can only see on a live quiz, and what the API hides.
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest the old term, analyze it, copy the shell, move every due date onto the new calendar, then rebuild.
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, enrichment, a Whisper cross-check, week mapping, and the lecture-answers index built on top.
 <!-- generated:end -->
 
 # Notes

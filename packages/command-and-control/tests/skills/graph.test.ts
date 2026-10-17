@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ADVANCED_MOC_ID, assignMocs, mocIdsFor, seedRelated } from '../../../../scripts/skills/lib/graph.mjs';
+import { ADVANCED_MOC_ID, assignMocs, conceptsForMoc, mocIdsFor, seedRelated } from '../../../../scripts/skills/lib/graph.mjs';
 
 const op = (id: string, section: string, extra: Record<string, unknown> = {}) => ({
   id,
@@ -82,6 +82,44 @@ describe('assignMocs', () => {
 
   it('links an intent MOC to the section that extends it', () => {
     expect(mocs.find((m) => m.id === 'ct_setup')?.related).toEqual(['admin']);
+  });
+});
+
+describe('conceptsForMoc', () => {
+  const concepts = [
+    { id: 'zebra', description: 'Z.', related: ['paste_layout'] },
+    { id: 'alpha', description: 'A.', related: ['install_module', 'paste_layout'] },
+    { id: 'unregistered', description: 'U.', related: ['not_an_op'] },
+    { id: 'empty', description: 'E.', related: [] },
+  ];
+
+  it('selects every concept naming one of the MOC operations, sorted by id', () => {
+    expect(conceptsForMoc(['paste_layout'], concepts).map((c) => c.id)).toEqual(['alpha', 'zebra']);
+  });
+
+  it('selects only the concepts that name an operation this MOC owns', () => {
+    expect(conceptsForMoc(['install_module'], concepts).map((c) => c.id)).toEqual(['alpha']);
+  });
+
+  it('returns nothing for a MOC no concept names', () => {
+    expect(conceptsForMoc(['get_cc_status'], concepts)).toEqual([]);
+    expect(conceptsForMoc([], concepts)).toEqual([]);
+  });
+
+  it('returns the concept records, not just their ids, so the map can render a line', () => {
+    expect(conceptsForMoc(['install_module'], concepts)).toEqual([
+      { id: 'alpha', description: 'A.', related: ['install_module', 'paste_layout'] },
+    ]);
+  });
+
+  it('is deterministic and leaves its input untouched', () => {
+    const before = JSON.stringify(concepts);
+    expect(conceptsForMoc(['paste_layout'], concepts)).toEqual(conceptsForMoc(['paste_layout'], concepts));
+    expect(JSON.stringify(concepts)).toBe(before);
+  });
+
+  it('returns nothing when the tree has no concepts at all', () => {
+    expect(conceptsForMoc(['paste_layout'])).toEqual([]);
   });
 });
 

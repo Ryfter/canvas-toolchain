@@ -17,8 +17,11 @@ packages/command-and-control/skills/
   moc/<section>.md          # generated: one per SectionId (8)
   moc/<intentTool>.md       # generated: one per intent tool (9) + moc/ct_advanced.md
   ops/<operation-id>.md     # one per Operation: frontmatter + hand-written body
-  concepts/<idea>.md        # hand-written cross-cutting notes (J9)
+  concepts/<idea>.md        # hand-written cross-cutting notes (J9); listed by the maps
 ```
+
+Both map kinds also list the concept notes whose `related:` operations they own
+(§5.2) — the generated operation lines come first, the concept lines after.
 
 Operation ids are unique across core and module operations (module ids are
 host-namespaced in `src/surface/module_adapter.ts`), so the file name is exactly
@@ -48,8 +51,9 @@ through **C**:
 
 So the first read is the public tool's topic map — `moc/ct_build.md`,
 `moc/ct_review.md`, … — not `index.md`. A MOC is the same operation list already
-filtered to one tool, so the read is smaller than the index *and* carries the
-full uncapped descriptions. **`index.md` stays as the full 86-operation catalog**,
+filtered to one tool (plus the concept notes that name one of its operations,
+§5.2), so the read is smaller than the index *and* carries the full uncapped
+descriptions. **`index.md` stays as the full 86-operation catalog**,
 the fallback for the "which tool am I in?" step, which the model decides from the
 tool descriptions it already holds.
 
@@ -99,9 +103,25 @@ related: [accessibility, design]
 ---
 ```
 
-`concepts/*.md` are hand-written and are **not** covered by the op rules; the
-lint only requires that they parse as frontmatter (if they have any) and that
-their `id` does not collide with an operation id.
+`concepts/*.md` are hand-written and carry their own three-key schema — they are
+never generated, only read:
+
+```yaml
+---
+id: accessibility_gate
+description: "How the a11y gate works: what blocks a Canvas publish, what only queues for human review, and the acknowledgment the professor must write."
+related: [accessibility_review_queue, audit_course_accessibility, publish_course]
+---
+```
+
+| Key | Source | Notes |
+| --- | --- | --- |
+| `id` | file name minus `.md` | Must not collide with an operation id, a MOC id, or `index`: link resolution is one flat id space, so a shadowed id makes every `[[id]]` ambiguous. |
+| `description` | hand-written | Required, and held to the same `--max-description` budget as an operation description. |
+| `related` | hand-written | The **operation ids** the note is about. This is the only authored edge: it is what decides which MOCs list the note (§5.2), and a note with no live `related:` id is reachable from nothing. |
+
+Concepts are excluded from the operation-id drift rule and from `orphan`; the
+generator reads `related` and never writes the file.
 
 ## 3. Wikilink syntax
 
@@ -203,6 +223,35 @@ curated layer adds the cross-tool workflow edges the seed cannot know about, suc
 as prerequisite/setup → use, publish → rollback, and the
 transcripts ↔ lecture-answers pairs).
 
+### 5.2 Concepts in the maps (J9)
+
+A concept note is a *cross-cutting* idea — a gate, a workflow, a naming trap —
+that no single operation owns. Which maps list it is **derived, not authored**:
+
+```text
+concepts/<id>.md  related: [a, b, c]
+                       │
+                       ▼  conceptsForMoc(opIds, concepts)
+              every MOC whose opIds contain a, b, or c
+```
+
+`conceptsForMoc` (lib/graph.mjs) selects the concept for a MOC when at least one
+of the concept's `related:` operations is in that MOC, then sorts by id. So a note
+about the publish path surfaces in `moc/ct_publish.md`, `moc/snapshots.md`, and
+any other map that owns one of the operations it names — and a note is never
+listed by a map that cannot reach it. A MOC or section with no related concept
+gets no concept section at all, rather than an empty heading.
+
+The rule is total in both directions: **every concept is listed by at least one
+MOC** (a note whose `related:` names no operation is unreachable, and
+`tests/skills/moc.test.ts` fails on it), and **no concept is listed by a MOC that
+owns none of its operations**. Because the edge is derived, adding a concept note
+is a one-file change: the maps are regenerated, never hand-edited.
+
+`index.md` (the full-catalog fallback) lists every concept once, after the
+per-section operation lists, so the same read that answers "which operation?"
+also names the cross-cutting notes.
+
 ## 6. Lint rules
 
 `scripts/skills/lint.mjs` (rules in `lib/lint-rules.mjs`). Any violation exits
@@ -210,19 +259,21 @@ non-zero; `--json` prints the machine-readable report.
 
 | Rule | Scope | Violation |
 | --- | --- | --- |
-| `missing-description` | ops | `description` absent or empty. |
-| `too-long` | ops | `description` longer than `--max-description` (default 200). |
+| `missing-description` | ops, concepts | `description` absent or empty. |
+| `too-long` | ops, concepts | `description` longer than `--max-description` (default 200). |
 | `duplicate` | ops | Two ops whose normalized descriptions are identical. |
 | `near-duplicate` | ops | Normalized trigram Jaccard ≥ `--similarity` (default 0.8). |
 | `broken-wikilink` | all files | A `[[x]]` body link or a `related:` entry where `x` is not an op, MOC, or concept id. |
-| `orphan` | ops | Op in no MOC (`moc/*.md` no longer mentions it). |
-| `drift` | ops, concepts | Ops — frontmatter `description` ≠ registry, frontmatter `id` ≠ file name, an op file the registry no longer declares, or a registry operation with no op file. Concepts — a frontmatter fence that never closes, or a concept id that collides with an operation id. |
+| `orphan` | ops | Op in no MOC (`moc/*.md` no longer mentions it). Concepts get the same guarantee from `conceptsForMoc`, asserted in `tests/skills/moc.test.ts` rather than re-derived here. |
+| `drift` | ops, concepts | Ops — frontmatter `description` ≠ registry, frontmatter `id` ≠ file name, an op file the registry no longer declares, or a registry operation with no op file. Concepts — a frontmatter fence that never closes, or a concept id that collides with an operation id or a map id (`index`, `moc/<name>`). |
 | `curated-link` | `data/related.json` | A `from`/`to` id that is not a registered operation, a self link, or a duplicate `from -> to` pair (§5.1). |
 
 `missing-description` short-circuits only the other *description* checks: the id
 drift, registry drift, and `related:` link checks still run on an op whose
 description is empty, so one empty field cannot hide the rest of the file's
-problems.
+problems. For a concept note it likewise leaves the id-collision check running,
+and it fires for a note with no frontmatter at all — the three-key schema is the
+contract.
 
 Normalization for the duplicate rules: lowercase, strip the `[@canvas-toolchain/…]`
 co-package prefix that several pass-through descriptions carry, collapse
@@ -264,6 +315,16 @@ The `curated-link` rule (J8) reports 0 against the committed
 non-empty `related:` list. `lint.test.ts` holds the per-rule fixture (an
 unknown `to`, an unknown `from`, a self link, and a duplicate pair).
 
+J9 adds **7 hand-written concept notes**, and the lint reports 0 violations with
+them in scope: 7 concepts, 45 concept links across 17 of the 18 maps
+(`moc/registry.md` owns no operation any concept names, so it gets no concept
+section at all). The concept rules have their own fixtures — a clean note, a
+missing description, an over-budget description, an operation-id collision, a
+map-id collision, and an unclosed frontmatter fence
+(`tests/skills/fixtures/lint/concept-*`). The concept descriptions are
+lint-clean at the same 200-character budget as the 86 operation descriptions,
+which is what lets the maps render a note's line without truncation.
+
 ## 7. Generator flow
 
 ```text
@@ -272,10 +333,17 @@ unknown `to`, an unknown `from`, a self link, and a duplicate pair).
                                 ▼                               ▼
                     lib/registry.mjs  loadOperations()   lib/related.mjs  loadCuratedRelated()
                                 │  Operation[] (handler stripped) │  Map<from, to[]>
+                                │                               │
+                                │                     skills/concepts/*.md  (hand-written)
+                                │                               │
+                                │                     lib/tree.mjs  readSkillsTree -> plainConcept
+                                │                               │  { id, description, related }[]
                                 └───────────────┬───────────────┘
                                                 ▼
                               lib/graph.mjs  seedRelated -> mergeRelated
+                                              conceptsForMoc(opIds, concepts)
                                  │ related: Map<opId, opId[]> (sorted)
+                                 │ concepts: Map<mocId, concept[]> (sorted)
               ┌─────────────────┼──────────────────┐
               ▼                 ▼                  ▼
    build-index.mjs        moc.mjs            lint.mjs
@@ -288,8 +356,8 @@ unknown `to`, an unknown `from`, a self link, and a duplicate pair).
 
 | Command | Writes |
 | --- | --- |
-| `node scripts/skills/build-index.mjs` | `skills/index.md`, `skills/ops/<id>.md` |
-| `node scripts/skills/moc.mjs` | `skills/moc/<name>.md` |
+| `node scripts/skills/build-index.mjs` | `skills/index.md` (operations by section, then the concepts), `skills/ops/<id>.md` |
+| `node scripts/skills/moc.mjs` | `skills/moc/<name>.md` (operations, then the concepts that name one of them) |
 | `node scripts/skills/lint.mjs [--json]` | nothing; exit 1 on violation |
 | `node scripts/skills/eval-baseline.mjs` | `docs/skill-graph-baseline.md` |
 | `node scripts/skills/eval-selection.mjs [--out <dir>]` | `old.md` + `pathc.md` prompts (default `/tmp/ct-selection`) |
@@ -309,7 +377,10 @@ write nothing — the CI-safe form of the idempotency check), and
 `--include-modules` (see §9).
 
 Order matters only in that `moc.mjs` links to op ids while `build-index.mjs`
-creates op files; both read the registry directly, so either can run first.
+creates op files; both read the registry directly, so either can run first. Both
+also read `concepts/` from the root they are writing into, so generating into a
+temp root that has no concepts simply produces maps with no concept lines — which
+is what makes the idempotency tests cheap.
 
 ## 8. Idempotency and the check mode
 

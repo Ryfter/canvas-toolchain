@@ -36,54 +36,54 @@ pretty-printed form is reported separately and is larger).
 | old surface: floor (tools + section index) | 17559 | 4390 |
 | registry dump (metadata) | 23237 | 5809 |
 | registry dump (with schemas) | 56320 | 14080 |
-| **new path A: index + op file (average)** | **15952** | **3988** |
-| new path A: worst ask | 16046 | 4012 |
-| new path A: index.md only | 15330 | 3833 |
-| new path B: capped index + op file (average) | 14053 | 3514 |
-| new path B: capped index only | 13431 | 3358 |
-| **new path C: MOC + op file (average)** | **3463** | **866** |
-| new path C: worst ask | 6556 | 1639 |
+| **new path A: index + op file (average)** | **17234** | **4309** |
+| new path A: worst ask | 17328 | 4332 |
+| new path A: index.md only | 16612 | 4153 |
+| new path B: capped index + op file (average) | 15231 | 3808 |
+| new path B: capped index only | 14609 | 3652 |
+| **new path C: MOC + op file (average)** | **4136** | **1034** |
+| new path C: worst ask | 7659 | 1915 |
 
 Reduction against the old-surface total:
 
 | New path | Factor |
 | --- | --- |
-| A — index + op file | 2.55x |
-| B — capped index + op file | 2.89x |
-| C — MOC + op file | 11.74x |
-| index.md only | 2.65x |
+| A — index + op file | 2.36x |
+| B — capped index + op file | 2.67x |
+| C — MOC + op file | 9.84x |
+| index.md only | 2.45x |
 
 Against a *thrifty* old path (tools list + the ct_advanced section index, no
 schemas), the comparison is less flattering and the more honest one to quote:
 
 | New path | Factor |
 | --- | --- |
-| A — index + op file | 1.1x |
-| C — MOC + op file | 5.07x |
+| A — index + op file | 1.02x |
+| C — MOC + op file | 4.25x |
 
 Reduction against the metadata registry dump:
 
 | New path | Factor |
 | --- | --- |
-| A — index + op file | 1.46x |
-| C — MOC + op file | 6.71x |
+| A — index + op file | 1.35x |
+| C — MOC + op file | 5.62x |
 
 ## Verdict against the plan's ≥5x target
 
-**Path A does not hit 5x.** It measures 2.55x against the full
-old-surface read, and only 1.1x against a thrifty old path
+**Path A does not hit 5x.** It measures 2.36x against the full
+old-surface read, and only 1.02x against a thrifty old path
 that reads the tools list and the ct_advanced section index without ever pulling
 a parameter schema. The reason is structural rather than a measurement artefact:
-`index.md` contains all 86 full descriptions (15330 chars,
-3833 tokens), which is essentially the metadata registry dump plus
+`index.md` contains all 86 full descriptions (16612 chars,
+4153 tokens), which is essentially the metadata registry dump plus
 prose, so reading it costs about what it replaces.
 
 Two levers were measured rather than guessed:
 
-* **B — cap the index lines at 140 characters**: 2.89x. Still short.
+* **B — cap the index lines at 140 characters**: 2.67x. Still short.
   Capping at 140 costs the caveats that make selection correct, so this is a
   bad trade even before the number is good enough.
-* **C — start from the intent tool's MOC, not the flat index**: **11.74x**, which
+* **C — start from the intent tool's MOC, not the flat index**: **9.84x**, which
   clears the target comfortably.
 
 Path C is not a hack: the model already knows which `ct_*` tool it is calling when
@@ -105,27 +105,33 @@ harness's accounting of what the new path would read for each ask.
 
 | Ask | Expected operation | Path A files | A tokens | Path C files | C tokens |
 | --- | --- | --- | --- | --- | --- |
-| import last spring's Canvas backup | `download_canvas_archive` | index.md + ops/download_canvas_archive.md | 3986 | moc/ct_import.md + ops/download_canvas_archive.md | 466 |
-| check my quiz before the New Quizzes migration | `validate_quiz` | index.md + ops/validate_quiz.md | 4002 | moc/ct_review.md + ops/validate_quiz.md | 606 |
-| roll back yesterday's publish | `rollback_course_publish` | index.md + ops/rollback_course_publish.md | 3955 | moc/ct_publish.md + ops/rollback_course_publish.md | 354 |
-| make a rubric students can read | `draft_student_rubric` | index.md + ops/draft_student_rubric.md | 4001 | moc/ct_build.md + ops/draft_student_rubric.md | 604 |
-| find off-syllabus topics in my lectures | `find_off_syllabus_topics` | index.md + ops/find_off_syllabus_topics.md | 3967 | moc/ct_analyze.md + ops/find_off_syllabus_topics.md | 415 |
-| prune old publish snapshots | `prune_publish_snapshots` | index.md + ops/prune_publish_snapshots.md | 3988 | moc/ct_advanced.md + ops/prune_publish_snapshots.md | 1626 |
-| install the roster module | `install_module` | index.md + ops/install_module.md | 3981 | moc/ct_advanced.md + ops/install_module.md | 1620 |
-| set my institution profile | `save_institution_profile` | index.md + ops/save_institution_profile.md | 4001 | moc/ct_advanced.md + ops/save_institution_profile.md | 1639 |
-| audit accessibility | `audit_course_accessibility` | index.md + ops/audit_course_accessibility.md | 4006 | moc/ct_review.md + ops/audit_course_accessibility.md | 610 |
-| fetch the Panopto transcripts | `bulk_fetch_panopto_transcripts` | index.md + ops/bulk_fetch_panopto_transcripts.md | 4009 | moc/ct_import.md + ops/bulk_fetch_panopto_transcripts.md | 489 |
-| ask the course a question | `ask_course` | index.md + ops/ask_course.md | 3975 | moc/ct_ask.md + ops/ask_course.md | 337 |
-| shift my dates to next semester | `shift_dates` | index.md + ops/shift_dates.md | 3963 | moc/ct_plan.md + ops/shift_dates.md | 343 |
-| generate a quiz | `generate_quiz` | index.md + ops/generate_quiz.md | 3995 | moc/ct_build.md + ops/generate_quiz.md | 598 |
-| preview the publish | `preview_course_publish` | index.md + ops/preview_course_publish.md | 3977 | moc/ct_publish.md + ops/preview_course_publish.md | 375 |
-| compare the transcripts | `compare_transcripts` | index.md + ops/compare_transcripts.md | 3999 | moc/ct_advanced.md + ops/compare_transcripts.md | 1638 |
-| save this layout as a template | `save_layout_as_template` | index.md + ops/save_layout_as_template.md | 3986 | moc/ct_advanced.md + ops/save_layout_as_template.md | 1625 |
-| recommend something for this topic | `recommend_for_topic` | index.md + ops/recommend_for_topic.md | 3985 | moc/ct_advanced.md + ops/recommend_for_topic.md | 1624 |
-| check my shell readiness | `check_shell_readiness` | index.md + ops/check_shell_readiness.md | 4012 | moc/ct_review.md + ops/check_shell_readiness.md | 616 |
+| import last spring's Canvas backup | `download_canvas_archive` | index.md + ops/download_canvas_archive.md | 4306 | moc/ct_import.md + ops/download_canvas_archive.md | 560 |
+| check my quiz before the New Quizzes migration | `validate_quiz` | index.md + ops/validate_quiz.md | 4322 | moc/ct_review.md + ops/validate_quiz.md | 745 |
+| roll back yesterday's publish | `rollback_course_publish` | index.md + ops/rollback_course_publish.md | 4276 | moc/ct_publish.md + ops/rollback_course_publish.md | 451 |
+| make a rubric students can read | `draft_student_rubric` | index.md + ops/draft_student_rubric.md | 4321 | moc/ct_build.md + ops/draft_student_rubric.md | 792 |
+| find off-syllabus topics in my lectures | `find_off_syllabus_topics` | index.md + ops/find_off_syllabus_topics.md | 4288 | moc/ct_analyze.md + ops/find_off_syllabus_topics.md | 509 |
+| prune old publish snapshots | `prune_publish_snapshots` | index.md + ops/prune_publish_snapshots.md | 4308 | moc/ct_advanced.md + ops/prune_publish_snapshots.md | 1902 |
+| install the roster module | `install_module` | index.md + ops/install_module.md | 4302 | moc/ct_advanced.md + ops/install_module.md | 1896 |
+| set my institution profile | `save_institution_profile` | index.md + ops/save_institution_profile.md | 4321 | moc/ct_advanced.md + ops/save_institution_profile.md | 1915 |
+| audit accessibility | `audit_course_accessibility` | index.md + ops/audit_course_accessibility.md | 4326 | moc/ct_review.md + ops/audit_course_accessibility.md | 750 |
+| fetch the Panopto transcripts | `bulk_fetch_panopto_transcripts` | index.md + ops/bulk_fetch_panopto_transcripts.md | 4330 | moc/ct_import.md + ops/bulk_fetch_panopto_transcripts.md | 584 |
+| ask the course a question | `ask_course` | index.md + ops/ask_course.md | 4295 | moc/ct_ask.md + ops/ask_course.md | 386 |
+| shift my dates to next semester | `shift_dates` | index.md + ops/shift_dates.md | 4284 | moc/ct_plan.md + ops/shift_dates.md | 393 |
+| generate a quiz | `generate_quiz` | index.md + ops/generate_quiz.md | 4315 | moc/ct_build.md + ops/generate_quiz.md | 786 |
+| preview the publish | `preview_course_publish` | index.md + ops/preview_course_publish.md | 4297 | moc/ct_publish.md + ops/preview_course_publish.md | 473 |
+| compare the transcripts | `compare_transcripts` | index.md + ops/compare_transcripts.md | 4320 | moc/ct_advanced.md + ops/compare_transcripts.md | 1914 |
+| save this layout as a template | `save_layout_as_template` | index.md + ops/save_layout_as_template.md | 4307 | moc/ct_advanced.md + ops/save_layout_as_template.md | 1901 |
+| recommend something for this topic | `recommend_for_topic` | index.md + ops/recommend_for_topic.md | 4306 | moc/ct_advanced.md + ops/recommend_for_topic.md | 1900 |
+| check my shell readiness | `check_shell_readiness` | index.md + ops/check_shell_readiness.md | 4332 | moc/ct_review.md + ops/check_shell_readiness.md | 755 |
 
 ## Honest caveats
 
+* **The maps carry the concept lines too.** `index.md` lists every hand-written
+  concept note once, and each MOC lists the notes whose `related:` operations it
+  owns (J9), so both new-path numbers include those lines. They are part of the
+  read rather than overhead: a concept is the cross-cutting guidance no single
+  operation description can carry, and it is why path C is still the only route
+  that clears the target.
 * **chars/4 is an approximation.** It under-counts code and over-counts prose;
   both surfaces are prose-heavy, so the *ratio* is the more trustworthy number
   than either absolute value.
@@ -138,7 +144,7 @@ harness's accounting of what the new path would read for each ask.
 * **Module operations are excluded.** They exist only at runtime behind
   `modules.json`, so the baseline is the core surface (86 operations).
 * **Reading one op file is an assumption.** An agent that picks from the index
-  alone reads only 3833 tokens; one that opens two op files
+  alone reads only 4153 tokens; one that opens two op files
   pays roughly double the average.
 * **Path C assumes the agent already knows its intent tool.** That is true when
   the model is dispatching an action, and false when it is deciding whether the

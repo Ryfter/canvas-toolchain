@@ -6,6 +6,7 @@ import { mergeRelated, seedRelated } from './lib/graph.mjs';
 import { curatedRelatedPath, loadCuratedRelated } from './lib/related.mjs';
 import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource } from './lib/registry.mjs';
 import { indexStubBody, opStubBody, renderIndexFile, renderOpFile } from './lib/render.mjs';
+import { plainConcept, readSkillsTree } from './lib/tree.mjs';
 
 /**
  * Write index.md and one ops/<id>.md per operation.
@@ -13,6 +14,9 @@ import { indexStubBody, opStubBody, renderIndexFile, renderOpFile } from './lib/
  * Idempotent: the operation order is the registry order, the curated `related`
  * links are merged in a sorted order, and nothing embeds a timestamp, so a
  * second run over an unchanged registry writes nothing.
+ *
+ * The index also lists the hand-written concept notes, so the fallback catalog
+ * names the cross-cutting ideas as well as the operations (J9).
  */
 export async function buildIndex({
   root = SKILLS_ROOT, repoRoot = REPO_ROOT, includeModules = false, check = false,
@@ -20,9 +24,10 @@ export async function buildIndex({
   const source = await loadRegistrySource({ repoRoot, includeModules });
   const curated = loadCuratedRelated(curatedRelatedPath(repoRoot));
   const related = mergeRelated(seedRelated(source.operations), curated.byFrom);
+  const concepts = readSkillsTree(root).concepts.map(plainConcept);
 
   const results = [
-    writeGeneratedFile(join(root, 'index.md'), renderIndexFile(source), { check, stub: indexStubBody() }),
+    writeGeneratedFile(join(root, 'index.md'), renderIndexFile(source, concepts), { check, stub: indexStubBody() }),
   ];
   for (const op of source.operations) {
     results.push(writeGeneratedFile(
@@ -32,7 +37,12 @@ export async function buildIndex({
     ));
   }
 
-  return { root, operations: source.operations.length, files: summarize(results) };
+  return {
+    root,
+    operations: source.operations.length,
+    concepts: concepts.length,
+    files: summarize(results),
+  };
 }
 
 async function main() {
@@ -50,6 +60,7 @@ async function main() {
   } else {
     const verb = args.check ? 'would write' : 'wrote';
     console.log(`build-index: ${summary.operations} operations -> ${summary.root}`);
+    console.log(`  ${summary.concepts} concepts listed in the index`);
     console.log(`  ${verb} ${files.created} new, ${files.updated} updated; ${files.unchanged} unchanged`);
   }
 

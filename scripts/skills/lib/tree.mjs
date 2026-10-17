@@ -45,3 +45,27 @@ export function readSkillsTree(root) {
 export function wikilinks(text) {
   return [...text.matchAll(/\[\[([^\]|]+)\]\]/g)].map((match) => match[1].trim());
 }
+
+/**
+ * A frontmatter `related:` list as ids. Concept notes are hand-written, so a
+ * scalar (`related: generate_quiz`) is read as a one-element list rather than
+ * iterated character by character — the same tolerance the lint and the MOC
+ * generator need, in one place.
+ */
+export function relatedList(frontMatter) {
+  const value = frontMatter?.related;
+  if (Array.isArray(value)) return value.map(String);
+  return value === undefined || value === null || value === '' ? [] : [String(value)];
+}
+
+/**
+ * The concept fields the graph projections consume: the file-stem id, the
+ * description an agent scans, and the operations the concept is about.
+ */
+export function plainConcept(doc) {
+  return {
+    id: doc.id,
+    description: String(doc.frontMatter.description ?? ''),
+    related: relatedList(doc.frontMatter),
+  };
+}

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ import { plainOperation } from '../../../../scripts/skills/lib/registry.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../../../../scripts/skills/build-index.mjs', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
+const SKILLS_ROOT = fileURLToPath(new URL('../../skills', import.meta.url));
 
 /**
  * A spawned writer boots node and imports the built registry from `dist`, which
@@ -56,6 +57,27 @@ function snapshot(root: string): Record<string, string> {
 }
 
 /**
+ * The concept notes are hand-written and committed, so a complete skills tree
+ * needs them copied in: the index lists them, and a tree without them is not the
+ * tree the generator produces in the repo.
+ */
+function seedConcepts(root: string): void {
+  const source = join(SKILLS_ROOT, 'concepts');
+  if (existsSync(source)) cpSync(source, join(root, 'concepts'), { recursive: true });
+}
+
+async function build(root: string) {
+  seedConcepts(root);
+  return buildIndex({ root });
+}
+
+/** The concept ids the index lists, in the order the generator wrote them. */
+function indexConceptIds(index: string): string[] {
+  const [, section = ''] = index.split('\n## Concepts (');
+  return [...section.matchAll(/^- \[\[([a-z0-9_.]+)\]\] — /gm)].map((match) => match[1] as string);
+}
+
+/**
  * The generator's output is identical for every test that only inspects it, so it
  * is built once in-process (`buildIndex` is exported and its `isMain` guard keeps
  * the CLI out of the way) and shared. Tests that write into the tree build their
@@ -66,7 +88,7 @@ let sharedReport: { operations: number; files: { created: number; changed: numbe
 
 beforeAll(async () => {
   sharedRoot = mkdtempSync(join(tmpdir(), 'skills-index-shared-'));
-  sharedReport = await buildIndex({ root: sharedRoot });
+  sharedReport = await build(sharedRoot);
 });
 
 afterAll(() => {
@@ -92,16 +114,29 @@ describe('build-index', () => {
 
   it('lists exactly the ops it wrote, one line each, in index.md', () => {
     const index = readFileSync(join(sharedRoot, 'index.md'), 'utf8');
-    const linked = [...index.matchAll(/^- \[\[([a-z0-9_.]+)\]\] — /gm)].map((m) => m[1]);
+    const [catalog] = index.split('\n## Concepts (');
+    const linked = [...(catalog ?? '').matchAll(/^- \[\[([a-z0-9_.]+)\]\] — /gm)].map((m) => m[1]);
     const opFiles = readdirSync(join(sharedRoot, 'ops')).map((f) => f.replace(/\.md$/, ''));
 
     expect(new Set(linked)).toEqual(new Set(opFiles));
     expect(linked.length).toBe(opFiles.length);
   });
 
+  it('lists every concept it found, after the operation catalog', () => {
+    const index = readFileSync(join(sharedRoot, 'index.md'), 'utf8');
+    const listed = indexConceptIds(index);
+    const conceptFiles = readdirSync(join(SKILLS_ROOT, 'concepts')).map((f) => f.replace(/\.md$/, ''));
+
+    expect(listed).toEqual([...conceptFiles].sort());
+    expect(listed.length).toBeGreaterThan(0);
+
+    const [catalog] = index.split('\n## Concepts (');
+    for (const id of listed) expect(catalog ?? '').not.toContain(`[[${id}]]`);
+  });
+
   it('is idempotent: a second run changes nothing', async () => {
     const root = tempRoot();
-    await buildIndex({ root });
+    await build(root);
     const before = snapshot(root);
 
     const report = await buildIndex({ root });
@@ -113,7 +148,7 @@ describe('build-index', () => {
 
   it('repairs a stale generated region in place and keeps the hand-written body', async () => {
     const root = tempRoot();
-    await buildIndex({ root });
+    await build(root);
     const before = snapshot(root);
 
     writeFileSync(join(root, 'ops', 'setup_cc.md'), '---\nid: "stale"\n---\n<!-- generated:end -->\n\nMine.\n');
@@ -138,7 +173,7 @@ describe('build-index', () => {
 
   it('never rewrites the hand-written body of an op file', async () => {
     const root = tempRoot();
-    await buildIndex({ root });
+    await build(root);
 
     const file = join(root, 'ops', 'setup_cc.md');
     writeFileSync(file, `${readFileSync(file, 'utf8')}\nHand-written pitfall.\n`);
@@ -174,7 +209,7 @@ describe('build-index', () => {
 describe('build-index CLI', () => {
   it('exits 1 in check mode when a file would change, and 0 when the tree is current', async () => {
     const stale = tempRoot();
-    await buildIndex({ root: stale });
+    await build(stale);
     writeFileSync(join(stale, 'ops', 'setup_cc.md'), '---\nid: "stale"\n---\n<!-- generated:end -->\n');
 
     const dirty = runCli(stale, '--check');
@@ -182,7 +217,7 @@ describe('build-index CLI', () => {
     expect(JSON.parse(dirty.stdout).files.changed).toBe(1);
 
     const current = tempRoot();
-    await buildIndex({ root: current });
+    await build(current);
     const clean = runCli(current, '--check');
     expect(clean.status).toBe(0);
     expect(JSON.parse(clean.stdout).files).toMatchObject({ created: 0, updated: 0, changed: 0 });
