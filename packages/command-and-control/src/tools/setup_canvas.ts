@@ -45,6 +45,31 @@ function getCanvasConfigPath(): string {
   return join(getCcHomePath(), 'canvas-config.json');
 }
 
+/** The keys setup_canvas owns and rewrites. Everything else in the file — the
+ *  V&R Plan C settings below, plus any field written by the Go installer or a
+ *  future version — is the professor's, and a re-run must not drop it. */
+const MANAGED_KEYS = new Set(['host', 'token', 'configuredAt', 'lastValidatedAt']);
+
+/** Read the settings already on disk that setup_canvas does not own, so a token
+ *  rotation or host fix cannot silently revert retention/breadcrumb settings to
+ *  their defaults. A missing or unparseable file preserves nothing (today's
+ *  overwrite behavior) rather than failing the setup. */
+function readPreservedSettings(configPath: string): Partial<CanvasSetupConfig> {
+  if (!existsSync(configPath)) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(configPath, 'utf-8'));
+  } catch {
+    return {};
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
+  const preserved: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!MANAGED_KEYS.has(key)) preserved[key] = value;
+  }
+  return preserved as Partial<CanvasSetupConfig>;
+}
+
 export function loadCanvasConfig(): CanvasSetupConfig {
   const configPath = getCanvasConfigPath();
   if (!existsSync(configPath)) {
@@ -114,16 +139,16 @@ export async function setupCanvas(input: SetupCanvasInput): Promise<SetupCanvasR
     }
   }
 
+  const home = getCcHomePath();
+  mkdirSync(home, { recursive: true });
+  const configPath = getCanvasConfigPath();
   const config: CanvasSetupConfig = {
+    ...readPreservedSettings(configPath),
     host,
     token,
     configuredAt: now,
     lastValidatedAt: test ? now : '',
   };
-
-  const home = getCcHomePath();
-  mkdirSync(home, { recursive: true });
-  const configPath = getCanvasConfigPath();
   const tmpPath = `${configPath}.tmp`;
   writeFileSync(tmpPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmpPath, configPath);
