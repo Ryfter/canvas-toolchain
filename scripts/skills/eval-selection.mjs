@@ -76,11 +76,12 @@ export function renderAsksBlock(fixtures) {
  * The addresses a model can name an operation by without knowing its id, all
  * taken from what the old surface advertises: `<intentTool>.<intentAction>` for
  * an intent-tool action, and `ct_advanced.<op id>` plus the section-qualified
- * `ct_advanced.<section>.<op id>` for an operation ct_advanced can actually run.
- * Both ct_advanced forms are gated on `exposure: 'advanced'` — `runAdvanced`
- * refuses anything else, so an intent or internal op never gets either address —
- * and the section form repeats the section name the ct_advanced catalog groups
- * the operation under.
+ * `ct_advanced.<section>.<op id>` for an operation ct_advanced runs from its own
+ * section. Both ct_advanced forms are gated on `exposure: 'advanced'` — and the
+ * section form repeats the section name the ct_advanced catalog groups the
+ * operation under. A deprecated legacy id gets its intent-tool address only; it
+ * is runnable through `ct_advanced` as a warning wrapper, but advertises no
+ * address there, so a bare id is scored as the id it is and nothing more.
  */
 export function buildAddressIndex(operations) {
   const index = new Map();

@@ -85,6 +85,7 @@ related: [generate_quiz, check_shell_readiness]
 | `intent_action` | `Operation.intentAction` | Empty string when absent. |
 | `exposure` | `Operation.exposure` | `intent`, `advanced`, or `internal`. |
 | `related` | seeded + curated, see §5 | Flow sequence of ids. Wikilink targets. |
+| `deprecated` | `Operation.deprecated.notice` | Present only on a legacy op kept one release as a warning wrapper: `Deprecated — use <tool> {action: "…"}; removed in <version>.` |
 
 All scalars are written as double-quoted strings except `related`, which is a
 flow sequence of plain scalars. Strings are escaped for `\` and `"`; the

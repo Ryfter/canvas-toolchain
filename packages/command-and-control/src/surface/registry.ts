@@ -1,4 +1,5 @@
 import type { Operation } from './operation.js';
+import { deprecation } from './deprecation.js';
 import type { PassthroughTool } from '../passthrough/ci_tools.js';
 import { setupCc } from '../tools/setup_cc.js';
 import { setupAnthropic } from '../tools/setup_anthropic.js';
@@ -130,6 +131,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'cc',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'cc' }),
   },
   {
     id: 'setup_anthropic',
@@ -149,6 +151,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'anthropic',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'anthropic' }),
   },
   {
     id: 'setup_canvas',
@@ -168,6 +171,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'canvas',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'canvas' }),
   },
   {
     id: 'setup_ollama',
@@ -185,6 +189,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'ollama',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'ollama' }),
   },
   {
     id: 'show_canvas_capabilities',
@@ -415,6 +420,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'courses_root',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'courses_root' }),
   },
   {
     id: 'open_dashboard',
@@ -442,6 +448,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'status',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'status' }),
   },
   {
     id: 'setup_doctor',
@@ -615,6 +622,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'transcripts',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'transcripts' }),
   },
   {
     id: 'compare_transcripts',
@@ -759,6 +767,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'lecture_answers',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'lecture_answers' }),
   },
   {
     id: 'index_course_for_answers',
@@ -934,6 +943,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'spot_check',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'spot_check' }),
   },
   {
     id: 'validate_quiz',
@@ -1258,6 +1268,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'course',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'course' }),
   },
   {
     id: 'get_course_state',
@@ -1767,6 +1778,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'backup',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'backup' }),
   },
   {
     id: 'download_canvas_archive',
