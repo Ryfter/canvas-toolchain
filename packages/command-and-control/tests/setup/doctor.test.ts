@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
 import { dirname, join } from 'node:path';
 import { runDoctor } from '../../src/setup/doctor.js';
@@ -157,7 +157,7 @@ describe('runDoctor checks', () => {
 
     expect(active.status).toBe('warn');
     expect(active.fix).toEqual({
-      tool: 'ct_advanced', action: 'set_active_llm_provider', hint: expect.any(String),
+      tool: 'ct_setup', action: 'llm_provider', hint: expect.any(String),
     });
     expect(check(report, 'llm.credentials').status).toBe('ok');
     expect(report.readyJourneys.aiAssisted).toBe(false);
@@ -187,8 +187,60 @@ describe('runDoctor checks', () => {
 
     expect(active.status).toBe('warn');
     expect(active.fix).toEqual({
-      tool: 'ct_advanced', action: 'set_active_llm_provider', hint: expect.stringContaining('lmstudio'),
+      tool: 'ct_setup', action: 'llm_provider', hint: expect.stringContaining('lmstudio'),
     });
+  });
+
+  it('lists every configured provider, in preference order, and points the fix at LM Studio', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    // Every provider is still named — nothing is silently dropped.
+    expect(active.summary).toContain('(lmstudio, ollama, anthropic)');
+    expect(active.fix).toEqual({
+      tool: 'ct_setup', action: 'llm_provider',
+      hint: expect.stringContaining('with provider "lmstudio"'),
+    });
+    // Pointing at one is a suggestion, not a choice: nothing was written.
+    expect(existsSync(join(ccHome, 'llm-provider.json'))).toBe(false);
+  });
+
+  it('points the fix at the next provider in order when LM Studio is not configured', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    expect(active.summary).toContain('(ollama, anthropic)');
+    expect(active.fix?.hint).toContain('with provider "ollama"');
+    expect(active.fix?.hint).not.toContain('lmstudio');
+    expect(existsSync(join(ccHome, 'llm-provider.json'))).toBe(false);
+  });
+
+  it('still points at the single configured provider when no active provider is set', async () => {
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    expect(active.summary).toContain('ollama');
+    expect(active.fix?.hint).toContain('with provider "ollama"');
+  });
+
+  it('lists configured credentials in preference order', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+
+    const credentials = check(await runDoctor(), 'llm.credentials');
+
+    expect(credentials.status).toBe('ok');
+    expect(credentials.summary).toMatch(/LM Studio.*Ollama.*Anthropic/);
   });
 
   it('reports a corrupt lmstudio-config.json instead of throwing', async () => {

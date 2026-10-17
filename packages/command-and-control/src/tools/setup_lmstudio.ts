@@ -7,6 +7,7 @@ import {
   LlmProviderError,
 } from '@canvas-toolchain/shared-llm';
 import { getCcHomePath } from '../kb/config.js';
+import { autoActivateProvider, type AutoActivateResult } from './set_active_llm_provider.js';
 
 const DEFAULT_BASE_URL = 'http://localhost:1234/v1';
 
@@ -47,6 +48,9 @@ export type SetupLmStudioResult =
       baseUrl: string;
       model: string;
       configPath: string;
+      message: string;
+      /** What the post-setup auto-activation did. */
+      activation: AutoActivateResult;
     }
   | {
       mode: 'commit';
@@ -165,11 +169,15 @@ export async function setupLmStudio(input: SetupLmStudioInput): Promise<SetupLmS
   writeFileSync(tmpPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmpPath, configPath);
 
+  const activation = autoActivateProvider('lmstudio');
+
   return {
     mode: 'commit',
     ok: true,
     baseUrl,
     model: input.model,
     configPath,
+    message: `LM Studio configured with ${input.model}. ${activation.note}`,
+    activation,
   };
 }

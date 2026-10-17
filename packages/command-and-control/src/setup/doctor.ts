@@ -1,5 +1,7 @@
 import { readSetupState } from './read_state.js';
+import { PREFERRED_PROVIDER_ORDER } from '../tools/set_active_llm_provider.js';
 import type {
+  ActiveProvider,
   DoctorCheck,
   DoctorCheckId,
   DoctorReport,
@@ -329,25 +331,52 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
       summary: 'llm-provider.json is corrupt, so no active LLM provider can be resolved.',
       detail: [providerFile.path],
       fix: {
-        tool: 'ct_advanced',
-        action: 'set_active_llm_provider',
-        hint: 'Re-run ct_advanced action set_active_llm_provider (operation set_active_llm_provider).',
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint: 'Run ct_setup action llm_provider to choose one of your configured providers.',
       },
     };
   }
 
-  if (anthropicFileConfigured || ollamaConfigured || lmstudioConfigured) {
-    const configured = anthropicFileConfigured ? 'anthropic' : ollamaConfigured ? 'ollama' : 'lmstudio';
+  // Several providers can be configured at once. With no active provider this is
+  // a genuine choice, so name them all and suggest, in preference order, without
+  // ever picking one: the doctor writes nothing.
+  const configured: ActiveProvider[] = PREFERRED_PROVIDER_ORDER.filter((provider) =>
+    provider === 'anthropic'
+      ? anthropicFileConfigured
+      : provider === 'ollama'
+        ? ollamaConfigured
+        : lmstudioConfigured);
+
+  if (configured.length === 1) {
+    const only = configured[0];
     return {
       id: 'llm.active_provider',
       status: 'warn',
       summary:
-        `${configured} is configured but no active provider is set, so AI tools fail with ` +
+        `${only} is configured but no active provider is set, so AI tools fail with ` +
         'LLM_PROVIDER_NOT_SET.',
       fix: {
-        tool: 'ct_advanced',
-        action: 'set_active_llm_provider',
-        hint: `Activate ${configured} (provider: "${configured}").`,
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint: `Activate it: ct_setup action llm_provider with provider "${only}".`,
+      },
+    };
+  }
+
+  if (configured.length > 1) {
+    return {
+      id: 'llm.active_provider',
+      status: 'warn',
+      summary:
+        `Multiple LLM providers are configured (${configured.join(', ')}) but no active provider ` +
+        'is set, so AI tools fail with LLM_PROVIDER_NOT_SET.',
+      fix: {
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint:
+          `Run ct_setup action llm_provider with provider "${configured[0]}" to choose one of ` +
+          `your configured providers: ${configured.join(', ')}.`,
       },
     };
   }
@@ -409,7 +438,7 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
       fix: {
         tool: 'ct_setup',
         action: 'anthropic',
-        hint: 'Add an Anthropic API key, or configure a local model with ct_setup action ollama or lmstudio.',
+        hint: 'Add an Anthropic API key, or configure a local model with ct_setup action lmstudio or ollama.',
       },
     };
   }
@@ -451,9 +480,9 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
   }
 
   const configured = [
-    anthropic.configured && `Anthropic (${anthropic.source === 'both' ? 'environment and file' : 'file'})`,
-    state.llm.ollama.configured && `Ollama (${state.llm.ollama.model ?? 'model unknown'})`,
     state.llm.lmstudio.configured && `LM Studio (${state.llm.lmstudio.model ?? 'model unknown'})`,
+    state.llm.ollama.configured && `Ollama (${state.llm.ollama.model ?? 'model unknown'})`,
+    anthropic.configured && `Anthropic (${anthropic.source === 'both' ? 'environment and file' : 'file'})`,
   ].filter((line): line is string => typeof line === 'string');
 
   return {

@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "ollama"
 exposure: "intent"
-related: [get_cc_status, get_started, set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_lmstudio]
+related: [get_cc_status, set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_llm_provider, setup_lmstudio]
 deprecated: "Deprecated — use ct_setup {action: \"ollama\"}; removed in 2.5.0."
 ---
 <!-- generated:end -->
