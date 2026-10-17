@@ -6,7 +6,6 @@ import { getStarted } from '../../src/setup/get_started.js';
 import type { GetStartedGuide, SetupCall } from '../../src/setup/get_started.js';
 import { buildRegistry } from '../../src/surface/registry.js';
 import { dispatchSurface } from '../../src/surface/dispatch.js';
-import { runAdvanced } from '../../src/surface/advanced.js';
 
 let ccHome: string;
 let cdsHome: string;
@@ -98,6 +97,7 @@ describe('getStarted on an empty home', () => {
     expect(llm.required).toBe(false);
     expect(llm.alternatives).toEqual([
       expect.objectContaining({ tool: 'ct_setup', action: 'ollama' }),
+      expect.objectContaining({ tool: 'ct_setup', action: 'lmstudio' }),
     ]);
     expect(guide.readyToGo).toBe(false);
     expect(guide.text).toContain('Optional:');
@@ -144,7 +144,7 @@ describe('getStarted with some setup done', () => {
     const activate = step(guide, 'llm_provider');
 
     expect(activate).toMatchObject({
-      tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'anthropic' },
+      tool: 'ct_setup', action: 'llm_provider', params: { provider: 'anthropic' },
     });
   });
 
@@ -160,10 +160,11 @@ describe('getStarted with some setup done', () => {
     expect(stepIds(guide)).toEqual(['courses_root', 'canvas', 'llm_provider']);
     expect(finish.why).toMatch(/selects ollama/);
     expect(finish.why).not.toMatch(/LLM_PROVIDER_NOT_SET/);
-    // The folded credentials fix becomes the one Anthropic alternative — never
-    // a second copy of the same call.
+    // The folded credentials fix becomes the Anthropic alternative — never a
+    // second copy of the same call — with LM Studio offered as the other option.
     expect(finish.alternatives).toEqual([
       expect.objectContaining({ tool: 'ct_setup', action: 'anthropic' }),
+      expect.objectContaining({ tool: 'ct_setup', action: 'lmstudio' }),
     ]);
   });
 
@@ -195,7 +196,7 @@ describe('getStarted step selection for a configured local model', () => {
     const activate = step(guide, 'llm_provider');
 
     expect(activate).toMatchObject({
-      tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'ollama' },
+      tool: 'ct_setup', action: 'llm_provider', params: { provider: 'ollama' },
     });
     expect(activate.alternatives).toEqual([]);
   });
@@ -224,7 +225,7 @@ describe('getStarted step selection for a configured local model', () => {
     // set_active_llm_provider refuses a provider with no config file, and the
     // runtime reads anthropic-config.json rather than the environment.
     expect(activate).toMatchObject({
-      tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'ollama' },
+      tool: 'ct_setup', action: 'llm_provider', params: { provider: 'ollama' },
     });
     expect(guide.steps.every((s) => s.params.provider !== 'anthropic')).toBe(true);
   });
@@ -239,7 +240,7 @@ describe('getStarted step selection for a configured local model', () => {
     expect(activate).toMatchObject({ params: { provider: 'anthropic' } });
     expect(activate.alternatives).toEqual([
       expect.objectContaining({
-        tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'ollama' },
+        tool: 'ct_setup', action: 'llm_provider', params: { provider: 'ollama' },
       }),
     ]);
   });
@@ -272,8 +273,9 @@ describe('getStarted step selection for a configured local model', () => {
     expect(finish).toMatchObject({ tool: 'ct_setup', action: 'ollama', params: {} });
     expect(finish.alternatives).toEqual([
       expect.objectContaining({
-        tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'anthropic' },
+        tool: 'ct_setup', action: 'llm_provider', params: { provider: 'anthropic' },
       }),
+      expect.objectContaining({ tool: 'ct_setup', action: 'lmstudio' }),
     ]);
   });
 });
@@ -308,17 +310,41 @@ describe('getStarted with a corrupt config file', () => {
     expect(stepIds(guide)).not.toContain('llm_credentials');
     expect(guide.capabilities.find((c) => c.id === 'aiAssisted')?.ready).toBe(true);
   });
+
+  it('points a corrupt LM Studio config at the lmstudio step, not at Anthropic', async () => {
+    seedRaw('lmstudio-config.json', '{ broken');
+
+    const guide = await getStarted();
+    const llm = step(guide, 'llm_credentials');
+
+    expect(llm).toMatchObject({ tool: 'ct_setup', action: 'lmstudio', params: {} });
+    expect(llm.alternatives).toEqual([
+      expect.objectContaining({ tool: 'ct_setup', action: 'anthropic' }),
+      expect.objectContaining({ tool: 'ct_setup', action: 'ollama' }),
+    ]);
+  });
+
+  it('asks to activate a configured LM Studio server when none is active', async () => {
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5' });
+
+    const guide = await getStarted();
+    const activate = step(guide, 'llm_provider');
+
+    expect(activate).toMatchObject({
+      tool: 'ct_setup', action: 'llm_provider', params: { provider: 'lmstudio' },
+    });
+  });
 });
 
 describe('getStarted renders calls its own dispatcher accepts', () => {
-  it('renders ct_advanced steps with action run plus an operation id', async () => {
+  it('renders the activation step as a ct_setup action the intent dispatcher accepts', async () => {
     seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
 
     const guide = await getStarted();
 
-    expect(guide.text).toContain('call: ct_advanced action run operation set_active_llm_provider');
-    const result = await runAdvanced(buildRegistry(), {
-      action: 'run', operation: 'set_active_llm_provider', params: { provider: 'anthropic' },
+    expect(guide.text).toContain('call: ct_setup action llm_provider {"provider":"anthropic"}');
+    const result = await dispatchSurface(buildRegistry(), 'ct_setup', {
+      action: 'llm_provider', params: { provider: 'anthropic' },
     });
     expect(result.isError).toBeFalsy();
   });

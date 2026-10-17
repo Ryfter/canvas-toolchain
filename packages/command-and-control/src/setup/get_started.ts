@@ -144,23 +144,45 @@ function canvasCall(): SetupCall {
 }
 
 function configureProviderCall(provider: ActiveProvider): SetupCall {
-  return provider === 'anthropic'
-    ? {
+  switch (provider) {
+    case 'anthropic':
+      return {
         tool: 'ct_setup',
         action: 'anthropic',
         params: { apiKey: '<your Anthropic API key>' },
         needs: ['An Anthropic API key (console.anthropic.com).'],
-      }
-    : {
+      };
+    case 'ollama':
+      return {
         tool: 'ct_setup',
         action: 'ollama',
         params: {},
         needs: ['A local model server running (e.g. Ollama on http://localhost:11434).'],
       };
+    case 'lmstudio':
+      return {
+        tool: 'ct_setup',
+        action: 'lmstudio',
+        params: {},
+        needs: [
+          'LM Studio running with a model loaded and its local server started ' +
+          '(Developer > Start Server, http://localhost:1234/v1).',
+        ],
+      };
+  }
 }
 
 function activateCall(provider: ActiveProvider): SetupCall {
-  return { tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider }, needs: [] };
+  // The same action the doctor's own fix names, so guidance and diagnosis agree.
+  return { tool: 'ct_setup', action: 'llm_provider', params: { provider }, needs: [] };
+}
+
+/** The generation providers, in the order guidance offers them. */
+const PROVIDER_ORDER: readonly ActiveProvider[] = ['anthropic', 'ollama', 'lmstudio'];
+
+/** A configure call for every provider other than `provider`. */
+function otherConfigureCalls(provider: ActiveProvider): SetupCall[] {
+  return PROVIDER_ORDER.filter((p) => p !== provider).map(configureProviderCall);
 }
 
 /**
@@ -176,6 +198,7 @@ function activatableProviders(state: SetupState): ActiveProvider[] {
     providers.push('anthropic');
   }
   if (state.llm.ollama.configured) providers.push('ollama');
+  if (state.llm.lmstudio.configured) providers.push('lmstudio');
   return providers;
 }
 
@@ -242,13 +265,13 @@ function credentialsStep(fix: DoctorFix): StepBody {
       alternatives: [],
     };
   }
-  if (fix.tool === 'ct_setup' && fix.action === 'ollama') {
+  if (fix.tool === 'ct_setup' && (fix.action === 'ollama' || fix.action === 'lmstudio')) {
     return {
       id: 'llm_credentials',
       capability: 'aiAssisted',
       title: 'Turn on AI assistance',
-      primary: configureProviderCall('ollama'),
-      alternatives: [configureProviderCall('anthropic')],
+      primary: configureProviderCall(fix.action),
+      alternatives: otherConfigureCalls(fix.action),
     };
   }
   // The remaining credential fixes all create or rewrite anthropic-config.json.
@@ -257,7 +280,7 @@ function credentialsStep(fix: DoctorFix): StepBody {
     capability: 'aiAssisted',
     title: 'Turn on AI assistance',
     primary: configureProviderCall('anthropic'),
-    alternatives: [configureProviderCall('ollama')],
+    alternatives: otherConfigureCalls('anthropic'),
   };
 }
 
@@ -268,13 +291,16 @@ function credentialsStep(fix: DoctorFix): StepBody {
 function providerStep(fix: DoctorFix, state: SetupState): StepBody | null {
   const configured = activatableProviders(state);
 
-  if (fix.tool === 'ct_setup' && (fix.action === 'anthropic' || fix.action === 'ollama')) {
+  if (
+    fix.tool === 'ct_setup' &&
+    (fix.action === 'anthropic' || fix.action === 'ollama' || fix.action === 'lmstudio')
+  ) {
     const named = fix.action;
-    const other: ActiveProvider = named === 'anthropic' ? 'ollama' : 'anthropic';
-    // Switching to an already-configured provider is a way out; configuring the
-    // other one is the alternative when it has no config yet.
-    const alternatives: SetupCall[] = configured.map(activateCall);
-    if (!configured.includes(other)) alternatives.push(configureProviderCall(other));
+    // Switching to an already-configured provider is a way out; configuring any
+    // other one is the alternative when it has no config file yet.
+    const alternatives = PROVIDER_ORDER.filter((p) => p !== named).map((p) =>
+      configured.includes(p) ? activateCall(p) : configureProviderCall(p),
+    );
     return {
       id: 'llm_provider',
       capability: 'aiAssisted',
@@ -284,11 +310,10 @@ function providerStep(fix: DoctorFix, state: SetupState): StepBody | null {
     };
   }
 
-  // `ct_advanced set_active_llm_provider` only works when a provider has a
-  // config file on disk. With nothing to activate — a corrupt
-  // llm-provider.json and no provider configured — the credentials step is the
-  // real work, and an activation call here would fail with
-  // PROVIDER_NOT_CONFIGURED.
+  // `ct_setup llm_provider` only works when a provider has a config file on
+  // disk. With nothing to activate — a corrupt llm-provider.json and no provider
+  // configured — the credentials step is the real work, and an activation call
+  // here would fail with PROVIDER_NOT_CONFIGURED.
   if (configured.length === 0) return null;
   const [preferred, ...rest] = configured;
   return {
@@ -327,6 +352,7 @@ function repairsCorruptFile(call: SetupCall, state: SetupState): boolean {
   const fileKeys: Partial<Record<string, ConfigFileKey>> = {
     anthropic: 'anthropic-config',
     ollama: 'ollama-config',
+    lmstudio: 'lmstudio-config',
     lecture_answers: 'lecture-answers-config',
   };
   const key = fileKeys[call.action];
