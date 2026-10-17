@@ -1,6 +1,6 @@
 ---
 id: "set_active_llm_provider"
-description: "Set the active generation LLM provider. Must be anthropic, ollama or lmstudio. Refuses to set a provider whose config file is absent."
+description: "Set the active generation LLM provider. Must be lmstudio, ollama or anthropic. Refuses to set a provider whose config file is absent."
 section: "admin"
 intent_tool: ""
 intent_action: ""

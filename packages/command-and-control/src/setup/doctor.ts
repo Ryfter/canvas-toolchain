@@ -1,4 +1,5 @@
 import { readSetupState } from './read_state.js';
+import { PREFERRED_PROVIDER_ORDER } from '../tools/set_active_llm_provider.js';
 import type {
   ActiveProvider,
   DoctorCheck,
@@ -337,13 +338,14 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
   }
 
   // Several providers can be configured at once. With no active provider this is
-  // a genuine choice, so name them all and let the professor pick — never
-  // silently prefer one (the whole point of "no preferred default").
-  const configured: ActiveProvider[] = [
-    anthropicFileConfigured && 'anthropic',
-    ollamaConfigured && 'ollama',
-    lmstudioConfigured && 'lmstudio',
-  ].filter((p): p is ActiveProvider => p !== false);
+  // a genuine choice, so name them all and suggest, in preference order, without
+  // ever picking one: the doctor writes nothing.
+  const configured: ActiveProvider[] = PREFERRED_PROVIDER_ORDER.filter((provider) =>
+    provider === 'anthropic'
+      ? anthropicFileConfigured
+      : provider === 'ollama'
+        ? ollamaConfigured
+        : lmstudioConfigured);
 
   if (configured.length === 1) {
     const only = configured[0];
@@ -372,8 +374,8 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
         tool: 'ct_setup',
         action: 'llm_provider',
         hint:
-          `Run ct_setup action llm_provider to choose one of your configured providers: ` +
-          `${configured.join(', ')}.`,
+          `Run ct_setup action llm_provider with provider "${configured[0]}" to choose one of ` +
+          `your configured providers: ${configured.join(', ')}.`,
       },
     };
   }
@@ -435,7 +437,7 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
       fix: {
         tool: 'ct_setup',
         action: 'anthropic',
-        hint: 'Add an Anthropic API key, or configure a local model with ct_setup action ollama or lmstudio.',
+        hint: 'Add an Anthropic API key, or configure a local model with ct_setup action lmstudio or ollama.',
       },
     };
   }
@@ -477,9 +479,9 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
   }
 
   const configured = [
-    anthropic.configured && `Anthropic (${anthropic.source === 'both' ? 'environment and file' : 'file'})`,
-    state.llm.ollama.configured && `Ollama (${state.llm.ollama.model ?? 'model unknown'})`,
     state.llm.lmstudio.configured && `LM Studio (${state.llm.lmstudio.model ?? 'model unknown'})`,
+    state.llm.ollama.configured && `Ollama (${state.llm.ollama.model ?? 'model unknown'})`,
+    anthropic.configured && `Anthropic (${anthropic.source === 'both' ? 'environment and file' : 'file'})`,
   ].filter((line): line is string => typeof line === 'string');
 
   return {

@@ -8,7 +8,7 @@ import { setupLmStudio } from '../tools/setup_lmstudio.js';
 import { setupLlmProvider } from '../tools/setup_llm_provider.js';
 import { showCanvasCapabilities } from '../tools/showcase/show_canvas_capabilities.js';
 import { previewCanvasPattern } from '../tools/showcase/preview_canvas_pattern.js';
-import { setActiveLlmProvider } from '../tools/set_active_llm_provider.js';
+import { PREFERRED_PROVIDER_ORDER, setActiveLlmProvider } from '../tools/set_active_llm_provider.js';
 import { setModuleEnabled } from '../tools/set_module_enabled.js';
 import { listModules } from '../tools/list_modules.js';
 import { browseModuleCatalog, installModuleTool, uninstallModuleTool } from '../tools/module_channel_tools.js';
@@ -110,8 +110,8 @@ const BASE_OPERATIONS: Operation[] = [
         anthropicModel: { type: 'string', description: 'Anthropic model name, e.g. "claude-sonnet-4-6".' },
         ollamaBaseUrl: { type: 'string', description: 'Ollama server URL, e.g. "http://localhost:11434".' },
         ollamaModel: { type: 'string', description: 'Ollama model name, e.g. "llama3.2".' },
-        routingFast: { type: 'string', enum: ['anthropic', 'ollama', 'lmstudio'] },
-        routingJudgment: { type: 'string', enum: ['anthropic', 'ollama', 'lmstudio'] },
+        routingFast: { type: 'string', enum: [...PREFERRED_PROVIDER_ORDER] },
+        routingJudgment: { type: 'string', enum: [...PREFERRED_PROVIDER_ORDER] },
         downloaderPath: { type: 'string', description: 'Absolute path to the canvas-backup executable (or canvas-backup.exe). Persisted in config — professors set this once instead of managing env vars.' },
         registryToken: { type: 'string', description: 'Premium registry token for ryfter:// resources. Stored locally and never echoed back.' },
         premiumRegistryBaseUrl: { type: 'string', description: 'Optional premium registry API base URL override.' },
@@ -200,13 +200,13 @@ const BASE_OPERATIONS: Operation[] = [
     id: 'setup_llm_provider',
     section: 'admin',
     description:
-      'Report the active and configured LLM providers; with no arguments it also probes local Ollama and LM Studio at their default URLs. Pass provider to activate a configured one.',
+      'Report the active and configured LLM providers, best first (LM Studio, Ollama, Anthropic); with no arguments it also probes the local servers. Pass provider to activate a configured one.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         provider: {
           type: 'string',
-          enum: ['anthropic', 'ollama', 'lmstudio'],
+          enum: [...PREFERRED_PROVIDER_ORDER],
           description: 'Provider to activate. Omit to report the active and configured providers.',
         },
       },
@@ -258,12 +258,12 @@ const BASE_OPERATIONS: Operation[] = [
   {
     id: 'set_active_llm_provider',
     section: 'admin',
-    description: 'Set the active generation LLM provider. Must be anthropic, ollama or lmstudio. Refuses to set a provider whose config file is absent.',
+    description: 'Set the active generation LLM provider. Must be lmstudio, ollama or anthropic. Refuses to set a provider whose config file is absent.',
     inputSchema: {
       type: 'object' as const,
       required: ['provider'],
       properties: {
-        provider: { type: 'string', enum: ['anthropic', 'ollama', 'lmstudio'], description: 'anthropic, ollama or lmstudio' },
+        provider: { type: 'string', enum: [...PREFERRED_PROVIDER_ORDER], description: 'lmstudio, ollama or anthropic' },
       },
     },
     handler: (args) => setActiveLlmProvider(args as never),

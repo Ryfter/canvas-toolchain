@@ -27,7 +27,24 @@ export interface MigrateActiveProviderResult {
   provider: ActiveProvider | null;
 }
 
-export const VALID_PROVIDERS: readonly ActiveProvider[] = ['anthropic', 'ollama', 'lmstudio'];
+/**
+ * The order providers are shown and recommended in: LM Studio, then Ollama,
+ * then Anthropic. Local-first, and LM Studio is the preferred local server.
+ *
+ * This is a *presentation* order only. It never activates a provider on its
+ * own — `autoActivateProvider` owns the activation rules, and an explicit
+ * selection is always written exactly as given.
+ */
+export const PREFERRED_PROVIDER_ORDER: readonly ActiveProvider[] = ['lmstudio', 'ollama', 'anthropic'];
+
+/** Every provider the toolchain accepts, in preference order. */
+export const VALID_PROVIDERS: readonly ActiveProvider[] = PREFERRED_PROVIDER_ORDER;
+
+/** "lmstudio, ollama or anthropic" — the preference order, for prose. */
+export function formatProviderList(): string {
+  const names = [...PREFERRED_PROVIDER_ORDER];
+  return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
+}
 
 function getActiveProviderPath(): string {
   return join(getCcHomePath(), 'llm-provider.json');
@@ -50,7 +67,7 @@ export function listConfiguredProviders(): ActiveProvider[] {
 export function loadActiveProvider(): ActiveProvider {
   const path = getActiveProviderPath();
   if (!existsSync(path)) {
-    throw new Error('LLM_PROVIDER_NOT_SET: Run set_active_llm_provider with anthropic, ollama or lmstudio.');
+    throw new Error(`LLM_PROVIDER_NOT_SET: Run set_active_llm_provider with ${formatProviderList()}.`);
   }
   let parsed: { provider?: string };
   try {

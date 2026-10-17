@@ -99,10 +99,12 @@ describe('setup_llm_provider report mode (local detection)', () => {
     if (result.mode !== 'report') throw new Error('expected report');
     expect(result.localServers.every((s) => !s.reachable)).toBe(true);
     expect(result.nextSteps.join(' ')).toMatch(/No LLM provider is configured/);
-    expect(result.nextSteps.join(' ')).toMatch(/No local Ollama or LM Studio server/);
+    expect(result.nextSteps.join(' ')).toMatch(/No local LM Studio or Ollama server/);
+    expect(result.options).toEqual([]);
+    expect(result.recommended).toBeNull();
   });
 
-  it('reports the active and configured providers', async () => {
+  it('reports the active and configured providers in preference order', async () => {
     mockServers(null, null);
     seedProvider('anthropic');
     seedConfig('anthropic', { apiKey: SECRET, model: 'claude' });
@@ -112,8 +114,10 @@ describe('setup_llm_provider report mode (local detection)', () => {
 
     if (result.mode !== 'report') throw new Error('expected report');
     expect(result.activeProvider).toBe('anthropic');
-    expect(result.configuredProviders).toEqual(['anthropic', 'ollama']);
+    // LM Studio, then Ollama, then Anthropic — not the order the files were read in.
+    expect(result.configuredProviders).toEqual(['ollama', 'anthropic']);
     expect(result.nextSteps.join(' ')).toMatch(/Switch with ct_setup action llm_provider/);
+    expect(result.recommended).toContain('"ollama"');
   });
 
   it('does not call a provider with no config file active', async () => {
@@ -137,6 +141,82 @@ describe('setup_llm_provider report mode (local detection)', () => {
     const result = await setupLlmProvider({});
 
     expect(JSON.stringify(result)).not.toContain(SECRET);
+  });
+});
+
+describe('setup_llm_provider preference order (LM Studio, Ollama, Anthropic)', () => {
+  it('lists every configured provider in preference order and recommends LM Studio first', async () => {
+    mockServers(null, null);
+    seedConfig('anthropic', { apiKey: SECRET, model: 'claude' });
+    seedConfig('ollama', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+    seedConfig('lmstudio', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+
+    const result = await setupLlmProvider({});
+
+    if (result.mode !== 'report') throw new Error('expected report');
+    expect(result.configuredProviders).toEqual(['lmstudio', 'ollama', 'anthropic']);
+    expect(result.options.map((o) => o.provider)).toEqual(['lmstudio', 'ollama', 'anthropic']);
+    expect(result.recommended).toBe('ct_setup action llm_provider with { provider: "lmstudio" }');
+    // Every alternative is still listed with its exact call — no silent pick.
+    const steps = result.nextSteps.join('\n');
+    expect(steps).toContain('ct_setup action llm_provider with { provider: "ollama" }');
+    expect(steps).toContain('ct_setup action llm_provider with { provider: "anthropic" }');
+    // Recommending is not choosing: nothing was written.
+    expect(existsSync(join(ccHomeDir, 'llm-provider.json'))).toBe(false);
+  });
+
+  it('recommends LM Studio when it is detected but not yet configured', async () => {
+    mockServers(null, ['qwen2.5-14b-instruct']);
+
+    const result = await setupLlmProvider({});
+
+    if (result.mode !== 'report') throw new Error('expected report');
+    expect(result.options[0]).toMatchObject({
+      provider: 'lmstudio', configured: false, detected: true,
+    });
+    expect(result.recommended).toContain('ct_setup action lmstudio');
+    expect(result.recommended).toContain('qwen2.5-14b-instruct');
+    expect(existsSync(join(ccHomeDir, 'lmstudio-config.json'))).toBe(false);
+  });
+
+  it('orders the detected local servers the same way', async () => {
+    mockServers(['qwen2.5:14b'], ['qwen2.5-14b-instruct']);
+
+    const result = await setupLlmProvider({});
+
+    if (result.mode !== 'report') throw new Error('expected report');
+    expect(result.localServers.map((s) => s.provider)).toEqual(['lmstudio', 'ollama']);
+  });
+
+  it('falls back to Ollama when LM Studio is absent', async () => {
+    mockServers(['qwen2.5:14b'], null);
+
+    const result = await setupLlmProvider({});
+
+    if (result.mode !== 'report') throw new Error('expected report');
+    expect(result.options.map((o) => o.provider)).toEqual(['ollama']);
+    expect(result.recommended).toContain('ct_setup action ollama');
+  });
+
+  it('falls back to Anthropic when it is the only provider available', async () => {
+    mockServers(null, null);
+    seedConfig('anthropic', { apiKey: SECRET, model: 'claude' });
+
+    const result = await setupLlmProvider({});
+
+    if (result.mode !== 'report') throw new Error('expected report');
+    expect(result.options).toHaveLength(1);
+    expect(result.recommended).toBe('ct_setup action llm_provider with { provider: "anthropic" }');
+  });
+
+  it('recommends nothing when no provider is configured or detected', async () => {
+    mockServers(null, null);
+
+    const result = await setupLlmProvider({});
+
+    if (result.mode !== 'report') throw new Error('expected report');
+    expect(result.options).toEqual([]);
+    expect(result.recommended).toBeNull();
   });
 });
 
