@@ -146,14 +146,21 @@ describe('runDoctor checks', () => {
     expect(JSON.stringify(report)).not.toContain('sk-ant-env');
   });
 
-  it('warns when Canvas credentials are present but the C&C store disagrees with Design Studio', async () => {
+  // #151 R7 (decision D1) changed what the doctor can see here: Canvas Design
+  // Studio resolves its Canvas host and token from the canonical store
+  // (~/.command-and-control/canvas-config.json), so a stale mirror in
+  // institution.json is no longer a split the professor can act on. The raw
+  // files are reconciled by migrateCanvasStores() (at C&C startup and after
+  // setup_canvas); that reconciliation is pinned in
+  // shared-types/tests/canvas-store.test.ts. The "no token anywhere" case below
+  // still exercises the warn branch, and so does the one-store-only test.
+  it('reads through a disagreeing institution.json to the canonical store', async () => {
     seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     seed('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'cds-tok' }, cdsHome);
 
     const sync = check(await runDoctor(), 'canvas.store_sync');
 
-    expect(sync.status).toBe('warn');
-    expect(sync.fix).toEqual({ tool: 'ct_setup', action: 'canvas', hint: expect.any(String) });
+    expect(sync.status).toBe('ok');
     expect(JSON.stringify(sync)).not.toContain('tok-secret');
   });
 
@@ -223,15 +230,19 @@ describe('runDoctor checks', () => {
     expect(JSON.stringify(report)).not.toContain('wave-secret');
   });
 
-  it('warns when Canvas Design Studio has the host but no API token', async () => {
-    seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+  // #151 R7 (D1): a token in the canonical store is a token Canvas Design Studio
+  // uses, so "Design Studio has a host but no token" can only happen when NO
+  // store holds one — and with no Canvas connection on either side that is a
+  // store, not a broken connection. The `points at ... but has no API token`
+  // branch in doctor.ts is therefore unreachable now (its source is owned by
+  // another job; flagged for follow-up rather than edited here).
+  it('treats a host-only institution.json with no Canvas store as merely unconnected', async () => {
     seed('institution.json', { canvasUrl: 'https://example.instructure.com' }, cdsHome);
 
     const sync = check(await runDoctor(), 'canvas.store_sync');
 
-    expect(sync.status).toBe('warn');
-    expect(sync.summary.toLowerCase()).toContain('token');
-    expect(sync.fix).toEqual({ tool: 'ct_setup', action: 'canvas', hint: expect.any(String) });
+    expect(sync.status).toBe('ok');
+    expect(sync.summary.toLowerCase()).toContain('no canvas connection');
   });
 });
 

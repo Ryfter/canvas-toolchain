@@ -194,3 +194,7 @@ export interface PageClos {
 // ── Canvas host ──────────────────────────────────────────────────────────────
 
 export { normalizeCanvasHost, canvasBaseUrl } from './canvas-host.js';
+
+// ── Canvas credential stores ─────────────────────────────────────────────────
+
+export * from './canvas-store.js';

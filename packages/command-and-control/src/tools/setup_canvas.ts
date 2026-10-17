@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
-import { normalizeCanvasHost } from '@canvas-toolchain/shared-types';
+import { migrateCanvasStores, normalizeCanvasHost, writeCanvasConfig } from '@canvas-toolchain/shared-types';
 
 export interface CanvasSetupConfig {
   host: string;
@@ -43,31 +43,6 @@ export interface SetupCanvasResult {
 
 function getCanvasConfigPath(): string {
   return join(getCcHomePath(), 'canvas-config.json');
-}
-
-/** The keys setup_canvas owns and rewrites. Everything else in the file — the
- *  V&R Plan C settings below, plus any field written by the Go installer or a
- *  future version — is the professor's, and a re-run must not drop it. */
-const MANAGED_KEYS = new Set(['host', 'token', 'configuredAt', 'lastValidatedAt']);
-
-/** Read the settings already on disk that setup_canvas does not own, so a token
- *  rotation or host fix cannot silently revert retention/breadcrumb settings to
- *  their defaults. A missing or unparseable file preserves nothing (today's
- *  overwrite behavior) rather than failing the setup. */
-function readPreservedSettings(configPath: string): Partial<CanvasSetupConfig> {
-  if (!existsSync(configPath)) return {};
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(readFileSync(configPath, 'utf-8'));
-  } catch {
-    return {};
-  }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
-  const preserved: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(parsed)) {
-    if (!MANAGED_KEYS.has(key)) preserved[key] = value;
-  }
-  return preserved as Partial<CanvasSetupConfig>;
 }
 
 export function loadCanvasConfig(): CanvasSetupConfig {
@@ -139,26 +114,39 @@ export async function setupCanvas(input: SetupCanvasInput): Promise<SetupCanvasR
     }
   }
 
-  const home = getCcHomePath();
-  mkdirSync(home, { recursive: true });
-  const configPath = getCanvasConfigPath();
-  const config: CanvasSetupConfig = {
-    ...readPreservedSettings(configPath),
+  // One writer for the canonical store (#151 R7, D1): atomic, owner-only, and it
+  // preserves the settings setup_canvas does not own — the V&R Plan C snapshot
+  // settings declared on CanvasSetupConfig, plus any field written by the Go
+  // installer or a future version.
+  writeCanvasConfig({
     host,
     token,
     configuredAt: now,
     lastValidatedAt: test ? now : '',
-  };
-  const tmpPath = `${configPath}.tmp`;
-  writeFileSync(tmpPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 });
-  renameSync(tmpPath, configPath);
+  });
+
+  // Canvas Design Studio reads its Canvas host and token from its own
+  // institution.json (which also owns the brand colors, accessibility policy and
+  // WAVE key). Bridge the two stores in both directions: on a fresh install this
+  // creates the mirror that C&C's own a11y tools need, and on an existing one it
+  // keeps them from disagreeing. Never fatal — the Canvas connection itself is
+  // saved and usable either way.
+  let storeNote = '';
+  try {
+    const migration = migrateCanvasStores();
+    if (migration.changed || migration.action === 'corrupt') storeNote = ` ${migration.detail}`;
+  } catch (err) {
+    storeNote = ` Warning: Canvas Design Studio's institution.json could not be updated (${
+      err instanceof Error ? err.message : String(err)
+    }); review_accessibility_policy and wave_deep_check may stay unavailable.`;
+  }
 
   return {
     configured: true,
     host,
     ...(test && { validatedAt: now }),
-    message: test
+    message: (test
       ? `Canvas configured and token validated for ${host}.`
-      : `Canvas configured for ${host} (token not tested).`,
+      : `Canvas configured for ${host} (token not tested).`) + storeNote,
   };
 }

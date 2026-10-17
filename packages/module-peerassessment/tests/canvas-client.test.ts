@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { PaCanvasClient } from '../src/canvas/client.js';
+import { describe, it, expect, afterEach } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { PaCanvasClient, loadCanvasCreds } from '../src/canvas/client.js';
 
 /** Build a fake fetch that maps URL substrings to JSON payloads (no Link paging). */
 function fakeFetch(routes: Array<{ match: string; body: unknown }>): typeof fetch {
@@ -94,5 +97,47 @@ describe('PaCanvasClient paging', () => {
     await expect(client.listCourseStudents(5)).rejects.toThrow(/CANVAS_PAGINATION_OFF_HOST/);
     expect(calls).toHaveLength(1);
     expect(calls[0]).toContain('canvas.test');
+  });
+});
+
+// #151 R7: this module reads ~/.command-and-control/canvas-config.json directly,
+// so it applies the same host rules as @canvas-toolchain/shared-types'
+// normalizeCanvasHost. The table below mirrors that implementation's own test
+// table — keeping it here is what stops the two from drifting apart.
+describe('loadCanvasCreds host normalization', () => {
+  const TABLE: Array<[string, string]> = [
+    ['https://example.instructure.com/', 'example.instructure.com'],
+    ['https://example.instructure.com/api/v1', 'example.instructure.com'],
+    ['exampleucanvas', 'exampleucanvas.instructure.com'],
+    ['canvas.exampleu.edu', 'canvas.exampleu.edu'],
+  ];
+
+  let homes: string[] = [];
+  const savedCcHome = process.env.CC_HOME;
+
+  afterEach(() => {
+    for (const dir of homes) rmSync(dir, { recursive: true, force: true });
+    homes = [];
+    if (savedCcHome === undefined) delete process.env.CC_HOME;
+    else process.env.CC_HOME = savedCcHome;
+  });
+
+  function seed(host: string, token: string): void {
+    const home = mkdtempSync(join(tmpdir(), 'pa-canvas-'));
+    homes.push(home);
+    process.env.CC_HOME = home;
+    writeFileSync(join(home, 'canvas-config.json'), JSON.stringify({ host, token }), 'utf-8');
+  }
+
+  it('canonicalizes the host it reads', () => {
+    for (const [saved, expected] of TABLE) {
+      seed(saved, 'tok');
+      expect(loadCanvasCreds()).toEqual({ host: expected, token: 'tok' });
+    }
+  });
+
+  it('throws rather than building a request against an unusable host', () => {
+    seed('  ', 'tok');
+    expect(() => loadCanvasCreds()).toThrow(/CANVAS_NOT_CONFIGURED/);
   });
 });

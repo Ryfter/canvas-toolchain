@@ -260,10 +260,22 @@ describe('readSetupState stores', () => {
     expect(JSON.stringify(state)).not.toContain('wave-secret');
   });
 
-  it('reports two stores pointing at different hosts as out of sync', async () => {
+  // #151 R7 (D1): Canvas Design Studio resolves its Canvas host and token from
+  // the canonical store, so a stale institution.json can no longer make the two
+  // stores disagree *in effect* — Design Studio reports the canonical host, and
+  // the raw files are reconciled by migrateCanvasStores() (pinned in
+  // shared-types/tests/canvas-store.test.ts).
+  it('reports the canonical host as the Design Studio host when the stores disagree', async () => {
     seedJson('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
-    seedJson('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'tok' }, cdsHome);
-    expect((await readSetupState()).storesInSync).toBe(false);
+    seedJson('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'cds-tok' }, cdsHome);
+
+    const state = await readSetupState();
+
+    expect(state.designStudio.host).toBe('example.instructure.com');
+    expect(state.designStudio.hasApiToken).toBe(true);
+    expect(state.storesInSync).toBe(true);
+    expect(JSON.stringify(state)).not.toContain('tok-secret');
+    expect(JSON.stringify(state)).not.toContain('cds-tok');
   });
 });
 

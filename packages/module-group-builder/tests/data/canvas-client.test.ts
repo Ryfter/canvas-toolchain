@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { CanvasClient } from '../../src/data/canvas-client.js';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { CanvasClient, loadCanvasCreds } from '../../src/data/canvas-client.js';
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -54,5 +57,48 @@ describe('CanvasClient', () => {
     });
     const c = new CanvasClient({ host: 'x.instructure.com', token: 'tok' }, { fetchImpl: fetchMock as unknown as typeof fetch });
     expect(await c.createGroupCategory(5, 'Week 3 Teams')).toEqual({ id: 77, name: 'Week 3 Teams' });
+  });
+});
+
+// #151 R7: this module reads ~/.command-and-control/canvas-config.json directly,
+// so it must apply the same host rules as @canvas-toolchain/shared-types'
+// normalizeCanvasHost. The table below is that implementation's own test table;
+// keeping it here is what stops the two from drifting apart.
+describe('loadCanvasCreds host normalization', () => {
+  const TABLE: Array<[string, string]> = [
+    ['https://example.instructure.com/', 'example.instructure.com'],
+    ['https://example.instructure.com/api/v1', 'example.instructure.com'],
+    ['  EXAMPLE.Instructure.COM.  ', 'example.instructure.com'],
+    ['exampleucanvas', 'exampleucanvas.instructure.com'],
+    ['canvas.exampleu.edu', 'canvas.exampleu.edu'],
+  ];
+
+  let homes: string[] = [];
+  const savedCcHome = process.env.CC_HOME;
+
+  afterEach(() => {
+    for (const dir of homes) rmSync(dir, { recursive: true, force: true });
+    homes = [];
+    if (savedCcHome === undefined) delete process.env.CC_HOME;
+    else process.env.CC_HOME = savedCcHome;
+  });
+
+  function seed(host: string, token: string): void {
+    const home = mkdtempSync(join(tmpdir(), 'gb-canvas-'));
+    homes.push(home);
+    process.env.CC_HOME = home;
+    writeFileSync(join(home, 'canvas-config.json'), JSON.stringify({ host, token }), 'utf-8');
+  }
+
+  it('canonicalizes the host it reads', () => {
+    for (const [saved, expected] of TABLE) {
+      seed(saved, 'tok');
+      expect(loadCanvasCreds()).toEqual({ host: expected, token: 'tok' });
+    }
+  });
+
+  it('throws rather than building a request against an unusable host', () => {
+    seed('   ', 'tok');
+    expect(() => loadCanvasCreds()).toThrow(/CANVAS_NOT_CONFIGURED/);
   });
 });
