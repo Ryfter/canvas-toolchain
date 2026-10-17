@@ -70,7 +70,7 @@ describe('searchRegistry', () => {
   });
 
   it('searches the configured premium registry with bearer auth', async () => {
-    setupCc({ registryToken: 'secret-token', premiumRegistryBaseUrl: 'https://registry.example.test/api' });
+    await setupCc({ registryToken: 'secret-token', premiumRegistryBaseUrl: 'https://registry.example.test/api' });
     const fetchMock = vi.fn(async () =>
       responseJson({
         results: [

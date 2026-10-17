@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { assertEndpointAllowed, parseEndpointUrl } from '@canvas-toolchain/shared-llm';
 import { loadConfig } from '../kb/config.js';
 import { readSetupState } from '../setup/read_state.js';
 import type { ActiveProvider } from '../setup/types.js';
@@ -58,11 +59,30 @@ export interface GetCcStatusResult {
   lastRun: CcConfig['lastRun'];
 }
 
+/** Canonical form of a saved base URL. A URL that fails to parse (e.g. one
+ *  carrying user:pass@) is never echoed — status output flows into LLM context. */
+function describeBaseUrl(raw: string): string {
+  try {
+    return parseEndpointUrl(raw).url;
+  } catch {
+    return '(invalid URL)';
+  }
+}
+
 /** Called only when `ollama-config.json` says Ollama is configured. */
 async function pingOllama(baseUrl: string): Promise<boolean> {
+  // SSRF guard: a saved config may hold a now-blocked URL — report unreachable
+  // rather than crashing the status probe or fetching the blocked target.
+  let endpoint: Awaited<ReturnType<typeof assertEndpointAllowed>>;
   try {
-    const res = await fetch(`${baseUrl}/api/tags`, {
+    endpoint = await assertEndpointAllowed(baseUrl);
+  } catch {
+    return false;
+  }
+  try {
+    const res = await fetch(`${endpoint.url}/api/tags`, {
       signal: AbortSignal.timeout(OLLAMA_PROBE_TIMEOUT_MS),
+      redirect: 'manual',
     });
     return res.ok;
   } catch {
@@ -93,7 +113,7 @@ export async function getCcStatus(): Promise<GetCcStatusResult> {
 
   const ollamaStatus = ollama.configured && ollama.host
     ? {
-        baseUrl: ollama.host,
+        baseUrl: describeBaseUrl(ollama.host),
         model: ollama.model ?? '',
         reachable: await pingOllama(ollama.host),
       }

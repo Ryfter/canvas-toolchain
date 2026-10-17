@@ -104,6 +104,55 @@ describe('getCcStatus', () => {
     expect(status.providers.ollama).toBeUndefined();
   });
 
+  it('reports a saved but blocked ollama URL as unreachable without fetching', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    // ollama-config.json is the store this tool reads; a hand-edited or legacy
+    // entry can hold a URL the guard now refuses.
+    writeFileSync(
+      join(tmpHome, 'ollama-config.json'),
+      JSON.stringify({ baseUrl: 'http://169.254.169.254', model: 'llama3.2' }),
+    );
+
+    const status = await getCcStatus();
+
+    expect(status.providers.ollama?.reachable).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('canonicalizes the reported ollama baseUrl without echoing credentials', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    writeFileSync(
+      join(tmpHome, 'ollama-config.json'),
+      JSON.stringify({ baseUrl: 'http://user:hunter2@localhost:11434/?x=1#y', model: 'llama3.2' }),
+    );
+
+    const status = await getCcStatus();
+
+    expect(JSON.stringify(status)).not.toContain('hunter2');
+    expect(status.providers.ollama?.reachable).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('reports reachable=false when /api/tags responds with a 3xx redirect', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response('', { status: 302, headers: { location: 'http://169.254.169.254/' } }),
+    ));
+    writeFileSync(
+      join(tmpHome, 'ollama-config.json'),
+      JSON.stringify({ baseUrl: 'http://localhost:11434', model: 'llama3.2' }),
+    );
+
+    const status = await getCcStatus();
+
+    expect(status.providers.ollama?.reachable).toBe(false);
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1]).toMatchObject({ redirect: 'manual' });
+    vi.unstubAllGlobals();
+  });
+
   it('reports mode and routing from config', async () => {
     const status = await getCcStatus();
     expect(status.mode).toBe('easy');
