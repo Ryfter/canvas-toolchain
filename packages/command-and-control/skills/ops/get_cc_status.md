@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "status"
 exposure: "intent"
-related: [install_module, list_modules, set_active_llm_provider, set_courses_root, set_module_enabled, setup_anthropic, setup_canvas, setup_cc, setup_lecture_answers, setup_ollama, setup_spot_check, setup_transcript_source]
+related: [set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_lecture_answers, setup_ollama, setup_spot_check, setup_transcript_source]
 ---
 <!-- generated:end -->
 

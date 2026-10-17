@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_inspect"
 intent_action: "canvas_modules"
 exposure: "intent"
-related: [check_shell_readiness, export_course_folder, get_course_state, list_assignments, list_pages, list_resources]
+related: [export_course_folder, get_course_state, ingest_canvas_archive, list_assignments, list_pages, list_resources]
 ---
 <!-- generated:end -->
 

@@ -5,7 +5,7 @@ section: "snapshots"
 intent_tool: "ct_publish"
 intent_action: "rollback"
 exposure: "intent"
-related: [list_publish_snapshots, preview_course_publish, publish_course, snapshot_course]
+related: [list_publish_snapshots, preview_course_publish, publish_course]
 ---
 <!-- generated:end -->
 

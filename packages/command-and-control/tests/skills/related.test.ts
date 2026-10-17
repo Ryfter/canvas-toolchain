@@ -1,9 +1,9 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { MAX_RELATED, mergeRelated } from '../../../../scripts/skills/lib/graph.mjs';
-import { curatedRelatedFrom, loadCuratedRelated } from '../../../../scripts/skills/lib/related.mjs';
+import { curatedRelatedFrom, curatedRelatedPath, loadCuratedRelated } from '../../../../scripts/skills/lib/related.mjs';
 
 const SKILLS = fileURLToPath(new URL('../../skills', import.meta.url));
 
@@ -63,6 +63,12 @@ describe('mergeRelated', () => {
 
   it('sorts the seed deterministically when there is no curated data', () => {
     expect(mergeRelated(new Map([['a', ['c', 'b']]])).get('a')).toEqual(['b', 'c']);
+  });
+});
+
+describe('curatedRelatedPath', () => {
+  it('resolves the data file under the supplied repo root, so a --repo-root override is honoured', () => {
+    expect(curatedRelatedPath('/elsewhere/repo')).toBe(join('/elsewhere/repo', 'scripts/skills/data/related.json'));
   });
 });
 

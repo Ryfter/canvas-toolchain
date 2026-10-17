@@ -5,7 +5,7 @@ section: "modules"
 intent_tool: ""
 intent_action: ""
 exposure: "advanced"
-related: [browse_module_catalog, discover_tools, get_cc_status, list_modules, set_module_enabled, uninstall_module]
+related: [browse_module_catalog, discover_tools, list_modules, set_module_enabled, uninstall_module]
 ---
 <!-- generated:end -->
 

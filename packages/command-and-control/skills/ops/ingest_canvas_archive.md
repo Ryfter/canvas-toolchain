@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_import"
 intent_action: "canvas_archive_ingest"
 exposure: "intent"
-related: [bulk_fetch_panopto_transcripts, diff_semesters, download_canvas_archive, download_transcripts, import_course, import_previous_shell, ingest_transcripts, setup_course]
+related: [bulk_fetch_panopto_transcripts, diff_semesters, download_canvas_archive, download_transcripts, import_course, import_previous_shell, ingest_transcripts, list_assignments, list_canvas_modules, list_pages, list_resources, setup_course]
 ---
 <!-- generated:end -->
 

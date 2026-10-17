@@ -5,7 +5,7 @@ section: "transcripts"
 intent_tool: ""
 intent_action: ""
 exposure: "advanced"
-related: [build_quote_bank, bulk_fetch_panopto_transcripts, compare_transcripts, download_transcripts, extract_lecture_topics, find_off_syllabus_topics, ingest_transcripts, map_transcripts_to_weeks, setup_transcript_source]
+related: [bulk_fetch_panopto_transcripts, compare_transcripts, download_transcripts, index_course_for_answers, ingest_transcripts, map_transcripts_to_weeks, setup_transcript_source]
 ---
 <!-- generated:end -->
 

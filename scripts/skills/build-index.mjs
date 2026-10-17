@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { isMain, parseArgs, runMain, WRITER_FLAGS } from './lib/cli.mjs';
 import { summarize, writeGeneratedFile } from './lib/emit.mjs';
 import { mergeRelated, seedRelated } from './lib/graph.mjs';
-import { loadCuratedRelated } from './lib/related.mjs';
+import { curatedRelatedPath, loadCuratedRelated } from './lib/related.mjs';
 import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource } from './lib/registry.mjs';
 import { indexStubBody, opStubBody, renderIndexFile, renderOpFile } from './lib/render.mjs';
 
@@ -18,7 +18,7 @@ export async function buildIndex({
   root = SKILLS_ROOT, repoRoot = REPO_ROOT, includeModules = false, check = false,
 } = {}) {
   const source = await loadRegistrySource({ repoRoot, includeModules });
-  const curated = loadCuratedRelated();
+  const curated = loadCuratedRelated(curatedRelatedPath(repoRoot));
   const related = mergeRelated(seedRelated(source.operations), curated.byFrom);
 
   const results = [

@@ -11,7 +11,11 @@ import { REPO_ROOT } from './registry.mjs';
  * are reported by the `curated-link` lint rule, so a bad edit fails CI with a
  * readable message instead of a stack trace from the loader.
  */
-export const CURATED_RELATED_PATH = join(REPO_ROOT, 'scripts/skills/data/related.json');
+export function curatedRelatedPath(repoRoot) {
+  return join(repoRoot, 'scripts/skills/data/related.json');
+}
+
+export const CURATED_RELATED_PATH = curatedRelatedPath(REPO_ROOT);
 
 /** The repo-relative path the lint reports a curated-link violation against. */
 export const CURATED_RELATED_FILE = 'scripts/skills/data/related.json';

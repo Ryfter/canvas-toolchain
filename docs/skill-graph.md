@@ -260,8 +260,8 @@ The nearest near-duplicate pair is `list_assignments` ↔ `list_pages` at **0.75
 real, below the 0.8 threshold, and worth a human look rather than a rewrite.
 
 The `curated-link` rule (J8) reports 0 against the committed
-`scripts/skills/data/related.json` — 130 directed links, 86/86 operations with a
-non-empty `related:` list. `related.test.ts` holds the per-rule fixture (an
+`scripts/skills/data/related.json` — 140 directed links, 86/86 operations with a
+non-empty `related:` list. `lint.test.ts` holds the per-rule fixture (an
 unknown `to`, an unknown `from`, a self link, and a duplicate pair).
 
 ## 7. Generator flow
@@ -294,6 +294,14 @@ unknown `to`, an unknown `from`, a self link, and a duplicate pair).
 | `node scripts/skills/eval-baseline.mjs` | `docs/skill-graph-baseline.md` |
 | `node scripts/skills/eval-selection.mjs [--out <dir>]` | `old.md` + `pathc.md` prompts (default `/tmp/ct-selection`) |
 | `node scripts/skills/eval-selection.mjs --score <answers.json>` | nothing; prints `correct/18` and the misses |
+
+`--score` maps a public-surface answer address to the operation it names before
+comparing: `<intentTool>.<intentAction>` (e.g. `ct_review.quiz`) and
+`ct_advanced.<op id>` (e.g. `ct_advanced.prune_publish_snapshots`) both resolve
+through the registry's `intentTool`/`intentAction`/`id` fields, so an answer given
+in the old surface's vocabulary is scored against the same operation the new
+surface would pick. A miss reports the raw answer and its mapping, so an
+unmappable address is visible rather than silently wrong.
 
 Flags on both writers: `--root <dir>` (skills root, default
 `packages/command-and-control/skills`), `--check` (report what would change,

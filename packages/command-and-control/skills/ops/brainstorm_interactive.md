@@ -5,7 +5,7 @@ section: "research"
 intent_tool: ""
 intent_action: ""
 exposure: "advanced"
-related: [analyze_course, build_quote_bank, extract_lecture_topics, fetch_news_feed, find_off_syllabus_topics, preview_canvas_pattern, scan_recent_developments, score_topic_currency, suggest_topics]
+related: [analyze_course, build_quote_bank, extract_lecture_topics, fetch_news_feed, find_off_syllabus_topics, scan_recent_developments, score_topic_currency, suggest_topics]
 ---
 <!-- generated:end -->
 

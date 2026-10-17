@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { isMain, LINT_FLAGS, parseArgs, runMain } from './lib/cli.mjs';
 import { DEFAULT_LINT_OPTIONS, lintSkills, summarizeViolations } from './lib/lint-rules.mjs';
-import { loadCuratedRelated } from './lib/related.mjs';
+import { curatedRelatedPath, loadCuratedRelated } from './lib/related.mjs';
 import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource } from './lib/registry.mjs';
 import { readSkillsTree } from './lib/tree.mjs';
 
@@ -14,7 +14,7 @@ export async function lintProject({
 } = {}) {
   const source = await loadRegistrySource({ repoRoot, includeModules });
   const tree = readSkillsTree(root);
-  const curated = loadCuratedRelated();
+  const curated = loadCuratedRelated(curatedRelatedPath(repoRoot));
 
   const options = {
     ...DEFAULT_LINT_OPTIONS,
