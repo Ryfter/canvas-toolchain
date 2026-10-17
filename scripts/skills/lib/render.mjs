@@ -47,7 +47,7 @@ export function mocStubBody() {
 }
 
 export function renderOpFile(op, related = []) {
-  return stringifyFrontMatter({
+  const frontMatter = {
     id: op.id,
     description: op.description,
     section: op.section,
@@ -55,7 +55,13 @@ export function renderOpFile(op, related = []) {
     intent_action: op.intentAction ?? '',
     exposure: op.exposure,
     related,
-  });
+  };
+  // Only a deprecated op carries the key: emitting it empty for every other
+  // operation would rewrite all of them for no information. The wording comes
+  // from the registry's deprecation record, so the file cannot drift from the
+  // notice the tool returns.
+  if (op.deprecated) frontMatter.deprecated = op.deprecated.notice;
+  return stringifyFrontMatter(frontMatter);
 }
 
 /**
