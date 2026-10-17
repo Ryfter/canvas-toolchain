@@ -292,16 +292,50 @@ unknown `to`, an unknown `from`, a self link, and a duplicate pair).
 | `node scripts/skills/moc.mjs` | `skills/moc/<name>.md` |
 | `node scripts/skills/lint.mjs [--json]` | nothing; exit 1 on violation |
 | `node scripts/skills/eval-baseline.mjs` | `docs/skill-graph-baseline.md` |
-| `node scripts/skills/eval-selection.mjs [--out <dir>]` | `old.md` + `pathc.md` prompts (default `/tmp/ct-selection`) |
-| `node scripts/skills/eval-selection.mjs --score <answers.json>` | nothing; prints `correct/18` and the misses |
+| `node scripts/skills/eval-selection.mjs [--set easy\|hard\|all] [--out <dir>]` | `old-<set>.md` + `pathc-<set>.md` prompts (default `/tmp/ct-selection`, default set `easy`) |
+| `node scripts/skills/eval-selection.mjs [--set easy\|hard\|all] --score <answers.json>` | nothing; prints overall `correct/total`, per-category accuracy, and the misses |
+
+`--set` selects the fixture list: `easy` is the original 18 asks
+(`selection.fixtures.json`), `hard` the 15 adversarial asks
+(`selection.hard.fixtures.json`), and `all` their union as **one ordered list**,
+so the ask numbers the prompts print and the ask numbers a score reads stay the
+same list. The prompt files are named for the set, so running `--set easy` and
+`--set hard` into one directory yields the four artifacts `old-easy.md`,
+`pathc-easy.md`, `old-hard.md`, and `pathc-hard.md`.
 
 `--score` maps a public-surface answer address to the operation it names before
-comparing: `<intentTool>.<intentAction>` (e.g. `ct_review.quiz`) and
-`ct_advanced.<op id>` (e.g. `ct_advanced.prune_publish_snapshots`) both resolve
-through the registry's `intentTool`/`intentAction`/`id` fields, so an answer given
-in the old surface's vocabulary is scored against the same operation the new
-surface would pick. A miss reports the raw answer and its mapping, so an
-unmappable address is visible rather than silently wrong.
+comparing. Three address shapes resolve through the registry's
+`intentTool`/`intentAction`/`id`/`section` fields:
+
+* `<intentTool>.<intentAction>` (e.g. `ct_review.quiz`);
+* `ct_advanced.<op id>` (e.g. `ct_advanced.prune_publish_snapshots`) and the
+  section-qualified `ct_advanced.<section>.<op id>` (e.g.
+  `ct_advanced.snapshots.snapshot_course`) — both only for an op `ct_advanced`
+  can actually run (`exposure: 'advanced'`);
+* any of the above with **spaces where the dots belong** (`ct_review quiz`,
+  `ct_advanced snapshots snapshot_course`), because a model often writes the
+  address that way.
+
+So an answer given in the old surface's vocabulary — including the version with
+no operation named, `ct_advanced.run`, which matches nothing and stays wrong — is
+scored against the same operation the new surface would pick. A miss reports the
+raw answer and its mapping, so an unmappable address is visible rather than
+silently wrong.
+
+Two rules beyond `expectedOp` + `alsoAcceptable` apply to the hard fixtures, and
+the prompt asks for both explicitly:
+
+* **`NONE` is a valid answer.** A hard ask whose capability the toolchain does
+  not have (grading, Canvas Inbox/email, enrollment mutation) expects the literal
+  `NONE` — the agent would ask a clarifying question instead of guessing.
+  `NONE` is compared case-insensitively, a real op for a `NONE` ask is a miss,
+  and `NONE` for a real op is a miss.
+* **A chain ask is answered by its first op.** For a fixture with `chain`, the
+  expected answer is `chain[0]` — the operation the workflow starts with — and
+  the later steps are listed for the report but not accepted in its place.
+
+Accuracy is reported **overall and per `category`** (`ambiguous-multi`, `chain`,
+`decoy`, `vague`, `none`); a fixture without a category is `uncategorized`.
 
 Flags on both writers: `--root <dir>` (skills root, default
 `packages/command-and-control/skills`), `--check` (report what would change,
