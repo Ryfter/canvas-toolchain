@@ -197,6 +197,17 @@ describe('applySetup failure handling', () => {
     expect(existsSync(join(ccHome, 'canvas-config.json'))).toBe(false);
   });
 
+  it('reports a null patch instead of throwing a TypeError', async () => {
+    const result = await applySetup(null as never);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('INVALID_INPUT');
+    expect(result.sections).toEqual([]);
+    expect(result.message).toBeTruthy();
+    expect(result.fix?.length).toBeGreaterThan(0);
+    expect(snapshot(ccHome)).toEqual({});
+  });
+
   it('refuses an unknown section before writing anything', async () => {
     const result = await applySetup({ courcesRoot: coursesRoot } as never);
 

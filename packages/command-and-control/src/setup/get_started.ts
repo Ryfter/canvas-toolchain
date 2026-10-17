@@ -172,9 +172,12 @@ function configureProviderCall(provider: ActiveProvider): SetupCall {
   }
 }
 
+/** Named once so `activateCall` and `foldLlmSteps` cannot drift apart. */
+const ACTIVATE_PROVIDER_ACTION = 'llm_provider';
+
 function activateCall(provider: ActiveProvider): SetupCall {
   // The same action the doctor's own fix names, so guidance and diagnosis agree.
-  return { tool: 'ct_setup', action: 'llm_provider', params: { provider }, needs: [] };
+  return { tool: 'ct_setup', action: ACTIVATE_PROVIDER_ACTION, params: { provider }, needs: [] };
 }
 
 /** The generation providers, in the order guidance offers them. */
@@ -373,8 +376,9 @@ function foldLlmSteps(drafts: Map<string, StepDraft>, state: SetupState): void {
   const credentials = drafts.get('llm_credentials');
   const provider = drafts.get('llm_provider');
   if (!credentials || !provider) return;
-  // Only the "finish configuring the named provider" step supersedes it.
-  if (provider.primary.action === 'set_active_llm_provider') return;
+  // Only the "finish configuring the named provider" step supersedes it: an
+  // activation step is a different job and must not swallow the credentials fix.
+  if (provider.primary.action === ACTIVATE_PROVIDER_ACTION) return;
   if (sameCall(credentials.primary, provider.primary)) {
     drafts.delete('llm_credentials');
     return;

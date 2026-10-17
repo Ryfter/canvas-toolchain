@@ -88,8 +88,8 @@ export interface ApplySetupResult {
   ok: boolean;
   dryRun: boolean;
   sections: ApplySectionResult[];
-  /** Set when the patch named a key that is not a section. Nothing was written. */
-  error?: 'UNKNOWN_SECTION';
+  /** Set when the patch itself is malformed, or named a key that is not a section. */
+  error?: 'UNKNOWN_SECTION' | 'INVALID_INPUT';
   /** Set alongside `error`, to show the patch the caller probably meant. */
   message?: string;
   fix?: string[];
@@ -408,10 +408,11 @@ function thrownFailure(err: unknown): SectionFailure {
 }
 
 async function runSection(spec: SectionSpec, value: unknown): Promise<ApplySectionResult> {
-  const failure = validateSectionArgs(spec, value);
-  if (failure) return { section: spec.section, op: spec.op, ok: false, ...failure };
-
+  // The local check is inside the guard on purpose: `spec.validate` stats the
+  // filesystem, so a throw (EACCES, say) is one section's failure, not the patch's.
   try {
+    const failure = validateSectionArgs(spec, value);
+    if (failure) return { section: spec.section, op: spec.op, ok: false, ...failure };
     return { section: spec.section, op: spec.op, ...normalizeOutcome(await spec.run(value)) };
   } catch (err) {
     // One section's failure is not the patch's: report it and let the rest run.
@@ -420,14 +421,18 @@ async function runSection(spec: SectionSpec, value: unknown): Promise<ApplySecti
 }
 
 function validateSection(spec: SectionSpec, value: unknown): ApplySectionResult {
-  const failure = validateSectionArgs(spec, value);
-  if (failure) return { section: spec.section, op: spec.op, ok: false, ...failure };
-  return {
-    section: spec.section,
-    op: spec.op,
-    ok: true,
-    message: `Would ${SECTION_EFFECT[spec.section]}.`,
-  };
+  try {
+    const failure = validateSectionArgs(spec, value);
+    if (failure) return { section: spec.section, op: spec.op, ok: false, ...failure };
+    return {
+      section: spec.section,
+      op: spec.op,
+      ok: true,
+      message: `Would ${SECTION_EFFECT[spec.section]}.`,
+    };
+  } catch (err) {
+    return { section: spec.section, op: spec.op, ok: false, ...thrownFailure(err) };
+  }
 }
 
 /**
@@ -440,6 +445,21 @@ function validateSection(spec: SectionSpec, value: unknown): ApplySectionResult 
  * doctor is not consulted, because it would only describe the unchanged disk.
  */
 export async function applySetup(input: ApplySetupInput = {}): Promise<ApplySetupResult> {
+  // A missing patch is a status read; a null, array, or primitive one is a caller
+  // bug. Report it instead of throwing a TypeError out of `Object.keys` below.
+  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
+    return {
+      ok: false,
+      dryRun: false,
+      sections: [],
+      error: 'INVALID_INPUT',
+      message: 'The apply patch must be an object of setup sections.',
+      fix: [
+        `Pass an object — valid sections: ${SECTION_SPECS.map((spec) => spec.section).join(', ')}, and dryRun.`,
+      ],
+    };
+  }
+
   const dryRun = input.dryRun === true;
   const patch = input as Record<string, unknown>;
   const known = new Set<string>([...SECTION_SPECS.map((spec) => spec.section), 'dryRun']);

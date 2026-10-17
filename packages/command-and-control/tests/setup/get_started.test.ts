@@ -230,6 +230,23 @@ describe('getStarted step selection for a configured local model', () => {
     expect(guide.steps.every((s) => s.params.provider !== 'anthropic')).toBe(true);
   });
 
+  it('keeps the credential step when an env-only key needs storing and a provider is awaiting activation', async () => {
+    // ANTHROPIC_API_KEY in the environment is not where the runtime reads a key
+    // from, and the configured Ollama still needs activating: two distinct jobs,
+    // so the activation step must not fold the credentials step away.
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-env-secret';
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
+
+    const guide = await getStarted();
+    const credentials = step(guide, 'llm_credentials');
+    const activate = step(guide, 'llm_provider');
+
+    expect(stepIds(guide)).toContain('llm_credentials');
+    expect(credentials).toMatchObject({ tool: 'ct_setup', action: 'anthropic' });
+    expect(activate).toMatchObject({ action: 'llm_provider', params: { provider: 'ollama' } });
+    expect(activate.alternatives).toEqual([]);
+  });
+
   it('offers the other configured provider as an alternative', async () => {
     seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
     seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
