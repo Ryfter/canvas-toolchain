@@ -60,6 +60,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `get_cc_status` | — | Health snapshot: installed packages, Anthropic/Ollama availability, routing config, last-run timestamps. |
 | `show_canvas_capabilities` | *category*, *supportStatus* | Return the Canvas design-pattern catalog as markdown. |
 | `preview_canvas_pattern` | **patternId** | Render one pattern to a standalone HTML preview (file:// URL). |
+| `get_started` | *journey* (local-authoring/canvas-connected/ai-assisted/full) | First-run orientation (`ct_setup` action `get_started`): which capabilities are ready and the exact call to finish each step. Read-only, no network. |
 
 ### 2.2 Command & Control — plug-in modules & institution discovery
 

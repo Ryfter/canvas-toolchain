@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "ollama"
 exposure: "intent"
-related: [get_cc_status, set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_lecture_answers, setup_transcript_source]
+related: [get_cc_status, get_started, set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_transcript_source]
 ---
 <!-- generated:end -->
 
