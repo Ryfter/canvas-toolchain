@@ -26,6 +26,10 @@ export interface InstitutionConfig {
   accessibilityPolicy?: import('@canvas-toolchain/shared-types').AccessibilityPolicy;
   /** WAVE subscription API key for wave_deep_check (optional; per-professor). */
   waveApiKey?: string;
+  /** Set by the Canvas store bridge when it creates this file on Design Studio's
+   *  behalf: the Canvas connection is real, but the institution name and brand
+   *  colors are still placeholders, so first-run brand setup keeps asking. */
+  brandSetupPending?: boolean;
 }
 
 export interface CanvasEnrollment {
