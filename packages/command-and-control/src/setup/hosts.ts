@@ -23,6 +23,13 @@ import type {
 const DEFAULT_MAX_CONFIG_BYTES = 1024 * 1024;
 
 /**
+ * Claude Code keeps its whole project history inside `~/.claude.json`, so that
+ * one file routinely passes the default cap. It gets its own ceiling — large
+ * enough for real users, still bounded so a pathological file is never read.
+ */
+const LARGE_MAX_CONFIG_BYTES = 32 * 1024 * 1024;
+
+/**
  * Substrings that identify the entry that runs canvas-toolchain. The installer
  * names the server exactly `canvas-toolchain`; every other wiring form carries
  * a marker too — a checkout's `command-and-control` package dir, or the
@@ -48,6 +55,13 @@ interface HostDescriptor {
   format: 'json' | 'toml';
   /** The host's own directory. Its presence is what "installed" means. */
   installDir(ctx: HostContext): string;
+  /**
+   * Overrides the `installDir` existence test for a host that shares its
+   * directory with another (Gemini CLI and Antigravity both live in `~/.gemini`).
+   */
+  isInstalled?(ctx: HostContext): boolean;
+  /** A per-host read cap, for a host whose config carries unrelated bulk. */
+  maxConfigBytes?: number;
   /** Config files to try, in order — VS Code has two shapes. */
   configFiles(ctx: HostContext): ConfigCandidate[];
 }
@@ -85,9 +99,24 @@ function zedDir(ctx: HostContext): string {
 }
 
 /**
+ * Gemini CLI and Antigravity share `~/.gemini`. Mirror the installer
+ * (`installer/tasks/mcphost.go` `GeminiConfigPath`): Gemini CLI is present when
+ * its own settings file exists, or when no Antigravity `config/` occupies the
+ * directory. Without this an Antigravity-only machine looks like an unwired
+ * Gemini CLI install.
+ */
+function geminiCliInstalled(ctx: HostContext): boolean {
+  const dir = join(ctx.home, '.gemini');
+  if (!existsSync(dir)) return false;
+  if (existsSync(join(dir, 'settings.json'))) return true;
+  return !existsSync(join(dir, 'config'));
+}
+
+/**
  * The hosts, with the paths the Go installer writes (`installer/tasks/mcphost.go`)
- * so detection and wiring cannot drift. Windsurf and Zed are read-only here:
- * the installer does not wire them, so their paths come from each host's docs.
+ * so detection and wiring cannot drift. Every host the installer wires
+ * (`SupportedHosts()`) is covered here. Windsurf and Zed are extra, read-only
+ * hosts the installer does not wire, so their paths come from each host's docs.
  */
 const HOSTS: HostDescriptor[] = [
   {
@@ -107,6 +136,7 @@ const HOSTS: HostDescriptor[] = [
     displayName: 'Claude Code',
     format: 'json',
     installDir: (ctx) => join(ctx.home, '.claude'),
+    maxConfigBytes: LARGE_MAX_CONFIG_BYTES,
     // Project-scoped `.mcp.json` is out of scope: it belongs to a repository,
     // not to the machine's setup.
     configFiles: (ctx) => [{ path: join(ctx.home, '.claude.json'), servers: ['mcpServers'] }],
@@ -162,8 +192,27 @@ const HOSTS: HostDescriptor[] = [
     displayName: 'Gemini CLI',
     format: 'json',
     installDir: (ctx) => join(ctx.home, '.gemini'),
+    isInstalled: geminiCliInstalled,
     configFiles: (ctx) => [
       { path: join(ctx.home, '.gemini', 'settings.json'), servers: ['mcpServers'] },
+    ],
+  },
+  {
+    id: 'kiro',
+    displayName: 'Kiro',
+    format: 'json',
+    installDir: (ctx) => join(ctx.home, '.kiro'),
+    configFiles: (ctx) => [
+      { path: join(ctx.home, '.kiro', 'settings', 'mcp.json'), servers: ['mcpServers'] },
+    ],
+  },
+  {
+    id: 'antigravity',
+    displayName: 'Antigravity',
+    format: 'json',
+    installDir: (ctx) => join(ctx.home, '.gemini', 'config'),
+    configFiles: (ctx) => [
+      { path: join(ctx.home, '.gemini', 'config', 'mcp_config.json'), servers: ['mcpServers'] },
     ],
   },
 ];
@@ -202,7 +251,7 @@ function parseJsonConfig(text: string): unknown | undefined {
     // Not plain JSON. Comments may be the only difference.
   }
   try {
-    return JSON.parse(stripJsonComments(text));
+    return JSON.parse(stripTrailingCommas(stripJsonComments(text)));
   } catch {
     return undefined;
   }
@@ -254,6 +303,39 @@ function stripJsonComments(text: string): string {
       inBlock = true;
       i++;
       continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
+/**
+ * JSONC also allows a comma after the last member of an object or array. Remove
+ * only those, and only outside a string, so a `,}` written inside a value is
+ * left exactly as it was.
+ */
+function stripTrailingCommas(text: string): string {
+  let out = '';
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      out += ch;
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      out += ch;
+      continue;
+    }
+    if (ch === ',') {
+      let next = i + 1;
+      while (next < text.length && /\s/.test(text[next])) next++;
+      if (next < text.length && (text[next] === '}' || text[next] === ']')) continue;
     }
     out += ch;
   }
@@ -461,6 +543,36 @@ interface TomlServer {
   args: string[];
 }
 
+type TomlMultiline = '"""' | "'''" | null;
+
+/**
+ * The multi-line-string state after a line. A line that opens `"""` or `'''`
+ * without closing it starts a string; the later line that closes it ends one.
+ * Lines in between are string content and must not be read as TOML.
+ */
+function multilineStateAfter(line: string, open: TomlMultiline): TomlMultiline {
+  if (open !== null) return line.includes(open) ? null : open;
+  for (const delimiter of ['"""', "'''"] as const) {
+    let at = line.indexOf(delimiter);
+    while (at !== -1) {
+      const closes = line.indexOf(delimiter, at + 3);
+      if (closes === -1) return delimiter;
+      at = line.indexOf(delimiter, closes + 3);
+    }
+  }
+  return null;
+}
+
+/**
+ * Whether an unparseable table header could name the table we read. A file is
+ * only "malformed" for our purposes when the broken header is ours; a broken or
+ * unrelated `[link](...)`-style line elsewhere must not hide a good entry.
+ */
+function couldBeTable(inner: string, table: string): boolean {
+  const head = inner.split('.')[0].trim();
+  return head === table || head === `"${table}"` || head === `'${table}'`;
+}
+
 /**
  * A minimal reader for the one TOML shape the hosts use — `[mcp_servers.<name>]`
  * with `command` and `args` — so the doctor needs no TOML dependency. Anything
@@ -469,10 +581,13 @@ interface TomlServer {
  */
 function tomlServers(text: string, table: string): Record<string, TomlServer> | null {
   if (text.trim().length === 0) return {};
-  const servers: Record<string, TomlServer> = {};
+  // A null prototype, so a table named `constructor` or `__proto__` is an
+  // ordinary own key rather than a hit on Object.prototype.
+  const servers = Object.create(null) as Record<string, TomlServer>;
   const lines = text.split(/\r?\n/);
   let current: string | null = null;
   let malformed = false;
+  let multiline: TomlMultiline = null;
 
   const ensure = (name: string): TomlServer => {
     servers[name] ??= { command: null, args: [] };
@@ -480,18 +595,29 @@ function tomlServers(text: string, table: string): Record<string, TomlServer> | 
   };
 
   for (let index = 0; index < lines.length; index++) {
-    const line = stripTomlComment(lines[index]).trim();
+    const raw = lines[index];
+    if (multiline !== null) {
+      multiline = multilineStateAfter(raw, multiline);
+      continue;
+    }
+    const line = stripTomlComment(raw).trim();
+    multiline = multilineStateAfter(line, null);
     if (line.length === 0) continue;
 
     if (line.startsWith('[')) {
       current = null;
-      if (!line.endsWith(']')) {
-        malformed = true;
+      const closed = line.endsWith(']');
+      const inner = closed ? line.slice(1, -1) : line.slice(1);
+      if (!closed) {
+        if (couldBeTable(inner, table)) malformed = true;
         continue;
       }
-      const parts = tomlDottedName(line.slice(1, -1));
-      if (!parts || parts.length === 0) malformed = true;
-      else if (parts.length === 2 && parts[0] === table) current = parts[1];
+      const parts = tomlDottedName(inner);
+      if (!parts || parts.length === 0) {
+        if (couldBeTable(inner, table)) malformed = true;
+        continue;
+      }
+      if (parts.length === 2 && parts[0] === table) current = parts[1];
       continue;
     }
 
@@ -502,8 +628,10 @@ function tomlServers(text: string, table: string): Record<string, TomlServer> | 
 
     if (key === 'command') {
       const read = readTomlString(value, 0);
+      // A single-quoted literal string carries no escapes, so only a
+      // double-quoted value is unescaped.
       if (!read) malformed = true;
-      else ensure(current).command = unescapeToml(read.raw);
+      else ensure(current).command = value.startsWith('"') ? unescapeToml(read.raw) : read.raw;
       continue;
     }
 
@@ -531,11 +659,15 @@ function tomlServers(text: string, table: string): Record<string, TomlServer> | 
 function detectHost(
   descriptor: HostDescriptor,
   ctx: HostContext,
-  maxBytes: number,
+  overrideMaxBytes: number | undefined,
 ): McpHostWiring {
+  const maxBytes = overrideMaxBytes ?? descriptor.maxConfigBytes ?? DEFAULT_MAX_CONFIG_BYTES;
+
   let installed = false;
   try {
-    installed = existsSync(descriptor.installDir(ctx));
+    installed = descriptor.isInstalled
+      ? descriptor.isInstalled(ctx)
+      : existsSync(descriptor.installDir(ctx));
   } catch {
     installed = false;
   }
@@ -591,8 +723,7 @@ export function detectHostWiring(options: HostWiringOptions = {}): HostWiringRep
     home: options.homedir ?? homedir(),
     env: options.env ?? process.env,
   };
-  const maxBytes = options.maxConfigBytes ?? DEFAULT_MAX_CONFIG_BYTES;
-  const hosts = HOSTS.map((descriptor) => detectHost(descriptor, ctx, maxBytes));
+  const hosts = HOSTS.map((descriptor) => detectHost(descriptor, ctx, options.maxConfigBytes));
 
   return {
     hosts,

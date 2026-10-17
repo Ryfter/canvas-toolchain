@@ -48,7 +48,9 @@ export type McpHostId =
   | 'windsurf'
   | 'zed'
   | 'codex'
-  | 'gemini';
+  | 'gemini'
+  | 'kiro'
+  | 'antigravity';
 
 /**
  * What one host's config says about canvas-toolchain. Booleans, plus the one
@@ -94,7 +96,10 @@ export interface HostWiringOptions {
   homedir?: string;
   /** Environment for `%APPDATA%` and `XDG_CONFIG_HOME`. Defaults to `process.env`. */
   env?: Record<string, string | undefined>;
-  /** Read cap. A larger config is reported as a parse error instead of read. */
+  /**
+   * Read cap, overriding each host's own. A larger config is reported as a
+   * parse error instead of read.
+   */
   maxConfigBytes?: number;
 }
 

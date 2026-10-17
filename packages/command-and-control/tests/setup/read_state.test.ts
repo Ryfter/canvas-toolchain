@@ -82,7 +82,7 @@ describe('readSetupState on an empty home', () => {
     });
     expect(state.modules.pendingRequests).toEqual([]);
     expect(state.secretBearingFiles).toEqual([]);
-    expect(state.hosts?.hosts).toHaveLength(8);
+    expect(state.hosts?.hosts).toHaveLength(10);
     expect(state.hosts?.anyWired).toBe(false);
     for (const health of Object.values(state.files)) {
       expect(health.present).toBe(false);

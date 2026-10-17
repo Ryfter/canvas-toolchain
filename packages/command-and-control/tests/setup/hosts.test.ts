@@ -174,6 +174,22 @@ const HOST_CASES: HostCase[] = [
     installDir: (d) => join(d.home, '.gemini'),
     body: (script) => JSON.stringify({ mcpServers: { 'canvas-toolchain': nodeEntry(script) } }, null, 2),
   },
+  {
+    id: 'kiro',
+    displayName: 'Kiro',
+    platforms: [MAC, WIN, LINUX],
+    file: (d) => join(d.home, '.kiro', 'settings', 'mcp.json'),
+    installDir: (d) => join(d.home, '.kiro'),
+    body: (script) => JSON.stringify({ mcpServers: { 'canvas-toolchain': nodeEntry(script) } }, null, 2),
+  },
+  {
+    id: 'antigravity',
+    displayName: 'Antigravity',
+    platforms: [MAC, WIN, LINUX],
+    file: (d) => join(d.home, '.gemini', 'config', 'mcp_config.json'),
+    installDir: (d) => join(d.home, '.gemini', 'config'),
+    body: (script) => JSON.stringify({ mcpServers: { 'canvas-toolchain': nodeEntry(script) } }, null, 2),
+  },
 ];
 
 // ---------------------------------------------------------------- helpers
@@ -229,11 +245,12 @@ function unlock(dir: string): void {
 // ---------------------------------------------------------------- tests
 
 describe('detectHostWiring paths', () => {
-  it('returns all eight hosts, in a stable order, on an empty home', () => {
+  it('returns all ten hosts, in a stable order, on an empty home', () => {
     const report = detect();
 
     expect(report.hosts.map((host) => host.id)).toEqual([
       'claude-desktop', 'claude-code', 'cursor', 'vscode', 'windsurf', 'zed', 'codex', 'gemini',
+      'kiro', 'antigravity',
     ]);
     expect(report.anyWired).toBe(false);
     expect(report.staleHosts).toEqual([]);
@@ -304,6 +321,20 @@ describe('detectHostWiring paths', () => {
     expect(hostOf(detect({ platform: LINUX }), 'zed').wired).toBe(true);
     // The same file under ~/.config is not where a Linux Zed with XDG set looks.
     expect(hostOf(detect({ platform: MAC }), 'zed').wired).toBe(false);
+  });
+
+  it('does not report Gemini CLI installed on an Antigravity-only ~/.gemini', () => {
+    mkdirSync(join(root, '.gemini', 'config'), { recursive: true });
+
+    expect(hostOf(detect(), 'gemini').installed).toBe(false);
+    expect(hostOf(detect(), 'antigravity').installed).toBe(true);
+  });
+
+  it('reports Gemini CLI installed from its settings file, alongside Antigravity', () => {
+    seedFile(join(root, '.gemini', 'settings.json'), JSON.stringify({ mcpServers: {} }));
+    mkdirSync(join(root, '.gemini', 'config'), { recursive: true });
+
+    expect(hostOf(detect(), 'gemini').installed).toBe(true);
   });
 });
 
@@ -438,6 +469,34 @@ describe('detectHostWiring unreadable configs', () => {
     });
 
     expect(hostOf(report, 'cursor').parseError).toBe(true);
+  });
+
+  it('reads a Claude Code config well past the default cap', () => {
+    const script = seedScript();
+    seedFile(
+      join(root, '.claude.json'),
+      JSON.stringify({
+        mcpServers: { 'canvas-toolchain': nodeEntry(script) },
+        history: 'x'.repeat(2_000_000),
+      }),
+    );
+    mkdirSync(join(root, '.claude'), { recursive: true });
+
+    const claudeCode = hostOf(detect(), 'claude-code');
+
+    expect(claudeCode.wired).toBe(true);
+    expect(claudeCode.parseError).toBe(false);
+    expect(claudeCode.scriptPath).toBe(collapsed(script));
+  });
+
+  it('still applies an injected cap to the larger Claude Code config', () => {
+    seedFile(join(root, '.claude.json'), JSON.stringify({ mcpServers: {} }));
+
+    const report = detectHostWiring({
+      platform: MAC, homedir: root, env: env(), maxConfigBytes: 4,
+    });
+
+    expect(hostOf(report, 'claude-code').parseError).toBe(true);
   });
 
   it('treats an empty config as nothing configured, not as corrupt', () => {
@@ -582,6 +641,98 @@ describe('detectHostWiring TOML (Codex CLI)', () => {
     expect(codex.parseError).toBe(true);
     expect(codex.wired).toBe(false);
   });
+
+  it('keeps a single-quoted literal command path unescaped', () => {
+    const literal = 'C:\\tools\\canvas-toolchain\\dist\\index.js';
+    seedFile(
+      join(root, '.codex', 'config.toml'),
+      ['[mcp_servers.canvas-toolchain]', `command = '${literal}'`, 'args = []', ''].join('\n'),
+    );
+
+    const codex = hostOf(detect(), 'codex');
+
+    expect(codex.wired).toBe(true);
+    expect(codex.parseError).toBe(false);
+    expect(codex.scriptPath).toBe(literal);
+  });
+
+  it('reads a table named after an Object.prototype key', () => {
+    seedFile(
+      join(root, '.codex', 'config.toml'),
+      ['[mcp_servers.constructor]', 'command = "npx"', 'args = ["-y", "canvas-toolchain"]', ''].join('\n'),
+    );
+
+    const codex = hostOf(detect(), 'codex');
+
+    expect(codex.parseError).toBe(false);
+    expect(codex.wired).toBe(true);
+  });
+
+  it('ignores table-like lines inside a multi-line string', () => {
+    const script = seedScript();
+    seedFile(
+      join(root, '.codex', 'config.toml'),
+      [
+        '[mcp_servers.canvas-toolchain]',
+        'command = "/usr/local/bin/node"',
+        `args = ["${tomlString(script)}"]`,
+        '',
+        'developer_instructions = """',
+        'Read the docs at https://example.com.',
+        '[not a table header',
+        '"""',
+        '',
+      ].join('\n'),
+    );
+
+    const codex = hostOf(detect(), 'codex');
+
+    expect(codex.wired).toBe(true);
+    expect(codex.parseError).toBe(false);
+    expect(codex.scriptPath).toBe(collapsed(script));
+  });
+
+  it('ignores table-like lines inside a multi-line literal string', () => {
+    const script = seedScript();
+    seedFile(
+      join(root, '.codex', 'config.toml'),
+      [
+        '[mcp_servers.canvas-toolchain]',
+        'command = "/usr/local/bin/node"',
+        `args = ["${tomlString(script)}"]`,
+        '',
+        "prompt = '''",
+        'See [the guide](https://example.com).',
+        '[still not a header',
+        "'''",
+        '',
+      ].join('\n'),
+    );
+
+    expect(hostOf(detect(), 'codex').wired).toBe(true);
+    expect(hostOf(detect(), 'codex').parseError).toBe(false);
+  });
+
+  it('does not let a broken unrelated section hide our entry', () => {
+    const script = seedScript();
+    seedFile(
+      join(root, '.codex', 'config.toml'),
+      [
+        '[mcp_servers.canvas-toolchain]',
+        'command = "/usr/local/bin/node"',
+        `args = ["${tomlString(script)}"]`,
+        '',
+        '[unrelated',
+        'key = "value"',
+        '',
+      ].join('\n'),
+    );
+
+    const codex = hostOf(detect(), 'codex');
+
+    expect(codex.wired).toBe(true);
+    expect(codex.parseError).toBe(false);
+  });
 });
 
 describe('detectHostWiring JSONC (Zed, VS Code)', () => {
@@ -621,6 +772,44 @@ describe('detectHostWiring JSONC (Zed, VS Code)', () => {
         '    "remote": { "url": "https://mcp.example.com/mcp" }, // remote, not ours',
         '    "canvas-toolchain": { "command": "npx", "args": ["-y", "canvas-toolchain"] }',
         '  }',
+        '}',
+        '',
+      ].join('\n'),
+    );
+
+    const zed = hostOf(detect(), 'zed');
+
+    expect(zed.parseError).toBe(false);
+    expect(zed.wired).toBe(true);
+  });
+
+  it('reads a settings file with trailing commas, which JSONC allows', () => {
+    seedFile(
+      join(root, '.config', 'zed', 'settings.json'),
+      [
+        '{',
+        '  "context_servers": {',
+        '    "canvas-toolchain": { "command": "npx", "args": ["-y", "canvas-toolchain"], },',
+        '  },',
+        '}',
+        '',
+      ].join('\n'),
+    );
+
+    const zed = hostOf(detect(), 'zed');
+
+    expect(zed.parseError).toBe(false);
+    expect(zed.wired).toBe(true);
+  });
+
+  it('never strips a brace-looking comma that sits inside a string', () => {
+    seedFile(
+      join(root, '.config', 'zed', 'settings.json'),
+      [
+        '// Zed settings',
+        '{',
+        '  "note": "a,}b",',
+        '  "context_servers": { "canvas-toolchain": { "command": "npx", "args": ["-y", "canvas-toolchain"] } }',
         '}',
         '',
       ].join('\n'),
