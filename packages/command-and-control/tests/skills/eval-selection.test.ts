@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildAddressIndex, scoreAnswers } from '../../../../scripts/skills/eval-selection.mjs';
+import { buildAddressIndex, normalizeAddress, scoreAnswers } from '../../../../scripts/skills/eval-selection.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
 const HARNESS = join(REPO_ROOT, 'scripts/skills/eval-selection.mjs');
@@ -108,6 +108,43 @@ describe('buildAddressIndex', () => {
     expect(index.has('ct_advanced.map_transcripts_to_weeks')).toBe(false);
     expect(index.has('ct_setup.undefined')).toBe(false);
   });
+
+  it('maps a section-qualified ct_advanced address onto its operation id', () => {
+    const index = buildAddressIndex([
+      { id: 'snapshot_course', exposure: 'advanced', section: 'snapshots' },
+      { id: 'reembed_course_index', exposure: 'advanced', section: 'admin' },
+    ]);
+    expect(index.get('ct_advanced.snapshots.snapshot_course')).toBe('snapshot_course');
+    expect(index.get('ct_advanced.admin.reembed_course_index')).toBe('reembed_course_index');
+  });
+
+  it('gives no section address to an op ct_advanced cannot run, and never maps the bare run action', () => {
+    const index = buildAddressIndex([
+      { id: 'validate_quiz', exposure: 'intent', intentTool: 'ct_review', intentAction: 'quiz', section: 'admin' },
+      { id: 'snapshot_course', exposure: 'advanced', section: 'snapshots' },
+    ]);
+    expect(index.has('ct_advanced.admin.validate_quiz')).toBe(false);
+    expect(index.has('ct_advanced.run')).toBe(false);
+    expect(index.has('ct_advanced.snapshots.run')).toBe(false);
+  });
+});
+
+describe('normalizeAddress', () => {
+  it('turns the spaces a model writes between address parts into dots', () => {
+    expect(normalizeAddress('ct_review quiz')).toBe('ct_review.quiz');
+    expect(normalizeAddress('ct_import transcripts_panopto')).toBe('ct_import.transcripts_panopto');
+    expect(normalizeAddress('  ct_advanced  admin  reembed_course_index  ')).toBe('ct_advanced.admin.reembed_course_index');
+  });
+
+  it('leaves a dotted address, a bare op id, and NONE unchanged', () => {
+    expect(normalizeAddress('ct_advanced.snapshots.snapshot_course')).toBe('ct_advanced.snapshots.snapshot_course');
+    expect(normalizeAddress('prune_publish_snapshots')).toBe('prune_publish_snapshots');
+    expect(normalizeAddress('NONE')).toBe('NONE');
+  });
+
+  it('normalizes the bare ct_advanced run action to an address no operation answers to', () => {
+    expect(normalizeAddress('ct_advanced run')).toBe('ct_advanced.run');
+  });
 });
 
 describe('scoreAnswers with an address index', () => {
@@ -118,7 +155,7 @@ describe('scoreAnswers with an address index', () => {
   ];
   const addressIndex = buildAddressIndex([
     { id: 'validate_quiz', exposure: 'intent', intentTool: 'ct_review', intentAction: 'quiz' },
-    { id: 'prune_publish_snapshots', exposure: 'advanced' },
+    { id: 'prune_publish_snapshots', exposure: 'advanced', section: 'snapshots' },
     { id: 'ask_course', exposure: 'intent', intentTool: 'ct_ask', intentAction: 'ask' },
   ]);
 
@@ -154,6 +191,47 @@ describe('scoreAnswers with an address index', () => {
     const result = scoreAnswers(fixtures, { answers: [{ ask: 1, op: 'ct_review.quiz' }] });
     expect(result.correct).toBe(0);
     expect(result.misses[0]).toMatchObject({ got: 'ct_review.quiz', mapped: null });
+  });
+
+  it('scores a section-qualified ct_advanced address as the operation it names', () => {
+    const result = scoreAnswers(fixtures, {
+      answers: [
+        { ask: 1, op: 'ct_review.quiz' },
+        { ask: 2, op: 'ct_advanced.snapshots.prune_publish_snapshots' },
+        { ask: 3, op: 'ct_ask.ask' },
+      ],
+    }, { addressIndex });
+
+    expect(result.correct).toBe(3);
+    expect(result.misses).toEqual([]);
+  });
+
+  it('scores a space-separated address as the dotted address it names', () => {
+    const result = scoreAnswers(fixtures, {
+      answers: [
+        { ask: 1, op: 'ct_review quiz' },
+        { ask: 2, op: 'ct_advanced snapshots prune_publish_snapshots' },
+        { ask: 3, op: 'ct_ask ask' },
+      ],
+    }, { addressIndex });
+
+    expect(result.correct).toBe(3);
+    expect(result.misses).toEqual([]);
+  });
+
+  it('keeps a bare ct_advanced run action wrong, reporting the raw answer and no mapping', () => {
+    const result = scoreAnswers(fixtures, {
+      answers: [
+        { ask: 1, op: 'ct_review.quiz' },
+        { ask: 2, op: 'ct_advanced.run' },
+        { ask: 3, op: 'ct_ask.ask' },
+      ],
+    }, { addressIndex });
+
+    expect(result.correct).toBe(2);
+    expect(result.misses).toEqual([
+      expect.objectContaining({ ask: 2, got: 'ct_advanced.run', mapped: null, expected: 'prune_publish_snapshots' }),
+    ]);
   });
 });
 
@@ -333,6 +411,41 @@ describe.skipIf(!HAS_DIST)('eval-selection CLI scoring', () => {
     const { stdout } = run('--score', answers);
     expect(stdout).toContain('17/18 correct');
     expect(stdout).toContain('got ct_publish.snapshots (mapped: list_publish_snapshots)');
+  }, SPAWN_TIMEOUT_MS);
+
+  it('scores a section-qualified ct_advanced address as the op it names', () => {
+    const answers = join(tempRoot(), 'answers.json');
+    // Ask 6 expects prune_publish_snapshots; the ct_advanced catalog lists it
+    // under section "snapshots", so answer it the way that catalog addresses it.
+    writeFileSync(answers, JSON.stringify({
+      answers: fixtures.map((fixture, i) => ({ ask: i + 1, op: i === 5 ? 'ct_advanced.snapshots.prune_publish_snapshots' : fixture.expectedOp })),
+    }));
+
+    const { stdout, status } = run('--score', answers);
+    expect(status).toBe(0);
+    expect(stdout).toContain('18/18 correct');
+  }, SPAWN_TIMEOUT_MS);
+
+  it('scores a space-separated address, mapping it before the comparison', () => {
+    const answers = join(tempRoot(), 'answers.json');
+    writeFileSync(answers, JSON.stringify({
+      answers: fixtures.map((fixture, i) => ({ ask: i + 1, op: i === 1 ? 'ct_review quiz' : fixture.expectedOp })),
+    }));
+
+    const { stdout, status } = run('--score', answers);
+    expect(status).toBe(0);
+    expect(stdout).toContain('18/18 correct');
+  }, SPAWN_TIMEOUT_MS);
+
+  it('reports a bare ct_advanced run action as an unmapped miss', () => {
+    const answers = join(tempRoot(), 'answers.json');
+    writeFileSync(answers, JSON.stringify({
+      answers: fixtures.map((fixture, i) => ({ ask: i + 1, op: i === 5 ? 'ct_advanced run' : fixture.expectedOp })),
+    }));
+
+    const { stdout } = run('--score', answers);
+    expect(stdout).toContain('17/18 correct');
+    expect(stdout).toContain('got ct_advanced run, expected prune_publish_snapshots');
   }, SPAWN_TIMEOUT_MS);
 });
 

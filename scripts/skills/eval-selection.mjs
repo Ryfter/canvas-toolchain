@@ -73,11 +73,14 @@ export function renderAsksBlock(fixtures) {
 }
 
 /**
- * The addresses a model can name an operation by without knowing its id, both
+ * The addresses a model can name an operation by without knowing its id, all
  * taken from what the old surface advertises: `<intentTool>.<intentAction>` for
- * an intent-tool action, and `ct_advanced.<op id>` for an operation ct_advanced
- * can actually run (`exposure: 'advanced'` — `runAdvanced` refuses anything
- * else, so an intent or internal op never gets that address).
+ * an intent-tool action, and `ct_advanced.<op id>` plus the section-qualified
+ * `ct_advanced.<section>.<op id>` for an operation ct_advanced can actually run.
+ * Both ct_advanced forms are gated on `exposure: 'advanced'` — `runAdvanced`
+ * refuses anything else, so an intent or internal op never gets either address —
+ * and the section form repeats the section name the ct_advanced catalog groups
+ * the operation under.
  */
 export function buildAddressIndex(operations) {
   const index = new Map();
@@ -85,9 +88,23 @@ export function buildAddressIndex(operations) {
     if (op.exposure === 'intent' && op.intentTool && op.intentAction) {
       index.set(`${op.intentTool}.${op.intentAction}`, op.id);
     }
-    if (op.exposure === 'advanced') index.set(`ct_advanced.${op.id}`, op.id);
+    if (op.exposure === 'advanced') {
+      index.set(`ct_advanced.${op.id}`, op.id);
+      if (op.section) index.set(`ct_advanced.${op.section}.${op.id}`, op.id);
+    }
   }
   return index;
+}
+
+/**
+ * A model may separate the parts of an address with a space rather than a dot
+ * (`ct_review quiz`, `ct_advanced run`), so the lookup key is the trimmed answer
+ * with every whitespace run collapsed to a dot. An operation id never contains
+ * whitespace, so a bare id is unchanged; and `ct_advanced run` normalizes to
+ * `ct_advanced.run`, which no operation answers to and stays a miss.
+ */
+export function normalizeAddress(value) {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, '.') : value;
 }
 
 /**
@@ -112,9 +129,11 @@ function resolveAnswer(value) {
  * - A fixture whose expected answer is `NONE` is correct only when the model
  *   answers `NONE`; a real op for it is a miss, and vice versa.
  *
- * An answer may arrive as an op id or as one of the old surface's addresses, so
- * each answer is resolved through `addressIndex` before the comparison and a
- * miss records both the raw answer and what it mapped to. Accuracy is reported
+ * An answer may arrive as an op id or as one of the old surface's addresses —
+ * dotted, section-qualified (`ct_advanced.<section>.<op id>`), or with spaces
+ * where the dots belong — so each answer is normalized and resolved through
+ * `addressIndex` before the comparison, and a miss records both the raw answer
+ * and what it mapped to. Accuracy is reported
  * overall and per fixture category (`categories`, first-appearance order; a
  * fixture with no category is `uncategorized`). Pure: no network, no model call,
  * no filesystem.
@@ -132,7 +151,7 @@ export function scoreAnswers(fixtures, answers, { addressIndex } = {}) {
   fixtures.forEach((fixture, index) => {
     const ask = index + 1;
     const got = byAsk.get(ask);
-    const mapped = typeof got === 'string' ? addressIndex?.get(got) : undefined;
+    const mapped = typeof got === 'string' ? addressIndex?.get(normalizeAddress(got)) : undefined;
     const resolved = resolveAnswer(mapped ?? got);
     const expected = fixture.chain?.[0] ?? fixture.expectedOp;
     const category = fixture.category ?? 'uncategorized';
@@ -267,31 +286,11 @@ function printScore(result) {
   }
 }
 
-/**
- * `--set` is this harness's own flag, so it is peeled off here rather than added
- * to the shared cli SPEC: `lib/cli.mjs` is implemented by every skills command
- * and this is the only one that selects a fixture set. Everything else is parsed
- * by the shared parser, which still rejects a flag this command does not implement.
- */
-function peelSetFlag(argv) {
-  const rest = [];
-  let set = DEFAULT_SET;
-  for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] !== '--set') {
-      rest.push(argv[i]);
-      continue;
-    }
-    const value = argv[i + 1];
-    if (value === undefined) throw new Error('--set needs a value');
-    set = value;
-    i += 1;
-  }
-  return { set, rest };
-}
-
 async function main() {
-  const { set, rest } = peelSetFlag(process.argv.slice(2));
-  const args = parseArgs(rest, SELECTION_FLAGS);
+  const args = parseArgs(process.argv.slice(2), SELECTION_FLAGS);
+  // `--set` is in the shared SPEC but implemented only here; the default applies
+  // when it is absent, so an unflagged run stays the easy set.
+  const set = args.set ?? DEFAULT_SET;
 
   if (args.score) {
     const answers = JSON.parse(readFileSync(args.score, 'utf8'));

@@ -9,6 +9,7 @@ const SPEC = {
   '--repo-root': { key: 'repoRoot', type: 'string' },
   '--out': { key: 'out', type: 'string' },
   '--score': { key: 'score', type: 'string' },
+  '--set': { key: 'set', type: 'string' },
   '--max-description': { key: 'maxDescription', type: 'number' },
   '--similarity': { key: 'similarity', type: 'number' },
 };
@@ -20,7 +21,7 @@ export const WRITER_FLAGS = ['--root', '--repo-root', '--check', '--include-modu
 export const LINT_FLAGS = ['--root', '--repo-root', '--include-modules', '--json', '--max-description', '--similarity'];
 
 /** Flags the selection harness implements. */
-export const SELECTION_FLAGS = ['--out', '--score', '--repo-root', '--json'];
+export const SELECTION_FLAGS = ['--out', '--score', '--set', '--repo-root', '--json'];
 
 const DEFAULTS = { root: null, repoRoot: null, check: false, includeModules: false, json: false };
 
