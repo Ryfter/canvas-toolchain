@@ -11,12 +11,14 @@ describe('whole-surface invariants', () => {
     }
   });
 
-  it('exposes exactly the advanced operations through ct_advanced', async () => {
+  it('exposes exactly the advanced and deprecated operations through ct_advanced', async () => {
     const reg = buildRegistry();
     const res = await runAdvanced(reg, { action: 'run', operation: 'nope', params: {} });
     const valid: string[] = JSON.parse(res.content[0].text as string).validOperations;
-    const advanced = [...reg.values()].filter((o) => o.exposure === 'advanced').map((o) => o.id);
-    expect(valid.sort()).toEqual(advanced.sort());
+    const runnable = [...reg.values()]
+      .filter((o) => o.exposure === 'advanced' || o.deprecated !== undefined)
+      .map((o) => o.id);
+    expect(valid.sort()).toEqual(runnable.sort());
   });
 
   it('makes an internal operation indistinguishable from a nonexistent one', async () => {

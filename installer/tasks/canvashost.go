@@ -13,6 +13,14 @@ import "strings"
 //
 // Vanity Canvas domains (anything that already contains a dot, e.g.
 // "canvas.exampleu.edu") are left untouched. The function is idempotent.
+//
+// The Go installer no longer collects a Canvas host — setup moved to the first
+// chat (setup_canvas) — so no Go caller remains. It is kept deliberately: it is
+// the documented Go side of a cross-language contract (AGENTS.md "Canvas host
+// handling"; packages/shared-types/src/canvas-host.ts names it as its twin) and
+// its table is the reference packages/shared-types/tests/canvas-host.test.ts
+// pins the TypeScript implementation against. Deleting it would remove the Go
+// half of that contract and the table the parity test points at.
 func NormalizeCanvasHost(raw string) string {
 	host := strings.ToLower(strings.TrimSpace(raw))
 	if host == "" {

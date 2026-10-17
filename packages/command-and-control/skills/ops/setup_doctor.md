@@ -1,6 +1,6 @@
 ---
 id: "setup_doctor"
-description: "Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic checks."
+description: "Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic probes; detects MCP host wiring."
 section: "admin"
 intent_tool: "ct_setup"
 intent_action: "doctor"

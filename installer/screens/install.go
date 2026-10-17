@@ -174,22 +174,18 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			_, err := tasks.ExtractTarGz(ctx, payload.NodeTarGz, nodeDest)
 			return err
 		}},
-		{Name: "npm install", Run: func(ctx context.Context) error {
-			return tasks.RunNPM(ctx, np, st.InstallDir, []string{"install"}, logFn)
+		// The payload ships a prebuilt dist/ and a package.json with the repo's
+		// `prepare` script stripped (pack-payload.sh), so this fetches runtime
+		// dependencies only — no TypeScript build runs on the professor's
+		// machine. Dev dependencies are omitted: nothing at runtime needs them.
+		{Name: "Install runtime dependencies", Run: func(ctx context.Context) error {
+			return tasks.RunNPM(ctx, np, st.InstallDir, []string{"ci", "--omit=dev"}, logFn)
 		}},
-		{Name: "npm run build", Run: func(ctx context.Context) error {
-			return tasks.RunNPM(ctx, np, st.InstallDir, []string{"run", "build"}, logFn)
-		}},
-		{Name: "Write configs", Warn: true, Run: func(ctx context.Context) error {
-			if err := tasks.WriteAnthropicConfig(st.AnthropicAPIKey, ""); err != nil {
-				return err
-			}
-			if err := tasks.WriteCanvasConfig(st.CanvasHost, st.CanvasToken); err != nil {
-				return err
-			}
-			return tasks.WritePanoptoConfig(st.PanoptoDomain, st.PanoptoClientID, st.PanoptoSecret)
-		}},
-		{Name: "Write module manifest", Warn: true, Run: func(ctx context.Context) error {
+		// An update skips the workflows screen, so st.WorkflowPanopto is at its
+		// zero value here — writing it would disable the professor's video
+		// module and drop activeProvider on every upgrade. Only a fresh install
+		// (an explicit workflow choice) may change this entry.
+		{Name: "Write module manifest", Warn: true, Skip: func() bool { return st.Mode == ModeUpdate }, Run: func(ctx context.Context) error {
 			return tasks.WriteModulesManifest(tasks.CcHomePath(), st.WorkflowPanopto)
 		}},
 		{Name: "Record requested modules", Warn: true, Run: func(ctx context.Context) error {
@@ -214,23 +210,26 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			}
 			return tasks.CreateUpdaterShortcuts(updaterPath, st.InstallDir)
 		}},
-		{Name: "Version marker", Run: func(ctx context.Context) error {
-			return tasks.WriteVersionMarker(st.InstallDir, st.Version)
-		}},
-		{Name: "Validate credentials", Warn: true, Run: func(ctx context.Context) error {
-			if st.AnthropicAPIKey != "" {
-				err := tasks.ValidateAnthropic(ctx, st.AnthropicAPIKey, "")
-				st.ValidationAnthropic = StepResult{Attempted: true, OK: err == nil, Message: errToString(err)}
+		// The setup check is the installer's one source of truth about whether
+		// this machine is ready, and it runs after every step that writes
+		// anything, so it sees them all. Warn, never Error: a doctor that
+		// cannot run falls back to the summary, it does not fail the install.
+		{Name: "Setup check (doctor)", Warn: true, Run: func(ctx context.Context) error {
+			report, err := tasks.RunDoctor(ctx, st.InstallDir)
+			if err != nil {
+				st.Doctor, st.DoctorErr = nil, err
+				return err
 			}
-			if st.CanvasHost != "" && st.CanvasToken != "" {
-				err := tasks.ValidateCanvas(ctx, st.CanvasHost, st.CanvasToken)
-				st.ValidationCanvas = StepResult{Attempted: true, OK: err == nil, Message: errToString(err)}
-			}
-			if st.PanoptoDomain != "" && st.PanoptoClientID != "" && st.PanoptoSecret != "" {
-				err := tasks.ValidatePanopto(ctx, st.PanoptoDomain, st.PanoptoClientID, st.PanoptoSecret)
-				st.ValidationPanopto = StepResult{Attempted: true, OK: err == nil, Message: errToString(err)}
-			}
+			st.Doctor, st.DoctorErr = &report, nil
 			return nil
+		}},
+		{Name: "Version marker", Run: func(ctx context.Context) error {
+			decision := tasks.DecideVersionMarker(st.Doctor, st.DoctorErr)
+			st.MarkerWithheld, st.MarkerReason = !decision.Write, decision.Reason
+			if !decision.Write {
+				return nil
+			}
+			return tasks.WriteVersionMarker(st.InstallDir, st.Version)
 		}},
 	}
 }
@@ -239,24 +238,15 @@ func installRowLabels() []string {
 	return []string{
 		"Extract embedded source",
 		"Extract bundled Node runtime",
-		"Install npm dependencies",
-		"Build TypeScript packages",
-		"Write per-feature config files",
+		"Install runtime dependencies",
 		"Write module manifest",
 		"Record requested modules",
 		"Install optional Python 3",
 		"Connect MCP-capable apps",
 		"Install updater + shortcut",
+		"Setup check (doctor)",
 		"Write version marker",
-		"Validate credentials",
 	}
-}
-
-func errToString(e error) string {
-	if e == nil {
-		return ""
-	}
-	return e.Error()
 }
 
 var (

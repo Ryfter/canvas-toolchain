@@ -6,6 +6,7 @@ intent_tool: "ct_setup"
 intent_action: "anthropic"
 exposure: "intent"
 related: [get_cc_status, set_active_llm_provider, set_courses_root, setup_canvas, setup_cc, setup_doctor, setup_llm_provider, setup_lmstudio, setup_ollama]
+deprecated: "Deprecated — use ct_setup {action: \"anthropic\"}; removed in 2.5.0."
 ---
 <!-- generated:end -->
 
