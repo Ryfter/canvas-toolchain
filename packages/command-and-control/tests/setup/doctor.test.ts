@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { runDoctor } from '../../src/setup/doctor.js';
 import { buildRegistry } from '../../src/surface/registry.js';
 import { dispatchSurface } from '../../src/surface/dispatch.js';
@@ -16,15 +16,20 @@ const CHECK_IDS = [
   'transcripts.source',
   'backup.sidecar',
   'modules.pending',
+  'hosts.wiring',
 ];
 
 let ccHome: string;
 let cdsHome: string;
+let hostHome: string;
 const ORIGINAL = {
   ccHome: process.env.CC_HOME,
   cdsHome: process.env.CANVAS_DESIGN_HOME,
   backupCommand: process.env.CANVAS_BACKUP_COMMAND,
   anthropicKey: process.env.ANTHROPIC_API_KEY,
+  home: process.env.HOME,
+  userProfile: process.env.USERPROFILE,
+  appData: process.env.APPDATA,
 };
 
 /** Seed a config file, 0600 like every writer in the repo, under either home. */
@@ -32,6 +37,30 @@ function seed(name: string, value: unknown, home: string = ccHome): string {
   const path = join(home, name);
   writeFileSync(path, JSON.stringify(value, null, 2), { encoding: 'utf-8', mode: 0o600 });
   return path;
+}
+
+/**
+ * A wired MCP host, in the shape the installer writes: Cursor's config is
+ * home-relative on every platform, so this fixture needs no per-OS branching.
+ */
+function seedWiredHost(scriptExists = true): string {
+  const script = join(hostHome, 'packages', 'command-and-control', 'dist', 'index.js');
+  if (scriptExists) {
+    mkdirSync(dirname(script), { recursive: true });
+    writeFileSync(script, '// canvas-toolchain mcp entry\n', 'utf-8');
+  }
+  mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+  writeFileSync(
+    join(hostHome, '.cursor', 'mcp.json'),
+    JSON.stringify({
+      mcpServers: {
+        'canvas-toolchain': { command: '/usr/local/bin/node', args: [script] },
+        other: { command: 'npx', args: ['-y', 'other-server'], env: { OTHER_TOKEN: 'other-env-secret' } },
+      },
+    }, null, 2),
+    'utf-8',
+  );
+  return script;
 }
 
 function check(report: Awaited<ReturnType<typeof runDoctor>>, id: string) {
@@ -43,8 +72,14 @@ function check(report: Awaited<ReturnType<typeof runDoctor>>, id: string) {
 beforeEach(() => {
   ccHome = mkdtempSync(join(tmpdir(), 'cc-home-'));
   cdsHome = mkdtempSync(join(tmpdir(), 'cds-home-'));
+  hostHome = mkdtempSync(join(tmpdir(), 'host-home-'));
   process.env.CC_HOME = ccHome;
   process.env.CANVAS_DESIGN_HOME = cdsHome;
+  // Host detection reads the OS home, so point it at a temp dir: otherwise the
+  // doctor would report on whatever this machine really has configured.
+  process.env.HOME = hostHome;
+  process.env.USERPROFILE = hostHome;
+  process.env.APPDATA = join(hostHome, 'AppData', 'Roaming');
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.CANVAS_BACKUP_COMMAND;
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network call in test'))));
@@ -53,11 +88,15 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(ccHome, { recursive: true, force: true });
   rmSync(cdsHome, { recursive: true, force: true });
+  rmSync(hostHome, { recursive: true, force: true });
   for (const [key, value] of Object.entries({
     CC_HOME: ORIGINAL.ccHome,
     CANVAS_DESIGN_HOME: ORIGINAL.cdsHome,
     CANVAS_BACKUP_COMMAND: ORIGINAL.backupCommand,
     ANTHROPIC_API_KEY: ORIGINAL.anthropicKey,
+    HOME: ORIGINAL.home,
+    USERPROFILE: ORIGINAL.userProfile,
+    APPDATA: ORIGINAL.appData,
   })) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
@@ -67,7 +106,7 @@ afterEach(() => {
 });
 
 describe('runDoctor on an empty home', () => {
-  it('returns all nine checks without throwing, and makes no network call', async () => {
+  it('returns all ten checks without throwing, and makes no network call', async () => {
     const report = await runDoctor();
 
     expect(report.checks.map((c) => c.id)).toEqual(CHECK_IDS);
@@ -285,6 +324,7 @@ describe('runDoctor journeys', () => {
     seed('institution.json', { canvasUrl: 'https://example.instructure.com', apiToken: 'cds-tok' }, cdsHome);
     seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
     seed('llm-provider.json', { provider: 'anthropic' });
+    seedWiredHost();
 
     const report = await runDoctor();
 
@@ -293,6 +333,80 @@ describe('runDoctor journeys', () => {
     expect(report.readyJourneys).toEqual({
       localAuthoring: true, canvasConnected: true, aiAssisted: true,
     });
+  });
+});
+
+describe('runDoctor host wiring', () => {
+  it('warns when no MCP host is wired, naming the installer and npx as the remedy', async () => {
+    const wiring = check(await runDoctor(), 'hosts.wiring');
+
+    expect(wiring.status).toBe('warn');
+    expect(wiring.summary).toMatch(/canvas-toolchain/);
+    expect(wiring.summary).toMatch(/installer/);
+    expect(wiring.summary).toMatch(/npx canvas-toolchain/);
+  });
+
+  it('reports ok when a host runs canvas-toolchain from a path that exists', async () => {
+    seedWiredHost();
+
+    const wiring = check(await runDoctor(), 'hosts.wiring');
+
+    expect(wiring.status).toBe('ok');
+    expect(wiring.summary).toContain('Cursor');
+    // The script path is home-relative, so no absolute home path is reported.
+    expect(wiring.detail?.join(' ')).toContain('~');
+    expect(wiring.detail?.join(' ')).toContain('command-and-control');
+    expect(wiring.detail?.join(' ')).not.toContain(hostHome);
+  });
+
+  it('names the host whose wired script is gone', async () => {
+    seedWiredHost(false);
+
+    const report = await runDoctor();
+    const wiring = check(report, 'hosts.wiring');
+
+    expect(wiring.status).toBe('warn');
+    expect(wiring.summary).toContain('Cursor');
+    expect(wiring.detail?.join(' ')).toContain('(missing)');
+  });
+
+  it('reads the hosts when the caller asks for it', async () => {
+    seedWiredHost();
+    expect(check(await runDoctor({ hosts: true }), 'hosts.wiring').status).toBe('ok');
+  });
+
+  it('skips host detection when the caller turns it off', async () => {
+    seedWiredHost();
+
+    const wiring = check(await runDoctor({ hosts: false }), 'hosts.wiring');
+
+    expect(wiring.status).toBe('ok');
+    expect(wiring.summary).toMatch(/turned off/i);
+  });
+
+  it('reports an unreadable host config, and still warns that nothing is wired', async () => {
+    mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+    writeFileSync(join(hostHome, '.cursor', 'mcp.json'), '{ nope', 'utf-8');
+
+    const wiring = check(await runDoctor(), 'hosts.wiring');
+
+    expect(wiring.status).toBe('warn');
+    expect(wiring.detail?.join(' ')).toContain('Cursor');
+    expect(wiring.detail?.join(' ')).toMatch(/unreadable/);
+  });
+
+  it('names no host on a machine that has none installed', async () => {
+    expect(check(await runDoctor(), 'hosts.wiring').detail).toBeUndefined();
+  });
+
+  it('never surfaces another server from a host config it read', async () => {
+    seedWiredHost();
+
+    const dumped = JSON.stringify(await runDoctor());
+
+    expect(dumped).toContain('Cursor');
+    expect(dumped).not.toContain('other-env-secret');
+    expect(dumped).not.toContain('other-server');
   });
 });
 
