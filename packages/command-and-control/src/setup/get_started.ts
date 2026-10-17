@@ -1,7 +1,9 @@
 import { readSetupState } from './read_state.js';
 import { runDoctor } from './doctor.js';
 import type {
-  DoctorCheckId,
+  ActiveProvider,
+  ConfigFileKey,
+  DoctorCheck,
   DoctorFix,
   DoctorReport,
   SetupJourney,
@@ -22,6 +24,13 @@ import type {
  *      those steps are optional rather than missing.
  *   2. No particular LLM is assumed. A hosted Anthropic key and a local model
  *      are equal first-class options, and "none" is a legitimate answer.
+ *
+ * A check's `summary` is its step's `why`. Each check warns for several
+ * different reasons — an env-only key, a corrupt file, a provider that
+ * `llm-provider.json` names but that has no config — and the doctor already
+ * states which one applies. A canned sentence here would be wrong for some of
+ * them, which is exactly how a step ends up telling a professor to fix
+ * something that is not broken.
  *
  * Every step names a real registered operation, and the params are the minimum
  * that call needs. Nothing here reads a secret: only the doctor's own
@@ -90,146 +99,287 @@ const JOURNEY_CAPABILITIES: Record<SetupJourney, CapabilityId[]> = {
   full: ['localAuthoring'],
 };
 
-/** The capability checks a first-run guide speaks to, in the order to present them. */
-const STEP_SPECS: Partial<Record<DoctorCheckId, { id: string; capability: CapabilityId; title: string; why: string }>> = {
-  'runtime.courses_root': {
-    id: 'courses_root',
-    capability: 'localAuthoring',
-    title: 'Set your courses root',
-    why:
-      'Local authoring — generate Canvas-safe HTML and paste it into Canvas yourself — needs no ' +
-      'credentials, only a place to keep your course folders.',
-  },
-  'canvas.credentials': {
-    id: 'canvas',
-    capability: 'canvasConnected',
-    title: 'Connect Canvas',
-    why:
-      'Unlocks publishing, pulling, and rubric sync through the Canvas API. Skipping it is fine — ' +
-      'the manual paste path always works.',
-  },
-  'llm.credentials': {
-    id: 'llm_credentials',
-    capability: 'aiAssisted',
-    title: 'Turn on AI assistance',
-    why:
-      'Adds AI drafting and course analysis. Use a hosted key or a local model — either works, and ' +
-      'neither is required for local authoring.',
-  },
-  'llm.active_provider': {
-    id: 'llm_provider',
-    capability: 'aiAssisted',
-    title: 'Activate your LLM provider',
-    why: 'AI tools fail with LLM_PROVIDER_NOT_SET until one configured provider is made active.',
-  },
-};
-
 /** Presentation order. Credentials precede activation, since activation needs a config to exist. */
-const STEP_ORDER = ['courses_root', 'canvas', 'llm_credentials', 'llm_provider'];
-
-/** The provider the doctor would activate, preferring the one already configured. */
-function preferredProvider(state: SetupState): string {
-  return state.llm.anthropic.configured ? 'anthropic' : 'ollama';
-}
+const STEP_ORDER = ['courses_root', 'canvas', 'llm_credentials', 'llm_provider', 'lecture_answers'];
 
 /**
- * The minimal call for a doctor fix. The doctor already decided *which*
- * operation fixes the check; this only adds the arguments that operation needs
- * and what the professor must have on hand. The default branch keeps an
- * unanticipated fix actionable rather than dropping it.
+ * A step before `required` is decided. `capability: null` means no journey
+ * blocks on it — the step is real work, but not one of the three verdicts.
  */
-function callFor(fix: DoctorFix, state: SetupState): SetupCall {
-  switch (`${fix.tool}:${fix.action}`) {
-    case 'ct_setup:courses_root':
-      return {
-        tool: 'ct_setup',
-        action: 'courses_root',
-        params: { coursesRoot: '<absolute path to the folder that holds your course folders>' },
-        needs: ['The folder where you keep your course folders (an absolute path, e.g. ~/Documents/courses).'],
-      };
-    case 'ct_setup:canvas':
-      return {
-        tool: 'ct_setup',
-        action: 'canvas',
-        params: {
-          host: '<your Canvas host, e.g. school.instructure.com>',
-          token: '<your Canvas access token>',
-        },
-        needs: [
-          'Your Canvas URL (e.g. school.instructure.com).',
-          'An access token from Canvas: Account > Settings > New Access Token.',
-        ],
-      };
-    case 'ct_setup:anthropic':
-      return {
+interface StepDraft {
+  id: string;
+  capability: CapabilityId | null;
+  title: string;
+  /** The doctor's own wording for this check. */
+  why: string;
+  primary: SetupCall;
+  alternatives: SetupCall[];
+}
+
+/** A draft from a check builder, before the check's own summary is attached. */
+type StepBody = Omit<StepDraft, 'why'>;
+
+function coursesRootCall(): SetupCall {
+  return {
+    tool: 'ct_setup',
+    action: 'courses_root',
+    params: { coursesRoot: '<absolute path to the folder that holds your course folders>' },
+    needs: ['The folder where you keep your course folders (an absolute path, e.g. ~/Documents/courses).'],
+  };
+}
+
+function canvasCall(): SetupCall {
+  return {
+    tool: 'ct_setup',
+    action: 'canvas',
+    params: {
+      host: '<your Canvas host, e.g. school.instructure.com>',
+      token: '<your Canvas access token>',
+    },
+    needs: [
+      'Your Canvas URL (e.g. school.instructure.com).',
+      'An access token from Canvas: Account > Settings > New Access Token.',
+    ],
+  };
+}
+
+function configureProviderCall(provider: ActiveProvider): SetupCall {
+  return provider === 'anthropic'
+    ? {
         tool: 'ct_setup',
         action: 'anthropic',
         params: { apiKey: '<your Anthropic API key>' },
-        needs: ['An Anthropic API key (console.anthropic.com), or a local model instead — see below.'],
-      };
-    case 'ct_setup:ollama':
-      return {
+        needs: ['An Anthropic API key (console.anthropic.com).'],
+      }
+    : {
         tool: 'ct_setup',
         action: 'ollama',
         params: {},
         needs: ['A local model server running (e.g. Ollama on http://localhost:11434).'],
       };
-    case 'ct_advanced:set_active_llm_provider':
-      return {
-        tool: 'ct_advanced',
-        action: 'set_active_llm_provider',
-        params: { provider: preferredProvider(state) },
-        needs: [],
-      };
-    default:
-      return { tool: fix.tool, action: fix.action, params: {}, needs: [] };
-  }
 }
 
-/** The local-model path, offered only where the primary call is a hosted key. */
-function alternativesFor(primary: SetupCall): SetupCall[] {
-  if (primary.tool !== 'ct_setup' || primary.action !== 'anthropic') return [];
-  return [
-    {
-      tool: 'ct_setup',
-      action: 'ollama',
-      params: {},
-      needs: ['A local model server, e.g. Ollama on http://localhost:11434 — no API key needed.'],
-    },
-  ];
+function activateCall(provider: ActiveProvider): SetupCall {
+  return { tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider }, needs: [] };
 }
 
 /**
- * The `llm.active_provider` fix is usually "activate the configured provider".
- * It is a configure step in the one case where llm-provider.json names a
- * provider whose own config file is missing — the doctor then points at that
- * provider's `ct_setup` action instead.
+ * The providers that can actually be activated, mirroring the doctor's
+ * `activeProviderCheck` predicate on purpose: `set_active_llm_provider` refuses
+ * a provider whose config file is absent, and an env-only `ANTHROPIC_API_KEY`
+ * does not count, because the runtime reads the file rather than the
+ * environment.
  */
-function stepTitle(specId: string, primary: SetupCall, defaultTitle: string): string {
-  return specId === 'llm_provider' && primary.action !== 'set_active_llm_provider'
-    ? 'Finish configuring your LLM provider'
-    : defaultTitle;
+function activatableProviders(state: SetupState): ActiveProvider[] {
+  const providers: ActiveProvider[] = [];
+  if (state.llm.anthropic.source === 'file' || state.llm.anthropic.source === 'both') {
+    providers.push('anthropic');
+  }
+  if (state.llm.ollama.configured) providers.push('ollama');
+  return providers;
+}
+
+/**
+ * The courses-root fix has two flavors: set the root, or — when config.json is
+ * corrupt — repair it first. `loadConfig()` throws on corrupt JSON, so
+ * `courses_root` cannot run until `cc` has rewritten the file.
+ */
+function coursesRootStep(fix: DoctorFix): StepBody {
+  if (fix.tool === 'ct_setup' && fix.action === 'cc') {
+    return {
+      id: 'courses_root',
+      capability: 'localAuthoring',
+      title: 'Repair your configuration, then set your courses root',
+      primary: {
+        tool: 'ct_setup',
+        action: 'cc',
+        params: {},
+        needs: ['Your courses root path (an absolute path), to set once config.json is repaired.'],
+      },
+      alternatives: [],
+    };
+  }
+  if (fix.tool === 'ct_setup' && fix.action === 'courses_root') {
+    return {
+      id: 'courses_root',
+      capability: 'localAuthoring',
+      title: 'Set your courses root',
+      primary: coursesRootCall(),
+      alternatives: [],
+    };
+  }
+  // Keep any other fix the doctor names actionable, under a title that does not
+  // claim the call sets the root.
+  return {
+    id: 'courses_root',
+    capability: 'localAuthoring',
+    title: 'Fix your configuration',
+    primary: { tool: fix.tool, action: fix.action, params: {}, needs: [] },
+    alternatives: [],
+  };
+}
+
+/**
+ * The `llm.credentials` check warns for four different reasons (an env-only
+ * key, a corrupt anthropic/ollama config, a corrupt lecture-answers config, or
+ * no credentials at all), so the step is chosen by which file the fix rewrites.
+ */
+function credentialsStep(fix: DoctorFix): StepBody {
+  if (fix.tool === 'ct_setup' && fix.action === 'lecture_answers') {
+    return {
+      id: 'lecture_answers',
+      // Not one of the three verdicts: `aiAssisted` is about the generation
+      // provider, and this file only feeds the course Q&A index. Marking it
+      // required would contradict a ready `aiAssisted`.
+      capability: null,
+      title: 'Repair the course Q&A embeddings config',
+      primary: {
+        tool: 'ct_setup',
+        action: 'lecture_answers',
+        params: {},
+        needs: ['An embedding provider: a local Ollama server, or the bundled in-process embedder.'],
+      },
+      alternatives: [],
+    };
+  }
+  if (fix.tool === 'ct_setup' && fix.action === 'ollama') {
+    return {
+      id: 'llm_credentials',
+      capability: 'aiAssisted',
+      title: 'Turn on AI assistance',
+      primary: configureProviderCall('ollama'),
+      alternatives: [configureProviderCall('anthropic')],
+    };
+  }
+  // The remaining credential fixes all create or rewrite anthropic-config.json.
+  return {
+    id: 'llm_credentials',
+    capability: 'aiAssisted',
+    title: 'Turn on AI assistance',
+    primary: configureProviderCall('anthropic'),
+    alternatives: [configureProviderCall('ollama')],
+  };
+}
+
+/**
+ * The `llm.active_provider` check either asks to activate a configured
+ * provider, or to finish configuring the one `llm-provider.json` names.
+ */
+function providerStep(fix: DoctorFix, state: SetupState): StepBody | null {
+  const configured = activatableProviders(state);
+
+  if (fix.tool === 'ct_setup' && (fix.action === 'anthropic' || fix.action === 'ollama')) {
+    const named = fix.action;
+    const other: ActiveProvider = named === 'anthropic' ? 'ollama' : 'anthropic';
+    // Switching to an already-configured provider is a way out; configuring the
+    // other one is the alternative when it has no config yet.
+    const alternatives: SetupCall[] = configured.map(activateCall);
+    if (!configured.includes(other)) alternatives.push(configureProviderCall(other));
+    return {
+      id: 'llm_provider',
+      capability: 'aiAssisted',
+      title: 'Finish configuring your LLM provider',
+      primary: configureProviderCall(named),
+      alternatives,
+    };
+  }
+
+  // `ct_advanced set_active_llm_provider` only works when a provider has a
+  // config file on disk. With nothing to activate — a corrupt
+  // llm-provider.json and no provider configured — the credentials step is the
+  // real work, and an activation call here would fail with
+  // PROVIDER_NOT_CONFIGURED.
+  if (configured.length === 0) return null;
+  const [preferred, ...rest] = configured;
+  return {
+    id: 'llm_provider',
+    capability: 'aiAssisted',
+    title: 'Activate your LLM provider',
+    primary: activateCall(preferred),
+    alternatives: rest.map(activateCall),
+  };
+}
+
+/** The step a single doctor check asks for, or null when it is not first-run guidance. */
+function stepFor(check: DoctorCheck, state: SetupState): StepBody | null {
+  const fix = check.fix;
+  if (!fix) return null;
+  switch (check.id) {
+    case 'runtime.courses_root':
+      return coursesRootStep(fix);
+    case 'canvas.credentials':
+      return { id: 'canvas', capability: 'canvasConnected', title: 'Connect Canvas', primary: canvasCall(), alternatives: [] };
+    case 'llm.credentials':
+      return credentialsStep(fix);
+    case 'llm.active_provider':
+      return providerStep(fix, state);
+    default:
+      return null;
+  }
+}
+
+function sameCall(a: SetupCall, b: SetupCall): boolean {
+  return a.tool === b.tool && a.action === b.action && JSON.stringify(a.params) === JSON.stringify(b.params);
+}
+
+/** True when this call exists only to rewrite a file that is present but unparseable. */
+function repairsCorruptFile(call: SetupCall, state: SetupState): boolean {
+  const fileKeys: Partial<Record<string, ConfigFileKey>> = {
+    anthropic: 'anthropic-config',
+    ollama: 'ollama-config',
+    lecture_answers: 'lecture-answers-config',
+  };
+  const key = fileKeys[call.action];
+  if (!key) return false;
+  const file = state.files[key];
+  return file.present && !file.validJson;
+}
+
+/**
+ * `llm-provider.json` naming a provider with no config makes the doctor warn
+ * twice: `llm.active_provider` says "finish configuring <provider>" and
+ * `llm.credentials` says "configure some provider". Two steps that both claim
+ * to come first and disagree on which provider is worse than one, so the named
+ * provider wins and the credentials fix becomes an alternative — unless it
+ * repairs a different, corrupt file, which is a separate problem.
+ */
+function foldLlmSteps(drafts: Map<string, StepDraft>, state: SetupState): void {
+  const credentials = drafts.get('llm_credentials');
+  const provider = drafts.get('llm_provider');
+  if (!credentials || !provider) return;
+  // Only the "finish configuring the named provider" step supersedes it.
+  if (provider.primary.action === 'set_active_llm_provider') return;
+  if (sameCall(credentials.primary, provider.primary)) {
+    drafts.delete('llm_credentials');
+    return;
+  }
+  if (repairsCorruptFile(credentials.primary, state)) return;
+  provider.alternatives.push(credentials.primary);
+  drafts.delete('llm_credentials');
 }
 
 function stepsFor(report: DoctorReport, state: SetupState, journey: SetupJourney): SetupStep[] {
   const requiredCapabilities = new Set(JOURNEY_CAPABILITIES[journey]);
-  const steps: SetupStep[] = [];
+  const drafts = new Map<string, StepDraft>();
 
   for (const check of report.checks) {
-    const spec = STEP_SPECS[check.id];
-    if (!spec || check.status === 'ok' || !check.fix) continue;
-    const primary = callFor(check.fix, state);
-    steps.push({
-      ...primary,
-      id: spec.id,
-      required: requiredCapabilities.has(spec.capability),
-      title: stepTitle(spec.id, primary, spec.title),
-      why: spec.why,
-      alternatives: alternativesFor(primary),
-    });
+    if (check.status === 'ok') continue;
+    const body = stepFor(check, state);
+    if (body) drafts.set(body.id, { ...body, why: check.summary });
   }
 
-  return steps.sort((a, b) => STEP_ORDER.indexOf(a.id) - STEP_ORDER.indexOf(b.id));
+  foldLlmSteps(drafts, state);
+
+  return [...drafts.values()]
+    .map((draft) => ({
+      ...draft.primary,
+      id: draft.id,
+      required: draft.capability !== null && requiredCapabilities.has(draft.capability),
+      title: draft.title,
+      why: draft.why,
+      alternatives: draft.alternatives,
+    }))
+    .sort((a, b) => STEP_ORDER.indexOf(a.id) - STEP_ORDER.indexOf(b.id));
 }
 
 function capabilitiesFor(report: DoctorReport, state: SetupState): ReadyCapability[] {
@@ -262,7 +412,7 @@ function capabilitiesFor(report: DoctorReport, state: SetupState): ReadyCapabili
   ];
 }
 
-function greetingFor(steps: SetupStep[]): string {
+function greetingFor(steps: SetupStep[], capabilities: ReadyCapability[]): string {
   const required = steps.filter((step) => step.required).length;
   if (required > 0) {
     return `Let's get you set up: ${required} required step${required === 1 ? '' : 's'}, then optional extras.`;
@@ -270,7 +420,18 @@ function greetingFor(steps: SetupStep[]): string {
   if (steps.length === 0) {
     return "You're ready — every capability is configured. Ask about your course to begin.";
   }
+  if (capabilities.every((capability) => capability.ready)) {
+    return "You're ready — every capability is configured. The optional steps below repair extras.";
+  }
   return "You're ready — local authoring works now. The optional steps below unlock more.";
+}
+
+/** The literal call text. `ct_advanced` takes action=run plus an operation id. */
+function renderCall(call: SetupCall): string {
+  const args = JSON.stringify(call.params);
+  return call.tool === 'ct_advanced'
+    ? `${call.tool} action run operation ${call.action} ${args}`
+    : `${call.tool} action ${call.action} ${args}`;
 }
 
 function renderText(guide: Omit<GetStartedGuide, 'text'>): string {
@@ -289,11 +450,11 @@ function renderText(guide: Omit<GetStartedGuide, 'text'>): string {
   lines.push('', 'Next steps:');
   guide.steps.forEach((step, index) => {
     lines.push(`${index + 1}. ${step.required ? '' : 'Optional: '}${step.title}`);
-    lines.push(`   call: ${step.tool} action ${step.action} ${JSON.stringify(step.params)}`);
+    lines.push(`   call: ${renderCall(step)}`);
     if (step.needs.length > 0) lines.push(`   have on hand: ${step.needs.join(' ')}`);
     lines.push(`   why: ${step.why}`);
     for (const alternative of step.alternatives) {
-      lines.push(`   or: ${alternative.tool} action ${alternative.action} ${JSON.stringify(alternative.params)}`);
+      lines.push(`   or: ${renderCall(alternative)}`);
     }
   });
 
@@ -314,7 +475,7 @@ export async function getStarted(opts: GetStartedOptions = {}): Promise<GetStart
   const capabilities = capabilitiesFor(report, state);
 
   const guide = {
-    greeting: greetingFor(steps),
+    greeting: greetingFor(steps, capabilities),
     journey,
     readyToGo,
     capabilities,

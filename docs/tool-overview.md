@@ -6,6 +6,8 @@ Its core apps are **Canvas Toolchain — Command & Control** (the single profess
 
 ## Core Features
 
+**Knowing what is ready, and what to do first.** Make the toolchain's first act an orientation rather than a guess: it reports which capabilities are ready today and, for each one that is not, the next step to take with what to have on hand. Local authoring — generating Canvas-safe HTML and pasting it into Canvas by hand — needs no credentials at all, and Canvas publishing and AI assistance are optional upgrades, so a partly configured machine reads as partly ready instead of broken. When something is wrong, the same check says what is configured, what is broken, and how to fix it, instead of failing later with an opaque error.
+
 **Faster Canvas shell refreshes.** Import prior Canvas content, identify stale materials, shift due dates, draft updates, and generate ready-to-paste Canvas pages.
 
 **Canvas-safe page generation.** Turn course markdown, assignment briefs, and imported content into polished HTML designed for Canvas's editor restrictions, templates, brand colors, and reusable page patterns.

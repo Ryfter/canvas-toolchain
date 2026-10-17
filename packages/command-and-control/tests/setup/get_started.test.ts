@@ -6,6 +6,7 @@ import { getStarted } from '../../src/setup/get_started.js';
 import type { GetStartedGuide, SetupCall } from '../../src/setup/get_started.js';
 import { buildRegistry } from '../../src/surface/registry.js';
 import { dispatchSurface } from '../../src/surface/dispatch.js';
+import { runAdvanced } from '../../src/surface/advanced.js';
 
 let ccHome: string;
 let cdsHome: string;
@@ -21,6 +22,18 @@ function seed(name: string, value: unknown, home: string = ccHome): string {
   const path = join(home, name);
   writeFileSync(path, JSON.stringify(value, null, 2), { encoding: 'utf-8', mode: 0o600 });
   return path;
+}
+
+/** Seed a file the doctor must report as present-but-corrupt. */
+function seedRaw(name: string, text: string, home: string = ccHome): string {
+  const path = join(home, name);
+  writeFileSync(path, text, { encoding: 'utf-8', mode: 0o600 });
+  return path;
+}
+
+/** The step ids in the order the guide presents them. */
+function stepIds(guide: GetStartedGuide): string[] {
+  return guide.steps.map((s) => s.id);
 }
 
 function step(guide: GetStartedGuide, id: string) {
@@ -143,6 +156,10 @@ describe('getStarted with some setup done', () => {
 
     expect(finish).toMatchObject({ tool: 'ct_setup', action: 'ollama', params: {} });
     expect(finish.title).toMatch(/finish configuring/i);
+    // One LLM step, not a credentials step contradicting the named provider.
+    expect(stepIds(guide)).toEqual(['courses_root', 'canvas', 'llm_provider']);
+    expect(finish.why).toMatch(/selects ollama/);
+    expect(finish.why).not.toMatch(/LLM_PROVIDER_NOT_SET/);
   });
 
   it('makes Canvas required when the caller asks about publishing', async () => {
@@ -162,6 +179,143 @@ describe('getStarted with some setup done', () => {
     const guide = await getStarted({ journey: 'local-authoring' });
 
     expect(guide.steps.filter((s) => s.required).map((s) => s.id)).toEqual(['courses_root']);
+  });
+});
+
+describe('getStarted step selection for a configured local model', () => {
+  it('asks to activate the local model when no provider is active', async () => {
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
+
+    const guide = await getStarted();
+    const activate = step(guide, 'llm_provider');
+
+    expect(activate).toMatchObject({
+      tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'ollama' },
+    });
+    expect(activate.alternatives).toEqual([]);
+  });
+
+  it('is AI-ready when the local model is active', async () => {
+    const coursesRoot = join(ccHome, 'courses');
+    mkdirSync(coursesRoot, { recursive: true });
+    seed('config.json', { coursesRoot });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
+    seed('llm-provider.json', { provider: 'ollama' });
+
+    const guide = await getStarted();
+
+    expect(guide.capabilities.find((c) => c.id === 'aiAssisted')?.ready).toBe(true);
+    expect(stepIds(guide)).toEqual(['canvas']);
+    expect(guide.readyToGo).toBe(true);
+  });
+
+  it('activates the provider that has a config file, not an env-only Anthropic key', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-env-secret';
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
+
+    const guide = await getStarted();
+    const activate = step(guide, 'llm_provider');
+
+    // set_active_llm_provider refuses a provider with no config file, and the
+    // runtime reads anthropic-config.json rather than the environment.
+    expect(activate).toMatchObject({
+      tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'ollama' },
+    });
+    expect(guide.steps.every((s) => s.params.provider !== 'anthropic')).toBe(true);
+  });
+
+  it('offers the other configured provider as an alternative', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
+
+    const guide = await getStarted();
+    const activate = step(guide, 'llm_provider');
+
+    expect(activate).toMatchObject({ params: { provider: 'anthropic' } });
+    expect(activate.alternatives).toEqual([
+      expect.objectContaining({
+        tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'ollama' },
+      }),
+    ]);
+  });
+
+  it('offers no activation at all when no provider has a config file', async () => {
+    seedRaw('llm-provider.json', '{ not json');
+
+    const guide = await getStarted();
+
+    expect(stepIds(guide)).not.toContain('llm_provider');
+    expect(step(guide, 'llm_credentials').action).toBe('anthropic');
+  });
+
+  it('does not emit the same call twice when llm-provider.json names Anthropic', async () => {
+    seed('llm-provider.json', { provider: 'anthropic' });
+
+    const guide = await getStarted();
+
+    expect(stepIds(guide)).toEqual(['courses_root', 'canvas', 'llm_provider']);
+    expect(step(guide, 'llm_provider')).toMatchObject({ tool: 'ct_setup', action: 'anthropic' });
+  });
+
+  it('offers switching to the provider that is already configured', async () => {
+    seed('llm-provider.json', { provider: 'ollama' });
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+
+    const guide = await getStarted();
+    const finish = step(guide, 'llm_provider');
+
+    expect(finish).toMatchObject({ tool: 'ct_setup', action: 'ollama', params: {} });
+    expect(finish.alternatives).toEqual([
+      expect.objectContaining({
+        tool: 'ct_advanced', action: 'set_active_llm_provider', params: { provider: 'anthropic' },
+      }),
+    ]);
+  });
+});
+
+describe('getStarted with a corrupt config file', () => {
+  it('repairs a corrupt config.json before asking for the courses root', async () => {
+    seedRaw('config.json', '{ broken');
+
+    const guide = await getStarted();
+    const root = step(guide, 'courses_root');
+
+    // loadConfig() throws on corrupt JSON, so courses_root cannot run first.
+    expect(root).toMatchObject({ tool: 'ct_setup', action: 'cc', params: {} });
+    expect(root.title).toMatch(/repair/i);
+    expect(root.why).toMatch(/corrupt/i);
+    expect(root.needs.join(' ')).toMatch(/courses root/i);
+  });
+
+  it('files a corrupt lecture-answers config as its own optional step, not as AI assistance', async () => {
+    const coursesRoot = join(ccHome, 'courses');
+    mkdirSync(coursesRoot, { recursive: true });
+    seed('config.json', { coursesRoot });
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('llm-provider.json', { provider: 'anthropic' });
+    seedRaw('lecture-answers-config.json', '{ broken');
+
+    const guide = await getStarted();
+    const answers = step(guide, 'lecture_answers');
+
+    expect(answers).toMatchObject({ tool: 'ct_setup', action: 'lecture_answers', params: {} });
+    expect(answers.required).toBe(false);
+    expect(stepIds(guide)).not.toContain('llm_credentials');
+    expect(guide.capabilities.find((c) => c.id === 'aiAssisted')?.ready).toBe(true);
+  });
+});
+
+describe('getStarted renders calls its own dispatcher accepts', () => {
+  it('renders ct_advanced steps with action run plus an operation id', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+
+    const guide = await getStarted();
+
+    expect(guide.text).toContain('call: ct_advanced action run operation set_active_llm_provider');
+    const result = await runAdvanced(buildRegistry(), {
+      action: 'run', operation: 'set_active_llm_provider', params: { provider: 'anthropic' },
+    });
+    expect(result.isError).toBeFalsy();
   });
 });
 
