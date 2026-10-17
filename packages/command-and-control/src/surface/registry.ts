@@ -17,6 +17,7 @@ import { setCourseAiasDefault } from '../tools/set_course_aias_default.js';
 import { setCoursesRoot } from '../tools/set_courses_root.js';
 import { openDashboard } from '../tools/open_dashboard.js';
 import { getCcStatus } from '../tools/get_cc_status.js';
+import { runDoctor } from '../setup/doctor.js';
 import { analyzeCourse } from '../tools/workflows/analyze_course.js';
 import { planNextSemester } from '../tools/workflows/plan_next_semester.js';
 import { updateCourseMaterials } from '../tools/workflows/update_course_materials.js';
@@ -441,6 +442,27 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'status',
+  },
+  {
+    id: 'setup_doctor',
+    section: 'admin',
+    description: 'Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic checks.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        probe: { type: 'boolean', description: 'Opt in to live network probes of the configured Canvas and Anthropic endpoints (default false: zero network calls).' },
+        journey: {
+          type: 'string',
+          enum: ['local-authoring', 'canvas-connected', 'ai-assisted', 'full'],
+          description: 'Which capability the verdict is for. A narrower journey ignores unconfigured checks it does not need. Default full.',
+        },
+      },
+    },
+    handler: (args) => runDoctor(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'doctor',
   },
   {
     id: 'analyze_course',

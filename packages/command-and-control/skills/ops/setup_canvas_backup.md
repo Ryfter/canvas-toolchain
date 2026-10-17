@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "backup"
 exposure: "intent"
-related: [download_canvas_archive, get_cc_status, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_lecture_answers, setup_ollama, setup_transcript_source]
+related: [download_canvas_archive, get_cc_status, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_ollama, setup_transcript_source]
 ---
 <!-- generated:end -->
 
