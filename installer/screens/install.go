@@ -214,7 +214,25 @@ func buildSteps(st *State, logFn func(string)) []tasks.Step {
 			}
 			return tasks.CreateUpdaterShortcuts(updaterPath, st.InstallDir)
 		}},
+		// The setup check is the installer's one source of truth about whether
+		// this machine is ready, and it runs after every step that writes
+		// anything, so it sees them all. Warn, never Error: a doctor that
+		// cannot run falls back to the summary, it does not fail the install.
+		{Name: "Setup check (doctor)", Warn: true, Run: func(ctx context.Context) error {
+			report, err := tasks.RunDoctor(ctx, st.InstallDir)
+			if err != nil {
+				st.Doctor, st.DoctorErr = nil, err
+				return err
+			}
+			st.Doctor, st.DoctorErr = &report, nil
+			return nil
+		}},
 		{Name: "Version marker", Run: func(ctx context.Context) error {
+			decision := tasks.DecideVersionMarker(st.Doctor, st.DoctorErr)
+			st.MarkerWithheld, st.MarkerReason = !decision.Write, decision.Reason
+			if !decision.Write {
+				return nil
+			}
 			return tasks.WriteVersionMarker(st.InstallDir, st.Version)
 		}},
 		{Name: "Validate credentials", Warn: true, Run: func(ctx context.Context) error {
@@ -247,6 +265,7 @@ func installRowLabels() []string {
 		"Install optional Python 3",
 		"Connect MCP-capable apps",
 		"Install updater + shortcut",
+		"Setup check (doctor)",
 		"Write version marker",
 		"Validate credentials",
 	}

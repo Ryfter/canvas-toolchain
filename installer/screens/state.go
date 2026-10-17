@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"sort"
 	"sync"
+
+	"github.com/Ryfter/canvas-toolchain/installer/tasks"
 )
 
 type InstallMode int
@@ -46,6 +48,17 @@ type State struct {
 	ValidationAnthropic StepResult
 	ValidationCanvas    StepResult
 	ValidationPanopto   StepResult
+
+	// Doctor is the setup engine's own readiness report, read by running the
+	// installed `canvas-toolchain doctor --json` during install. It is nil when
+	// that check could not run — see DoctorErr — and the summary then falls
+	// back to the installer's own step results.
+	Doctor    *tasks.DoctorReport
+	DoctorErr error
+	// MarkerWithheld records that the doctor's verdict deliberately stopped the
+	// installer from writing .canvas-toolchain-version (DecideVersionMarker).
+	MarkerWithheld bool
+	MarkerReason   string
 
 	Version string
 }

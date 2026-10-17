@@ -51,11 +51,55 @@ Same as T1 but with `.pkg` on macOS 12+ Apple Silicon. Verify Gatekeeper bypass 
 ### T5 — Install with zero APIs filled
 
 1. Fresh install, skip every credential field on screen 3.
-2. Verify summary screen shows three yellow warnings naming setup_anthropic, setup_canvas, setup_panopto.
+2. Verify the summary screen's **Setup readiness** section (it shows what the
+   installed toolchain's own setup check reports, not the installer's guesses):
+   - "Local authoring", "Canvas connected" and "AI assisted" each show a yellow
+     ⚠ with "not set up yet".
+   - Each warn check is listed with the operation that fixes it, e.g.
+     `Fix: ct_setup canvas — Run ct_setup action canvas with your Canvas host and API token.`
+   - "Panopto not configured" appears if the Panopto workflow was left blank.
+   - The screen ends with `Next step: open your AI app and say "get started".`
+3. Re-run the installer inside an MCP client: `get started` should walk through
+   the same list.
 
 ### T6 — Install with all APIs filled (real keys)
 
-Verify live validation rows on screen 5 show green for each successful API.
+Verify the readiness section shows "Canvas connected" and "AI assisted" green
+(⚠ rows only for whatever is genuinely still unset), and that the installer's own
+live validation rows on screen 5 show green for each successful API.
+
+### T11 — Summary when the setup check cannot run
+
+The setup check runs at the end of the install and reads what the earlier steps
+wrote, so the way to break it by hand is to take part of it away while those
+steps are still running (they take minutes — npm install, then the build):
+
+1. Fresh install, credentials skipped, click through to screen 4.
+2. While "Install npm dependencies" / "Build TypeScript packages" is running,
+   delete the entrypoint the check spawns:
+   `rm "<install dir>/packages/canvas-toolchain/bin/canvas-toolchain.mjs"`.
+3. Verify:
+   - The install still completes — "Setup check (doctor)" shows a yellow ⚠, and
+     nothing on screen 4 turns red.
+   - Screen 5's setup section shows a short `Setup check unavailable — installed
+     entrypoint missing at …` note, then the installer's own warnings
+     (setup_anthropic / setup_canvas / setup_panopto).
+   - No "Local authoring / Canvas connected / AI assisted" rows appear: the
+     installer never invents a readiness verdict it did not get.
+   - The `Next step: open your AI app and say "get started"` line still appears.
+4. Reinstall (or restore the file) to get back to a working tree.
+
+The same fallback is covered by unit tests for the other causes: missing node
+runtime, a timeout, and an unreadable report.
+
+### T12 — Version marker semantics
+
+The marker (`.canvas-toolchain-version`) is written unless the setup check
+reports `fail`. On a real machine the check runs the full journey, which reports
+`warn` at worst — so the marker is written as it always has been, and update mode
+(T4) is unaffected. The withheld case is unit-tested
+(`installer/screens/install_test.go`, `TestVersionMarkerStep_FollowsTheDoctor`),
+because it cannot be produced by a working toolchain.
 
 ### T7 — Install with malformed Claude Desktop config
 

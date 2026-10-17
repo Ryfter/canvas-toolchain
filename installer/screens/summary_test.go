@@ -1,14 +1,20 @@
 package screens
 
 import (
+	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/Ryfter/canvas-toolchain/installer/tasks"
 	"github.com/Ryfter/canvas-toolchain/installer/ui"
 )
 
@@ -97,6 +103,8 @@ func dumpLabels(obj fyne.CanvasObject) string {
 			for _, c := range v.CreateRenderer().Objects() {
 				walk(c)
 			}
+		case *container.Scroll:
+			walk(v.Content)
 		case *fyne.Container:
 			for _, c := range v.Objects {
 				walk(c)
@@ -105,6 +113,171 @@ func dumpLabels(obj fyne.CanvasObject) string {
 	}
 	walk(obj)
 	return sb.String()
+}
+
+// doctorReport builds the shape `canvas-toolchain doctor --json` returns, so
+// the screen renders a real document rather than a hand-shaped stub.
+func doctorReport(status string, journeys tasks.ReadyJourneys, checks ...tasks.DoctorCheck) *tasks.DoctorReport {
+	return &tasks.DoctorReport{
+		OverallStatus: status,
+		Journey:       "full",
+		Checks:        checks,
+		ReadyJourneys: journeys,
+	}
+}
+
+func newSummaryState(t *testing.T, st *State) string {
+	t.Helper()
+	app := test.NewApp()
+	defer app.Quit()
+	w := app.NewWindow("test")
+	defer w.Close()
+
+	st.InstallDir = t.TempDir()
+	screen := NewSummaryScreen(w, st, func() {})
+	if screen == nil {
+		t.Fatal("expected non-nil summary screen")
+	}
+	return dumpLabels(screen)
+}
+
+// The summary renders the doctor's own verdict — readiness per capability, then
+// every warn/fail check with the operation that fixes it.
+func TestSummaryScreen_RendersDoctorReadiness(t *testing.T) {
+	st := NewState("2.3.0")
+	st.Doctor = doctorReport("warn",
+		tasks.ReadyJourneys{},
+		tasks.DoctorCheck{ID: "runtime.courses_root", Status: "warn", Summary: "No courses root is configured.",
+			Fix: &tasks.DoctorFix{Tool: "ct_setup", Action: "courses_root", Hint: "Point the toolchain at your course folders."}},
+		tasks.DoctorCheck{ID: "llm.credentials", Status: "warn", Summary: "No LLM credentials are configured, so the AI-assisted tools are unavailable.",
+			Fix: &tasks.DoctorFix{Tool: "ct_setup", Action: "anthropic", Hint: "Add an Anthropic API key."}},
+		tasks.DoctorCheck{ID: "transcripts.source", Status: "ok", Summary: "No transcript source configured; enrichment defaults to panopto."},
+	)
+
+	labels := newSummaryState(t, st)
+
+	for _, want := range []string{
+		"Local authoring",
+		"Canvas connected",
+		"AI assisted",
+		"not set up yet",
+		"No courses root is configured.",
+		"Fix: ct_setup courses_root",
+		"No LLM credentials are configured",
+		"Fix: ct_setup anthropic — Add an Anthropic API key.",
+		`Next step: open your AI app and say "get started".`,
+	} {
+		if !strings.Contains(labels, want) {
+			t.Errorf("summary is missing %q; got:\n%s", want, labels)
+		}
+	}
+	// An ok check is background: it must not be listed as something to fix.
+	if strings.Contains(labels, "defaults to panopto") {
+		t.Errorf("ok checks must not be listed; got:\n%s", labels)
+	}
+}
+
+func TestSummaryScreen_MarksAReadyInstall(t *testing.T) {
+	st := NewState("2.3.0")
+	st.Doctor = doctorReport("ok",
+		tasks.ReadyJourneys{LocalAuthoring: true, CanvasConnected: true, AiAssisted: true},
+		tasks.DoctorCheck{ID: "runtime.courses_root", Status: "ok", Summary: "Courses root: /courses"},
+	)
+
+	labels := newSummaryState(t, st)
+
+	if strings.Contains(labels, "not set up yet") {
+		t.Errorf("a ready install must show no unconfigured capability; got:\n%s", labels)
+	}
+	if !strings.Contains(labels, "Nothing to fix") {
+		t.Errorf("expected the all-clear line; got:\n%s", labels)
+	}
+}
+
+// A doctor `fail` withholds the version marker; the summary has to say so
+// rather than claim a clean install.
+func TestSummaryScreen_MarksATroubledInstall(t *testing.T) {
+	st := NewState("2.3.0")
+	st.Doctor = doctorReport("fail", tasks.ReadyJourneys{})
+	st.MarkerWithheld = true
+	st.MarkerReason = "the setup check reported a failure"
+
+	labels := newSummaryState(t, st)
+
+	if !strings.Contains(labels, "installed — setup needs attention") {
+		t.Errorf("expected the title to drop the clean claim; got:\n%s", labels)
+	}
+	if !strings.Contains(labels, "Install version not recorded") {
+		t.Errorf("expected the withheld marker to be explained; got:\n%s", labels)
+	}
+}
+
+// No doctor means the summary falls back to what the installer can vouch for,
+// with a short note — never a failed install, never a silent gap.
+func TestSummaryScreen_FallsBackWhenTheDoctorCouldNotRun(t *testing.T) {
+	st := NewState("2.3.0")
+	st.DoctorErr = errors.New("bundled Node runtime missing at /opt/canvas-toolchain/.node/bin/node")
+
+	labels := newSummaryState(t, st)
+
+	if !strings.Contains(labels, "Setup check unavailable — bundled Node runtime missing") {
+		t.Errorf("expected the fallback note; got:\n%s", labels)
+	}
+	if !strings.Contains(labels, "setup_anthropic") || !strings.Contains(labels, "setup_canvas") {
+		t.Errorf("expected the installer's own warnings; got:\n%s", labels)
+	}
+	if strings.Contains(labels, "Local authoring") {
+		t.Errorf("capability rows come from the doctor and must not be invented; got:\n%s", labels)
+	}
+	if !strings.Contains(labels, `Next step: open your AI app and say "get started".`) {
+		t.Errorf("the next step applies with or without the doctor; got:\n%s", labels)
+	}
+}
+
+func TestSummaryScreen_FallsBackWhenNoDoctorRan(t *testing.T) {
+	labels := newSummaryState(t, NewState("2.3.0"))
+
+	if !strings.Contains(labels, "Setup check unavailable — it did not run") {
+		t.Errorf("expected the fallback note; got:\n%s", labels)
+	}
+}
+
+// The Panopto note is the installer's own observation, so it survives on the
+// doctor path too (the doctor inspects no Panopto config).
+func TestSummaryScreen_KeepsTheInstallerPanoptoNote(t *testing.T) {
+	st := NewState("2.3.0")
+	st.WorkflowPanopto = true
+	st.Doctor = doctorReport("ok", tasks.ReadyJourneys{LocalAuthoring: true})
+
+	labels := newSummaryState(t, st)
+
+	if !strings.Contains(labels, "Panopto not configured") {
+		t.Errorf("expected the installer's Panopto note; got:\n%s", labels)
+	}
+}
+
+// The committed testdata is the wire format the screen parses, so the screen
+// renders a real doctor document end to end.
+func TestSummaryScreen_RendersTheCommittedDoctorSample(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "tasks", "testdata", "doctor-report.json"))
+	if err != nil {
+		t.Fatalf("testdata missing: %v", err)
+	}
+	report := tasks.DoctorReport{}
+	if err := json.Unmarshal(raw, &report); err != nil {
+		t.Fatalf("testdata is not a doctor report: %v", err)
+	}
+
+	st := NewState("2.3.0")
+	st.Doctor = &report
+	labels := newSummaryState(t, st)
+
+	if !strings.Contains(labels, "Canvas is not connected") {
+		t.Errorf("expected the sample's Canvas finding; got:\n%s", labels)
+	}
+	if !strings.Contains(labels, "Fix: ct_setup canvas") {
+		t.Errorf("expected the sample's Canvas fix; got:\n%s", labels)
+	}
 }
 
 // dumpButtonTexts walks the widget tree collecting HoverButton label text.
