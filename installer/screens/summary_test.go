@@ -212,8 +212,9 @@ func TestSummaryScreen_MarksATroubledInstall(t *testing.T) {
 	}
 }
 
-// No doctor means the summary falls back to what the installer can vouch for,
-// with a short note — never a failed install, never a silent gap.
+// No doctor means the summary falls back to what the installer can vouch for.
+// It collects no credentials any more, so the fallback says the install is
+// unverified — never a claim about a credential it did not see.
 func TestSummaryScreen_FallsBackWhenTheDoctorCouldNotRun(t *testing.T) {
 	st := NewState("2.3.0")
 	st.DoctorErr = errors.New("bundled Node runtime missing at /opt/canvas-toolchain/.node/bin/node")
@@ -223,8 +224,8 @@ func TestSummaryScreen_FallsBackWhenTheDoctorCouldNotRun(t *testing.T) {
 	if !strings.Contains(labels, "Setup check unavailable — bundled Node runtime missing") {
 		t.Errorf("expected the fallback note; got:\n%s", labels)
 	}
-	if !strings.Contains(labels, "setup_anthropic") || !strings.Contains(labels, "setup_canvas") {
-		t.Errorf("expected the installer's own warnings; got:\n%s", labels)
+	if !strings.Contains(labels, "not verified yet") {
+		t.Errorf("expected the unverified note; got:\n%s", labels)
 	}
 	if strings.Contains(labels, "Local authoring") {
 		t.Errorf("capability rows come from the doctor and must not be invented; got:\n%s", labels)
@@ -251,8 +252,23 @@ func TestSummaryScreen_KeepsTheInstallerPanoptoNote(t *testing.T) {
 
 	labels := newSummaryState(t, st)
 
-	if !strings.Contains(labels, "Panopto not configured") {
+	if !strings.Contains(labels, "Panopto workflow selected") {
 		t.Errorf("expected the installer's Panopto note; got:\n%s", labels)
+	}
+}
+
+// The Panopto guidance is tied to the workflow choice, not to any credential:
+// the installer collects none, so a professor who did not pick Panopto must not
+// be told to finish Panopto setup.
+func TestSummaryScreen_NoGuidanceWhenVideoWorkflowIsOff(t *testing.T) {
+	st := NewState("2.3.0")
+	st.WorkflowPanopto = false
+	st.Doctor = doctorReport("ok", tasks.ReadyJourneys{LocalAuthoring: true})
+
+	labels := newSummaryState(t, st)
+
+	if strings.Contains(labels, "Panopto workflow selected") {
+		t.Errorf("expected no Panopto guidance when the workflow is off; got:\n%s", labels)
 	}
 }
 

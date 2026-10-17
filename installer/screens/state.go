@@ -27,13 +27,6 @@ type State struct {
 	WorkflowRegistry bool
 	OptInPython      bool
 
-	AnthropicAPIKey string
-	CanvasHost      string
-	CanvasToken     string
-	PanoptoDomain   string
-	PanoptoClientID string
-	PanoptoSecret   string
-
 	InstalledPython bool
 	ConnectHosts    map[string]bool
 	WiredHosts      map[string]bool
@@ -43,11 +36,8 @@ type State struct {
 	// RequestedModuleIDs / requestedModule — the catalog goroutine in
 	// workflows.go and the install step in install.go both touch this map
 	// from different goroutines, so it needs requestedModulesMu.
-	requestedModules    map[string]bool
-	requestedModulesMu  sync.Mutex
-	ValidationAnthropic StepResult
-	ValidationCanvas    StepResult
-	ValidationPanopto   StepResult
+	requestedModules   map[string]bool
+	requestedModulesMu sync.Mutex
 
 	// Doctor is the setup engine's own readiness report, read by running the
 	// installed `canvas-toolchain doctor --json` during install. It is nil when
@@ -89,12 +79,6 @@ func (s *State) requestedModule(id string) bool {
 	s.requestedModulesMu.Lock()
 	defer s.requestedModulesMu.Unlock()
 	return s.requestedModules[id]
-}
-
-type StepResult struct {
-	Attempted bool
-	OK        bool
-	Message   string
 }
 
 func DefaultInstallDir() string {

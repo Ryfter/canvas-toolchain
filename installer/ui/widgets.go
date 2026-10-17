@@ -10,18 +10,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-type MaskedEntry struct {
-	widget.Entry
-}
-
-func NewMaskedEntry(placeholder string) *MaskedEntry {
-	e := &MaskedEntry{}
-	e.ExtendBaseWidget(e)
-	e.Password = true
-	e.SetPlaceHolder(placeholder)
-	return e
-}
-
 type StatusRow struct {
 	widget.BaseWidget
 	icon  *canvas.Text
@@ -76,22 +64,6 @@ func (r *StatusRow) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(box)
 }
 
-type HintedField struct {
-	Label string
-	Input fyne.CanvasObject
-	Hint  string
-}
-
-func (h HintedField) AsCanvasObject() fyne.CanvasObject {
-	hintLabel := canvas.NewText(h.Hint, color.NRGBA{R: 0x55, G: 0x55, B: 0x50, A: 0xFF})
-	hintLabel.TextSize = 11
-	return container.NewVBox(
-		widget.NewLabelWithStyle(h.Label, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		h.Input,
-		hintLabel,
-	)
-}
-
 func NewStatusRowWithStatus(label string, s RowStatus, hint string) *StatusRow {
 	r := NewStatusRow(label)
 	r.SetStatus(s, hint)
@@ -132,9 +104,9 @@ func (b *HoverButton) Tapped(_ *fyne.PointEvent) {
 	b.onTapped()
 }
 
-func (b *HoverButton) MouseIn(_ *desktop.MouseEvent)     { b.hovered = true; b.Refresh() }
-func (b *HoverButton) MouseOut()                         { b.hovered = false; b.Refresh() }
-func (b *HoverButton) MouseMoved(_ *desktop.MouseEvent)  {}
+func (b *HoverButton) MouseIn(_ *desktop.MouseEvent)    { b.hovered = true; b.Refresh() }
+func (b *HoverButton) MouseOut()                        { b.hovered = false; b.Refresh() }
+func (b *HoverButton) MouseMoved(_ *desktop.MouseEvent) {}
 func (b *HoverButton) Cursor() desktop.Cursor {
 	if b.disabled {
 		return desktop.DefaultCursor

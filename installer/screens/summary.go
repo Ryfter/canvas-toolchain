@@ -118,36 +118,31 @@ func setupSection(st *State) fyne.CanvasObject {
 }
 
 // fallbackSetupSection is the summary the installer showed before it asked the
-// doctor: a short note that the check could not run, then the warnings the
-// installer can still vouch for itself.
+// doctor: a short note that the check could not run. The installer collects no
+// credentials any more, so it cannot vouch for any of them — the honest
+// fallback is to say the install is unverified and point at the chat.
 func fallbackSetupSection(st *State) fyne.CanvasObject {
 	box := container.NewVBox(
 		ui.NewStatusRowWithStatus("Setup check unavailable — "+doctorUnavailableReason(st), ui.StatusWarn, ""),
 	)
-	if st.AnthropicAPIKey == "" {
-		box.Add(ui.NewStatusRowWithStatus("Anthropic API key not set — run setup_anthropic from your MCP client", ui.StatusWarn, ""))
-	}
-	if st.CanvasToken == "" {
-		box.Add(ui.NewStatusRowWithStatus("Canvas API token not set — run setup_canvas (optional)", ui.StatusWarn, ""))
-	}
-	if st.ValidationAnthropic.Attempted && !st.ValidationAnthropic.OK {
-		box.Add(ui.NewStatusRowWithStatus("Anthropic validation failed: "+st.ValidationAnthropic.Message, ui.StatusWarn, ""))
-	}
-	if st.ValidationCanvas.Attempted && !st.ValidationCanvas.OK {
-		box.Add(ui.NewStatusRowWithStatus("Canvas validation failed: "+st.ValidationCanvas.Message, ui.StatusWarn, ""))
-	}
+	note := widget.NewLabel("This install is not verified yet. Open your AI app and say \"get started\" — it checks what is left.")
+	note.Wrapping = fyne.TextWrapWord
+	box.Add(note)
 	addPanoptoNote(box, st)
 	return box
 }
 
 // addPanoptoNote is the installer's own question, not the doctor's: the doctor
 // inspects no Panopto config, and the professor chose this workflow on the
-// workflows screen, so the note survives on both paths.
+// workflows screen. The installer no longer collects Panopto credentials, so
+// this is a pointer to where they are added, on both summary paths.
 func addPanoptoNote(box *fyne.Container, st *State) {
-	if st.WorkflowPanopto && st.PanoptoDomain != "" && st.PanoptoClientID != "" && st.PanoptoSecret != "" {
+	if !st.WorkflowPanopto {
 		return
 	}
-	box.Add(ui.NewStatusRowWithStatus("Panopto not configured — run setup_panopto when you're ready", ui.StatusWarn, ""))
+	note := widget.NewLabel("Panopto workflow selected — your AI app finishes Panopto setup (setup_panopto).")
+	note.Wrapping = fyne.TextWrapWord
+	box.Add(note)
 }
 
 func doctorUnavailableReason(st *State) string {
