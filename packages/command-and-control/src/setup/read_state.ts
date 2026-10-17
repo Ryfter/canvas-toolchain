@@ -18,6 +18,7 @@ import { loadInstalledModules } from '../channel/installed.js';
 import { loadPendingRequests } from '../channel/pending.js';
 import { managedCanvasBackupConfigExists } from '../passthrough/canvas_backup_config.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
+import { detectHostWiring } from './hosts.js';
 import type {
   CanvasStoreMigrationRecord,
   ConfigFileKey,
@@ -295,6 +296,9 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
       })),
       pendingRequests: loadPendingRequests().modules,
     },
+    // Read-only, and the only part of this read that looks outside the CC home.
+    // Opt-out, so a caller that must not touch another app's files can say so.
+    hosts: opts.hosts === false ? null : detectHostWiring(),
   };
 
   if (opts.probe === true) {

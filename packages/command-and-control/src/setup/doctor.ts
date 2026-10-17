@@ -19,6 +19,7 @@ const ALL_CHECKS: DoctorCheckId[] = [
   'transcripts.source',
   'backup.sidecar',
   'modules.pending',
+  'hosts.wiring',
 ];
 
 /**
@@ -519,6 +520,66 @@ function modulesCheck(state: SetupState): DoctorCheck {
   };
 }
 
+/**
+ * Whether the AI client the professor is talking through can reach the
+ * toolchain. It is the one check whose fix is not a tool call — wiring a host is
+ * the installer's job — so the remedy lives in the summary rather than in a
+ * `fix` that would have to name an operation that does not exist.
+ */
+function hostsWiringCheck(state: SetupState): DoctorCheck {
+  const wiring = state.hosts;
+  if (wiring === null) {
+    return {
+      id: 'hosts.wiring',
+      status: 'ok',
+      summary: 'MCP host detection was turned off for this report, so no host was checked.',
+    };
+  }
+
+  const wired = wiring.hosts.filter((host) => host.wired);
+  const stale = wired.filter((host) => host.stalePath);
+  const remedy =
+    'Re-run the canvas-toolchain installer to wire your AI client, or see the setup docs for ' +
+    '`npx canvas-toolchain`.';
+
+  if (stale.length > 0) {
+    return {
+      id: 'hosts.wiring',
+      status: 'warn',
+      summary:
+        `${stale.length} MCP host(s) point canvas-toolchain at a file that no longer exists ` +
+        `(${stale.map((host) => host.displayName).join(', ')}). ${remedy}`,
+      detail: stale.map((host) => `${host.displayName}: ${host.scriptPath ?? 'script'} (missing)`),
+    };
+  }
+
+  if (wired.length === 0) {
+    const detail = [
+      ...wiring.hosts
+        .filter((host) => host.parseError)
+        .map((host) => `${host.displayName}: config present but unreadable`),
+      ...wiring.hosts
+        .filter((host) => !host.parseError && (host.installed || host.configFound))
+        .map((host) => `${host.displayName}: installed but not wired`),
+    ];
+    return {
+      id: 'hosts.wiring',
+      status: 'warn',
+      summary: `No MCP host on this machine is wired to run canvas-toolchain. ${remedy}`,
+      ...(detail.length > 0 ? { detail } : {}),
+    };
+  }
+
+  return {
+    id: 'hosts.wiring',
+    status: 'ok',
+    summary: `canvas-toolchain is wired into ${wired.map((host) => host.displayName).join(', ')}.`,
+    detail: wired
+      .filter((host) => host.scriptPath !== null)
+      .map((host) => `${host.displayName}: ${host.scriptPath}`),
+  };
+}
+
 /** Apply a journey's blockers to warnings, so an explicit ask is answered plainly. */
 function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): DoctorCheck[] {
   const blockers = JOURNEY_BLOCKERS[journey];
@@ -535,7 +596,8 @@ function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): Docto
  */
 export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorReport> {
   const journey = opts.journey ?? 'full';
-  const state = opts.state ?? (await readSetupState({ probe: opts.probe === true }));
+  const state = opts.state ??
+    (await readSetupState({ probe: opts.probe === true, hosts: opts.hosts !== false }));
 
   const checks = escalateForJourney([
     coursesRootCheck(state),
@@ -547,6 +609,7 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
     transcriptCheck(state),
     backupCheck(state),
     modulesCheck(state),
+    hostsWiringCheck(state),
   ], journey);
 
   const considered = new Set(JOURNEY_CHECKS[journey]);

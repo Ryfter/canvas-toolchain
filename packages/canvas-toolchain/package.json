@@ -7,6 +7,9 @@
   "bin": {
     "canvas-toolchain": "bin/canvas-toolchain.mjs"
   },
+  "scripts": {
+    "test": "node --test tests/doctor.test.mjs"
+  },
   "files": [
     "bin"
   ],

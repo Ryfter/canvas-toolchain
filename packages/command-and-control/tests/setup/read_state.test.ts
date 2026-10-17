@@ -6,10 +6,14 @@ import { readSetupState } from '../../src/setup/read_state.js';
 
 let ccHome: string;
 let cdsHome: string;
+let hostHome: string;
 const ORIGINAL = {
   ccHome: process.env.CC_HOME,
   cdsHome: process.env.CANVAS_DESIGN_HOME,
   anthropicKey: process.env.ANTHROPIC_API_KEY,
+  home: process.env.HOME,
+  userProfile: process.env.USERPROFILE,
+  appData: process.env.APPDATA,
 };
 
 /** Seed a file under CC_HOME (or CANVAS_DESIGN_HOME when `home` is given). */
@@ -26,8 +30,13 @@ function seedJson(name: string, value: unknown, home: string = ccHome): string {
 beforeEach(() => {
   ccHome = mkdtempSync(join(tmpdir(), 'cc-home-'));
   cdsHome = mkdtempSync(join(tmpdir(), 'cds-home-'));
+  hostHome = mkdtempSync(join(tmpdir(), 'host-home-'));
   process.env.CC_HOME = ccHome;
   process.env.CANVAS_DESIGN_HOME = cdsHome;
+  // The host wiring read follows the OS home, so isolate it like the rest.
+  process.env.HOME = hostHome;
+  process.env.USERPROFILE = hostHome;
+  process.env.APPDATA = join(hostHome, 'AppData', 'Roaming');
   delete process.env.ANTHROPIC_API_KEY;
   // Any network call at all fails loudly rather than hanging or returning.
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network call in test'))));
@@ -36,10 +45,14 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(ccHome, { recursive: true, force: true });
   rmSync(cdsHome, { recursive: true, force: true });
+  rmSync(hostHome, { recursive: true, force: true });
   for (const [key, value] of Object.entries({
     CC_HOME: ORIGINAL.ccHome,
     CANVAS_DESIGN_HOME: ORIGINAL.cdsHome,
     ANTHROPIC_API_KEY: ORIGINAL.anthropicKey,
+    HOME: ORIGINAL.home,
+    USERPROFILE: ORIGINAL.userProfile,
+    APPDATA: ORIGINAL.appData,
   })) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
@@ -69,6 +82,8 @@ describe('readSetupState on an empty home', () => {
     });
     expect(state.modules.pendingRequests).toEqual([]);
     expect(state.secretBearingFiles).toEqual([]);
+    expect(state.hosts?.hosts).toHaveLength(10);
+    expect(state.hosts?.anyWired).toBe(false);
     for (const health of Object.values(state.files)) {
       expect(health.present).toBe(false);
       expect(health.validJson).toBe(false);
@@ -406,6 +421,46 @@ describe('readSetupState probe', () => {
   it('is not attempted by default', async () => {
     seedJson('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     expect((await readSetupState()).canvas.probe).toBeUndefined();
+  });
+});
+
+describe('readSetupState host wiring', () => {
+  it('reports a wired host with a home-relative script path', async () => {
+    const script = join(hostHome, 'dist', 'index.js');
+    mkdirSync(join(hostHome, 'dist'), { recursive: true });
+    writeFileSync(script, '// mcp\n', 'utf-8');
+    mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+    writeFileSync(
+      join(hostHome, '.cursor', 'mcp.json'),
+      JSON.stringify({ mcpServers: { 'canvas-toolchain': { command: 'node', args: [script] } } }),
+      'utf-8',
+    );
+
+    const state = await readSetupState();
+
+    expect(state.hosts?.anyWired).toBe(true);
+    expect(state.hosts?.hosts.find((host) => host.id === 'cursor')?.scriptPath)
+      .toBe(`~${script.slice(hostHome.length)}`);
+    expect(JSON.stringify(state)).not.toContain(hostHome);
+  });
+
+  it('reads no host config when hosts is false', async () => {
+    mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+    writeFileSync(join(hostHome, '.cursor', 'mcp.json'), '{ nope', 'utf-8');
+
+    const state = await readSetupState({ hosts: false });
+
+    expect(state.hosts).toBeNull();
+  });
+
+  it('reports an unreadable host config as a parse error, never a throw', async () => {
+    mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+    writeFileSync(join(hostHome, '.cursor', 'mcp.json'), '{ nope', 'utf-8');
+
+    const state = await readSetupState();
+
+    expect(state.hosts?.hosts.find((host) => host.id === 'cursor')?.parseError).toBe(true);
+    expect(state.hosts?.anyWired).toBe(false);
   });
 });
 

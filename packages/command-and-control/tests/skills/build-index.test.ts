@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { buildIndex } from '../../../../scripts/skills/build-index.mjs';
 import { parseFrontMatter } from '../../../../scripts/skills/lib/frontmatter.mjs';
 import { plainOperation } from '../../../../scripts/skills/lib/registry.mjs';
+import { buildRegistry } from '../../src/surface/registry.js';
 
 const SCRIPT = fileURLToPath(new URL('../../../../scripts/skills/build-index.mjs', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
@@ -24,6 +25,9 @@ const SPAWN_TIMEOUT_MS = 30_000;
 const OP_FRONTMATTER_KEYS = [
   'id', 'description', 'section', 'intent_tool', 'intent_action', 'exposure', 'related',
 ];
+
+/** A deprecated operation carries one more key: the notice its id goes away in. */
+const DEPRECATED_OP_FRONTMATTER_KEYS = [...OP_FRONTMATTER_KEYS, 'deprecated'];
 
 const roots: string[] = [];
 
@@ -201,11 +205,14 @@ describe('build-index', () => {
   });
 
   it('gives every op file the full frontmatter schema and nothing else', () => {
+    const registry = buildRegistry();
     for (const name of readdirSync(join(sharedRoot, 'ops'))) {
+      const id = name.replace(/\.md$/, '');
       const { data } = parseFrontMatter(readFileSync(join(sharedRoot, 'ops', name), 'utf8'));
       expect(data, name).not.toBeNull();
-      expect(Object.keys(data ?? {}), name).toEqual(OP_FRONTMATTER_KEYS);
-      expect(data?.id, name).toBe(name.replace(/\.md$/, ''));
+      const expected = registry.get(id)?.deprecated ? DEPRECATED_OP_FRONTMATTER_KEYS : OP_FRONTMATTER_KEYS;
+      expect(Object.keys(data ?? {}), name).toEqual(expected);
+      expect(data?.id, name).toBe(id);
       expect(String(data?.description ?? '').length, name).toBeGreaterThan(0);
       expect(Array.isArray(data?.related), name).toBe(true);
       expect(data?.related, name).not.toContain(data?.id);

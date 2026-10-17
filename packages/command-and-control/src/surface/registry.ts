@@ -1,4 +1,5 @@
 import type { Operation } from './operation.js';
+import { deprecation } from './deprecation.js';
 import type { PassthroughTool } from '../passthrough/ci_tools.js';
 import { setupCc } from '../tools/setup_cc.js';
 import { setupAnthropic } from '../tools/setup_anthropic.js';
@@ -18,6 +19,7 @@ import { setCoursesRoot } from '../tools/set_courses_root.js';
 import { openDashboard } from '../tools/open_dashboard.js';
 import { getCcStatus } from '../tools/get_cc_status.js';
 import { runDoctor } from '../setup/doctor.js';
+import { getStarted } from '../setup/get_started.js';
 import { analyzeCourse } from '../tools/workflows/analyze_course.js';
 import { planNextSemester } from '../tools/workflows/plan_next_semester.js';
 import { updateCourseMaterials } from '../tools/workflows/update_course_materials.js';
@@ -130,6 +132,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'cc',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'cc' }),
   },
   {
     id: 'setup_anthropic',
@@ -149,6 +152,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'anthropic',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'anthropic' }),
   },
   {
     id: 'setup_canvas',
@@ -168,6 +172,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'canvas',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'canvas' }),
   },
   {
     id: 'setup_ollama',
@@ -185,6 +190,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'ollama',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'ollama' }),
   },
   {
     id: 'show_canvas_capabilities',
@@ -415,6 +421,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'courses_root',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'courses_root' }),
   },
   {
     id: 'open_dashboard',
@@ -442,11 +449,12 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'status',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'status' }),
   },
   {
     id: 'setup_doctor',
     section: 'admin',
-    description: 'Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic checks.',
+    description: 'Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic probes; detects MCP host wiring.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -456,6 +464,7 @@ export const CORE_OPERATIONS: Operation[] = [
           enum: ['local-authoring', 'canvas-connected', 'ai-assisted', 'full'],
           description: 'Which capability the verdict is for. A narrower journey ignores unconfigured checks it does not need. Default full.',
         },
+        hosts: { type: 'boolean', description: 'Read the other MCP clients\' config files (never write) to report whether canvas-toolchain is wired into each. Default true.' },
       },
     },
     handler: (args) => runDoctor(args as never),
@@ -463,6 +472,26 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'doctor',
+  },
+  {
+    id: 'get_started',
+    section: 'admin',
+    description: 'First-run guidance built from the setup doctor: which capabilities are ready and the exact ct_setup or ct_advanced call that finishes each one. Read-only and offline.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        journey: {
+          type: 'string',
+          enum: ['local-authoring', 'canvas-connected', 'ai-assisted', 'full'],
+          description: 'Which capability to guide toward. Default full: courses root required, Canvas and AI optional.',
+        },
+      },
+    },
+    handler: (args) => getStarted(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'get_started',
   },
   {
     id: 'analyze_course',
@@ -614,6 +643,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'transcripts',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'transcripts' }),
   },
   {
     id: 'compare_transcripts',
@@ -758,6 +788,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'lecture_answers',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'lecture_answers' }),
   },
   {
     id: 'index_course_for_answers',
@@ -933,6 +964,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'spot_check',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'spot_check' }),
   },
   {
     id: 'validate_quiz',
@@ -1257,6 +1289,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'course',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'course' }),
   },
   {
     id: 'get_course_state',
@@ -1766,6 +1799,7 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'backup',
+    deprecated: deprecation({ tool: 'ct_setup', action: 'backup' }),
   },
   {
     id: 'download_canvas_archive',

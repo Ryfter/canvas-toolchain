@@ -5,7 +5,8 @@ section: "transcripts"
 intent_tool: "ct_setup"
 intent_action: "transcripts"
 exposure: "intent"
-related: [compare_transcripts, enrich_panopto_transcripts, get_cc_status, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_lecture_answers, setup_ollama]
+related: [compare_transcripts, enrich_panopto_transcripts, get_cc_status, get_started, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_ollama]
+deprecated: "Deprecated — use ct_setup {action: \"transcripts\"}; removed in 2.5.0."
 ---
 <!-- generated:end -->
 
