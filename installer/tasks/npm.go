@@ -14,17 +14,29 @@ type NodePaths struct {
 	NPM  string
 }
 
+// NodeBinaryPath is the bundled Node executable for a target OS. The runtime
+// unpacks differently per platform: Windows keeps node.exe directly under
+// <installDir>/.node, every other platform under .node/bin. The OS is a
+// parameter, and the separator is chosen from it, so the Windows layout is
+// testable on any host. ResolveNodePaths and the summary's manual-config
+// snippet both go through this one function, so the path a host is given can
+// never drift from where the installer actually put Node.
+func NodeBinaryPath(installDir, goos string) string {
+	if goos == "windows" {
+		return installDir + `\.node\node.exe`
+	}
+	return installDir + "/.node/bin/node"
+}
+
 func ResolveNodePaths(installDir string) NodePaths {
 	nodeDir := filepath.Join(installDir, ".node")
-	var nodeBin, npmCli string
+	var npmCli string
 	if runtime.GOOS == "windows" {
-		nodeBin = filepath.Join(nodeDir, "node.exe")
 		npmCli = filepath.Join(nodeDir, "node_modules", "npm", "bin", "npm-cli.js")
 	} else {
-		nodeBin = filepath.Join(nodeDir, "bin", "node")
 		npmCli = filepath.Join(nodeDir, "lib", "node_modules", "npm", "bin", "npm-cli.js")
 	}
-	return NodePaths{Node: nodeBin, NPM: npmCli}
+	return NodePaths{Node: NodeBinaryPath(installDir, runtime.GOOS), NPM: npmCli}
 }
 
 func RunNPM(ctx context.Context, np NodePaths, workdir string, args []string, out func(line string)) error {

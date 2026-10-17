@@ -16,9 +16,6 @@ func TestNewState_Defaults(t *testing.T) {
 	if s.WorkflowPanopto || s.WorkflowCI || s.WorkflowRegistry || s.OptInPython {
 		t.Error("expected non-default workflows to default to false")
 	}
-	if s.CanvasHost != "" {
-		t.Errorf("expected CanvasHost default empty (no institution prefill), got %q", s.CanvasHost)
-	}
 	if !strings.Contains(s.InstallDir, "canvas-toolchain") {
 		t.Errorf("expected InstallDir to contain 'canvas-toolchain', got %q", s.InstallDir)
 	}

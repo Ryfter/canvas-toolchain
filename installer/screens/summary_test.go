@@ -30,6 +30,46 @@ func TestBuildSnippet_ReflectsInstallDir(t *testing.T) {
 	}
 }
 
+// The manual snippet must point at the same bundled Node the install tasks use,
+// on every platform. Hardcoding .node/bin/node sent Windows users a path that
+// does not exist — the runtime unpacks node.exe directly under .node. Marshal
+// is required, not cosmetic: a Windows path holds backslashes, which must be
+// JSON-escaped or the pasted config is malformed.
+func TestBuildSnippet_UsesTheBundledNodePerGOOS(t *testing.T) {
+	cases := []struct{ goos, installDir string }{
+		{"windows", `C:\Users\prof\canvas-toolchain`},
+		{"darwin", "/Users/prof/canvas-toolchain"},
+		{"linux", "/opt/canvas-toolchain"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.goos, func(t *testing.T) {
+			st := NewState("2.3.0")
+			st.InstallDir = tc.installDir
+
+			snippet := buildSnippetForGOOS(st, tc.goos)
+			var doc struct {
+				McpServers map[string]struct {
+					Command string   `json:"command"`
+					Args    []string `json:"args"`
+				} `json:"mcpServers"`
+			}
+			if err := json.Unmarshal([]byte(snippet), &doc); err != nil {
+				t.Fatalf("snippet is not valid JSON: %v\n%s", err, snippet)
+			}
+			entry, ok := doc.McpServers["canvas-toolchain"]
+			if !ok {
+				t.Fatalf("snippet is missing the canvas-toolchain server: %s", snippet)
+			}
+			if want := tasks.NodeBinaryPath(tc.installDir, tc.goos); entry.Command != want {
+				t.Errorf("command = %q, want the bundled Node %q", entry.Command, want)
+			}
+			if len(entry.Args) != 1 || !strings.Contains(entry.Args[0], "command-and-control/dist/index.js") {
+				t.Errorf("unexpected args: %#v", entry.Args)
+			}
+		})
+	}
+}
+
 func TestNewSummaryScreen_RendersWithoutPanic(t *testing.T) {
 	a := test.NewApp()
 	defer a.Quit()
@@ -212,8 +252,9 @@ func TestSummaryScreen_MarksATroubledInstall(t *testing.T) {
 	}
 }
 
-// No doctor means the summary falls back to what the installer can vouch for,
-// with a short note — never a failed install, never a silent gap.
+// No doctor means the summary falls back to what the installer can vouch for.
+// It collects no credentials any more, so the fallback says the install is
+// unverified — never a claim about a credential it did not see.
 func TestSummaryScreen_FallsBackWhenTheDoctorCouldNotRun(t *testing.T) {
 	st := NewState("2.3.0")
 	st.DoctorErr = errors.New("bundled Node runtime missing at /opt/canvas-toolchain/.node/bin/node")
@@ -223,8 +264,8 @@ func TestSummaryScreen_FallsBackWhenTheDoctorCouldNotRun(t *testing.T) {
 	if !strings.Contains(labels, "Setup check unavailable — bundled Node runtime missing") {
 		t.Errorf("expected the fallback note; got:\n%s", labels)
 	}
-	if !strings.Contains(labels, "setup_anthropic") || !strings.Contains(labels, "setup_canvas") {
-		t.Errorf("expected the installer's own warnings; got:\n%s", labels)
+	if !strings.Contains(labels, "not verified yet") {
+		t.Errorf("expected the unverified note; got:\n%s", labels)
 	}
 	if strings.Contains(labels, "Local authoring") {
 		t.Errorf("capability rows come from the doctor and must not be invented; got:\n%s", labels)
@@ -251,14 +292,15 @@ func TestSummaryScreen_KeepsTheInstallerPanoptoNote(t *testing.T) {
 
 	labels := newSummaryState(t, st)
 
-	if !strings.Contains(labels, "Panopto not configured") {
+	if !strings.Contains(labels, "Panopto workflow selected") {
 		t.Errorf("expected the installer's Panopto note; got:\n%s", labels)
 	}
 }
 
 // Panopto is opt-in: a professor who did not tick the workflow must not be told
-// they have something left to configure. The note only applies to the chosen,
-// incomplete workflow.
+// they have something left to configure. The note only applies to the chosen
+// workflow — and the installer collects no Panopto credentials any more, so a
+// chosen workflow is always the incomplete case.
 func TestSummaryScreen_OmitsPanoptoNoteWhenWorkflowNotChosen(t *testing.T) {
 	st := NewState("2.3.0")
 	st.WorkflowPanopto = false
@@ -266,25 +308,8 @@ func TestSummaryScreen_OmitsPanoptoNoteWhenWorkflowNotChosen(t *testing.T) {
 
 	labels := newSummaryState(t, st)
 
-	if strings.Contains(labels, "Panopto not configured") {
+	if strings.Contains(labels, "Panopto workflow selected") {
 		t.Errorf("a workflow the professor did not choose must not warn; got:\n%s", labels)
-	}
-}
-
-// A chosen and fully configured Panopto workflow is complete, so there is
-// nothing to warn about either.
-func TestSummaryScreen_OmitsPanoptoNoteWhenWorkflowConfigured(t *testing.T) {
-	st := NewState("2.3.0")
-	st.WorkflowPanopto = true
-	st.PanoptoDomain = "https://example.panopto.com"
-	st.PanoptoClientID = "client-id"
-	st.PanoptoSecret = "secret"
-	st.Doctor = doctorReport("ok", tasks.ReadyJourneys{LocalAuthoring: true})
-
-	labels := newSummaryState(t, st)
-
-	if strings.Contains(labels, "Panopto not configured") {
-		t.Errorf("a fully configured workflow needs no note; got:\n%s", labels)
 	}
 }
 
