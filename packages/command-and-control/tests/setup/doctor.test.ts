@@ -152,6 +152,34 @@ describe('runDoctor checks', () => {
     });
   });
 
+  it('lists every configured provider and picks none when no active provider is set', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    for (const provider of ['anthropic', 'ollama', 'lmstudio']) {
+      expect(active.summary).toContain(provider);
+    }
+    expect(active.fix).toEqual({
+      tool: 'ct_setup', action: 'llm_provider', hint: expect.stringContaining('ct_setup action llm_provider'),
+    });
+    // Never steer the user to one arbitrary provider by name.
+    expect(active.fix?.hint).not.toMatch(/with provider "/);
+  });
+
+  it('still points at the single configured provider when no active provider is set', async () => {
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    expect(active.summary).toContain('ollama');
+    expect(active.fix?.hint).toContain('ollama');
+  });
+
   it('reports a corrupt lmstudio-config.json instead of throwing', async () => {
     writeFileSync(join(ccHome, 'lmstudio-config.json'), '{ nope', 'utf-8');
 

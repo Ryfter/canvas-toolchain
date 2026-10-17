@@ -99,6 +99,21 @@ describe('auto-activation after a successful setup', () => {
     expect(JSON.parse(readFileSync(providerPath(), 'utf-8'))).toEqual({ provider: 'ollama' });
   });
 
+  it('keeps the already-active provider and does not tell the user to switch to it', async () => {
+    seedProvider('anthropic');
+    seedAnthropicConfig();
+
+    const result = await setupAnthropic({ apiKey: 'sk-ant-real', test: false });
+
+    expect(result.activation).toEqual({
+      activated: false,
+      activeProvider: 'anthropic',
+      note: expect.stringContaining('already the active LLM provider'),
+    });
+    expect(result.activation?.note).not.toMatch(/switch to anthropic/);
+    expect(JSON.parse(readFileSync(providerPath(), 'utf-8'))).toEqual({ provider: 'anthropic' });
+  });
+
   it('replaces a selector that points at a provider which is not configured', async () => {
     seedProvider('lmstudio'); // no lmstudio-config.json on disk
 
