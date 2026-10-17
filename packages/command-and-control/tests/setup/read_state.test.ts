@@ -157,6 +157,20 @@ describe('readSetupState secrets', () => {
     }
   });
 
+  // #151 R7 review fix 6: the list must describe the FILES, not Design Studio's
+  // canonical overlay. institution.json used to be flagged for a token it did not
+  // hold, and canvas-config.json for one it only had a host of.
+  it('does not flag a Canvas store that holds no secret on disk', async () => {
+    seedJson('canvas-config.json', { host: 'example.instructure.com' });
+    seedJson('institution.json', { institution: 'Example U', canvasUrl: 'https://example.instructure.com' }, cdsHome);
+
+    const state = await readSetupState();
+
+    expect(state.secretBearingFiles).toEqual([]);
+    expect(state.canvasConfig).toEqual({ host: 'example.instructure.com', hasApiToken: false });
+    expect(state.designStudio.hasApiToken).toBe(false);
+  });
+
   it('leaves a config.json without a registry token out of the secret list', async () => {
     seedJson('config.json', { coursesRoot: '/courses' });
     expect((await readSetupState()).secretBearingFiles).toEqual([]);
@@ -240,6 +254,7 @@ describe('readSetupState stores', () => {
       hasApiToken: true,
       hasWaveApiKey: true,
       institutionName: null,
+      brandSetupPending: false,
     });
     expect(JSON.stringify(state)).not.toContain('cds-tok');
   });
@@ -255,27 +270,58 @@ describe('readSetupState stores', () => {
       hasApiToken: false,
       hasWaveApiKey: true,
       institutionName: 'State U',
+      brandSetupPending: false,
     });
     expect(state.storesInSync).toBe(true);
     expect(JSON.stringify(state)).not.toContain('wave-secret');
   });
 
-  // #151 R7 (D1): Canvas Design Studio resolves its Canvas host and token from
-  // the canonical store, so a stale institution.json can no longer make the two
-  // stores disagree *in effect* — Design Studio reports the canonical host, and
-  // the raw files are reconciled by migrateCanvasStores() (pinned in
-  // shared-types/tests/canvas-store.test.ts).
-  it('reports the canonical host as the Design Studio host when the stores disagree', async () => {
+  it('reports the store the Canvas bridge synthesized as still awaiting brand setup', async () => {
+    seedJson('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+    seedJson(
+      'institution.json',
+      { institution: '', canvasUrl: 'https://example.instructure.com', apiToken: 'tok-secret', brandSetupPending: true },
+      cdsHome,
+    );
+
+    const state = await readSetupState();
+
+    expect(state.designStudio.brandSetupPending).toBe(true);
+    expect(state.designStudio.institutionName).toBeNull();
+  });
+
+  // #151 R7 review fix 6: Canvas Design Studio's loadConfig() overlays the
+  // canonical host and token, which hid a raw disagreement from the doctor — the
+  // files would be silently reconciled by the next save. Read both stores raw.
+  it('reports a raw disagreement between the two stores', async () => {
     seedJson('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     seedJson('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'cds-tok' }, cdsHome);
 
     const state = await readSetupState();
 
-    expect(state.designStudio.host).toBe('example.instructure.com');
-    expect(state.designStudio.hasApiToken).toBe(true);
-    expect(state.storesInSync).toBe(true);
+    expect(state.canvasConfig).toEqual({ host: 'example.instructure.com', hasApiToken: true });
+    expect(state.designStudio.host).toBe('other.instructure.com');
+    expect(state.storesInSync).toBe(false);
     expect(JSON.stringify(state)).not.toContain('tok-secret');
     expect(JSON.stringify(state)).not.toContain('cds-tok');
+  });
+
+  it('reports the store-sync outcome the bridge last recorded', async () => {
+    seedJson('canvas-store-migration.json', {
+      at: '2026-10-17T09:40:00.000Z',
+      action: 'canvas-config-wins',
+      detail: 'Both stores held different Canvas credentials…',
+      backupPath: join(cdsHome, 'institution.json.bak-2026-10-17T09-40-00-000Z'),
+    });
+
+    const state = await readSetupState();
+
+    expect(state.canvasStoreMigration?.action).toBe('canvas-config-wins');
+    expect(state.canvasStoreMigration?.backupPath).toContain('institution.json.bak-');
+  });
+
+  it('reports no migration when the bridge has never acted', async () => {
+    expect((await readSetupState()).canvasStoreMigration).toBeNull();
   });
 });
 

@@ -114,16 +114,21 @@ export async function setupCanvas(input: SetupCanvasInput): Promise<SetupCanvasR
     }
   }
 
-  // One writer for the canonical store (#151 R7, D1): atomic, owner-only, and it
-  // preserves the settings setup_canvas does not own — the V&R Plan C snapshot
-  // settings declared on CanvasSetupConfig, plus any field written by the Go
-  // installer or a future version.
-  writeCanvasConfig({
-    host,
-    token,
-    configuredAt: now,
-    lastValidatedAt: test ? now : '',
-  });
+  // One writer for the canonical store (#151 R7, D1): atomic with a unique temp
+  // name, owner-only, preserving the settings setup_canvas does not own — the
+  // V&R Plan C snapshot settings declared on CanvasSetupConfig, plus any field
+  // written by the Go installer or a future version. setup_canvas is this file's
+  // owner and the professor is explicitly re-configuring, so a file that cannot be
+  // parsed may be replaced — with its old bytes kept aside as a backup.
+  writeCanvasConfig(
+    {
+      host,
+      token,
+      configuredAt: now,
+      lastValidatedAt: test ? now : '',
+    },
+    { replaceCorrupt: true },
+  );
 
   // Canvas Design Studio reads its Canvas host and token from its own
   // institution.json (which also owns the brand colors, accessibility policy and
@@ -133,7 +138,7 @@ export async function setupCanvas(input: SetupCanvasInput): Promise<SetupCanvasR
   // saved and usable either way.
   let storeNote = '';
   try {
-    const migration = migrateCanvasStores();
+    const migration = migrateCanvasStores({ createInstitution: true });
     if (migration.changed || migration.action === 'corrupt') storeNote = ` ${migration.detail}`;
   } catch (err) {
     storeNote = ` Warning: Canvas Design Studio's institution.json could not be updated (${

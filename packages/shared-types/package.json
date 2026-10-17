@@ -2,7 +2,7 @@
   "name": "@canvas-toolchain/shared-types",
   "license": "MIT",
   "version": "2.3.0",
-  "description": "Shared TypeScript types across Curriculum Intelligence, Canvas Design Studio, and Command & Control",
+  "description": "Shared TypeScript types and the Canvas host rule and credential-store bridge used by Curriculum Intelligence, Canvas Design Studio, and Command & Control",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

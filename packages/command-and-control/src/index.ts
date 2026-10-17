@@ -21,7 +21,7 @@ import { adaptModuleTools } from './surface/module_adapter.js';
 import { listTools } from './surface/list_tools.js';
 import { dispatchSurface } from './surface/dispatch.js';
 import type { Operation } from './surface/operation.js';
-import { migrateCanvasStores } from '@canvas-toolchain/shared-types';
+import { bridgeCanvasStoresAtStartup } from './setup/canvas_store_boot.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -33,19 +33,11 @@ const server = new Server(
 // Bridge the two Canvas credential stores once at startup (#151 R7, D1):
 // ~/.command-and-control/canvas-config.json is canonical and Canvas Design
 // Studio's institution.json mirrors it, so a professor who configured Canvas in
-// either app has both. Non-fatal and quiet when there is nothing to do — an
-// unwritable or read-only home must never stop the server booting, and the
-// result never contains a token.
-try {
-  const migration = migrateCanvasStores();
-  if (migration.changed || migration.action === 'corrupt') {
-    console.error(`[canvas-store] ${migration.detail}`);
-  }
-} catch (err) {
-  console.error(
-    `[canvas-store] migration skipped: ${err instanceof Error ? err.message : String(err)}`,
-  );
-}
+// either app has both. Never fatal, never creates Design Studio's file — an
+// unwritable or read-only home must not stop the server booting, and a blank
+// institution.json would switch off Design Studio's own brand setup. What it did
+// (and any backup it took) goes to the migration journal, which the doctor reads.
+bridgeCanvasStoresAtStartup();
 
 // Load enabled modules (e.g. video) before registering handlers so their tool
 // schemas and handlers are available to ListTools/CallTool.

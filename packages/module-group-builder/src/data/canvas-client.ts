@@ -18,9 +18,9 @@ export interface CanvasClientOptions { fetchImpl?: typeof fetch; }
  * The same rules as normalizeCanvasHost in @canvas-toolchain/shared-types, which
  * is the canonical implementation (and the twin of installer/tasks/canvashost.go).
  * This package does not depend on shared-types, and a channel bundle inlines its
- * dependencies, so the rule is duplicated rather than imported — the test in
- * tests/data/canvas-client.test.ts pins it to the shared table, so a change in one
- * place cannot silently miss the other.
+ * dependencies, so the rule is duplicated rather than imported. The test imports
+ * that implementation and asserts this copy normalizes the same spellings the same
+ * way, so a change to the shared rule this copy misses fails the suite.
  *
  * A host saved as "school.instructure.com/" or with a "/api/v1" path builds a
  * broken base URL (`https://school.instructure.com//api/v1/...`), so it is

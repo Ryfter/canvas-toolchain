@@ -6,6 +6,7 @@ import { loadAccessibilityPolicy, saveAccessibilityPolicy, loadWaveApiKey } from
 import { ccHome } from '@canvas-toolchain/shared-types';
 import { setupCanvas } from '../../src/tools/setup_canvas.js';
 import { waveDeepCheckTool } from '../../src/tools/wave_deep_check.js';
+import { reviewAccessibilityPolicy } from '../../src/tools/review_accessibility_policy.js';
 import { getCcHomePath } from '../../src/kb/config.js';
 
 // #151 R7 / decision D1: ~/.command-and-control/canvas-config.json is the single
@@ -59,9 +60,25 @@ describe('setup_canvas mirrors into Canvas Design Studio', () => {
     // Minimal valid content: a complete config every CDS reader accepts.
     expect(created.institution).toBe('');
     expect(created.colors).toBeDefined();
+    // #151 R7 review fix 1: the synthesized file must not look like a finished
+    // setup to Canvas Design Studio — it has no institution name or real colors.
+    expect(created.brandSetupPending).toBe(true);
     if (process.platform !== 'win32') {
       expect(statSync(institutionPath()).mode & 0o777).toBe(0o600);
     }
+  });
+
+  it('never re-marks an existing, genuinely configured institution.json', async () => {
+    writeFileSync(institutionPath(), JSON.stringify({
+      institution: 'Example University',
+      colors: { primary: '#0033A0', primaryDark: '#002277', primaryLight: '#E6ECF9', secondary: '#D64309' },
+      canvasUrl: `https://${HOST}`,
+      apiToken: TOKEN,
+    }, null, 2), 'utf-8');
+
+    await configuredCanvas();
+
+    expect(readJson(institutionPath()).brandSetupPending).toBeUndefined();
   });
 
   it('keeps the Design Studio fields a pre-existing institution.json already had', async () => {
@@ -179,5 +196,20 @@ describe('the shared store path rule', () => {
   it('agrees with Command & Control\'s own CC_HOME resolution', () => {
     expect(ccHome()).toBe(getCcHomePath());
     expect(ccHome()).toBe(ccHomeDir);
+  });
+});
+
+// #151 R7 review fix 1: startup no longer synthesizes institution.json, so a
+// professor who configured Canvas before this change — canvas-config.json only —
+// must be told how to create it rather than left with an opaque failure.
+describe('recovery on a Command & Control-only install', () => {
+  it('tells the professor the action that creates institution.json', () => {
+    writeFileSync(canvasPath(), JSON.stringify({ host: HOST, token: TOKEN }, null, 2), 'utf-8');
+
+    const result = reviewAccessibilityPolicy({ confirm: true });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('NO_INSTITUTION_CONFIG');
+    expect(result.fix?.join(' ')).toContain('ct_setup action canvas');
   });
 });

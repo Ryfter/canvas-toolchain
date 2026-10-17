@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { configExists, loadConfig, saveConfig } from '../src/config.js';
+import { configExists, loadConfig, needsBrandSetup, saveConfig } from '../src/config.js';
+import { getStarted } from '../src/tools/get-started.js';
 import type { InstitutionConfig } from '../src/types.js';
 
 // #151 R7 / D1: ~/.command-and-control/canvas-config.json is the single source of
@@ -30,6 +31,8 @@ let ccHome: string;
 
 const institutionPath = () => join(designHome, 'institution.json');
 const canvasPath = () => join(ccHome, 'canvas-config.json');
+const readJson = (path: string): Record<string, unknown> =>
+  JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>;
 
 function seedCanvas(value: unknown): void {
   writeFileSync(canvasPath(), JSON.stringify(value, null, 2), 'utf-8');
@@ -148,5 +151,143 @@ describe('the setup path writes the canonical store too', () => {
     saveConfig(SAMPLE_CONFIG);
 
     expect(existsSync(canvasPath())).toBe(false);
+  });
+});
+
+// #151 R7 review fix 2: loadConfig() overlays the canonical host and token, so a
+// load -> save cycle (the a11y policy, the WAVE key, list_canvas_courses' kbTip)
+// used to copy the canonical token onto disk — silently, and with no backup.
+describe('an ordinary save keeps the Canvas fields the file has', () => {
+  it('does not copy the overlaid canonical token into institution.json', () => {
+    seedInstitution(SAMPLE_CONFIG);
+    seedCanvas(CANVAS_CONFIG);
+    const before = readFileSync(institutionPath(), 'utf-8');
+
+    // Exactly what saveAccessibilityPolicy / saveWaveApiKey / list-courses do.
+    saveConfig(loadConfig());
+
+    expect(readJson(institutionPath()).apiToken).toBe(INSTITUTION_TOKEN);
+    const backups = readdirSync(designHome).filter((name) => name.includes('.bak-'));
+    expect(backups).toEqual([]);
+    // Nothing needed to change, so the file the professor had is the file they keep.
+    expect(readFileSync(institutionPath(), 'utf-8')).toBe(before);
+  });
+
+  it('does not give a file with no Canvas fields one', () => {
+    seedInstitution({ institution: 'Example U', colors: SAMPLE_CONFIG.colors });
+    seedCanvas(CANVAS_CONFIG);
+    const overlaid = loadConfig();
+    expect(overlaid.apiToken).toBe(CANONICAL_TOKEN); // the overlay really is in play
+
+    saveConfig({ ...overlaid, kbTipShown: true });
+
+    const saved = readJson(institutionPath());
+    expect(saved.apiToken).toBeUndefined();
+    expect(saved.canvasUrl).toBeUndefined();
+    expect(saved.kbTipShown).toBe(true);
+  });
+});
+
+describe('the setup path rotates the Canvas credentials deliberately', () => {
+  it('records a fresh, unvalidated configuration when host or token changes', () => {
+    seedCanvas(CANVAS_CONFIG);
+
+    saveConfig(
+      { ...SAMPLE_CONFIG, canvasUrl: 'https://new.instructure.com', apiToken: 'rotated-token' },
+      { syncCanvasStore: true },
+    );
+
+    const written = readJson(canvasPath());
+    expect(written.host).toBe('new.instructure.com');
+    expect(written.token).toBe('rotated-token');
+    // The previous validation belonged to the previous token, so it must not be
+    // reported as this one's.
+    expect(written.lastValidatedAt).toBe('');
+    expect(written.configuredAt).not.toBe(CANVAS_CONFIG.configuredAt);
+  });
+
+  it('keeps the recorded timestamps when the credentials are unchanged', () => {
+    seedCanvas(CANVAS_CONFIG);
+
+    saveConfig(
+      { ...SAMPLE_CONFIG, canvasUrl: `https://${HOST}`, apiToken: CANONICAL_TOKEN },
+      { syncCanvasStore: true },
+    );
+
+    const written = readJson(canvasPath());
+    expect(written.configuredAt).toBe(CANVAS_CONFIG.configuredAt);
+    expect(written.lastValidatedAt).toBe(CANVAS_CONFIG.lastValidatedAt);
+  });
+
+  it('backs up institution.json before the setup path rewrites a different Canvas value', () => {
+    seedInstitution(SAMPLE_CONFIG);
+    const before = readFileSync(institutionPath(), 'utf-8');
+
+    saveConfig(
+      { ...SAMPLE_CONFIG, canvasUrl: `https://${HOST}`, apiToken: 'new-canvas-token' },
+      { syncCanvasStore: true },
+    );
+
+    const backups = readdirSync(designHome).filter((name) => name.includes('.bak-'));
+    expect(backups).toHaveLength(1);
+    expect(readFileSync(join(designHome, backups[0]), 'utf-8')).toBe(before);
+    expect(readJson(institutionPath()).apiToken).toBe('new-canvas-token');
+  });
+
+  it('takes no backup when it rewrites the same Canvas credentials', () => {
+    seedInstitution({ ...SAMPLE_CONFIG, apiToken: CANONICAL_TOKEN });
+
+    saveConfig({ ...SAMPLE_CONFIG, apiToken: CANONICAL_TOKEN }, { syncCanvasStore: true });
+
+    expect(readdirSync(designHome).filter((name) => name.includes('.bak-'))).toEqual([]);
+  });
+
+  // #151 R7 review fix 4: before the bridge, only setup_canvas replaced
+  // canvas-config.json. Now the wizard can too — and a hand-edited file with a
+  // typo in its snapshot settings must not be destroyed by it.
+  it('refuses to replace a corrupt canvas-config.json, leaving both stores alone', () => {
+    seedInstitution(SAMPLE_CONFIG);
+    const institutionBefore = readFileSync(institutionPath(), 'utf-8');
+    writeFileSync(canvasPath(), '{ not json', 'utf-8');
+
+    expect(() => saveConfig({ ...SAMPLE_CONFIG, apiToken: 'new-canvas-token' }, { syncCanvasStore: true }))
+      .toThrow(/CANVAS_STORE_CORRUPT/);
+
+    expect(readFileSync(canvasPath(), 'utf-8')).toBe('{ not json');
+    expect(readFileSync(institutionPath(), 'utf-8')).toBe(institutionBefore);
+  });
+});
+
+// #151 R7 review fix 1: institution.json created by the bridge has no institution
+// name and only placeholder colors, so Design Studio must keep asking for brand
+// setup instead of reporting a fully configured app.
+describe('a store the bridge synthesized still asks for brand setup', () => {
+  const SYNTHESIZED = {
+    institution: '',
+    colors: SAMPLE_CONFIG.colors,
+    canvasUrl: `https://${HOST}`,
+    apiToken: CANONICAL_TOKEN,
+    brandSetupPending: true,
+  };
+
+  it('reports brand setup as pending and says so in get_started', () => {
+    seedInstitution(SYNTHESIZED);
+
+    expect(configExists()).toBe(true);
+    expect(needsBrandSetup()).toBe(true);
+    const text = getStarted();
+    expect(text).toMatch(/institution name and brand colors/i);
+    expect(text).not.toContain('fully configured');
+  });
+
+  it('is settled once the wizard has written a real institution name', () => {
+    seedInstitution(SAMPLE_CONFIG);
+
+    expect(needsBrandSetup()).toBe(false);
+    expect(getStarted()).toContain('fully configured');
+  });
+
+  it('asks for brand setup when there is no file at all', () => {
+    expect(needsBrandSetup()).toBe(true);
   });
 });

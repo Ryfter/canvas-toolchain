@@ -63,14 +63,16 @@ describe('review_accessibility_policy', () => {
     expect(r.error).toBe('INVALID_CONFORMANCE');
   });
 
-  it('surfaces the Design Studio setup_institution fix when no config exists', () => {
+  it('points at both ways to create the institution config', () => {
     const r = reviewAccessibilityPolicy({ confirm: true }, memDeps());
     expect(r.ok).toBe(false);
     expect(r.error).toBe('NO_INSTITUTION_CONFIG');
     const fix = r.fix!.join(' ');
+    expect(fix).toContain('~/.canvas-design-mcp/institution.json');
+    // #151 R7 review fix 1: the bridge no longer creates this file at startup, so
+    // the recovery path has to name the action that does.
+    expect(fix).toContain('ct_setup action canvas');
     expect(fix).toContain('setup_institution');
     expect(fix).toContain('Canvas Design Studio');
-    expect(fix).toContain('~/.canvas-design-mcp/institution.json');
-    expect(fix).toContain('does not expose');
   });
 });

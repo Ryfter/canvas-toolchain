@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PaCanvasClient, loadCanvasCreds } from '../src/canvas/client.js';
+import { normalizeCanvasHost } from '../../shared-types/src/canvas-host.js';
 
 /** Build a fake fetch that maps URL substrings to JSON payloads (no Link paging). */
 function fakeFetch(routes: Array<{ match: string; body: unknown }>): typeof fetch {
@@ -102,14 +103,15 @@ describe('PaCanvasClient paging', () => {
 
 // #151 R7: this module reads ~/.command-and-control/canvas-config.json directly,
 // so it applies the same host rules as @canvas-toolchain/shared-types'
-// normalizeCanvasHost. The table below mirrors that implementation's own test
-// table — keeping it here is what stops the two from drifting apart.
+// normalizeCanvasHost. That function IS the rule — these tests import it rather
+// than restating its table, so the two cannot drift apart.
 describe('loadCanvasCreds host normalization', () => {
-  const TABLE: Array<[string, string]> = [
-    ['https://example.instructure.com/', 'example.instructure.com'],
-    ['https://example.instructure.com/api/v1', 'example.instructure.com'],
-    ['exampleucanvas', 'exampleucanvas.instructure.com'],
-    ['canvas.exampleu.edu', 'canvas.exampleu.edu'],
+  const HOST_SPELLINGS = [
+    'https://example.instructure.com/',
+    'https://example.instructure.com/api/v1',
+    '  EXAMPLE.Instructure.COM.  ',
+    'exampleucanvas',
+    'canvas.exampleu.edu',
   ];
 
   let homes: string[] = [];
@@ -123,21 +125,26 @@ describe('loadCanvasCreds host normalization', () => {
   });
 
   function seed(host: string, token: string): void {
-    const home = mkdtempSync(join(tmpdir(), 'pa-canvas-'));
+    const home = mkdtempSync(join(tmpdir(), 'canvas-creds-'));
     homes.push(home);
     process.env.CC_HOME = home;
     writeFileSync(join(home, 'canvas-config.json'), JSON.stringify({ host, token }), 'utf-8');
   }
 
-  it('canonicalizes the host it reads', () => {
-    for (const [saved, expected] of TABLE) {
+  it('normalizes exactly as the shared implementation does', () => {
+    for (const saved of HOST_SPELLINGS) {
       seed(saved, 'tok');
-      expect(loadCanvasCreds()).toEqual({ host: expected, token: 'tok' });
+      expect(loadCanvasCreds()).toEqual({ host: normalizeCanvasHost(saved), token: 'tok' });
     }
   });
 
+  it('still completes a bare school label', () => {
+    seed('exampleucanvas', 'tok');
+    expect(loadCanvasCreds().host).toBe('exampleucanvas.instructure.com');
+  });
+
   it('throws rather than building a request against an unusable host', () => {
-    seed('  ', 'tok');
+    seed('   ', 'tok');
     expect(() => loadCanvasCreds()).toThrow(/CANVAS_NOT_CONFIGURED/);
   });
 });
