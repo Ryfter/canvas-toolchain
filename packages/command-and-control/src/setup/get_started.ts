@@ -1,3 +1,4 @@
+import { PREFERRED_PROVIDER_ORDER } from '../tools/set_active_llm_provider.js';
 import { readSetupState } from './read_state.js';
 import { runDoctor } from './doctor.js';
 import type {
@@ -180,29 +181,31 @@ function activateCall(provider: ActiveProvider): SetupCall {
   return { tool: 'ct_setup', action: ACTIVATE_PROVIDER_ACTION, params: { provider }, needs: [] };
 }
 
-/** The generation providers, in the order guidance offers them. */
-const PROVIDER_ORDER: readonly ActiveProvider[] = ['anthropic', 'ollama', 'lmstudio'];
-
-/** A configure call for every provider other than `provider`. */
+/**
+ * A configure call for every provider other than `provider`, in the shared
+ * preference order. Guidance, the doctor and the activation rules all derive
+ * from PREFERRED_PROVIDER_ORDER, so they offer LM Studio before Ollama before
+ * Anthropic rather than each keeping its own list.
+ */
 function otherConfigureCalls(provider: ActiveProvider): SetupCall[] {
-  return PROVIDER_ORDER.filter((p) => p !== provider).map(configureProviderCall);
+  return PREFERRED_PROVIDER_ORDER.filter((p) => p !== provider).map(configureProviderCall);
 }
 
 /**
- * The providers that can actually be activated, mirroring the doctor's
- * `activeProviderCheck` predicate on purpose: `set_active_llm_provider` refuses
- * a provider whose config file is absent, and an env-only `ANTHROPIC_API_KEY`
- * does not count, because the runtime reads the file rather than the
- * environment.
+ * The providers that can actually be activated, in preference order. Filters
+ * PREFERRED_PROVIDER_ORDER with the same predicate as the doctor's
+ * `activeProviderCheck`: `set_active_llm_provider` refuses a provider whose
+ * config file is absent, and an env-only `ANTHROPIC_API_KEY` does not count,
+ * because the runtime reads the file rather than the environment.
  */
 function activatableProviders(state: SetupState): ActiveProvider[] {
-  const providers: ActiveProvider[] = [];
-  if (state.llm.anthropic.source === 'file' || state.llm.anthropic.source === 'both') {
-    providers.push('anthropic');
-  }
-  if (state.llm.ollama.configured) providers.push('ollama');
-  if (state.llm.lmstudio.configured) providers.push('lmstudio');
-  return providers;
+  return PREFERRED_PROVIDER_ORDER.filter((provider) => {
+    if (provider === 'anthropic') {
+      return state.llm.anthropic.source === 'file' || state.llm.anthropic.source === 'both';
+    }
+    if (provider === 'ollama') return state.llm.ollama.configured;
+    return state.llm.lmstudio.configured;
+  });
 }
 
 /**
@@ -301,7 +304,7 @@ function providerStep(fix: DoctorFix, state: SetupState): StepBody | null {
     const named = fix.action;
     // Switching to an already-configured provider is a way out; configuring any
     // other one is the alternative when it has no config file yet.
-    const alternatives = PROVIDER_ORDER.filter((p) => p !== named).map((p) =>
+    const alternatives = PREFERRED_PROVIDER_ORDER.filter((p) => p !== named).map((p) =>
       configured.includes(p) ? activateCall(p) : configureProviderCall(p),
     );
     return {

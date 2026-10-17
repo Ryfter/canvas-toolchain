@@ -95,9 +95,10 @@ describe('getStarted on an empty home', () => {
     const llm = step(guide, 'llm_credentials');
 
     expect(llm.required).toBe(false);
+    // PREFERRED_PROVIDER_ORDER: LM Studio, then Ollama, then Anthropic.
     expect(llm.alternatives).toEqual([
-      expect.objectContaining({ tool: 'ct_setup', action: 'ollama' }),
       expect.objectContaining({ tool: 'ct_setup', action: 'lmstudio' }),
+      expect.objectContaining({ tool: 'ct_setup', action: 'ollama' }),
     ]);
     expect(guide.readyToGo).toBe(false);
     expect(guide.text).toContain('Optional:');
@@ -161,10 +162,11 @@ describe('getStarted with some setup done', () => {
     expect(finish.why).toMatch(/selects ollama/);
     expect(finish.why).not.toMatch(/LLM_PROVIDER_NOT_SET/);
     // The folded credentials fix becomes the Anthropic alternative — never a
-    // second copy of the same call — with LM Studio offered as the other option.
+    // second copy of the same call — with the preferred local server (LM Studio)
+    // offered first.
     expect(finish.alternatives).toEqual([
-      expect.objectContaining({ tool: 'ct_setup', action: 'anthropic' }),
       expect.objectContaining({ tool: 'ct_setup', action: 'lmstudio' }),
+      expect.objectContaining({ tool: 'ct_setup', action: 'anthropic' }),
     ]);
   });
 
@@ -247,17 +249,38 @@ describe('getStarted step selection for a configured local model', () => {
     expect(activate.alternatives).toEqual([]);
   });
 
-  it('offers the other configured provider as an alternative', async () => {
+  it('recommends the preferred configured provider, matching the doctor', async () => {
     seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
     seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
 
     const guide = await getStarted();
     const activate = step(guide, 'llm_provider');
 
-    expect(activate).toMatchObject({ params: { provider: 'anthropic' } });
+    // PREFERRED_PROVIDER_ORDER is lmstudio, ollama, anthropic, so Ollama outranks
+    // Anthropic — the same recommendation the doctor's fix makes.
+    expect(activate).toMatchObject({ params: { provider: 'ollama' } });
+    expect(activate.alternatives).toEqual([
+      expect.objectContaining({
+        tool: 'ct_setup', action: 'llm_provider', params: { provider: 'anthropic' },
+      }),
+    ]);
+  });
+
+  it('prefers LM Studio when every provider is configured', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('ollama-config.json', { baseUrl: 'http://localhost:11434', model: 'llama3.2' });
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5' });
+
+    const guide = await getStarted();
+    const activate = step(guide, 'llm_provider');
+
+    expect(activate).toMatchObject({ params: { provider: 'lmstudio' } });
     expect(activate.alternatives).toEqual([
       expect.objectContaining({
         tool: 'ct_setup', action: 'llm_provider', params: { provider: 'ollama' },
+      }),
+      expect.objectContaining({
+        tool: 'ct_setup', action: 'llm_provider', params: { provider: 'anthropic' },
       }),
     ]);
   });
@@ -289,10 +312,10 @@ describe('getStarted step selection for a configured local model', () => {
 
     expect(finish).toMatchObject({ tool: 'ct_setup', action: 'ollama', params: {} });
     expect(finish.alternatives).toEqual([
+      expect.objectContaining({ tool: 'ct_setup', action: 'lmstudio' }),
       expect.objectContaining({
         tool: 'ct_setup', action: 'llm_provider', params: { provider: 'anthropic' },
       }),
-      expect.objectContaining({ tool: 'ct_setup', action: 'lmstudio' }),
     ]);
   });
 });
@@ -336,8 +359,8 @@ describe('getStarted with a corrupt config file', () => {
 
     expect(llm).toMatchObject({ tool: 'ct_setup', action: 'lmstudio', params: {} });
     expect(llm.alternatives).toEqual([
-      expect.objectContaining({ tool: 'ct_setup', action: 'anthropic' }),
       expect.objectContaining({ tool: 'ct_setup', action: 'ollama' }),
+      expect.objectContaining({ tool: 'ct_setup', action: 'anthropic' }),
     ]);
   });
 

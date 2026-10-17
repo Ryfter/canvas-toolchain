@@ -112,13 +112,13 @@ describe('applySetup on a fresh home', () => {
     expect(result.ok).toBe(true);
     expect(result.dryRun).toBe(false);
     expect(result.sections.map((s) => s.section)).toEqual([
-      'coursesRoot', 'canvas', 'anthropic', 'lmstudio', 'llmProvider',
+      'coursesRoot', 'canvas', 'lmstudio', 'anthropic', 'llmProvider',
       'transcripts', 'lectureAnswers', 'spotCheck',
     ]);
     expect(result.sections.every((s) => s.ok)).toBe(true);
 
-    // The explicit choice runs after the config sections, so it wins over the
-    // Anthropic that configuring that key auto-activated first.
+    // The config sections auto-activate in preference order (LM Studio first),
+    // and the explicit choice runs last, so it wins regardless.
     expect(JSON.parse(readFileSync(join(ccHome, 'llm-provider.json'), 'utf-8'))).toEqual({
       provider: 'lmstudio',
     });
@@ -155,6 +155,34 @@ describe('applySetup on a fresh home', () => {
     const activation = result.sections.find((s) => s.section === 'llmProvider');
     expect(activation).toMatchObject({ ok: false, code: 'PROVIDER_NOT_CONFIGURED' });
     expect(result.sections.find((s) => s.section === 'spotCheck')?.ok).toBe(true);
+  });
+
+  it('auto-activates the preferred provider when a patch configures several', async () => {
+    const result = await applySetup({
+      anthropic: { apiKey: 'sk-ant-secret', test: true },
+      lmstudio: { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5' },
+    });
+
+    // No explicit llmProvider, so the LLM sections run in PREFERRED_PROVIDER_ORDER
+    // and LM Studio — configured first — is the provider that gets activated.
+    expect(result.ok).toBe(true);
+    expect(result.sections.map((s) => s.section)).toEqual(['lmstudio', 'anthropic']);
+    expect(JSON.parse(readFileSync(join(ccHome, 'llm-provider.json'), 'utf-8'))).toEqual({
+      provider: 'lmstudio',
+    });
+  });
+
+  it('honours an explicit provider over the auto-activated preference', async () => {
+    const result = await applySetup({
+      anthropic: { apiKey: 'sk-ant-secret', test: true },
+      lmstudio: { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5' },
+      llmProvider: 'anthropic',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(JSON.parse(readFileSync(join(ccHome, 'llm-provider.json'), 'utf-8'))).toEqual({
+      provider: 'anthropic',
+    });
   });
 });
 

@@ -30,6 +30,7 @@ import { setupAnthropic, type SetupAnthropicInput } from '../tools/setup_anthrop
 import { setupOllama, type SetupOllamaInput } from '../tools/setup_ollama.js';
 import { setupLmStudio, type SetupLmStudioInput } from '../tools/setup_lmstudio.js';
 import { setupLlmProvider } from '../tools/setup_llm_provider.js';
+import { PREFERRED_PROVIDER_ORDER } from '../tools/set_active_llm_provider.js';
 import { setupTranscriptSource, type SetupTranscriptSourceInput } from '../tools/setup_transcript_source.js';
 import type { SetupSpotCheckInput } from '../tools/shell_ready/types.js';
 import { setupLectureAnswers, type SetupLectureAnswersInput } from '../tools/workflows/setup_lecture_answers.js';
@@ -152,15 +153,56 @@ interface SectionSpec {
 }
 
 /**
+ * The provider-config sections, keyed by provider. `SECTION_SPECS` orders them
+ * from `PREFERRED_PROVIDER_ORDER` rather than listing them again: configuring
+ * several providers in one patch auto-activates the first to run, so this order
+ * makes that the same provider the doctor recommends (LM Studio, Ollama, then
+ * Anthropic).
+ */
+const PROVIDER_SECTION_SPECS: Record<ActiveProvider, SectionSpec> = {
+  anthropic: {
+    section: 'anthropic',
+    op: 'setup_anthropic',
+    required: ['apiKey'],
+    run: (value) => setupAnthropic(value as SetupAnthropicInput),
+  },
+  ollama: {
+    section: 'ollama',
+    op: 'setup_ollama',
+    // apply always commits: a model-less call would only probe and write nothing.
+    required: ['model'],
+    run: (value) => setupOllama(value as SetupOllamaInput),
+  },
+  lmstudio: {
+    section: 'lmstudio',
+    op: 'setup_lmstudio',
+    required: ['model'],
+    run: (value) => setupLmStudio(value as SetupLmStudioInput),
+  },
+};
+
+/**
+ * Activating the chosen provider runs last of the LLM group: configuring a
+ * provider auto-activates the first one, so an explicit choice has to be written
+ * after every config section, not before.
+ */
+const LLM_ACTIVATION_SPEC: SectionSpec = {
+  section: 'llmProvider',
+  op: 'setup_llm_provider',
+  property: 'provider',
+  run: (provider) => setupLlmProvider({ provider: provider as ActiveProvider }),
+};
+
+/**
  * The sections in execution order. The order is the one that keeps every
  * precondition true:
  *   - the courses root first, because the doctor's local-authoring verdict and
  *     every course-scoped operation depend on it;
  *   - Canvas next, because the store bridge it runs feeds Canvas Design Studio's
  *     own tools and the archive config at the end;
- *   - the LLM configs next, and activating the chosen provider LAST of that
- *     group: configuring a provider auto-activates the first one, so the
- *     professor's explicit choice has to be written after it, not before;
+ *   - the LLM configs next, in PREFERRED_PROVIDER_ORDER, and activating the
+ *     chosen provider LAST of that group, so the professor's explicit choice
+ *     always wins over whatever a config section auto-activated;
  *   - then the rest, which only read what the earlier sections wrote.
  */
 const SECTION_SPECS: readonly SectionSpec[] = [
@@ -194,31 +236,8 @@ const SECTION_SPECS: readonly SectionSpec[] = [
     required: ['host', 'token'],
     run: (value) => setupCanvas(value as SetupCanvasInput),
   },
-  {
-    section: 'anthropic',
-    op: 'setup_anthropic',
-    required: ['apiKey'],
-    run: (value) => setupAnthropic(value as SetupAnthropicInput),
-  },
-  {
-    section: 'ollama',
-    op: 'setup_ollama',
-    // apply always commits: a model-less call would only probe and write nothing.
-    required: ['model'],
-    run: (value) => setupOllama(value as SetupOllamaInput),
-  },
-  {
-    section: 'lmstudio',
-    op: 'setup_lmstudio',
-    required: ['model'],
-    run: (value) => setupLmStudio(value as SetupLmStudioInput),
-  },
-  {
-    section: 'llmProvider',
-    op: 'setup_llm_provider',
-    property: 'provider',
-    run: (provider) => setupLlmProvider({ provider: provider as ActiveProvider }),
-  },
+  ...PREFERRED_PROVIDER_ORDER.map((provider) => PROVIDER_SECTION_SPECS[provider]),
+  LLM_ACTIVATION_SPEC,
   {
     section: 'transcripts',
     op: 'setup_transcript_source',
