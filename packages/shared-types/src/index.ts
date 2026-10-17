@@ -194,3 +194,22 @@ export interface PageClos {
 // ── Canvas host ──────────────────────────────────────────────────────────────
 
 export { normalizeCanvasHost, canvasBaseUrl } from './canvas-host.js';
+
+// ── Canvas credential stores ─────────────────────────────────────────────────
+// Only what the two apps actually call. The rest of canvas-store.ts is internal
+// plumbing (file locations, per-store writers, migration internals): publishing
+// it widens the npm API for no caller, and some of it — mirrorToInstitution,
+// for one — does filesystem writes that only the bridge should drive.
+
+export {
+  ccHome,
+  migrateCanvasStores,
+  readCanonicalCanvas,
+  readCanvasStoreJournal,
+  writeCanvasConfig,
+  writeInstitutionConfig,
+} from './canvas-store.js';
+export type {
+  CanvasStoreJournalRecord,
+  CanvasStoreMigrationResult,
+} from './canvas-store.js';

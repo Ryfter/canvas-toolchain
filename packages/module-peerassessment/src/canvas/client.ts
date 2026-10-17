@@ -12,6 +12,29 @@ interface RawCanvasUser {
 }
 interface RawNamed { id: number; name: string; }
 
+/**
+ * The same rules as normalizeCanvasHost in @canvas-toolchain/shared-types, which
+ * is the canonical implementation (and the twin of installer/tasks/canvashost.go).
+ * This package does not depend on shared-types, and a channel bundle inlines its
+ * dependencies, so the rule is duplicated rather than imported. The test imports
+ * that implementation and asserts this copy normalizes the same spellings the same
+ * way, so a change to the shared rule this copy misses fails the suite.
+ *
+ * A host saved as "school.instructure.com/" or with a "/api/v1" path builds a
+ * broken base URL, so it is normalized on read.
+ */
+function normalizeCanvasHost(raw: string): string {
+  let host = raw.trim().toLowerCase();
+  if (!host) return '';
+  host = host.replace(/^https?:\/\//, '');
+  const cut = host.search(/[/?]/);
+  if (cut >= 0) host = host.slice(0, cut);
+  host = host.trim().replace(/\.+$/, '');
+  if (!host) return '';
+  if (!host.includes('.')) host += '.instructure.com';
+  return host;
+}
+
 /** Read ~/.command-and-control/canvas-config.json. Throws if not configured. */
 export function loadCanvasCreds(): CanvasCreds {
   const path = join(ccHome(), 'canvas-config.json');
@@ -20,7 +43,9 @@ export function loadCanvasCreds(): CanvasCreds {
   try { cfg = JSON.parse(readFileSync(path, 'utf-8')) as Partial<CanvasCreds>; }
   catch { throw new Error('CANVAS_NOT_CONFIGURED: canvas-config.json is corrupt. Re-run setup_canvas.'); }
   if (!cfg.host || !cfg.token) throw new Error('CANVAS_NOT_CONFIGURED: canvas-config.json missing host/token.');
-  return { host: cfg.host, token: cfg.token };
+  const host = normalizeCanvasHost(cfg.host);
+  if (!host) throw new Error('CANVAS_NOT_CONFIGURED: canvas-config.json has an unusable host. Re-run setup_canvas.');
+  return { host, token: cfg.token };
 }
 
 function parseNextLink(link: string | null): string | undefined {
