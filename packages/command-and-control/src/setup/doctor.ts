@@ -38,15 +38,17 @@ const JOURNEY_CHECKS: Record<SetupJourney, DoctorCheckId[]> = {
 };
 
 /**
- * The one requirement that *is* the journey. A caller who asks "am I ready to
+ * The requirements that *are* the journey. A caller who asks "am I ready to
  * publish to Canvas?" and has no Canvas token gets `fail`, not the gentler
- * `warn` an unconfigured feature gets in the full report.
+ * `warn` an unconfigured feature gets in the full report. `ai-assisted` names
+ * both halves of the LLM setup: a provider must be active *and* its credentials
+ * must work, so a home with neither fails the journey rather than warning.
  */
-const JOURNEY_BLOCKER: Record<SetupJourney, DoctorCheckId | null> = {
-  'local-authoring': 'runtime.courses_root',
-  'canvas-connected': 'canvas.credentials',
-  'ai-assisted': 'llm.active_provider',
-  full: null,
+const JOURNEY_BLOCKERS: Record<SetupJourney, DoctorCheckId[]> = {
+  'local-authoring': ['runtime.courses_root'],
+  'canvas-connected': ['canvas.credentials'],
+  'ai-assisted': ['llm.active_provider', 'llm.credentials'],
+  full: [],
 };
 
 const STATUS_RANK: Record<DoctorStatus, number> = { ok: 0, warn: 1, fail: 2 };
@@ -189,6 +191,10 @@ function canvasCredentialsCheck(state: SetupState): DoctorCheck {
 
 function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
   const { canvas, designStudio } = state;
+  // A Canvas connection needs a host *and* a token. A local/brand-only
+  // institution.json (brand colors, a WAVE key) is a store, not a connection,
+  // so it must never be mistaken for one side of the split.
+  const cdsConnected = designStudio.host !== null && designStudio.hasApiToken;
   const fix = {
     tool: 'ct_setup' as const,
     action: 'canvas',
@@ -198,19 +204,27 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
       'setup_institution wizard writes.',
   };
 
-  if (!canvas.configured && !designStudio.configured) {
+  if (!canvas.configured && !cdsConnected) {
     return {
       id: 'canvas.store_sync',
       status: 'ok',
-      summary: 'Neither Canvas store exists yet.',
+      summary: designStudio.configured
+        ? 'Canvas Design Studio has an institution.json but no Canvas connection, and Command & Control has no Canvas store.'
+        : 'Neither Canvas store exists yet.',
     };
   }
-  if (!designStudio.configured) {
+  if (!cdsConnected) {
+    const institutionFile = state.files['institution-config'];
     return {
       id: 'canvas.store_sync',
       status: 'warn',
-      summary: 'Canvas is configured for Command & Control but not for Canvas Design Studio.',
-      detail: [state.files['canvas-config'].path, `${state.files['institution-config'].path} (missing)`],
+      summary: designStudio.host !== null
+        ? `Canvas Design Studio points at ${designStudio.host} but has no API token, so it cannot authenticate.`
+        : 'Canvas is configured for Command & Control but not for Canvas Design Studio.',
+      detail: [
+        institutionFile.present ? institutionFile.path : `${institutionFile.path} (missing)`,
+        state.files['canvas-config'].path,
+      ],
       fix,
     };
   }
@@ -355,6 +369,21 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
     };
   }
 
+  const probe = anthropic.probe;
+  if (probe?.attempted && !probe.reachable) {
+    const reason = probe.status !== undefined ? `HTTP ${probe.status}` : probe.errorCode ?? 'unreachable';
+    return {
+      id: 'llm.credentials',
+      status: 'warn',
+      summary: `Anthropic at api.anthropic.com did not accept the stored API key (${reason}).`,
+      fix: {
+        tool: 'ct_setup',
+        action: 'anthropic',
+        hint: 'Re-issue the key in the Anthropic console and run ct_setup action anthropic again.',
+      },
+    };
+  }
+
   const configured = [
     anthropic.configured && `Anthropic (${anthropic.source === 'both' ? 'environment and file' : 'file'})`,
     state.llm.ollama.configured && `Ollama (${state.llm.ollama.model ?? 'model unknown'})`,
@@ -454,12 +483,12 @@ function modulesCheck(state: SetupState): DoctorCheck {
   };
 }
 
-/** Apply a journey's blocker to a warning, so an explicit ask is answered plainly. */
+/** Apply a journey's blockers to warnings, so an explicit ask is answered plainly. */
 function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): DoctorCheck[] {
-  const blocker = JOURNEY_BLOCKER[journey];
-  if (blocker === null) return checks;
+  const blockers = JOURNEY_BLOCKERS[journey];
+  if (blockers.length === 0) return checks;
   return checks.map((check) =>
-    check.id === blocker && check.status === 'warn'
+    blockers.includes(check.id) && check.status === 'warn'
       ? { ...check, status: 'fail' as const }
       : check);
 }
@@ -493,9 +522,12 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
     );
 
   const { activeProvider, anthropic, ollama } = state.llm;
+  // A failed live probe means the key on disk does not work, so an active
+  // Anthropic provider is not yet usable even though the file looks complete.
+  const anthropicProbeFailed = anthropic.probe?.attempted === true && anthropic.probe.reachable === false;
   const activeProviderReady = activeProvider !== null &&
     (activeProvider === 'anthropic'
-      ? anthropic.source === 'file' || anthropic.source === 'both'
+      ? (anthropic.source === 'file' || anthropic.source === 'both') && !anthropicProbeFailed
       : ollama.configured);
 
   return {

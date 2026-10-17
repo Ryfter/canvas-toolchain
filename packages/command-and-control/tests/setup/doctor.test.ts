@@ -213,6 +213,26 @@ describe('runDoctor checks', () => {
     writeFileSync(join(ccHome, 'transcript-config.json'), '{ nope', 'utf-8');
     expect(check(await runDoctor(), 'transcripts.source').status).toBe('warn');
   });
+
+  it('does not call a local-only institution.json a Canvas connection', async () => {
+    seed('institution.json', { institution: 'State U', waveApiKey: 'wave-secret' }, cdsHome);
+
+    const report = await runDoctor();
+
+    expect(check(report, 'canvas.store_sync').status).toBe('ok');
+    expect(JSON.stringify(report)).not.toContain('wave-secret');
+  });
+
+  it('warns when Canvas Design Studio has the host but no API token', async () => {
+    seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+    seed('institution.json', { canvasUrl: 'https://example.instructure.com' }, cdsHome);
+
+    const sync = check(await runDoctor(), 'canvas.store_sync');
+
+    expect(sync.status).toBe('warn');
+    expect(sync.summary.toLowerCase()).toContain('token');
+    expect(sync.fix).toEqual({ tool: 'ct_setup', action: 'canvas', hint: expect.any(String) });
+  });
 });
 
 describe('runDoctor journeys', () => {
@@ -235,6 +255,13 @@ describe('runDoctor journeys', () => {
     const assisted = await runDoctor({ journey: 'ai-assisted' });
 
     expect(check(assisted, 'llm.active_provider').status).toBe('fail');
+    expect(assisted.overallStatus).toBe('fail');
+  });
+
+  it('fails the ai-assisted journey on a home with no LLM configured', async () => {
+    const assisted = await runDoctor({ journey: 'ai-assisted' });
+
+    expect(check(assisted, 'llm.credentials').status).toBe('fail');
     expect(assisted.overallStatus).toBe('fail');
   });
 
@@ -314,6 +341,41 @@ describe('runDoctor probe', () => {
     seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
     expect(check(await runDoctor({ probe: true }), 'canvas.credentials').status).toBe('ok');
+  });
+
+  it('reports an Anthropic probe that cannot resolve the API host', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('llm-provider.json', { provider: 'anthropic' });
+    vi.stubGlobal('fetch', vi.fn(async () => { throw Object.assign(new Error('x'), { code: 'ENOTFOUND' }); }));
+
+    const report = await runDoctor({ probe: true });
+    const credentials = check(report, 'llm.credentials');
+
+    expect(credentials.status).toBe('warn');
+    expect(credentials.summary).toMatch(/ENOTFOUND/);
+    expect(credentials.fix).toEqual({ tool: 'ct_setup', action: 'anthropic', hint: expect.any(String) });
+    expect(report.readyJourneys.aiAssisted).toBe(false);
+  });
+
+  it('reports an Anthropic probe that rejects the key with its HTTP status', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })));
+
+    const credentials = check(await runDoctor({ probe: true }), 'llm.credentials');
+
+    expect(credentials.status).toBe('warn');
+    expect(credentials.summary).toMatch(/HTTP 401/);
+  });
+
+  it('keeps the ai-assisted journey ready when the Anthropic probe succeeds', async () => {
+    seed('anthropic-config.json', { apiKey: 'sk-ant-secret', model: 'claude' });
+    seed('llm-provider.json', { provider: 'anthropic' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
+
+    const report = await runDoctor({ probe: true });
+
+    expect(check(report, 'llm.credentials').status).toBe('ok');
+    expect(report.readyJourneys.aiAssisted).toBe(true);
   });
 });
 

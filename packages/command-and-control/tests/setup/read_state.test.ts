@@ -244,6 +244,22 @@ describe('readSetupState stores', () => {
     expect(JSON.stringify(state)).not.toContain('cds-tok');
   });
 
+  it('reads a local-only institution.json without inventing a Canvas host', async () => {
+    seedJson('institution.json', { institution: 'State U', waveApiKey: 'wave-secret' }, cdsHome);
+
+    const state = await readSetupState();
+
+    expect(state.designStudio).toEqual({
+      configured: true,
+      host: null,
+      hasApiToken: false,
+      hasWaveApiKey: true,
+      institutionName: 'State U',
+    });
+    expect(state.storesInSync).toBe(true);
+    expect(JSON.stringify(state)).not.toContain('wave-secret');
+  });
+
   it('reports two stores pointing at different hosts as out of sync', async () => {
     seedJson('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     seedJson('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'tok' }, cdsHome);
