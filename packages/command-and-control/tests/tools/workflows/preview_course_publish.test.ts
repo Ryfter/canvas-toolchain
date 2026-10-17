@@ -14,7 +14,7 @@ vi.mock('../../../src/tools/publish/canvas_config_bridge.js', () => ({
   loadInstitutionConfig: vi.fn().mockReturnValue({ canvasUrl: 'https://x', apiToken: 't' }),
 }));
 vi.mock('@canvas-toolchain/canvas-design-studio/dist/canvas-api.js', () => ({
-  CanvasApiClient: vi.fn().mockImplementation(() => ({ getPageBody: vi.fn().mockResolvedValue('') })),
+  CanvasApiClient: vi.fn(function () { return { getPageBody: vi.fn().mockResolvedValue('') }; }),
   CanvasApiError: class extends Error {},
 }));
 
@@ -105,9 +105,9 @@ describe('previewCoursePublish', () => {
 
   it('attaches a block-severity warning when getPageBody fails (rollback safety)', async () => {
     const { CanvasApiClient } = await import('@canvas-toolchain/canvas-design-studio/dist/canvas-api.js');
-    vi.mocked(CanvasApiClient as any).mockImplementationOnce(() => ({
-      getPageBody: vi.fn().mockRejectedValue(new Error('429 rate limited')),
-    }));
+    vi.mocked(CanvasApiClient as any).mockImplementationOnce(function () {
+      return { getPageBody: vi.fn().mockRejectedValue(new Error('429 rate limited')) };
+    });
     writeFileSync(join(course, 'output', 'wk1-overview.html'), '<h2>Week 1</h2>');
     vi.mocked(generateCourse).mockReturnValue({
       totalPages: 1, outputDir: join(course, 'output'), warnings: [],
