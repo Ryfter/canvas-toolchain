@@ -76,7 +76,7 @@ func NewSummaryScreen(parent fyne.Window, st *State, onClose func()) fyne.Canvas
 	)
 
 	bottom := container.NewBorder(nil, nil, done, launchBtn)
-	return container.NewBorder(container.NewVScroll(body), bottom, nil, nil)
+	return container.NewBorder(nil, bottom, nil, nil, container.NewVScroll(body))
 }
 
 // setupSection renders the doctor's verdict on this machine. Every readiness
@@ -141,10 +141,14 @@ func fallbackSetupSection(st *State) fyne.CanvasObject {
 }
 
 // addPanoptoNote is the installer's own question, not the doctor's: the doctor
-// inspects no Panopto config, and the professor chose this workflow on the
-// workflows screen, so the note survives on both paths.
+// inspects no Panopto config, so the installer notes it on both paths. Panopto
+// is opt-in, so the note only applies when the professor chose the workflow and
+// it is still incomplete.
 func addPanoptoNote(box *fyne.Container, st *State) {
-	if st.WorkflowPanopto && st.PanoptoDomain != "" && st.PanoptoClientID != "" && st.PanoptoSecret != "" {
+	if !st.WorkflowPanopto {
+		return
+	}
+	if st.PanoptoDomain != "" && st.PanoptoClientID != "" && st.PanoptoSecret != "" {
 		return
 	}
 	box.Add(ui.NewStatusRowWithStatus("Panopto not configured — run setup_panopto when you're ready", ui.StatusWarn, ""))

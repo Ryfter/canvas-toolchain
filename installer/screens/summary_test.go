@@ -256,6 +256,83 @@ func TestSummaryScreen_KeepsTheInstallerPanoptoNote(t *testing.T) {
 	}
 }
 
+// Panopto is opt-in: a professor who did not tick the workflow must not be told
+// they have something left to configure. The note only applies to the chosen,
+// incomplete workflow.
+func TestSummaryScreen_OmitsPanoptoNoteWhenWorkflowNotChosen(t *testing.T) {
+	st := NewState("2.3.0")
+	st.WorkflowPanopto = false
+	st.Doctor = doctorReport("ok", tasks.ReadyJourneys{LocalAuthoring: true})
+
+	labels := newSummaryState(t, st)
+
+	if strings.Contains(labels, "Panopto not configured") {
+		t.Errorf("a workflow the professor did not choose must not warn; got:\n%s", labels)
+	}
+}
+
+// A chosen and fully configured Panopto workflow is complete, so there is
+// nothing to warn about either.
+func TestSummaryScreen_OmitsPanoptoNoteWhenWorkflowConfigured(t *testing.T) {
+	st := NewState("2.3.0")
+	st.WorkflowPanopto = true
+	st.PanoptoDomain = "https://example.panopto.com"
+	st.PanoptoClientID = "client-id"
+	st.PanoptoSecret = "secret"
+	st.Doctor = doctorReport("ok", tasks.ReadyJourneys{LocalAuthoring: true})
+
+	labels := newSummaryState(t, st)
+
+	if strings.Contains(labels, "Panopto not configured") {
+		t.Errorf("a fully configured workflow needs no note; got:\n%s", labels)
+	}
+}
+
+// The body must fill the window. It is the border layout's center object, so it
+// takes all space the header/bottom bar leave; if it were passed as the top
+// slot it would collapse to the scrollbar's minimum height.
+func TestSummaryScreen_ScrollAreaFillsTheWindow(t *testing.T) {
+	app := test.NewApp()
+	defer app.Quit()
+	w := app.NewWindow("test")
+	defer w.Close()
+
+	st := NewState("2.3.0")
+	st.InstallDir = t.TempDir()
+	st.Doctor = doctorReport("warn", tasks.ReadyJourneys{},
+		tasks.DoctorCheck{ID: "runtime.courses_root", Status: "warn", Summary: "No courses root is configured."},
+	)
+
+	screen := NewSummaryScreen(w, st, func() {})
+	const width, height = 720, 600
+	screen.Resize(fyne.NewSize(width, height))
+
+	scroll := findScroll(screen)
+	if scroll == nil {
+		t.Fatal("expected the summary body to live in a scroll container")
+	}
+	if got := scroll.Size().Height; got <= height/2 {
+		t.Errorf("scroll area must fill the window height; got %v of %d", got, height)
+	}
+	if got := scroll.Size().Width; got <= width/2 {
+		t.Errorf("scroll area must span the window width; got %v of %d", got, width)
+	}
+}
+
+func findScroll(obj fyne.CanvasObject) *container.Scroll {
+	switch v := obj.(type) {
+	case *container.Scroll:
+		return v
+	case *fyne.Container:
+		for _, c := range v.Objects {
+			if s := findScroll(c); s != nil {
+				return s
+			}
+		}
+	}
+	return nil
+}
+
 // The committed testdata is the wire format the screen parses, so the screen
 // renders a real doctor document end to end.
 func TestSummaryScreen_RendersTheCommittedDoctorSample(t *testing.T) {
