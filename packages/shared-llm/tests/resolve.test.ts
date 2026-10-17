@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveLlmClient } from '../src/resolve.js';
 import { AnthropicLlmClient } from '../src/index.js';
 import { OllamaLlmClient } from '../src/ollama.js';
+import { LmStudioLlmClient } from '../src/lmstudio.js';
 import { LlmProviderError } from '../src/errors.js';
 
 describe('resolveLlmClient', () => {
@@ -19,6 +20,14 @@ describe('resolveLlmClient', () => {
       ollama: { baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' },
     });
     expect(client).toBeInstanceOf(OllamaLlmClient);
+  });
+
+  it('returns LmStudioLlmClient when provider=lmstudio and lmstudio config present', () => {
+    const client = resolveLlmClient({
+      provider: 'lmstudio',
+      lmstudio: { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' },
+    });
+    expect(client).toBeInstanceOf(LmStudioLlmClient);
   });
 
   it('throws LLM_PROVIDER_CONFIG_MISSING when provider=anthropic but anthropic config absent', () => {
@@ -39,7 +48,16 @@ describe('resolveLlmClient', () => {
       }));
   });
 
-  it('throws LLM_PROVIDER_NOT_SET when provider value is not anthropic or ollama', () => {
+  it('throws LLM_PROVIDER_CONFIG_MISSING when provider=lmstudio but lmstudio config absent', () => {
+    expect(() => resolveLlmClient({ provider: 'lmstudio' }))
+      .toThrow(expect.objectContaining({
+        constructor: LlmProviderError,
+        code: 'LLM_PROVIDER_CONFIG_MISSING',
+        provider: 'lmstudio',
+      }));
+  });
+
+  it('throws LLM_PROVIDER_NOT_SET when provider value is not a known provider', () => {
     expect(() => resolveLlmClient({ provider: 'something' as never }))
       .toThrow(expect.objectContaining({
         constructor: LlmProviderError,

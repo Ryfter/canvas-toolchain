@@ -1,4 +1,4 @@
-export type LlmProvider = 'anthropic' | 'ollama' | 'unknown';
+export type LlmProvider = 'anthropic' | 'ollama' | 'lmstudio' | 'unknown';
 
 export class LlmProviderError extends Error {
   constructor(

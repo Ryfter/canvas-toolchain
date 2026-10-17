@@ -11,6 +11,7 @@ const ORIGINAL = {
   ccHome: process.env.CC_HOME,
   cdsHome: process.env.CANVAS_DESIGN_HOME,
   anthropicKey: process.env.ANTHROPIC_API_KEY,
+  lmstudioKey: process.env.LMSTUDIO_API_KEY,
   home: process.env.HOME,
   userProfile: process.env.USERPROFILE,
   appData: process.env.APPDATA,
@@ -38,6 +39,7 @@ beforeEach(() => {
   process.env.USERPROFILE = hostHome;
   process.env.APPDATA = join(hostHome, 'AppData', 'Roaming');
   delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.LMSTUDIO_API_KEY;
   // Any network call at all fails loudly rather than hanging or returning.
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network call in test'))));
 });
@@ -50,6 +52,7 @@ afterEach(() => {
     CC_HOME: ORIGINAL.ccHome,
     CANVAS_DESIGN_HOME: ORIGINAL.cdsHome,
     ANTHROPIC_API_KEY: ORIGINAL.anthropicKey,
+    LMSTUDIO_API_KEY: ORIGINAL.lmstudioKey,
     HOME: ORIGINAL.home,
     USERPROFILE: ORIGINAL.userProfile,
     APPDATA: ORIGINAL.appData,
@@ -236,6 +239,18 @@ describe('readSetupState providers', () => {
     });
   });
 
+  it('reads the active LM Studio provider and its model', async () => {
+    seedJson('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+    seedJson('llm-provider.json', { provider: 'lmstudio' });
+
+    const state = await readSetupState();
+
+    expect(state.llm.activeProvider).toBe('lmstudio');
+    expect(state.llm.lmstudio).toEqual({
+      configured: true, host: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct',
+    });
+  });
+
   it('reads the lecture-answers embedder', async () => {
     seedJson('lecture-answers-config.json', { provider: 'voyage', voyageApiKey: 'pa-secret' });
     expect((await readSetupState()).llm.lectureAnswers).toEqual({ configured: true, provider: 'voyage' });
@@ -393,6 +408,46 @@ describe('readSetupState probe', () => {
     expect(url).toBe('https://api.anthropic.com/v1/models');
     expect((init.headers as Record<string, string>)['x-api-key']).toBe('sk-ant-secret');
     expect(init.redirect).toBe('manual');
+  });
+
+  it('probes LM Studio /v1/models when configured', async () => {
+    seedJson('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const state = await readSetupState({ probe: true });
+
+    expect(state.llm.lmstudio.probe).toEqual({ attempted: true, reachable: true, status: 200 });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://localhost:1234/v1/models');
+    expect(init.redirect).toBe('manual');
+  });
+
+  it('sends LMSTUDIO_API_KEY as a Bearer header when probing LM Studio', async () => {
+    process.env.LMSTUDIO_API_KEY = 'lm-secret-key';
+    seedJson('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const state = await readSetupState({ probe: true });
+
+    expect(state.llm.lmstudio.probe).toEqual({ attempted: true, reachable: true, status: 200 });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer lm-secret-key');
+    expect(JSON.stringify(state)).not.toContain('lm-secret-key');
+  });
+
+  it('refuses to probe a blocked LM Studio endpoint without fetching it', async () => {
+    seedJson('lmstudio-config.json', { baseUrl: 'http://169.254.169.254/v1', model: 'm' });
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const state = await readSetupState({ probe: true });
+
+    expect(state.llm.lmstudio.probe).toEqual({
+      attempted: true, reachable: false, errorCode: 'ENDPOINT_BLOCKED',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('records a failed probe as an error code, never an error message', async () => {

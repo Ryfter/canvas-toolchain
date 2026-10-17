@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "cc"
 exposure: "intent"
-related: [get_cc_status, get_started, set_courses_root, setup_anthropic, setup_canvas, setup_doctor, setup_ollama, setup_transcript_source]
+related: [get_cc_status, get_started, set_courses_root, setup_anthropic, setup_canvas, setup_doctor, setup_lmstudio, setup_ollama]
 deprecated: "Deprecated — use ct_setup {action: \"cc\"}; removed in 2.5.0."
 ---
 <!-- generated:end -->

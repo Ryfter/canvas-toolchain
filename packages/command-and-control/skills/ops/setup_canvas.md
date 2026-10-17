@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "canvas"
 exposure: "intent"
-related: [check_shell_readiness, get_cc_status, get_started, preview_course_publish, publish_course, set_courses_root, setup_anthropic, setup_canvas_backup, setup_cc, setup_doctor, setup_ollama, setup_transcript_source]
+related: [check_shell_readiness, get_cc_status, get_started, preview_course_publish, publish_course, set_courses_root, setup_anthropic, setup_canvas_backup, setup_cc, setup_doctor, setup_lmstudio, setup_ollama]
 deprecated: "Deprecated — use ct_setup {action: \"canvas\"}; removed in 2.5.0."
 ---
 <!-- generated:end -->

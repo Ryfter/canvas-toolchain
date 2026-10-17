@@ -295,9 +295,14 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
   const providerFile = state.files['llm-provider'];
   const anthropicFileConfigured = state.llm.anthropic.source === 'file' || state.llm.anthropic.source === 'both';
   const ollamaConfigured = state.llm.ollama.configured;
+  const lmstudioConfigured = state.llm.lmstudio.configured;
 
   if (activeProvider !== null) {
-    const backingConfigured = activeProvider === 'anthropic' ? anthropicFileConfigured : ollamaConfigured;
+    const backingConfigured = activeProvider === 'anthropic'
+      ? anthropicFileConfigured
+      : activeProvider === 'ollama'
+        ? ollamaConfigured
+        : lmstudioConfigured;
     if (backingConfigured) {
       return {
         id: 'llm.active_provider',
@@ -331,8 +336,8 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
     };
   }
 
-  if (anthropicFileConfigured || ollamaConfigured) {
-    const configured = anthropicFileConfigured ? 'anthropic' : 'ollama';
+  if (anthropicFileConfigured || ollamaConfigured || lmstudioConfigured) {
+    const configured = anthropicFileConfigured ? 'anthropic' : ollamaConfigured ? 'ollama' : 'lmstudio';
     return {
       id: 'llm.active_provider',
       status: 'warn',
@@ -355,9 +360,9 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
 }
 
 function llmCredentialsCheck(state: SetupState): DoctorCheck {
-  const { anthropic } = state.llm;
-  const corrupt = (key: 'anthropic-config' | 'ollama-config' | 'lecture-answers-config',
-    action: 'anthropic' | 'ollama' | 'lecture_answers'): DoctorCheck => ({
+  const { anthropic, activeProvider } = state.llm;
+  const corrupt = (key: 'anthropic-config' | 'ollama-config' | 'lmstudio-config' | 'lecture-answers-config',
+    action: 'anthropic' | 'ollama' | 'lmstudio' | 'lecture_answers'): DoctorCheck => ({
     id: 'llm.credentials',
     status: 'warn',
     summary: `${key}.json is corrupt.`,
@@ -389,11 +394,14 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
   if (state.files['ollama-config'].present && !state.files['ollama-config'].validJson) {
     return corrupt('ollama-config', 'ollama');
   }
+  if (state.files['lmstudio-config'].present && !state.files['lmstudio-config'].validJson) {
+    return corrupt('lmstudio-config', 'lmstudio');
+  }
   if (state.files['lecture-answers-config'].present && !state.files['lecture-answers-config'].validJson) {
     return corrupt('lecture-answers-config', 'lecture_answers');
   }
 
-  if (!anthropic.configured && !state.llm.ollama.configured) {
+  if (!anthropic.configured && !state.llm.ollama.configured && !state.llm.lmstudio.configured) {
     return {
       id: 'llm.credentials',
       status: 'warn',
@@ -401,7 +409,7 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
       fix: {
         tool: 'ct_setup',
         action: 'anthropic',
-        hint: 'Add an Anthropic API key, or configure a local model with ct_setup action ollama.',
+        hint: 'Add an Anthropic API key, or configure a local model with ct_setup action ollama or lmstudio.',
       },
     };
   }
@@ -421,9 +429,31 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
     };
   }
 
+  const lmStudioProbe = state.llm.lmstudio.probe;
+  if (
+    activeProvider === 'lmstudio' &&
+    lmStudioProbe?.attempted &&
+    !lmStudioProbe.reachable
+  ) {
+    const reason = lmStudioProbe.status !== undefined
+      ? `HTTP ${lmStudioProbe.status}`
+      : lmStudioProbe.errorCode ?? 'unreachable';
+    return {
+      id: 'llm.credentials',
+      status: 'warn',
+      summary: `LM Studio at ${state.llm.lmstudio.host ?? 'the configured URL'} is not reachable (${reason}).`,
+      fix: {
+        tool: 'ct_setup',
+        action: 'lmstudio',
+        hint: 'Open LM Studio and click Developer > Start Server, then run ct_setup action lmstudio again.',
+      },
+    };
+  }
+
   const configured = [
     anthropic.configured && `Anthropic (${anthropic.source === 'both' ? 'environment and file' : 'file'})`,
     state.llm.ollama.configured && `Ollama (${state.llm.ollama.model ?? 'model unknown'})`,
+    state.llm.lmstudio.configured && `LM Studio (${state.llm.lmstudio.model ?? 'model unknown'})`,
   ].filter((line): line is string => typeof line === 'string');
 
   return {
@@ -620,21 +650,27 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
       'ok',
     );
 
-  const { activeProvider, anthropic, ollama } = state.llm;
+  const { activeProvider, anthropic, ollama, lmstudio } = state.llm;
   // A failed live probe means the key on disk does not work, so an active
   // Anthropic provider is not yet usable even though the file looks complete.
   const anthropicProbeFailed = anthropic.probe?.attempted === true && anthropic.probe.reachable === false;
+  const lmstudioProbeFailed = lmstudio.probe?.attempted === true && lmstudio.probe.reachable === false;
   const activeProviderReady = activeProvider !== null &&
     (activeProvider === 'anthropic'
       ? (anthropic.source === 'file' || anthropic.source === 'both') && !anthropicProbeFailed
-      : ollama.configured);
+      : activeProvider === 'ollama'
+        ? ollama.configured
+        : lmstudio.configured && !lmstudioProbeFailed);
 
   return {
     overallStatus,
     journey,
     // Read off the state, not the option: a caller-supplied state is the truth
     // about whether probes actually ran.
-    probed: state.canvas.probe !== undefined || state.llm.anthropic.probe !== undefined,
+    probed:
+      state.canvas.probe !== undefined ||
+      state.llm.anthropic.probe !== undefined ||
+      state.llm.lmstudio.probe !== undefined,
     checkedAt: new Date().toISOString(),
     checks,
     readyJourneys: {
