@@ -1,6 +1,6 @@
 ---
 id: "browse_module_catalog"
-description: "List the module catalog: what exists, what is installed/enabled, which have updates, and any modules requested from the installer GUI. Read-only. Pass clearPending: true to discard stale installer requests. Also lists companion programs (e.g. Canvas Backup) that work alongside the toolchain and are installed separately."
+description: "Module catalog: exists / installed / enabled / update state and installer-GUI requests, plus companion programs (e.g. Canvas Backup). Read-only; clearPending:true discards stale requests."
 section: "modules"
 intent_tool: ""
 intent_action: ""

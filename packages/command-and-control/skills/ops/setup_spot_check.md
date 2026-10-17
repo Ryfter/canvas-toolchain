@@ -1,6 +1,6 @@
 ---
 id: "setup_spot_check"
-description: "Opt in/out of a weekly shell (+ quiz validate) spot-check reminder day. Recommends Saturday. Persists weeklyCheckEnabled + weeklyCheckDay under ~/.command-and-control/spot-check.json (no secrets). Manual `ct_review` action `shell_readiness` always works. Does not install OS cron (fast-follow)."
+description: "Opt in/out of a weekly shell + quiz spot-check reminder day (recommends Saturday). Persists the setting only; no OS cron installed. Manual ct_review shell_readiness always works."
 section: "admin"
 intent_tool: "ct_setup"
 intent_action: "spot_check"

@@ -1,6 +1,6 @@
 ---
 id: "index_course_for_answers"
-description: "Build or incrementally update a per-course hybrid (FTS5 + vec) index over enriched lecture transcripts, CDS markdown, slide PDFs (under <courseDir>/slides/), and the canonical FAQ (<courseDir>/answers/canonical.md). Auto-incremental on subsequent calls based on file mtimes. Pass rebuild=true to wipe and re-embed everything (provider switch, suspected corruption)."
+description: "Build/update a per-course hybrid (FTS5 + vec) index over transcripts, CDS markdown, slides/ PDFs, and answers/canonical.md. Incremental by mtime; rebuild:true wipes and re-embeds all."
 section: "admin"
 intent_tool: "ct_ask"
 intent_action: "index"

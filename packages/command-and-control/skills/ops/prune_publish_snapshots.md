@@ -1,6 +1,6 @@
 ---
 id: "prune_publish_snapshots"
-description: "Apply retention policy to a course's publish snapshots. Removes snapshots older than the configured retention window AND beyond the configured retention count (defaults: keep 3 most-recent, keep anything ≤ 30 days old). Never removes the currently-live snapshot. When dryRun is true, lists what would be pruned without taking action. Auto-pruning also runs after every successful `ct_publish` action `publish`."
+description: "Apply retention to publish snapshots: drops those past the window and count (default keep 3, keep ≤30 days), never the live one. dryRun lists only; also runs after every successful publish."
 section: "snapshots"
 intent_tool: ""
 intent_action: ""

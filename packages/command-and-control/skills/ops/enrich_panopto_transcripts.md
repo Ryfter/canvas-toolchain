@@ -1,6 +1,6 @@
 ---
 id: "enrich_panopto_transcripts"
-description: "Generate enriched markdown from downloaded Panopto VTT files. Adds Week/Date headers, deep links every 5 minutes, strips filler words, applies vocab corrections, and highlights key statements as blockquotes. Requires `ct_import` action `transcripts_panopto` to have been run first."
+description: "Enrich Panopto VTT into markdown: Week/Date headers, deep links every 5 min, filler stripped, vocab corrections, key statements as blockquotes. Requires a prior transcripts_panopto run."
 section: "transcripts"
 intent_tool: ""
 intent_action: ""

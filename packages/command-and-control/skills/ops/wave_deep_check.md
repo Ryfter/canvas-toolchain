@@ -1,6 +1,6 @@
 ---
 id: "wave_deep_check"
-description: "Deep accessibility check of a PUBLICLY-visible page via the paid WAVE API (WebAIM). Two-call spend gate: first call previews the cost (~2 credits) and runs nothing; re-call with confirm: true to spend. Auth-gated Canvas URLs are refused before any spend — use the free WAVE browser extension or MS Accessibility Insights for those. Optional apiKey is saved to the institution config on first use."
+description: "Deep a11y check of a PUBLIC page via the paid WAVE API. Spend gate: preview (~2 credits) first, then confirm:true. Auth-gated Canvas URLs refused — use the free extension. apiKey saved on first use."
 section: "accessibility"
 intent_tool: ""
 intent_action: ""

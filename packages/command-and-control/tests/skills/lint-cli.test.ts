@@ -35,13 +35,13 @@ function run(...args: string[]): { stdout: string; stderr: string; status: numbe
 }
 
 describe('lint CLI', () => {
-  it('exits non-zero and reports violations as JSON for the committed tree', () => {
+  it('reports the committed tree as clean JSON', () => {
     const { stdout, status } = run('--json');
     const report = JSON.parse(stdout);
 
-    expect(status).toBe(1);
-    expect(report.summary.total).toBeGreaterThan(0);
-    expect(report.summary.byRule['too-long']).toBeGreaterThan(0);
+    expect(status).toBe(0);
+    expect(report.summary.total).toBe(0);
+    expect(report.summary.byRule['too-long']).toBe(0);
     expect(report.operations).toBeGreaterThanOrEqual(86);
     expect(report.summary.byRule).toHaveProperty('orphan');
   }, SPAWN_TIMEOUT_MS);
@@ -73,8 +73,8 @@ describe('lint CLI', () => {
     symlinkSync(SCRIPT, shim);
     try {
       const { stdout, status } = runScript(shim, ['--json']);
-      expect(status).toBe(1);
-      expect(JSON.parse(stdout).summary.byRule['too-long']).toBeGreaterThan(0);
+      expect(status).toBe(0);
+      expect(JSON.parse(stdout).operations).toBeGreaterThanOrEqual(86);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

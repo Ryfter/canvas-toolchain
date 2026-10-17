@@ -1,6 +1,6 @@
 ---
 id: "generate_quiz"
-description: "Author a local quiz draft markdown from course materials (books/slides/lectures) with difficulty-mix knobs. Writes under week-NN/quizzes/ (temp+rename). Manual anytime — not required for the weekly shell spot-check (use `ct_review` action `quiz` for live Canvas). Requires an active LLM (`ct_setup` action `anthropic` or Ollama). Does not publish to Canvas Quizzes."
+description: "Author a local quiz draft (books/slides/lectures) with difficulty-mix knobs, written under week-NN/quizzes/. Needs an LLM. Does not publish to Canvas — use ct_review quiz for live checks."
 section: "design"
 intent_tool: "ct_build"
 intent_action: "quiz"

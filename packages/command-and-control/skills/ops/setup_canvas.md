@@ -1,6 +1,6 @@
 ---
 id: "setup_canvas"
-description: "Configure the Canvas LMS host and API token used for direct page publishing. Validates the token against /api/v1/users/self before saving. Stored locally at ~/.command-and-control/canvas-config.json with 0o600 permissions."
+description: "Configure the Canvas host and API token used for direct publishing. Validates the token against /api/v1/users/self before saving, then stores it locally with 0o600 permissions."
 section: "admin"
 intent_tool: "ct_setup"
 intent_action: "canvas"

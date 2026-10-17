@@ -11,10 +11,10 @@ Deep accessibility checks beyond the standard audit.
 
 ## Operations (4)
 
-- [[accessibility_review_queue]] — The per-course "near the edge" accessibility worklist: pages with borderline findings, needs-human-review criteria, or acknowledged publishes. Lists open entries worst-margin first with live Canvas URLs for human-eyes verification; resolve marks a page reviewed. The professor is the final arbiter.
-- [[audit_course_accessibility]] — Run the full WCAG 2.2 engine stack (in-house + axe-core) across every generated page of a course project, report per-page verdicts against the required level, and refresh the borderline review queue. The regular between-semesters check.
-- [[review_accessibility_policy]] — The institution accessibility policy anchor (spec §7): shows the policy URLs, required conformance level, cadence, and last-verified date; confirm: true stamps today's date after the professor re-reads the policy. Also accepts updates to urls / requiredConformance / recheckWeeks / wcag3Advisory so nobody edits JSON by hand. Default level: WCAG 2.1 AA (ADA Title II baseline).
-- [[wave_deep_check]] — Deep accessibility check of a PUBLICLY-visible page via the paid WAVE API (WebAIM). Two-call spend gate: first call previews the cost (~2 credits) and runs nothing; re-call with confirm: true to spend. Auth-gated Canvas URLs are refused before any spend — use the free WAVE browser extension or MS Accessibility Insights for those. Optional apiKey is saved to the institution config on first use.
+- [[accessibility_review_queue]] — Course "near the edge" a11y worklist: borderline findings, needs-review criteria, and acknowledged publishes, worst-margin first, live Canvas URLs. resolve marks a page reviewed; professor is arbiter.
+- [[audit_course_accessibility]] — Run the full WCAG 2.2 stack (in-house + axe-core) over every generated page, report per-page verdicts vs the required level, and refresh the borderline queue. The between-semesters check.
+- [[review_accessibility_policy]] — Accessibility policy anchor: shows policy URLs, required level, cadence, last-verified; confirm:true stamps a re-read. Updates urls/requiredConformance/recheckWeeks/wcag3Advisory. Default WCAG 2.1 AA.
+- [[wave_deep_check]] — Deep a11y check of a PUBLIC page via the paid WAVE API. Spend gate: preview (~2 credits) first, then confirm:true. Auth-gated Canvas URLs refused — use the free extension. apiKey saved on first use.
 <!-- generated:end -->
 
 # Notes

@@ -1,6 +1,6 @@
 ---
 id: "draft_student_rubric"
-description: "Take a faculty-facing rubric and use the Anthropic API to produce a student-facing rewrite plus worked examples per criterion. Writes a markdown file matching the CDS rubric page-type schema so `ct_build` action `course` can render it as a Canvas page + downloadable .md for students to paste into an LLM. Run `ct_setup` action `anthropic` first if not configured."
+description: "Rewrite a faculty rubric into student-facing language with worked examples per criterion. Writes CDS rubric markdown for ct_build course to render as a Canvas page + student .md. Needs Anthropic."
 section: "design"
 intent_tool: "ct_build"
 intent_action: "rubric"

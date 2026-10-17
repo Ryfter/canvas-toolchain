@@ -1,6 +1,6 @@
 ---
 id: "snapshot_course"
-description: "Write or update a course reference markdown doc capturing course identifiers, assignment groups, modules, and an append-only Update Log. Re-running against the same outputPath regenerates the auto-managed sections (delimited by AUTO:start/AUTO:end HTML comment markers) and preserves all hand-edited prose around them."
+description: "Write/update a course reference doc (identifiers, assignment groups, modules, append-only Update Log). Re-runs regenerate the AUTO:start/AUTO:end sections but preserve hand-edited prose around them."
 section: "snapshots"
 intent_tool: ""
 intent_action: ""

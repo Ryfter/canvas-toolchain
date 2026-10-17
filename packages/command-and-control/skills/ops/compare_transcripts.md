@@ -1,6 +1,6 @@
 ---
 id: "compare_transcripts"
-description: "Opt-in: transcribe Panopto lecture audio locally with Whisper and compare it against the Panopto VTT. Writes a .comparison.md per session ranking disagreements, and returns suggested vocab corrections for you to approve (nothing is written to panopto-vocab.json automatically). Needs audio — auto-fetched when available, otherwise follow the returned guided web-download instructions. Requires `ct_import` action `transcripts_panopto` first."
+description: "Opt-in: Whisper-transcribe lecture audio, diff it against the Panopto VTT. Writes .comparison.md per session; returns vocab corrections for approval (none auto-written). Needs audio, prior fetch."
 section: "transcripts"
 intent_tool: ""
 intent_action: ""

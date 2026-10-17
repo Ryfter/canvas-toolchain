@@ -1,6 +1,6 @@
 ---
 id: "check_shell_readiness"
-description: "Advisory spot-check of a LIVE Canvas course shell. Run anytime (manual). Optional weekly cadence is opt-in via `ct_setup` action `spot_check` (recommends Saturday). Weeks: infer Week N from module titles + termStartMonday; weekMapOverrides win. Thorough = week beginning in ~2 weeks; lighter = ~1 week. Cross-checks due/unlock/lock. Emits quizCallouts for `ct_review` action `quiz` (sibling; validate-first). Read-only. `ct_setup` action `canvas` required."
+description: "Spot-check a LIVE Canvas shell: infer Week N from module titles + termStartMonday (overrides win), cross-check due/unlock/lock, emit quiz callouts for ct_review quiz. Read-only; needs canvas setup."
 section: "admin"
 intent_tool: "ct_review"
 intent_action: "shell_readiness"

@@ -133,7 +133,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'setup_anthropic',
     section: 'admin',
-    description: 'Configure the Anthropic API key used by all AI-powered tools. Validates the key against the Anthropic API before saving. Stored locally at ~/.command-and-control/anthropic-config.json with 0o600 permissions.',
+    description: 'Configure the Anthropic API key used by all AI tools. Validates it against the Anthropic API before saving, then stores it locally with 0o600 permissions.',
     inputSchema: {
       type: 'object' as const,
       required: ['apiKey'],
@@ -152,7 +152,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'setup_canvas',
     section: 'admin',
-    description: 'Configure the Canvas LMS host and API token used for direct page publishing. Validates the token against /api/v1/users/self before saving. Stored locally at ~/.command-and-control/canvas-config.json with 0o600 permissions.',
+    description: 'Configure the Canvas host and API token used for direct publishing. Validates the token against /api/v1/users/self before saving, then stores it locally with 0o600 permissions.',
     inputSchema: {
       type: 'object' as const,
       required: ['host', 'token'],
@@ -189,10 +189,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'show_canvas_capabilities',
     section: 'design',
     description:
-      "Returns the catalog of Canvas-safe design patterns. Optionally filter by category " +
-      "(layout, information, interactive, pedagogical, branded) or supportStatus " +
-      "(supported, partial, aspirational). Use this to discover what patterns exist; " +
-      "then call `ct_build` action `preview_pattern` to see any specific pattern rendered.",
+      "Return the catalog of Canvas-safe design patterns, filterable by category (layout, information, interactive, pedagogical, branded) or supportStatus. Discover here, then preview_pattern to render one.",
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -212,9 +209,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'preview_canvas_pattern',
     section: 'design',
     description:
-      "Renders a specific Canvas capability pattern to a standalone HTML file " +
-      "that can be opened in any browser. Use this after `ct_advanced` run `show_canvas_capabilities` " +
-      "to actually see a pattern in action.",
+      "Render a Canvas capability pattern to a standalone HTML file openable in any browser. Use after `ct_advanced` run `show_canvas_capabilities` to see a pattern in action.",
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -275,7 +270,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'browse_module_catalog',
     section: 'modules',
-    description: 'List the module catalog: what exists, what is installed/enabled, which have updates, and any modules requested from the installer GUI. Read-only. Pass clearPending: true to discard stale installer requests. Also lists companion programs (e.g. Canvas Backup) that work alongside the toolchain and are installed separately.',
+    description: 'Module catalog: exists / installed / enabled / update state and installer-GUI requests, plus companion programs (e.g. Canvas Backup). Read-only; clearPending:true discards stale requests.',
     inputSchema: {
       type: 'object' as const,
       properties: { clearPending: { type: 'boolean', description: 'Discard pending installer-GUI module requests.' } },
@@ -287,7 +282,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'install_module',
     section: 'modules',
-    description: 'Install (or upgrade) a module from the catalog. Two-call gate: first call previews name/version/size/source/sha256 with NO side effects; call again with confirm: true to download, verify the pinned sha256, and install. Takes effect on the next reconnect.',
+    description: 'Install/upgrade a catalog module. Two-call gate: first call previews name/version/size/source/sha256 (no side effects); re-call with confirm:true to verify the sha256 and install. Needs a reconnect.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -317,7 +312,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'discover_tools',
     section: 'modules',
     description:
-      'Discover what tools the institution/professor uses: scans the Canvas instance (account → per-course → self-report cascade), matches findings against available modules, and returns detected tools, module-enable suggestions, unmatched tools, and a catalog pick-list. Read-only.',
+      'Discover institutional tools: scans Canvas (account → course → self-report), matches findings to modules, and returns detected tools, enable suggestions, unmatched tools, and a pick-list. Read-only.',
     inputSchema: { type: 'object' as const, properties: {} },
     handler: (args) => discoverTools(args as never),
     taskCategory: 'none',
@@ -327,7 +322,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'save_institution_profile',
     section: 'admin',
     description:
-      'Write/merge the institution profile (the master tool library) and optional per-class tool deltas. Accretive — new tools are added, existing preserved. The profile is the payload for usage feedback (#77).',
+      'Write/merge the institution profile (master tool library) plus optional per-class deltas. Accretive — new tools added, existing preserved. This profile is the payload for usage feedback.',
     inputSchema: {
       type: 'object' as const,
       required: ['tools'],
@@ -371,7 +366,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'submit_usage_feedback',
     section: 'admin',
     description:
-      'Submit an anonymized inventory of your institution\'s tools as a GitHub issue, so the author can prioritize integrations. Opt-in. Two-call gate: call once to review the exact payload, then call again with confirm:true to submit via gh. named:true includes full identifiers (default is anonymized).',
+      'Submit an anonymized inventory of your institution\'s tools as a GitHub issue so the author can prioritize integrations. Opt-in two-call gate: review, then confirm:true via gh. named:true adds ids.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -387,9 +382,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'set_course_aias_default',
     section: 'admin',
     description:
-      "Set the course-wide AI Assessment Scale default for a CDS course folder. " +
-      "Writes defaultAiasLevel (and optional defaultAiasNote) into course-config.md. " +
-      "Per-page aiasLevel overrides this default at render time.",
+      "Set the course-wide AI Assessment Scale default for a CDS course folder, writing defaultAiasLevel (and optional defaultAiasNote) into course-config.md. Per-page aiasLevel overrides at render.",
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -564,7 +557,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'enrich_panopto_transcripts',
     section: 'transcripts',
-    description: 'Generate enriched markdown from downloaded Panopto VTT files. Adds Week/Date headers, deep links every 5 minutes, strips filler words, applies vocab corrections, and highlights key statements as blockquotes. Requires `ct_import` action `transcripts_panopto` to have been run first.',
+    description: 'Enrich Panopto VTT into markdown: Week/Date headers, deep links every 5 min, filler stripped, vocab corrections, key statements as blockquotes. Requires a prior transcripts_panopto run.',
     inputSchema: {
       type: 'object' as const,
       required: ['transcriptsPath'],
@@ -603,7 +596,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'compare_transcripts',
     section: 'transcripts',
-    description: 'Opt-in: transcribe Panopto lecture audio locally with Whisper and compare it against the Panopto VTT. Writes a .comparison.md per session ranking disagreements, and returns suggested vocab corrections for you to approve (nothing is written to panopto-vocab.json automatically). Needs audio — auto-fetched when available, otherwise follow the returned guided web-download instructions. Requires `ct_import` action `transcripts_panopto` first.',
+    description: 'Opt-in: Whisper-transcribe lecture audio, diff it against the Panopto VTT. Writes .comparison.md per session; returns vocab corrections for approval (none auto-written). Needs audio, prior fetch.',
     inputSchema: {
       type: 'object' as const,
       required: ['transcriptsPath'],
@@ -693,7 +686,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'list_publish_snapshots',
     section: 'snapshots',
-    description: 'List all publish snapshots for a course in oldest-to-newest order, showing which is currently live in Canvas and which can be rolled back to / rolled forward to. Pipe the snapshotId from a row into `ct_publish` action `rollback` to restore that version.',
+    description: 'List a course\'s publish snapshots oldest-to-newest, marking the one live in Canvas and which can be rolled back/forward. Feed a row\'s snapshotId to ct_publish rollback.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'courseDir'],
@@ -711,7 +704,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'prune_publish_snapshots',
     section: 'snapshots',
-    description: 'Apply retention policy to a course\'s publish snapshots. Removes snapshots older than the configured retention window AND beyond the configured retention count (defaults: keep 3 most-recent, keep anything ≤ 30 days old). Never removes the currently-live snapshot. When dryRun is true, lists what would be pruned without taking action. Auto-pruning also runs after every successful `ct_publish` action `publish`.',
+    description: 'Apply retention to publish snapshots: drops those past the window and count (default keep 3, keep ≤30 days), never the live one. dryRun lists only; also runs after every successful publish.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'courseDir'],
@@ -728,7 +721,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'setup_lecture_answers',
     section: 'admin',
-    description: 'First-run configuration for the lecture answers bot. Auto-detects Ollama on localhost:11434. When Ollama is absent, returns guidance to either install Ollama or re-call with provider="transformers-js" (in-process; requires installing @xenova/transformers in command-and-control first) or provider="voyage" (cloud, requires voyageApiKey). The bot is opt-in — until this tool succeeds, `ct_ask` action `ask` and `ct_ask` action `index` report NO_CONFIG.',
+    description: 'First-run setup for the lecture answers bot: auto-detects Ollama on localhost:11434, else install it or pick transformers-js/voyage (voyage needs a key). Until then ct_ask ask/index report NO_CONFIG.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -747,7 +740,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'index_course_for_answers',
     section: 'admin',
-    description: 'Build or incrementally update a per-course hybrid (FTS5 + vec) index over enriched lecture transcripts, CDS markdown, slide PDFs (under <courseDir>/slides/), and the canonical FAQ (<courseDir>/answers/canonical.md). Auto-incremental on subsequent calls based on file mtimes. Pass rebuild=true to wipe and re-embed everything (provider switch, suspected corruption).',
+    description: 'Build/update a per-course hybrid (FTS5 + vec) index over transcripts, CDS markdown, slides/ PDFs, and answers/canonical.md. Incremental by mtime; rebuild:true wipes and re-embeds all.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'courseDir'],
@@ -767,7 +760,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'ask_course',
     section: 'admin',
-    description: 'Faculty-facing Q&A against the per-course hybrid index. Auto-incrementally re-indexes any changed source files before retrieving. Returns the LLM-generated answer plus citations (with deep-link URLs for transcript chunks where the source platform provided a deepLinkTemplate). Degrades to keyword-only retrieval when the embedding provider is unavailable.',
+    description: 'Faculty Q&A over the course hybrid index: auto-reindexes changed sources, returns an LLM answer + citations (deep links where available), falling back to keyword-only if the embedder is missing.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'courseDir', 'question'],
@@ -788,7 +781,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'reembed_course_index',
     section: 'admin',
-    description: 'Switch embedding providers and rebuild the per-course index in one call. Convenience wrapper over `ct_setup` action `lecture_answers` + `ct_ask` action `index` --rebuild. Use when migrating from Ollama to Voyage (or vice versa), since vector dimensions are not interchangeable.',
+    description: 'Switch embedding providers and rebuild the course index in one call (ct_setup lecture_answers + ct_ask index --rebuild). Use when migrating providers — vector dimensions are not interchangeable.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'courseDir'],
@@ -808,7 +801,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'snapshot_course',
     section: 'snapshots',
-    description: 'Write or update a course reference markdown doc capturing course identifiers, assignment groups, modules, and an append-only Update Log. Re-running against the same outputPath regenerates the auto-managed sections (delimited by AUTO:start/AUTO:end HTML comment markers) and preserves all hand-edited prose around them.',
+    description: 'Write/update a course reference doc (identifiers, assignment groups, modules, append-only Update Log). Re-runs regenerate the AUTO:start/AUTO:end sections but preserve hand-edited prose around them.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId', 'outputPath'],
@@ -824,7 +817,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'draft_student_rubric',
     section: 'design',
-    description: 'Take a faculty-facing rubric and use the Anthropic API to produce a student-facing rewrite plus worked examples per criterion. Writes a markdown file matching the CDS rubric page-type schema so `ct_build` action `course` can render it as a Canvas page + downloadable .md for students to paste into an LLM. Run `ct_setup` action `anthropic` first if not configured.',
+    description: 'Rewrite a faculty rubric into student-facing language with worked examples per criterion. Writes CDS rubric markdown for ct_build course to render as a Canvas page + student .md. Needs Anthropic.',
     inputSchema: {
       type: 'object' as const,
       required: ['facultyRubricText', 'outputPath'],
@@ -848,7 +841,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'review_canvas_rubric',
     section: 'design',
-    description: 'Pull a rubric from Canvas (the assignment\'s attached rubric first; falls back to the course rubric list), detect whether it changed since your last student rewrite, and run a smart triage (acceptable / needs-update / needs-review) with specific flagged criteria. Read-only — writes nothing. When the verdict is needs-update it proposes a revised faculty rubric for your approval; feed the approved rubric to `ct_build` action `rubric`. Run `ct_setup` action `canvas` and `ct_setup` action `anthropic` first.',
+    description: 'Pull a Canvas rubric (attached, else course list), diff since last rewrite, triage acceptable/needs-update/needs-review. Read-only; needs-update proposes a revised rubric. Needs Canvas+Anthropic.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId'],
@@ -870,11 +863,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'check_shell_readiness',
     section: 'admin',
     description:
-      'Advisory spot-check of a LIVE Canvas course shell. Run anytime (manual). ' +
-      'Optional weekly cadence is opt-in via `ct_setup` action `spot_check` (recommends Saturday). ' +
-      'Weeks: infer Week N from module titles + termStartMonday; weekMapOverrides win. ' +
-      'Thorough = week beginning in ~2 weeks; lighter = ~1 week. Cross-checks due/unlock/lock. ' +
-      'Emits quizCallouts for `ct_review` action `quiz` (sibling; validate-first). Read-only. `ct_setup` action `canvas` required.',
+      'Spot-check a LIVE Canvas shell: infer Week N from module titles + termStartMonday (overrides win), cross-check due/unlock/lock, emit quiz callouts for ct_review quiz. Read-only; needs canvas setup.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseId'],
@@ -904,10 +893,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'setup_spot_check',
     section: 'admin',
     description:
-      'Opt in/out of a weekly shell (+ quiz validate) spot-check reminder day. ' +
-      'Recommends Saturday. Persists weeklyCheckEnabled + weeklyCheckDay under ' +
-      '~/.command-and-control/spot-check.json (no secrets). Manual `ct_review` action `shell_readiness` always works. ' +
-      'Does not install OS cron (fast-follow).',
+      'Opt in/out of a weekly shell + quiz spot-check reminder day (recommends Saturday). Persists the setting only; no OS cron installed. Manual ct_review shell_readiness always works.',
     inputSchema: {
       type: 'object' as const,
       required: ['enabled'],
@@ -930,7 +916,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'validate_quiz',
     section: 'admin',
     description:
-      'Advisory live-Canvas quiz quality check (Classic Quizzes questions API): missing keys, empty stems, duplicate stems, points mismatch, week-map date mismatches, optional LLM triage for ambiguous keys / weak distractors. Pass courseId+quizId for spot-check (source of truth = Canvas). Optional local quizPath/quizMarkdown is authoring pre-check only. Manual anytime — does not require weeklyCheckEnabled. Usable from shell readiness call-out for primary/secondary weeks. Run `ct_setup` action `canvas` first for live mode. Does not write to Canvas or gate publish.',
+      'Advisory quiz check (Classic Quizzes): missing keys, empty/dup stems, points mismatch, week-map dates, optional LLM triage. Live via courseId+quizId, else local pre-check. Read-only; needs Canvas.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -957,7 +943,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'generate_quiz',
     section: 'design',
     description:
-      'Author a local quiz draft markdown from course materials (books/slides/lectures) with difficulty-mix knobs. Writes under week-NN/quizzes/ (temp+rename). Manual anytime — not required for the weekly shell spot-check (use `ct_review` action `quiz` for live Canvas). Requires an active LLM (`ct_setup` action `anthropic` or Ollama). Does not publish to Canvas Quizzes.',
+      'Author a local quiz draft (books/slides/lectures) with difficulty-mix knobs, written under week-NN/quizzes/. Needs an LLM. Does not publish to Canvas — use ct_review quiz for live checks.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseDir', 'week', 'sources'],
@@ -1000,7 +986,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'accessibility_review_queue',
     section: 'accessibility',
     description:
-      'The per-course "near the edge" accessibility worklist: pages with borderline findings, needs-human-review criteria, or acknowledged publishes. Lists open entries worst-margin first with live Canvas URLs for human-eyes verification; resolve marks a page reviewed. The professor is the final arbiter.',
+      'Course "near the edge" a11y worklist: borderline findings, needs-review criteria, and acknowledged publishes, worst-margin first, live Canvas URLs. resolve marks a page reviewed; professor is arbiter.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseDir'],
@@ -1021,7 +1007,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'audit_course_accessibility',
     section: 'accessibility',
     description:
-      'Run the full WCAG 2.2 engine stack (in-house + axe-core) across every generated page of a course project, report per-page verdicts against the required level, and refresh the borderline review queue. The regular between-semesters check.',
+      'Run the full WCAG 2.2 stack (in-house + axe-core) over every generated page, report per-page verdicts vs the required level, and refresh the borderline queue. The between-semesters check.',
     inputSchema: {
       type: 'object' as const,
       required: ['courseDir'],
@@ -1040,7 +1026,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'review_accessibility_policy',
     section: 'accessibility',
     description:
-      "The institution accessibility policy anchor (spec §7): shows the policy URLs, required conformance level, cadence, and last-verified date; confirm: true stamps today's date after the professor re-reads the policy. Also accepts updates to urls / requiredConformance / recheckWeeks / wcag3Advisory so nobody edits JSON by hand. Default level: WCAG 2.1 AA (ADA Title II baseline).",
+      "Accessibility policy anchor: shows policy URLs, required level, cadence, last-verified; confirm:true stamps a re-read. Updates urls/requiredConformance/recheckWeeks/wcag3Advisory. Default WCAG 2.1 AA.",
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -1066,7 +1052,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'wave_deep_check',
     section: 'accessibility',
     description:
-      'Deep accessibility check of a PUBLICLY-visible page via the paid WAVE API (WebAIM). Two-call spend gate: first call previews the cost (~2 credits) and runs nothing; re-call with confirm: true to spend. Auth-gated Canvas URLs are refused before any spend — use the free WAVE browser extension or MS Accessibility Insights for those. Optional apiKey is saved to the institution config on first use.',
+      'Deep a11y check of a PUBLIC page via the paid WAVE API. Spend gate: preview (~2 credits) first, then confirm:true. Auth-gated Canvas URLs refused — use the free extension. apiKey saved on first use.',
     inputSchema: {
       type: 'object' as const,
       required: ['url'],
@@ -1083,7 +1069,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'brainstorm_interactive',
     section: 'research',
-    description: 'Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via `ct_setup` action `anthropic`.',
+    description: 'Propose interactive Canvas widget concepts for a topic + learning goal: 2-3 specs (kind, purpose, content schema, sample data, accessibility notes) with rationale. Returns SPECS only. Needs an LLM.',
     inputSchema: {
       type: 'object' as const,
       required: ['topic', 'learningGoal'],
@@ -1729,10 +1715,7 @@ export const CORE_OPERATIONS: Operation[] = [
     id: 'setup_canvas_backup',
     section: 'admin',
     description:
-      '[canvas-backup] Generate a Canvas Backup config from the Canvas connection already ' +
-      'configured in Command and Control. Writes ~/.command-and-control/canvas-backup.generated.toml ' +
-      '(token stays out of the file; passed via CANVAS_TOKEN at archive time). Run this once per ' +
-      'semester so `ct_import` action `canvas_archive_download` can find base_url / archive root / year / semester.',
+      '[canvas-backup] Generate the Canvas Backup config from your Canvas connection. Writes the toml without the token (passed via CANVAS_TOKEN). Run once per semester so canvas_archive_download works.',
     inputSchema: {
       type: 'object',
       required: ['semester'],

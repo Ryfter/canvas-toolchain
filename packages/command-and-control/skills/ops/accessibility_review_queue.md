@@ -1,6 +1,6 @@
 ---
 id: "accessibility_review_queue"
-description: "The per-course \"near the edge\" accessibility worklist: pages with borderline findings, needs-human-review criteria, or acknowledged publishes. Lists open entries worst-margin first with live Canvas URLs for human-eyes verification; resolve marks a page reviewed. The professor is the final arbiter."
+description: "Course \"near the edge\" a11y worklist: borderline findings, needs-review criteria, and acknowledged publishes, worst-margin first, live Canvas URLs. resolve marks a page reviewed; professor is arbiter."
 section: "accessibility"
 intent_tool: "ct_review"
 intent_action: "queue"

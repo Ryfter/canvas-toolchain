@@ -1,6 +1,6 @@
 ---
 id: "set_course_aias_default"
-description: "Set the course-wide AI Assessment Scale default for a CDS course folder. Writes defaultAiasLevel (and optional defaultAiasNote) into course-config.md. Per-page aiasLevel overrides this default at render time."
+description: "Set the course-wide AI Assessment Scale default for a CDS course folder, writing defaultAiasLevel (and optional defaultAiasNote) into course-config.md. Per-page aiasLevel overrides at render."
 section: "admin"
 intent_tool: ""
 intent_action: ""
