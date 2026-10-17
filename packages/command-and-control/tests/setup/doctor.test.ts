@@ -117,7 +117,7 @@ describe('runDoctor checks', () => {
 
     expect(active.status).toBe('warn');
     expect(active.fix).toEqual({
-      tool: 'ct_advanced', action: 'set_active_llm_provider', hint: expect.any(String),
+      tool: 'ct_setup', action: 'llm_provider', hint: expect.any(String),
     });
     expect(check(report, 'llm.credentials').status).toBe('ok');
     expect(report.readyJourneys.aiAssisted).toBe(false);
@@ -147,7 +147,7 @@ describe('runDoctor checks', () => {
 
     expect(active.status).toBe('warn');
     expect(active.fix).toEqual({
-      tool: 'ct_advanced', action: 'set_active_llm_provider', hint: expect.stringContaining('lmstudio'),
+      tool: 'ct_setup', action: 'llm_provider', hint: expect.stringContaining('lmstudio'),
     });
   });
 

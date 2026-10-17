@@ -5,6 +5,7 @@ import { setupAnthropic } from '../tools/setup_anthropic.js';
 import { setupCanvas } from '../tools/setup_canvas.js';
 import { setupOllama } from '../tools/setup_ollama.js';
 import { setupLmStudio } from '../tools/setup_lmstudio.js';
+import { setupLlmProvider } from '../tools/setup_llm_provider.js';
 import { showCanvasCapabilities } from '../tools/showcase/show_canvas_capabilities.js';
 import { previewCanvasPattern } from '../tools/showcase/preview_canvas_pattern.js';
 import { setActiveLlmProvider } from '../tools/set_active_llm_provider.js';
@@ -203,6 +204,27 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'lmstudio',
+  },
+  {
+    id: 'setup_llm_provider',
+    section: 'admin',
+    description:
+      'Report the active and configured LLM providers; with no arguments it also probes local Ollama and LM Studio at their default URLs. Pass provider to activate a configured one.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        provider: {
+          type: 'string',
+          enum: ['anthropic', 'ollama', 'lmstudio'],
+          description: 'Provider to activate. Omit to report the active and configured providers.',
+        },
+      },
+    },
+    handler: (args) => setupLlmProvider(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'llm_provider',
   },
   {
     id: 'show_canvas_capabilities',

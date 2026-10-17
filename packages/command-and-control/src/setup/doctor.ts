@@ -292,9 +292,9 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
       summary: 'llm-provider.json is corrupt, so no active LLM provider can be resolved.',
       detail: [providerFile.path],
       fix: {
-        tool: 'ct_advanced',
-        action: 'set_active_llm_provider',
-        hint: 'Re-run ct_advanced action set_active_llm_provider (operation set_active_llm_provider).',
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint: 'Run ct_setup action llm_provider to choose one of your configured providers.',
       },
     };
   }
@@ -308,9 +308,9 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
         `${configured} is configured but no active provider is set, so AI tools fail with ` +
         'LLM_PROVIDER_NOT_SET.',
       fix: {
-        tool: 'ct_advanced',
-        action: 'set_active_llm_provider',
-        hint: `Activate ${configured} (provider: "${configured}").`,
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint: `Activate it: ct_setup action llm_provider with provider "${configured}".`,
       },
     };
   }

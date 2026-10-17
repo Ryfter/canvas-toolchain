@@ -2,20 +2,21 @@
 id: "admin"
 kind: "section"
 description: "Institution profile, dashboard, feedback, defaults."
-ops: 36
+ops: 37
 related: [ct_setup, ct_import, ct_inspect, ct_analyze, ct_plan, ct_build, ct_review, ct_ask, ct_advanced]
 ---
 # admin section
 
 Institution profile, dashboard, feedback, defaults.
 
-## Operations (36)
+## Operations (37)
 
 - [[setup_cc]] — Configure Command & Control: set mode (easy/advanced), Anthropic model, Ollama base URL and model, and routing preferences. Run this first.
 - [[setup_anthropic]] — Configure the Anthropic API key used by all AI tools. Validates it against the Anthropic API before saving, then stores it locally with 0o600 permissions.
 - [[setup_canvas]] — Configure the Canvas host and API token used for direct publishing. Validates the token against /api/v1/users/self before saving, then stores it locally with 0o600 permissions.
 - [[setup_ollama]] — Configure Ollama as the local generation LLM. Discovery mode (no model) returns the recommended-models markdown. Commit mode (with model) validates the model is pulled and writes ollama-config.json.
 - [[setup_lmstudio]] — Configure LM Studio (OpenAI-compatible local server) as the generation LLM. Discovery mode lists loaded models from the running server; commit mode validates the model and writes lmstudio-config.json.
+- [[setup_llm_provider]] — Report the active and configured LLM providers; with no arguments it also probes local Ollama and LM Studio at their default URLs. Pass provider to activate a configured one.
 - [[set_active_llm_provider]] — Set the active generation LLM provider. Must be anthropic, ollama or lmstudio. Refuses to set a provider whose config file is absent.
 - [[save_institution_profile]] — Write/merge the institution profile (master tool library) plus optional per-class deltas. Accretive — new tools added, existing preserved. This profile is the payload for usage feedback.
 - [[submit_usage_feedback]] — Submit an anonymized inventory of your institution's tools as a GitHub issue so the author can prioritize integrations. Opt-in two-call gate: review, then confirm:true via gh. named:true adds ids.

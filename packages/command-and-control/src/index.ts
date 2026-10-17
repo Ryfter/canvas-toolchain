@@ -14,6 +14,7 @@ import {
 } from './tools/workflows/bulk_fetch_panopto_transcripts.js';
 import { checkForUpdates, getUpdateNotice } from './update/check.js';
 import { loadModules } from './modules/registry.js';
+import { migrateActiveProvider } from './tools/set_active_llm_provider.js';
 import { checkChannelNotices, getChannelNotices } from './channel/notices.js';
 import { appendNotice } from './lib/append_notice.js';
 import { buildRegistry } from './surface/registry.js';
@@ -36,6 +37,27 @@ const loadedModules = await loadModules();
 // Fire-and-forget background check — never blocks startup.
 void checkForUpdates();
 void checkChannelNotices();
+
+/**
+ * Activate a lone configured LLM provider for installs that configured one
+ * before auto-activation existed. Non-fatal: a failure only skips the
+ * convenience, and the doctor still points at ct_setup action llm_provider.
+ * Local file reads only — never the network, never a secret in the log line.
+ */
+function migrateActiveLlmProvider(): void {
+  try {
+    const result = migrateActiveProvider();
+    if (result.activated) {
+      console.error(`[migration] activated the only configured LLM provider: ${result.provider}`);
+    }
+  } catch (err) {
+    console.error(
+      `[migration] could not check the active LLM provider: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+migrateActiveLlmProvider();
 
 // ── The operation registry ──────────────────────────────────────────────────
 // 86 core operations plus every enabled module's tools. Module operation ids are
