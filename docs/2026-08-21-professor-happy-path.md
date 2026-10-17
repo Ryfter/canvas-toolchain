@@ -8,7 +8,7 @@ Ten numbered steps from MCP start to a successful shell brief edit. Credentials 
 2. **Start MCP:** `npx canvas-toolchain` (published to npm as of v2.2.1, same day); **from source:** `git clone … && cd canvas-toolchain && npm install && node packages/canvas-toolchain/bin/canvas-toolchain.mjs`.
 3. **Wire client:** `{ "mcpServers": { "canvas-toolchain": { "command": "npx", "args": ["canvas-toolchain"] } } }` — restart the AI app.
 4. **Smoke (maintainer / from source):** `node scripts/smoke-npx.mjs node packages/canvas-toolchain/bin/canvas-toolchain.mjs` → `OK: canvas-toolchain@<version>` (stdio MCP `initialize`; see script header in [`scripts/smoke-npx.mjs`](../scripts/smoke-npx.mjs)).
-5. **“Am I configured?”** Ask your client to run **`get_cc_status`** — the C&C status tool (presence-only booleans for keys, Canvas, packages). Design Studio alone exposes **`get_started`**; it is **not** on C&C.
+5. **“Am I configured?”** Ask your client to run **`get_cc_status`** — the C&C status tool (presence-only booleans for keys, Canvas, packages). For step-by-step first-run guidance instead, run **`get_started`** (`ct_setup` action `get_started`): it reports which capabilities are ready and the exact call that finishes each remaining step. Design Studio also has its own separate `get_started` tool (its own server, not C&C).
 6. **Register course:** `setup_course` `{ courseId: "ITM370", displayName: "…" }` (once per course).
 7. **Get an editable shell:** `plan_next_semester` `{ courseId, sourceSemesterId, newSemesterId }` — or `import_course` `{ archivePath, outputDir }` from a Canvas Backup `.zip` if you have no CI plan yet.
 8. **Locate briefs:** `~/.curriculum-intelligence/courses/<courseId>/semesters/<semesterId>/next-plan/week-XX/*.md` — or `node scripts/shell-edit-doctor.mjs --courseId ITM370 --semesterId Fall2026`.
@@ -34,4 +34,5 @@ Integration smoke (fixtures, not stdio): `npm run smoke:integration --workspace=
 | Package | Tool name | Use |
 | --- | --- | --- |
 | Command & Control (`npx canvas-toolchain`) | **`get_cc_status`** | “What’s configured?” — mode, key presence, Canvas/LLM files, installed packages |
-| Canvas Design Studio (standalone MCP) | **`get_started`** | Design Studio orientation only; from C&C use **`get_cc_status`** instead |
+| Command & Control (`npx canvas-toolchain`) | **`get_started`** | “What do I do first?” — which capabilities are ready, plus the exact call that finishes each remaining step (`ct_setup` action `get_started`) |
+| Canvas Design Studio (standalone MCP) | **`get_started`** | Design Studio's own orientation, a different tool; from C&C use `get_cc_status` / `get_started` |

@@ -2,27 +2,29 @@
 id: "admin"
 kind: "section"
 description: "Institution profile, dashboard, feedback, defaults."
-ops: 35
+ops: 37
 related: [ct_setup, ct_import, ct_inspect, ct_analyze, ct_plan, ct_build, ct_review, ct_ask, ct_advanced]
 ---
 # admin section
 
 Institution profile, dashboard, feedback, defaults.
 
-## Operations (35)
+## Operations (37)
 
 - [[setup_cc]] — Configure Command & Control: set mode (easy/advanced), Anthropic model, Ollama base URL and model, and routing preferences. Run this first.
 - [[setup_anthropic]] — Configure the Anthropic API key used by all AI tools. Validates it against the Anthropic API before saving, then stores it locally with 0o600 permissions.
 - [[setup_canvas]] — Configure the Canvas host and API token used for direct publishing. Validates the token against /api/v1/users/self before saving, then stores it locally with 0o600 permissions.
 - [[setup_ollama]] — Configure Ollama as the local generation LLM. Discovery mode (no model) returns the recommended-models markdown. Commit mode (with model) validates the model is pulled and writes ollama-config.json.
-- [[set_active_llm_provider]] — Set the active generation LLM provider. Must be anthropic or ollama. Refuses to set a provider whose config file is absent.
+- [[setup_lmstudio]] — Configure LM Studio (OpenAI-compatible local server) as the generation LLM. Discovery mode lists loaded models from the running server; commit mode validates the model and writes lmstudio-config.json.
+- [[set_active_llm_provider]] — Set the active generation LLM provider. Must be anthropic, ollama or lmstudio. Refuses to set a provider whose config file is absent.
 - [[save_institution_profile]] — Write/merge the institution profile (master tool library) plus optional per-class deltas. Accretive — new tools added, existing preserved. This profile is the payload for usage feedback.
 - [[submit_usage_feedback]] — Submit an anonymized inventory of your institution's tools as a GitHub issue so the author can prioritize integrations. Opt-in two-call gate: review, then confirm:true via gh. named:true adds ids.
 - [[set_course_aias_default]] — Set the course-wide AI Assessment Scale default for a CDS course folder, writing defaultAiasLevel (and optional defaultAiasNote) into course-config.md. Per-page aiasLevel overrides at render.
 - [[set_courses_root]] — Set the root directory for course discovery used by the local dashboard. The dashboard scans this directory recursively for folders containing course-config.md.
 - [[open_dashboard]] — Start the local Canvas Toolchain dashboard (read-only course health view). Returns a localhost URL the professor can open in a browser. Requires `ct_setup` action `courses_root` first.
 - [[get_cc_status]] — Get a health snapshot: which domain packages are installed, whether Anthropic key and Ollama are available, active routing config, and last-run timestamps per workflow.
-- [[setup_doctor]] — Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic checks.
+- [[setup_doctor]] — Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic probes; detects MCP host wiring.
+- [[get_started]] — First-run guidance built from the setup doctor: which capabilities are ready and the exact ct_setup or ct_advanced call that finishes each one. Read-only and offline.
 - [[plan_next_semester]] — Answer "get me ready to plan next semester" — imports previous shell, fetches the academic calendar, shifts all due dates, and generates a recommended outline.
 - [[full_pipeline]] — Run `ct_analyze` action `course` → `ct_plan` action `semester` → `ct_build` action `materials` end-to-end. Returns results from all three phases.
 - [[setup_lecture_answers]] — Lecture answers bot setup: auto-detects Ollama on localhost:11434, else install or pick transformers-js (in-process, needs @xenova/transformers) or voyage (cloud, key). Else ct_ask reports NO_CONFIG.

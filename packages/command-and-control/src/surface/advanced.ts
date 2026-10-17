@@ -10,9 +10,48 @@ const json = (value: unknown, isError = false): CallToolResult => ({
 });
 
 /** Operations reachable through ct_advanced: everything not on an intent tool
- *  and not internal. */
+ *  and not internal, plus the deprecated legacy ids kept as warning wrappers. */
 function advancedOps(reg: Registry): Operation[] {
-  return [...reg.values()].filter((o) => o.exposure === 'advanced');
+  const ops = [...reg.values()];
+  return [
+    ...ops.filter((o) => o.exposure === 'advanced'),
+    // A deprecated op normally still sits on its intent tool, so this adds a
+    // second address for it. The exposure guard keeps a future deprecated
+    // advanced op from being listed twice.
+    ...ops.filter((o) => o.deprecated !== undefined && o.exposure !== 'advanced'),
+  ];
+}
+
+/** What describe reports for one operation. A deprecated op carries its
+ *  replacement so the model can move to the supported call. */
+function described(op: Operation): Record<string, unknown> {
+  return {
+    description: op.description,
+    inputSchema: op.inputSchema,
+    ...(op.deprecated ? { deprecated: op.deprecated } : {}),
+  };
+}
+
+/**
+ * A deprecated legacy id still runs exactly as it did, so its result is
+ * returned untouched apart from the deprecation itself: a plain object gains
+ * the `deprecation` field, and a CallToolResult keeps its own content — and its
+ * `isError` — with the notice appended as one more text block.
+ *
+ * Anything else (an array, a scalar) is wrapped under `result` rather than
+ * spread, because spreading an array into an object would silently turn it into
+ * `{0: …, 1: …}`. No operation returns such a shape today; the branch exists so
+ * a future one cannot be corrupted rather than to serve a caller.
+ */
+function withDeprecation(result: unknown, op: Operation): CallToolResult {
+  const deprecated = op.deprecated!;
+  if (isCallToolResult(result)) {
+    return { ...result, content: [...result.content, { type: 'text', text: deprecated.notice }] };
+  }
+  if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
+    return json({ ...result as Record<string, unknown>, deprecation: deprecated });
+  }
+  return json({ result, deprecation: deprecated });
 }
 
 /** One wording for describe and run so an unknown id reads the same either way. */
@@ -35,12 +74,16 @@ function requiredNames(schema: Record<string, unknown>): string[] {
 
 /**
  * The description carries section and operation NAMES only — never schemas.
- * That is the whole context saving: names are cheap, schemas are not.
+ * That is the whole context saving: names are cheap, schemas are not. A
+ * deprecated id is the one exception, carrying its replacement inline so the
+ * marker is visible without a describe round-trip.
  */
 export function advancedToolSchema(reg: Registry): Tool {
   const ops = advancedOps(reg);
   const lines = SECTION_IDS.map((id) => {
-    const names = ops.filter((o) => o.section === id).map((o) => o.id);
+    const names = ops
+      .filter((o) => o.section === id)
+      .map((o) => (o.deprecated ? `${o.id} (${o.deprecated.marker})` : o.id));
     return names.length ? `- ${id}: ${SECTIONS[id].description} [${names.join(', ')}]` : null;
   }).filter(Boolean);
 
@@ -90,15 +133,13 @@ export async function runAdvanced(reg: Registry, rawArgs: unknown): Promise<Call
     if (args.operation) {
       const op = ops.find((o) => o.id === args.operation);
       if (!op) return unknownOperation(args.operation, ops);
-      return json({ operations: { [op.id]: { description: op.description, inputSchema: op.inputSchema } } });
+      return json({ operations: { [op.id]: described(op) } });
     }
     if (args.section) {
       const inSection = ops.filter((o) => o.section === args.section);
       return json({
         section: args.section,
-        operations: Object.fromEntries(
-          inSection.map((o) => [o.id, { description: o.description, inputSchema: o.inputSchema }]),
-        ),
+        operations: Object.fromEntries(inSection.map((o) => [o.id, described(o)])),
       });
     }
     return json({
@@ -120,7 +161,8 @@ export async function runAdvanced(reg: Registry, rawArgs: unknown): Promise<Call
     const op = reg.get(args.operation);
     // Internal operations run as steps inside other operations and are not
     // callable. Report them like any unknown id so the model self-corrects.
-    if (!op || op.exposure !== 'advanced') {
+    // A deprecated id is callable here by design: that is the warning wrapper.
+    if (!op || (op.exposure !== 'advanced' && op.deprecated === undefined)) {
       return unknownOperation(args.operation, ops);
     }
 
@@ -144,6 +186,7 @@ export async function runAdvanced(reg: Registry, rawArgs: unknown): Promise<Call
     }
 
     const result = await op.handler(params);
+    if (op.deprecated) return withDeprecation(result, op);
     if (isCallToolResult(result)) return result;
     return json(result);
   }
