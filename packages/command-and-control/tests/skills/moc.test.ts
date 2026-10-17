@@ -3,11 +3,22 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'n
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { buildIndex } from '../../../../scripts/skills/build-index.mjs';
+import { buildMocs } from '../../../../scripts/skills/moc.mjs';
 import { parseFrontMatter } from '../../../../scripts/skills/lib/frontmatter.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../../../../scripts/skills/moc.mjs', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
+
+/**
+ * A spawned writer boots node and imports the built registry from `dist`, which
+ * costs ~0.4s on an idle machine and several times that when CI runs the test
+ * files in parallel. Tests that genuinely need a child process (exit codes,
+ * stderr) carry an explicit budget instead of the 5s default, which a
+ * multi-spawn test can exceed under that contention.
+ */
+const SPAWN_TIMEOUT_MS = 30_000;
 
 /** The two closed sets the registry declares, plus the sidecar tool. */
 const SECTION_IDS = [
@@ -27,9 +38,9 @@ function tempRoot(): string {
   return dir;
 }
 
-function runCli(script: string, ...args: string[]): { stdout: string; status: number } {
+function runMocCli(...args: string[]): { stdout: string; status: number } {
   try {
-    const stdout = execFileSync(process.execPath, [script, ...args, '--json'], {
+    const stdout = execFileSync(process.execPath, [SCRIPT, ...args, '--json'], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
     });
@@ -41,9 +52,14 @@ function runCli(script: string, ...args: string[]): { stdout: string; status: nu
   }
 }
 
-function buildBoth(root: string): void {
-  runCli(fileURLToPath(new URL('../../../../scripts/skills/build-index.mjs', import.meta.url)), '--root', root);
-  runCli(SCRIPT, '--root', root);
+/**
+ * build-index then moc, called in-process. The writers are exported and their
+ * `isMain` guard keeps the CLI out of the way, so the built registry is imported
+ * once per test file instead of once per spawned process.
+ */
+async function buildBoth(root: string): Promise<void> {
+  await buildIndex({ root });
+  await buildMocs({ root });
 }
 
 function readMocs(root: string): Array<{ id: string; data: Record<string, unknown>; body: string }> {
@@ -53,39 +69,49 @@ function readMocs(root: string): Array<{ id: string; data: Record<string, unknow
   });
 }
 
+function snapshotMocs(root: string): string[] {
+  return readdirSync(join(root, 'moc')).sort().map((name) => readFileSync(join(root, 'moc', name), 'utf8'));
+}
+
+/**
+ * The generated tree is identical for every test that only inspects it, so it is
+ * built once and shared. Tests that write into the tree build their own.
+ */
+let sharedRoot: string;
+
+beforeAll(async () => {
+  sharedRoot = mkdtempSync(join(tmpdir(), 'skills-moc-shared-'));
+  await buildBoth(sharedRoot);
+});
+
+afterAll(() => {
+  rmSync(sharedRoot, { recursive: true, force: true });
+});
+
 afterEach(() => {
   for (const dir of roots.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
 describe('moc', () => {
   it('writes one MOC per section, per intent tool, and for ct_advanced', () => {
-    const root = tempRoot();
-    buildBoth(root);
-
-    const ids = readdirSync(join(root, 'moc')).map((f) => f.replace(/\.md$/, ''));
+    const ids = readdirSync(join(sharedRoot, 'moc')).map((f) => f.replace(/\.md$/, ''));
     expect(ids.sort()).toEqual([...EXPECTED_MOC_IDS].sort());
     expect(ids.length).toBe(18);
   });
 
   it('places every operation in at least one MOC', () => {
-    const root = tempRoot();
-    buildBoth(root);
-
-    const opIds = readdirSync(join(root, 'ops')).map((f) => f.replace(/\.md$/, ''));
+    const opIds = readdirSync(join(sharedRoot, 'ops')).map((f) => f.replace(/\.md$/, ''));
     const linked = new Set(
-      readMocs(root).flatMap((moc) => [...moc.body.matchAll(/\[\[([a-z0-9_.]+)\]\]/g)].map((m) => m[1])),
+      readMocs(sharedRoot).flatMap((moc) => [...moc.body.matchAll(/\[\[([a-z0-9_.]+)\]\]/g)].map((m) => m[1])),
     );
 
     expect(opIds.filter((id) => !linked.has(id))).toEqual([]);
   });
 
   it('files each operation under its own section MOC', () => {
-    const root = tempRoot();
-    buildBoth(root);
-
-    const mocs = new Map(readMocs(root).map((moc) => [moc.id, moc]));
-    for (const name of readdirSync(join(root, 'ops'))) {
-      const { data } = parseFrontMatter(readFileSync(join(root, 'ops', name), 'utf8'));
+    const mocs = new Map(readMocs(sharedRoot).map((moc) => [moc.id, moc]));
+    for (const name of readdirSync(join(sharedRoot, 'ops'))) {
+      const { data } = parseFrontMatter(readFileSync(join(sharedRoot, 'ops', name), 'utf8'));
       const id = String(data?.id);
       const section = String(data?.section);
       expect(mocs.get(section)?.body, `${id} in ${section}`).toContain(`[[${id}]]`);
@@ -93,12 +119,9 @@ describe('moc', () => {
   });
 
   it('files intent operations under their intent tool MOC and advanced ones under ct_advanced', () => {
-    const root = tempRoot();
-    buildBoth(root);
-
-    const mocs = new Map(readMocs(root).map((moc) => [moc.id, moc]));
-    for (const name of readdirSync(join(root, 'ops'))) {
-      const { data } = parseFrontMatter(readFileSync(join(root, 'ops', name), 'utf8'));
+    const mocs = new Map(readMocs(sharedRoot).map((moc) => [moc.id, moc]));
+    for (const name of readdirSync(join(sharedRoot, 'ops'))) {
+      const { data } = parseFrontMatter(readFileSync(join(sharedRoot, 'ops', name), 'utf8'));
       const id = String(data?.id);
       const expected = data?.exposure === 'intent'
         ? String(data?.intent_tool)
@@ -108,10 +131,7 @@ describe('moc', () => {
   });
 
   it('carries the map frontmatter schema and counts its own operations', () => {
-    const root = tempRoot();
-    buildBoth(root);
-
-    for (const moc of readMocs(root)) {
+    for (const moc of readMocs(sharedRoot)) {
       expect(Object.keys(moc.data), moc.id).toEqual(['id', 'kind', 'description', 'ops', 'related']);
       expect(typeof moc.data.ops, moc.id).toBe('number');
       const listed = [...moc.body.matchAll(/^- \[\[/gm)].length;
@@ -120,44 +140,55 @@ describe('moc', () => {
   });
 
   it('links sections to the tools that reach them and back', () => {
-    const root = tempRoot();
-    buildBoth(root);
-
-    const mocs = new Map(readMocs(root).map((moc) => [moc.id, moc]));
+    const mocs = new Map(readMocs(sharedRoot).map((moc) => [moc.id, moc]));
     expect(mocs.get('ct_review')?.data.related).toEqual(['accessibility']);
     expect(String(mocs.get('design')?.data.related)).toContain('ct_build');
     expect(String(mocs.get('design')?.data.related)).toContain('ct_advanced');
   });
 
-  it('is idempotent and never rewrites a hand-written MOC body', () => {
+  it('is idempotent and never rewrites a hand-written MOC body', async () => {
     const root = tempRoot();
-    buildBoth(root);
+    await buildBoth(root);
 
     const file = join(root, 'moc', 'ct_build.md');
     const withNote = `${readFileSync(file, 'utf8')}\nHand-written map note.\n`;
     writeFileSync(file, withNote);
 
-    const { stdout, status } = runCli(SCRIPT, '--root', root);
-    expect(status).toBe(0);
-    expect(JSON.parse(stdout).files.changed).toBe(0);
+    const summary = await buildMocs({ root });
+    expect(summary.files.changed).toBe(0);
     expect(readFileSync(file, 'utf8')).toBe(withNote);
   });
 
-  it('reports changed files in check mode without writing', () => {
+  it('reports changed files in check mode without writing', async () => {
     const root = tempRoot();
-    buildBoth(root);
+    await buildBoth(root);
     expect(readdirSync(join(root, 'moc')).length).toBe(18);
-    const before = readdirSync(join(root, 'moc')).map((f) => readFileSync(join(root, 'moc', f), 'utf8'));
+    const before = snapshotMocs(root);
 
-    const { status, stdout } = runCli(SCRIPT, '--root', root, '--check');
-    expect(status).toBe(0);
-    expect(JSON.parse(stdout).files).toMatchObject({ created: 0, updated: 0, changed: 0 });
+    const current = await buildMocs({ root, check: true });
+    expect(current.files).toMatchObject({ created: 0, updated: 0, changed: 0 });
+    expect(snapshotMocs(root)).toEqual(before);
 
     const fresh = tempRoot();
-    const changed = runCli(SCRIPT, '--root', fresh, '--check');
-    expect(changed.status).toBe(1);
-    expect(JSON.parse(changed.stdout).files.created).toBe(18);
+    const wouldWrite = await buildMocs({ root: fresh, check: true });
+    expect(wouldWrite.files.created).toBe(18);
     expect(readdirSync(fresh)).toEqual([]);
-    expect(readdirSync(join(root, 'moc')).map((f) => readFileSync(join(root, 'moc', f), 'utf8'))).toEqual(before);
+    expect(snapshotMocs(root)).toEqual(before);
   });
+});
+
+describe('moc CLI', () => {
+  it('exits 1 in check mode when it would write, and 0 when the tree is current', async () => {
+    const fresh = tempRoot();
+    const wouldWrite = runMocCli('--root', fresh, '--check');
+    expect(wouldWrite.status).toBe(1);
+    expect(JSON.parse(wouldWrite.stdout).files.created).toBe(18);
+    expect(readdirSync(fresh)).toEqual([]);
+
+    const root = tempRoot();
+    await buildBoth(root);
+    const current = runMocCli('--root', root, '--check');
+    expect(current.status).toBe(0);
+    expect(JSON.parse(current.stdout).files).toMatchObject({ created: 0, updated: 0, changed: 0 });
+  }, SPAWN_TIMEOUT_MS);
 });

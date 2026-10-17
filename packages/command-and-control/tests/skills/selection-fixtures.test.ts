@@ -12,6 +12,14 @@ const HARNESS = join(REPO_ROOT, 'scripts/skills/eval-baseline.mjs');
 const SKILLS = join(REPO_ROOT, 'packages/command-and-control/skills');
 const HAS_DIST = existsSync(join(REPO_ROOT, 'packages/command-and-control/dist/surface/registry.js'));
 
+/**
+ * The harness is spawned, not imported, because these tests assert the command's
+ * own output and its `--out` write. A spawn pays node boot plus the built-registry
+ * import (~0.4s idle, several times that when CI runs the test files in
+ * parallel), so the budget is explicit rather than the 5s default.
+ */
+const SPAWN_TIMEOUT_MS = 30_000;
+
 const selection = JSON.parse(readFileSync(FIXTURES, 'utf8')) as {
   fixtures: Array<{ ask: string; expectedOp: string; alsoAcceptable?: string[]; why: string }>;
 };
@@ -98,7 +106,7 @@ describe.skipIf(!HAS_DIST)('eval-baseline harness', () => {
     }
     expect(report.tokens.newPath.average).toBeGreaterThan(0);
     expect(report.tokens.oldSurface.toolsList).toBeGreaterThan(0);
-  });
+  }, SPAWN_TIMEOUT_MS);
 
   it('writes the baseline document where asked', () => {
     const out = join(tempRoot(), 'baseline.md');
@@ -108,5 +116,5 @@ describe.skipIf(!HAS_DIST)('eval-baseline harness', () => {
     expect(doc).toContain('# Token baseline');
     expect(doc).toContain('chars/4');
     for (const fixture of selection.fixtures) expect(doc).toContain(fixture.expectedOp);
-  });
+  }, SPAWN_TIMEOUT_MS);
 });

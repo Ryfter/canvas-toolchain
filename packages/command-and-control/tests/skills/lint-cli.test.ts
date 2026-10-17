@@ -8,6 +8,18 @@ import { describe, expect, it } from 'vitest';
 const SCRIPT = fileURLToPath(new URL('../../../../scripts/skills/lint.mjs', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
 
+/**
+ * Every test here drives the real bin, because that is what it asserts: the
+ * process boundary (exit codes, stderr, symlinked invocation) and the flag
+ * plumbing through `parseArgs`, neither of which survives being replaced by a
+ * direct `lintProject` call. Each run pays node boot plus the built-registry
+ * import from `dist` (~0.4s idle, several times that when CI runs the test files
+ * in parallel), so the budget is explicit rather than the 5s default. The
+ * flag-rejection tests fail in `parseArgs`, before that import, and are far
+ * cheaper.
+ */
+const SPAWN_TIMEOUT_MS = 30_000;
+
 function runScript(script: string, args: string[]): { stdout: string; stderr: string; status: number } {
   try {
     const stdout = execFileSync(process.execPath, [script, ...args], { cwd: REPO_ROOT, encoding: 'utf8' });
@@ -32,28 +44,28 @@ describe('lint CLI', () => {
     expect(report.summary.byRule['too-long']).toBeGreaterThan(0);
     expect(report.operations).toBeGreaterThanOrEqual(86);
     expect(report.summary.byRule).toHaveProperty('orphan');
-  });
+  }, SPAWN_TIMEOUT_MS);
 
   it('exits zero when nothing violates', () => {
     const { stdout, status } = run('--json', '--max-description', '1000000');
     expect(status).toBe(0);
     expect(JSON.parse(stdout).summary.total).toBe(0);
-  });
+  }, SPAWN_TIMEOUT_MS);
 
   it('honours a lowered length limit', () => {
     const report = JSON.parse(run('--json', '--max-description', '1').stdout);
     expect(report.summary.byRule['too-long']).toBe(report.operations);
-  });
+  }, SPAWN_TIMEOUT_MS);
 
   it('rejects a non-numeric limit and an unknown flag instead of ignoring them', () => {
     expect(run('--max-description', 'wide').stderr).toContain('needs a positive number');
     expect(run('--similarity', '0').stderr).toContain('needs a positive number');
     expect(run('--nope').stderr).toContain('unknown argument');
-  });
+  }, SPAWN_TIMEOUT_MS);
 
   it('rejects a flag the writers own but the lint does not implement', () => {
     expect(run('--check').stderr).toContain('unknown argument');
-  });
+  }, SPAWN_TIMEOUT_MS);
 
   it('runs its main when invoked through a symlink, as a bin shim does', () => {
     const dir = mkdtempSync(join(tmpdir(), 'skills-lint-'));
@@ -66,5 +78,5 @@ describe('lint CLI', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+  }, SPAWN_TIMEOUT_MS);
 });
