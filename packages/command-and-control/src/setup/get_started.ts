@@ -358,6 +358,26 @@ function foldLlmSteps(drafts: Map<string, StepDraft>, state: SetupState): void {
   drafts.delete('llm_credentials');
 }
 
+/**
+ * A step's alternatives are the other ways to satisfy it, so a repeat of the
+ * primary or of an earlier alternative is noise. More than one producer can
+ * propose the same call — `providerStep` offers the unconfigured provider and
+ * `foldLlmSteps` folds the credentials fix into that same list — so dedupe in
+ * one place at the end rather than trusting each producer to know what the
+ * others emitted.
+ */
+function dedupeAlternatives(drafts: Map<string, StepDraft>): void {
+  for (const draft of drafts.values()) {
+    const kept: SetupCall[] = [];
+    for (const alternative of draft.alternatives) {
+      if (sameCall(alternative, draft.primary)) continue;
+      if (kept.some((call) => sameCall(call, alternative))) continue;
+      kept.push(alternative);
+    }
+    draft.alternatives = kept;
+  }
+}
+
 function stepsFor(report: DoctorReport, state: SetupState, journey: SetupJourney): SetupStep[] {
   const requiredCapabilities = new Set(JOURNEY_CAPABILITIES[journey]);
   const drafts = new Map<string, StepDraft>();
@@ -369,6 +389,7 @@ function stepsFor(report: DoctorReport, state: SetupState, journey: SetupJourney
   }
 
   foldLlmSteps(drafts, state);
+  dedupeAlternatives(drafts);
 
   return [...drafts.values()]
     .map((draft) => ({

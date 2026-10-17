@@ -160,6 +160,11 @@ describe('getStarted with some setup done', () => {
     expect(stepIds(guide)).toEqual(['courses_root', 'canvas', 'llm_provider']);
     expect(finish.why).toMatch(/selects ollama/);
     expect(finish.why).not.toMatch(/LLM_PROVIDER_NOT_SET/);
+    // The folded credentials fix becomes the one Anthropic alternative — never
+    // a second copy of the same call.
+    expect(finish.alternatives).toEqual([
+      expect.objectContaining({ tool: 'ct_setup', action: 'anthropic' }),
+    ]);
   });
 
   it('makes Canvas required when the caller asks about publishing', async () => {
