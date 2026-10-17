@@ -48,6 +48,8 @@ export function resolveLlmClient(input: ResolveInput): LlmClient {
     'LLM_PROVIDER_NOT_SET',
     `Unknown provider: ${String(input.provider)}`,
     'unknown',
-    ['Run set_active_llm_provider to choose anthropic, ollama or lmstudio'],
+    // This package is provider-agnostic and cannot import the caller's
+    // PREFERRED_PROVIDER_ORDER, so the list is mirrored here in that order.
+    ['Run set_active_llm_provider to choose lmstudio, ollama or anthropic'],
   );
 }

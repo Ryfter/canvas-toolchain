@@ -2,7 +2,13 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, readFileSync, existsSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
 import { join } from 'node:path';
-import { setActiveLlmProvider, loadActiveProvider } from '../../src/tools/set_active_llm_provider.js';
+import {
+  setActiveLlmProvider,
+  loadActiveProvider,
+  PREFERRED_PROVIDER_ORDER,
+  VALID_PROVIDERS,
+  formatProviderList,
+} from '../../src/tools/set_active_llm_provider.js';
 
 let ccHomeDir: string;
 const ORIGINAL_CC_HOME = process.env.CC_HOME;
@@ -32,6 +38,27 @@ function seedLmStudioConfig() {
     JSON.stringify({ baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' }),
   );
 }
+
+describe('provider preference order', () => {
+  it('is the single source for the order: LM Studio, then Ollama, then Anthropic', () => {
+    expect(PREFERRED_PROVIDER_ORDER).toEqual(['lmstudio', 'ollama', 'anthropic']);
+    // The accepted set is the same three, kept in that order so every list a
+    // user or the model reads agrees.
+    expect(VALID_PROVIDERS).toEqual(['lmstudio', 'ollama', 'anthropic']);
+    expect(formatProviderList()).toBe('lmstudio, ollama or anthropic');
+  });
+
+  it('never reorders an explicit selection: activation writes what it is given', async () => {
+    seedAnthropicConfig();
+    seedLmStudioConfig();
+    const result = await setActiveLlmProvider({ provider: 'anthropic' });
+
+    expect(result.ok).toBe(true);
+    expect(JSON.parse(readFileSync(join(ccHomeDir, 'llm-provider.json'), 'utf-8'))).toEqual({
+      provider: 'anthropic',
+    });
+  });
+});
 
 describe('setActiveLlmProvider', () => {
   it('writes llm-provider.json with provider=anthropic when anthropic-config.json exists', async () => {

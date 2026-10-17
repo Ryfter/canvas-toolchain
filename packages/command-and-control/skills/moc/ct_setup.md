@@ -16,7 +16,7 @@ Configure credentials, providers, and paths. Run first.
 - [[setup_canvas]] — Configure the Canvas host and API token used for direct publishing. Validates the token against /api/v1/users/self before saving, then stores it locally with 0o600 permissions.
 - [[setup_ollama]] — Configure Ollama as the local generation LLM. Discovery mode (no model) returns the recommended-models markdown. Commit mode (with model) validates the model is pulled and writes ollama-config.json.
 - [[setup_lmstudio]] — Configure LM Studio (OpenAI-compatible local server) as the generation LLM. Discovery mode lists loaded models from the running server; commit mode validates the model and writes lmstudio-config.json.
-- [[setup_llm_provider]] — Report the active and configured LLM providers; with no arguments it also probes local Ollama and LM Studio at their default URLs. Pass provider to activate a configured one.
+- [[setup_llm_provider]] — Report the active and configured LLM providers, best first (LM Studio, Ollama, Anthropic); with no arguments it also probes the local servers. Pass provider to activate a configured one.
 - [[set_courses_root]] — Set the root directory for course discovery used by the local dashboard. The dashboard scans this directory recursively for folders containing course-config.md.
 - [[get_cc_status]] — Get a health snapshot: which domain packages are installed, whether Anthropic key and Ollama are available, active routing config, and last-run timestamps per workflow.
 - [[setup_doctor]] — Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic checks.

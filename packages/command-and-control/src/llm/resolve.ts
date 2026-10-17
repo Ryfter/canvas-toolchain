@@ -1,8 +1,11 @@
 import { resolveLlmClient, LlmProviderError, type LlmClient } from '@canvas-toolchain/shared-llm';
-import { loadActiveProvider } from '../tools/set_active_llm_provider.js';
+import { formatProviderList, loadActiveProvider } from '../tools/set_active_llm_provider.js';
 import { loadAnthropicConfig } from '../tools/setup_anthropic.js';
 import { loadOllamaConfig } from '../tools/setup_ollama.js';
 import { loadLmStudioConfig } from '../tools/setup_lmstudio.js';
+
+/** "Run set_active_llm_provider ...", naming the providers in preference order. */
+const CHOOSE_PROVIDER_FIX = `Run set_active_llm_provider to choose ${formatProviderList()}`;
 
 export function resolveActiveLlmClient(): LlmClient {
   let provider: 'anthropic' | 'ollama' | 'lmstudio';
@@ -13,7 +16,7 @@ export function resolveActiveLlmClient(): LlmClient {
       'LLM_PROVIDER_NOT_SET',
       err instanceof Error ? err.message : String(err),
       'unknown',
-      ['Run set_active_llm_provider to choose anthropic, ollama or lmstudio'],
+      [CHOOSE_PROVIDER_FIX],
     );
   }
 
@@ -95,6 +98,6 @@ export function resolveActiveLlmClient(): LlmClient {
     'LLM_PROVIDER_NOT_SET',
     `Unsupported LLM provider '${String(provider)}'`,
     'unknown',
-    ['Run set_active_llm_provider to choose anthropic, ollama or lmstudio'],
+    [CHOOSE_PROVIDER_FIX],
   );
 }

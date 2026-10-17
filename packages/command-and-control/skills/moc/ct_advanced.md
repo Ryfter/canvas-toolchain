@@ -12,7 +12,7 @@ Less common operations, reached through ct_advanced describe/run.
 ## Operations (31)
 
 - [[show_canvas_capabilities]] — Canvas-safe pattern catalog: filter by category (layout, information, interactive, pedagogical, branded) or supportStatus (supported/partial/aspirational). Then ct_build preview_pattern renders one.
-- [[set_active_llm_provider]] — Set the active generation LLM provider. Must be anthropic, ollama or lmstudio. Refuses to set a provider whose config file is absent.
+- [[set_active_llm_provider]] — Set the active generation LLM provider. Must be lmstudio, ollama or anthropic. Refuses to set a provider whose config file is absent.
 - [[set_module_enabled]] — Enable or disable a plug-in module (e.g. video) by writing modules.json. Always available so a disabled module can be re-enabled. Takes effect after the MCP client reconnects/restarts.
 - [[list_modules]] — List all known plug-in modules with their id, name, enabled state, active provider, and the provider/tool types they handle.
 - [[browse_module_catalog]] — Module catalog: exists / installed / enabled / update state and installer-GUI requests, plus companion programs (e.g. Canvas Backup). Read-only; clearPending:true discards stale requests.

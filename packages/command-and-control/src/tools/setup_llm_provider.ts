@@ -1,7 +1,9 @@
 import { listLmStudioModels } from '@canvas-toolchain/shared-llm';
 import { probeTags } from './setup_ollama.js';
 import {
+  formatProviderList,
   listConfiguredProviders,
+  PREFERRED_PROVIDER_ORDER,
   readActiveProviderOrNull,
   setActiveLlmProvider,
   type ActiveProvider,
@@ -28,12 +30,27 @@ export interface LocalServerProbe {
   configure: string;
 }
 
+/** One provider the professor could use, with the exact call that gets there. */
+export interface ProviderOption {
+  provider: ActiveProvider;
+  /** Its `<provider>-config.json` is on disk. */
+  configured: boolean;
+  /** Its local server answered at the default URL. Always false for Anthropic. */
+  detected: boolean;
+  /** Activate it when it is configured; configure it when it is only detected. */
+  call: string;
+}
+
 export type SetupLlmProviderResult =
   | {
       mode: 'report';
       activeProvider: ActiveProvider | null;
       configuredProviders: ActiveProvider[];
       localServers: LocalServerProbe[];
+      /** Providers worth choosing, best first: LM Studio, Ollama, Anthropic. */
+      options: ProviderOption[];
+      /** The one call to recommend next, or null when there is nothing to offer. */
+      recommended: string | null;
       nextSteps: string[];
     }
   | { mode: 'activate'; ok: true; provider: ActiveProvider; configPath: string }
@@ -91,36 +108,66 @@ function nextStepsFor(
   activeProvider: ActiveProvider | null,
   configured: ActiveProvider[],
   localServers: LocalServerProbe[],
-): string[] {
+): { options: ProviderOption[]; recommended: string | null; nextSteps: string[] } {
+  const reachable = new Map<ActiveProvider, LocalServerProbe>(
+    localServers.filter((server) => server.reachable).map((server) => [server.provider, server]),
+  );
+
+  // Everything worth offering, best first. A configured provider is activated;
+  // one that is only detected is what the probe's own configure call does.
+  const options: ProviderOption[] = [];
+  for (const provider of PREFERRED_PROVIDER_ORDER) {
+    const server = reachable.get(provider);
+    if (configured.includes(provider)) {
+      options.push({
+        provider,
+        configured: true,
+        detected: server !== undefined,
+        call: `ct_setup action llm_provider with { provider: "${provider}" }`,
+      });
+    } else if (server !== undefined) {
+      options.push({ provider, configured: false, detected: true, call: server.configure });
+    }
+  }
+
   const steps: string[] = [];
+  let recommended: string | null = null;
 
   if (activeProvider !== null && !configured.includes(activeProvider)) {
     // The selector points at a provider with no config file: it is not usable, so
     // do not also call it the active provider — that reads as a contradiction.
+    recommended = `ct_setup action ${activeProvider}`;
     steps.push(
       `llm-provider.json selects ${activeProvider}, but ${activeProvider}-config.json is missing; ` +
-      `run ct_setup action ${activeProvider} to configure it.`,
+      `run ${recommended} to configure it.`,
     );
   } else if (activeProvider !== null) {
     steps.push(`Active LLM provider: ${activeProvider}.`);
-    const alternates = configured.filter((p) => p !== activeProvider);
+    // Only a configured provider can be switched to; a merely detected server is
+    // reported by the probe lines below, with its own configure call.
+    const alternates = options.filter((option) => option.provider !== activeProvider && option.configured);
     if (alternates.length > 0) {
+      recommended = alternates[0].call;
       steps.push(
-        `Switch with ct_setup action llm_provider with { provider: "${alternates[0]}" }` +
-        (alternates.length > 1 ? ` (also configured: ${alternates.slice(1).join(', ')}).` : '.'),
+        `Switch with ${recommended}` +
+        (alternates.length > 1
+          ? `; also available: ${alternates.slice(1).map((option) => option.call).join('; ')}.`
+          : '.'),
       );
     } else {
-      steps.push('No other provider is configured; ct_setup action anthropic, ollama or lmstudio adds one.');
+      steps.push(`No other provider is configured; ct_setup action ${formatProviderList()} adds one.`);
     }
-  } else if (configured.length > 0) {
-    steps.push(
-      'No active LLM provider is set. Activate a configured one with ct_setup action llm_provider: ' +
-      configured.map((p) => `{ provider: "${p}" }`).join(' or ') + '.',
-    );
+  } else if (options.length > 0) {
+    // Preferences order the recommendation; they never make the choice.
+    recommended = options[0].call;
+    steps.push(`Recommended next call: ${recommended}`);
+    for (const option of options.slice(1)) {
+      steps.push(`Alternative: ${option.call}`);
+    }
   } else {
     steps.push(
       'No LLM provider is configured yet. Add an Anthropic key with ct_setup action anthropic, ' +
-      'or configure a local model with ct_setup action ollama or lmstudio.',
+      'or configure a local model with ct_setup action lmstudio or ollama.',
     );
   }
 
@@ -135,16 +182,17 @@ function nextStepsFor(
     }
   }
   if (localServers.every((server) => !server.reachable)) {
-    steps.push('No local Ollama or LM Studio server answered at its default URL.');
+    steps.push('No local LM Studio or Ollama server answered at its default URL.');
   }
 
-  return steps;
+  return { options, recommended, nextSteps: steps };
 }
 
 /**
  * One place to see and choose the generation LLM. With no `provider` it reports
  * the active and configured providers and probes the local servers at their
- * default URLs; with `provider` it activates an already-configured provider.
+ * default URLs, recommending the best candidate first (LM Studio, then Ollama,
+ * then Anthropic); with `provider` it activates an already-configured provider.
  */
 export async function setupLlmProvider(input: SetupLlmProviderInput = {}): Promise<SetupLlmProviderResult> {
   if (input.provider !== undefined) {
@@ -157,13 +205,19 @@ export async function setupLlmProvider(input: SetupLlmProviderInput = {}): Promi
 
   const activeProvider = readActiveProviderOrNull();
   const configuredProviders = listConfiguredProviders();
-  const localServers = await Promise.all([detectOllama(), detectLmStudio()]);
+  // Both probes run in parallel; the results are presented in preference order.
+  const probes = await Promise.all([detectOllama(), detectLmStudio()]);
+  const localServers = PREFERRED_PROVIDER_ORDER
+    .flatMap((provider) => probes.filter((probe) => probe.provider === provider));
+  const report = nextStepsFor(activeProvider, configuredProviders, localServers);
 
   return {
     mode: 'report',
     activeProvider,
     configuredProviders,
     localServers,
-    nextSteps: nextStepsFor(activeProvider, configuredProviders, localServers),
+    options: report.options,
+    recommended: report.recommended,
+    nextSteps: report.nextSteps,
   };
 }
