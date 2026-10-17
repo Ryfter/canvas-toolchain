@@ -56,11 +56,28 @@ describe('config storage hardening (real module)', () => {
   });
 
   it('replaces an existing config completely (rename over old file)', () => {
-    saveConfig(SAMPLE_CONFIG);
-    saveConfig({ ...SAMPLE_CONFIG, institution: 'Second University', apiToken: undefined });
+    saveConfig({ ...SAMPLE_CONFIG, legacyField: 'stale' } as InstitutionConfig);
+    saveConfig({ ...SAMPLE_CONFIG, institution: 'Second University' });
     const onDisk = JSON.parse(readFileSync(join(testHome, 'institution.json'), 'utf-8'));
     expect(onDisk.institution).toBe('Second University');
-    expect(onDisk.apiToken).toBeUndefined();
+    // Fields the caller did not pass are dropped — this is not a merge writer.
+    expect(onDisk.legacyField).toBeUndefined();
+    expect(readdirSync(testHome)).toEqual(['institution.json']);
+  });
+
+  // #151 R7 review: an ordinary save must not rewrite the Canvas fields the file
+  // already holds. Before, loadConfig()'s canonical overlay made a load -> save
+  // cycle (the a11y policy, the WAVE key) copy the canonical token onto disk; now
+  // only the setup_institution wizard — which passes syncCanvasStore — may change
+  // them, and it backs the file up first.
+  it('keeps the Canvas fields an ordinary save does not mention', () => {
+    saveConfig(SAMPLE_CONFIG);
+    saveConfig({ ...SAMPLE_CONFIG, institution: 'Second University', apiToken: undefined });
+
+    const onDisk = JSON.parse(readFileSync(join(testHome, 'institution.json'), 'utf-8'));
+    expect(onDisk.institution).toBe('Second University');
+    expect(onDisk.apiToken).toBe('example-token-123');
+    expect(onDisk.canvasUrl).toBe('https://example.instructure.com');
     expect(readdirSync(testHome)).toEqual(['institution.json']);
   });
 });

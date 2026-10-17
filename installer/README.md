@@ -5,6 +5,12 @@ The installer drops the canvas-toolchain source onto the user's machine,
 installs npm dependencies, optionally installs Python 3, and creates an Updater
 shortcut.
 
+Before the final screen it runs the installed toolchain's own setup check
+(`node packages/canvas-toolchain/bin/canvas-toolchain.mjs doctor --json`) and
+shows that report — per-capability readiness, every finding, and the operation
+that fixes it. If the check cannot run, the summary falls back to what the
+installer itself verified; the doctor never blocks or fails an install.
+
 The installer auto-detects and wires the canvas-toolchain MCP server into any of
 these apps that are installed on your machine (untick any you don't want on the
 "Choose your workflows" screen):

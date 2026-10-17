@@ -36,6 +36,74 @@ export type ConfigFileKey =
   | 'lecture-answers-config'
   | 'modules-manifest';
 
+/**
+ * The MCP hosts (AI clients) the doctor can read, read-only, to report whether
+ * canvas-toolchain is wired in. Reading another app's config is a decision of
+ * record (#151 D5); writing one is not, and never will be.
+ */
+export type McpHostId =
+  | 'claude-desktop'
+  | 'claude-code'
+  | 'cursor'
+  | 'vscode'
+  | 'windsurf'
+  | 'zed'
+  | 'codex'
+  | 'gemini'
+  | 'kiro'
+  | 'antigravity';
+
+/**
+ * What one host's config says about canvas-toolchain. Booleans, plus the one
+ * path that belongs to us — never another server's command, args, or env, any
+ * of which can hold a token.
+ */
+export interface McpHostWiring {
+  id: McpHostId;
+  displayName: string;
+  /** The host's own config directory exists. */
+  installed: boolean;
+  /** The host's config file exists on disk. */
+  configFound: boolean;
+  /** A server entry in that file runs canvas-toolchain. */
+  wired: boolean;
+  /** Wired, but the script it names is gone — usually a checkout that moved. */
+  stalePath: boolean;
+  /**
+   * Present but unreadable: corrupt, too large, or unparseable. Never a throw,
+   * and never true on a host that was wired anyway.
+   */
+  parseError: boolean;
+  /**
+   * The canvas-toolchain entry's script, with the home directory collapsed to
+   * `~`. Null when the host is not wired, or is wired through a package runner
+   * (`npx canvas-toolchain`) rather than a file path.
+   */
+  scriptPath: string | null;
+}
+
+export interface HostWiringReport {
+  /** One entry per known host, in a stable order. */
+  hosts: McpHostWiring[];
+  /** At least one host runs canvas-toolchain from a path that exists. */
+  anyWired: boolean;
+  /** Hosts wired to a script that is no longer on disk. */
+  staleHosts: McpHostId[];
+}
+
+/** Where the host detector looks. Every field is an injection point for tests. */
+export interface HostWiringOptions {
+  platform?: NodeJS.Platform;
+  homedir?: string;
+  /** Environment for `%APPDATA%` and `XDG_CONFIG_HOME`. Defaults to `process.env`. */
+  env?: Record<string, string | undefined>;
+  /**
+   * Read cap, overriding each host's own. A larger config is reported as a
+   * parse error instead of read.
+   */
+  maxConfigBytes?: number;
+}
+
 /** Presence/validity/permission facts about one file. No file body, ever. */
 export interface SecretFileHealth {
   path: string;
@@ -58,6 +126,20 @@ export interface ProbeResult {
   reachable: boolean;
   status?: number;
   errorCode?: string;
+}
+
+/**
+ * What the Canvas store bridge did the last time it ran, as recorded in
+ * ~/.command-and-control/canvas-store-migration.json. `detail` and `backupPath`
+ * are what a professor needs to find a file the bridge set aside; neither holds a
+ * token.
+ */
+export interface CanvasStoreMigrationRecord {
+  at: string;
+  /** Bridge action id, e.g. 'canvas-config-wins', 'corrupt', 'in-sync'. */
+  action: string;
+  detail: string;
+  backupPath?: string;
 }
 
 /**
@@ -91,10 +173,26 @@ export interface SetupState {
     hasApiToken: boolean;
     hasWaveApiKey: boolean;
     institutionName: string | null;
+    /** The store still has no institution name or brand colors: the Canvas store
+     *  bridge created it, and Canvas Design Studio must keep prompting. */
+    brandSetupPending: boolean;
   };
 
-  /** The two Canvas stores agree, or neither exists. */
+  /** Fingerprint of canvas-config.json exactly as it is on disk. The doctor
+   *  compares the two RAW stores, because Canvas Design Studio's loadConfig()
+   *  overlays the canonical credentials and would hide a disagreement that still
+   *  has to be reconciled. */
+  canvasConfig: {
+    host: string | null;
+    hasApiToken: boolean;
+  };
+
+  /** The two Canvas stores agree on their host, or neither has one. */
   storesInSync: boolean;
+
+  /** The last Canvas store bridge outcome, or null when it has never acted.
+   *  No secrets: this is what the doctor shows the professor. */
+  canvasStoreMigration: CanvasStoreMigrationRecord | null;
 
   llm: {
     activeProvider: ActiveProvider | null;
@@ -140,6 +238,13 @@ export interface SetupState {
     /** Module ids the installer's picker requested but nobody installed yet. */
     pendingRequests: string[];
   };
+
+  /**
+   * Whether canvas-toolchain is wired into each MCP host on this machine, read
+   * from the hosts' own config files and never written back. Null when the read
+   * was turned off, which the doctor reports as such instead of as "not wired".
+   */
+  hosts: HostWiringReport | null;
 }
 
 export interface ReadSetupStateOptions {
@@ -148,6 +253,12 @@ export interface ReadSetupStateOptions {
    * the configured Canvas and Anthropic endpoints.
    */
   probe?: boolean;
+  /**
+   * Default true: read the other MCP hosts' config files (read-only) to report
+   * whether canvas-toolchain is wired into each. Set false to leave those files
+   * untouched entirely.
+   */
+  hosts?: boolean;
 }
 
 export type DoctorStatus = 'ok' | 'warn' | 'fail';
@@ -161,7 +272,8 @@ export type DoctorCheckId =
   | 'llm.credentials'
   | 'transcripts.source'
   | 'backup.sidecar'
-  | 'modules.pending';
+  | 'modules.pending'
+  | 'hosts.wiring';
 
 /** The exact operation that fixes a check, naming a real registered action. */
 export interface DoctorFix {
@@ -200,4 +312,6 @@ export interface RunDoctorOptions {
   journey?: SetupJourney;
   /** A pre-read state, so a caller that already read the disk does not pay twice. */
   state?: SetupState;
+  /** Forwarded to `readSetupState` when no `state` is supplied. Default true. */
+  hosts?: boolean;
 }

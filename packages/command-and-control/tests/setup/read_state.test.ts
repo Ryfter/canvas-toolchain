@@ -6,11 +6,15 @@ import { readSetupState } from '../../src/setup/read_state.js';
 
 let ccHome: string;
 let cdsHome: string;
+let hostHome: string;
 const ORIGINAL = {
   ccHome: process.env.CC_HOME,
   cdsHome: process.env.CANVAS_DESIGN_HOME,
   anthropicKey: process.env.ANTHROPIC_API_KEY,
   lmstudioKey: process.env.LMSTUDIO_API_KEY,
+  home: process.env.HOME,
+  userProfile: process.env.USERPROFILE,
+  appData: process.env.APPDATA,
 };
 
 /** Seed a file under CC_HOME (or CANVAS_DESIGN_HOME when `home` is given). */
@@ -27,8 +31,13 @@ function seedJson(name: string, value: unknown, home: string = ccHome): string {
 beforeEach(() => {
   ccHome = mkdtempSync(join(tmpdir(), 'cc-home-'));
   cdsHome = mkdtempSync(join(tmpdir(), 'cds-home-'));
+  hostHome = mkdtempSync(join(tmpdir(), 'host-home-'));
   process.env.CC_HOME = ccHome;
   process.env.CANVAS_DESIGN_HOME = cdsHome;
+  // The host wiring read follows the OS home, so isolate it like the rest.
+  process.env.HOME = hostHome;
+  process.env.USERPROFILE = hostHome;
+  process.env.APPDATA = join(hostHome, 'AppData', 'Roaming');
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.LMSTUDIO_API_KEY;
   // Any network call at all fails loudly rather than hanging or returning.
@@ -38,11 +47,15 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(ccHome, { recursive: true, force: true });
   rmSync(cdsHome, { recursive: true, force: true });
+  rmSync(hostHome, { recursive: true, force: true });
   for (const [key, value] of Object.entries({
     CC_HOME: ORIGINAL.ccHome,
     CANVAS_DESIGN_HOME: ORIGINAL.cdsHome,
     ANTHROPIC_API_KEY: ORIGINAL.anthropicKey,
     LMSTUDIO_API_KEY: ORIGINAL.lmstudioKey,
+    HOME: ORIGINAL.home,
+    USERPROFILE: ORIGINAL.userProfile,
+    APPDATA: ORIGINAL.appData,
   })) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
@@ -72,6 +85,8 @@ describe('readSetupState on an empty home', () => {
     });
     expect(state.modules.pendingRequests).toEqual([]);
     expect(state.secretBearingFiles).toEqual([]);
+    expect(state.hosts?.hosts).toHaveLength(10);
+    expect(state.hosts?.anyWired).toBe(false);
     for (const health of Object.values(state.files)) {
       expect(health.present).toBe(false);
       expect(health.validJson).toBe(false);
@@ -158,6 +173,20 @@ describe('readSetupState secrets', () => {
     for (const secret of ['gh-secret', 'tok-secret', 'sk-ant-secret', 'pa-secret', 'wave-secret']) {
       expect(dumped).not.toContain(secret);
     }
+  });
+
+  // #151 R7 review fix 6: the list must describe the FILES, not Design Studio's
+  // canonical overlay. institution.json used to be flagged for a token it did not
+  // hold, and canvas-config.json for one it only had a host of.
+  it('does not flag a Canvas store that holds no secret on disk', async () => {
+    seedJson('canvas-config.json', { host: 'example.instructure.com' });
+    seedJson('institution.json', { institution: 'Example U', canvasUrl: 'https://example.instructure.com' }, cdsHome);
+
+    const state = await readSetupState();
+
+    expect(state.secretBearingFiles).toEqual([]);
+    expect(state.canvasConfig).toEqual({ host: 'example.instructure.com', hasApiToken: false });
+    expect(state.designStudio.hasApiToken).toBe(false);
   });
 
   it('leaves a config.json without a registry token out of the secret list', async () => {
@@ -255,6 +284,7 @@ describe('readSetupState stores', () => {
       hasApiToken: true,
       hasWaveApiKey: true,
       institutionName: null,
+      brandSetupPending: false,
     });
     expect(JSON.stringify(state)).not.toContain('cds-tok');
   });
@@ -270,15 +300,58 @@ describe('readSetupState stores', () => {
       hasApiToken: false,
       hasWaveApiKey: true,
       institutionName: 'State U',
+      brandSetupPending: false,
     });
     expect(state.storesInSync).toBe(true);
     expect(JSON.stringify(state)).not.toContain('wave-secret');
   });
 
-  it('reports two stores pointing at different hosts as out of sync', async () => {
+  it('reports the store the Canvas bridge synthesized as still awaiting brand setup', async () => {
     seedJson('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
-    seedJson('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'tok' }, cdsHome);
-    expect((await readSetupState()).storesInSync).toBe(false);
+    seedJson(
+      'institution.json',
+      { institution: '', canvasUrl: 'https://example.instructure.com', apiToken: 'tok-secret', brandSetupPending: true },
+      cdsHome,
+    );
+
+    const state = await readSetupState();
+
+    expect(state.designStudio.brandSetupPending).toBe(true);
+    expect(state.designStudio.institutionName).toBeNull();
+  });
+
+  // #151 R7 review fix 6: Canvas Design Studio's loadConfig() overlays the
+  // canonical host and token, which hid a raw disagreement from the doctor — the
+  // files would be silently reconciled by the next save. Read both stores raw.
+  it('reports a raw disagreement between the two stores', async () => {
+    seedJson('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
+    seedJson('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'cds-tok' }, cdsHome);
+
+    const state = await readSetupState();
+
+    expect(state.canvasConfig).toEqual({ host: 'example.instructure.com', hasApiToken: true });
+    expect(state.designStudio.host).toBe('other.instructure.com');
+    expect(state.storesInSync).toBe(false);
+    expect(JSON.stringify(state)).not.toContain('tok-secret');
+    expect(JSON.stringify(state)).not.toContain('cds-tok');
+  });
+
+  it('reports the store-sync outcome the bridge last recorded', async () => {
+    seedJson('canvas-store-migration.json', {
+      at: '2026-10-17T09:40:00.000Z',
+      action: 'canvas-config-wins',
+      detail: 'Both stores held different Canvas credentials…',
+      backupPath: join(cdsHome, 'institution.json.bak-2026-10-17T09-40-00-000Z'),
+    });
+
+    const state = await readSetupState();
+
+    expect(state.canvasStoreMigration?.action).toBe('canvas-config-wins');
+    expect(state.canvasStoreMigration?.backupPath).toContain('institution.json.bak-');
+  });
+
+  it('reports no migration when the bridge has never acted', async () => {
+    expect((await readSetupState()).canvasStoreMigration).toBeNull();
   });
 });
 
@@ -403,6 +476,46 @@ describe('readSetupState probe', () => {
   it('is not attempted by default', async () => {
     seedJson('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     expect((await readSetupState()).canvas.probe).toBeUndefined();
+  });
+});
+
+describe('readSetupState host wiring', () => {
+  it('reports a wired host with a home-relative script path', async () => {
+    const script = join(hostHome, 'dist', 'index.js');
+    mkdirSync(join(hostHome, 'dist'), { recursive: true });
+    writeFileSync(script, '// mcp\n', 'utf-8');
+    mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+    writeFileSync(
+      join(hostHome, '.cursor', 'mcp.json'),
+      JSON.stringify({ mcpServers: { 'canvas-toolchain': { command: 'node', args: [script] } } }),
+      'utf-8',
+    );
+
+    const state = await readSetupState();
+
+    expect(state.hosts?.anyWired).toBe(true);
+    expect(state.hosts?.hosts.find((host) => host.id === 'cursor')?.scriptPath)
+      .toBe(`~${script.slice(hostHome.length)}`);
+    expect(JSON.stringify(state)).not.toContain(hostHome);
+  });
+
+  it('reads no host config when hosts is false', async () => {
+    mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+    writeFileSync(join(hostHome, '.cursor', 'mcp.json'), '{ nope', 'utf-8');
+
+    const state = await readSetupState({ hosts: false });
+
+    expect(state.hosts).toBeNull();
+  });
+
+  it('reports an unreadable host config as a parse error, never a throw', async () => {
+    mkdirSync(join(hostHome, '.cursor'), { recursive: true });
+    writeFileSync(join(hostHome, '.cursor', 'mcp.json'), '{ nope', 'utf-8');
+
+    const state = await readSetupState();
+
+    expect(state.hosts?.hosts.find((host) => host.id === 'cursor')?.parseError).toBe(true);
+    expect(state.hosts?.anyWired).toBe(false);
   });
 });
 

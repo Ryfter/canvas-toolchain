@@ -226,7 +226,10 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
     brandUrl: brandUrl.trim() || undefined,
   };
 
-  saveConfig(config);
+  // The setup path is the one that also writes the canonical Canvas store, so a
+  // professor who later configures Canvas in Command & Control sees the same host
+  // and token in both apps (#151 R7, D1).
+  saveConfig(config, { syncCanvasStore: true });
 
   // Optional Panopto section — always skippable
   const panoptoDomain = await input({
@@ -270,7 +273,7 @@ export async function runWizard(defaults?: WizardDefaults): Promise<InstitutionC
       ...(panoptoClientId.trim() ? { clientId: panoptoClientId.trim(), clientSecret: panoptoClientSecret } : {}),
     };
 
-    saveConfig(config);
+    saveConfig(config, { syncCanvasStore: true });
     console.log(`✓ Panopto domain: ${panoptoDomain.trim()}`);
     console.log(`  iFrame whitelisted: ${iframeWhitelisted === null ? 'unsure' : String(iframeWhitelisted)}`);
     if (panoptoClientId.trim()) console.log('✓ Panopto API credentials saved');

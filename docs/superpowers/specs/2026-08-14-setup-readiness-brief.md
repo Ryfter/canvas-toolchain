@@ -2,6 +2,7 @@
 
 **Date:** 2026-08-14
 **Status:** Brief only. Not approved. Not a plan. **Do not implement from this file.**
+**Superseded in part (2026-10-17):** the R1–R3 slices shipped. `readSetupState`, `runDoctor`, and `getStarted` now live in `packages/command-and-control/src/setup/`, surfaced as the `ct_setup` actions `doctor` and `get_started` — so the "`get_started` still exists only on Design Studio" claim below no longer holds (C&C's `get_started` is a different tool from Design Studio's standalone one). The A/B/C choice for the *write* half (`applySetup`, decisions D1–D5) is still open; read this file's analysis as the 2026-08-14 snapshot it is.
 **Issue:** [#151](https://github.com/Ryfter/canvas-toolchain/issues/151) — *One setup/readiness engine — make install mean one thing (umbrella)*
 **Sources:** `TO-WORK-ON/reviews/review-grok.md`, `review-codex.md`, `installer-map.md`, and the tree as of `eb396ac`. Claims below were re-checked by grep; review text that #141 / #152 / #155 already shipped is called out as done, not re-proposed.
 

@@ -21,6 +21,7 @@ const ALL_CHECKS: DoctorCheckId[] = [
   'transcripts.source',
   'backup.sidecar',
   'modules.pending',
+  'hosts.wiring',
 ];
 
 /**
@@ -191,28 +192,56 @@ function canvasCredentialsCheck(state: SetupState): DoctorCheck {
   };
 }
 
+/**
+ * Lines the professor needs beyond the verdict: where the bridge last put a file
+ * it rewrote, and the fact that Design Studio has not collected a name and
+ * colors yet. Both are diagnostics the check surfaces rather than its reason.
+ */
+function storeNotes(state: SetupState): string[] {
+  const notes: string[] = [];
+  const migration = state.canvasStoreMigration;
+  if (migration) {
+    notes.push(`Last Canvas store migration (${migration.at}, ${migration.action}): ${migration.detail}`);
+    if (migration.backupPath) notes.push(`Backup of the previous file: ${migration.backupPath}`);
+  }
+  if (state.designStudio.brandSetupPending) {
+    notes.push(
+      'Canvas Design Studio still needs its institution name and brand colors — run ' +
+      'setup_institution there to finish its brand setup.',
+    );
+  }
+  return notes;
+}
+
 function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
-  const { canvas, designStudio } = state;
+  const { canvasConfig, designStudio } = state;
   // A Canvas connection needs a host *and* a token. A local/brand-only
-  // institution.json (brand colors, a WAVE key) is a store, not a connection,
-  // so it must never be mistaken for one side of the split.
+  // institution.json (brand colors, a WAVE key) is a store, not a connection, so
+  // it must never be mistaken for one side of the split. Both sides are read RAW
+  // from disk: Canvas Design Studio's loadConfig() overlays the canonical
+  // credentials, which would hide a disagreement the next save has to reconcile.
   const cdsConnected = designStudio.host !== null && designStudio.hasApiToken;
+  const ccConnected = canvasConfig.host !== null && canvasConfig.hasApiToken;
+  const notes = storeNotes(state);
   const fix = {
     tool: 'ct_setup' as const,
     action: 'canvas',
     hint:
-      'Keep ~/.command-and-control/canvas-config.json as the source of truth; Canvas Design ' +
-      'Studio reads its own ~/.canvas-design-mcp/institution.json, which only the standalone ' +
-      'setup_institution wizard writes.',
+      'Re-run ct_setup action canvas (or restart Command & Control) to reconcile ' +
+      '~/.command-and-control/canvas-config.json with Canvas Design Studio\'s ' +
+      '~/.canvas-design-mcp/institution.json.',
   };
 
-  if (!canvas.configured && !cdsConnected) {
+  // Neither store names a Canvas host: nothing to reconcile, even when one file
+  // holds brand settings or a WAVE key.
+  if (canvasConfig.host === null && designStudio.host === null) {
     return {
       id: 'canvas.store_sync',
       status: 'ok',
       summary: designStudio.configured
         ? 'Canvas Design Studio has an institution.json but no Canvas connection, and Command & Control has no Canvas store.'
         : 'Neither Canvas store exists yet.',
+      ...(notes.length > 0 && { detail: notes }),
     };
   }
   if (!cdsConnected) {
@@ -226,16 +255,22 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
       detail: [
         institutionFile.present ? institutionFile.path : `${institutionFile.path} (missing)`,
         state.files['canvas-config'].path,
+        ...notes,
       ],
       fix,
     };
   }
-  if (!canvas.configured) {
+  if (!ccConnected) {
+    const canvasFile = state.files['canvas-config'];
     return {
       id: 'canvas.store_sync',
       status: 'warn',
       summary: 'Canvas Design Studio has a Canvas connection that Command & Control does not.',
-      detail: [state.files['institution-config'].path, `${state.files['canvas-config'].path} (missing)`],
+      detail: [
+        state.files['institution-config'].path,
+        canvasFile.present ? canvasFile.path : `${canvasFile.path} (missing)`,
+        ...notes,
+      ],
       fix,
     };
   }
@@ -244,14 +279,16 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
       id: 'canvas.store_sync',
       status: 'warn',
       summary:
-        `The two Canvas stores point at different hosts (${canvas.host} vs ${designStudio.host}).`,
+        `The two Canvas stores point at different hosts (${canvasConfig.host} vs ${designStudio.host}).`,
+      ...(notes.length > 0 && { detail: notes }),
       fix,
     };
   }
   return {
     id: 'canvas.store_sync',
     status: 'ok',
-    summary: `Both Canvas stores agree on ${canvas.host}.`,
+    summary: `Both Canvas stores agree on ${canvasConfig.host}.`,
+    ...(notes.length > 0 && { detail: notes }),
   };
 }
 
@@ -542,6 +579,66 @@ function modulesCheck(state: SetupState): DoctorCheck {
   };
 }
 
+/**
+ * Whether the AI client the professor is talking through can reach the
+ * toolchain. It is the one check whose fix is not a tool call — wiring a host is
+ * the installer's job — so the remedy lives in the summary rather than in a
+ * `fix` that would have to name an operation that does not exist.
+ */
+function hostsWiringCheck(state: SetupState): DoctorCheck {
+  const wiring = state.hosts;
+  if (wiring === null) {
+    return {
+      id: 'hosts.wiring',
+      status: 'ok',
+      summary: 'MCP host detection was turned off for this report, so no host was checked.',
+    };
+  }
+
+  const wired = wiring.hosts.filter((host) => host.wired);
+  const stale = wired.filter((host) => host.stalePath);
+  const remedy =
+    'Re-run the canvas-toolchain installer to wire your AI client, or see the setup docs for ' +
+    '`npx canvas-toolchain`.';
+
+  if (stale.length > 0) {
+    return {
+      id: 'hosts.wiring',
+      status: 'warn',
+      summary:
+        `${stale.length} MCP host(s) point canvas-toolchain at a file that no longer exists ` +
+        `(${stale.map((host) => host.displayName).join(', ')}). ${remedy}`,
+      detail: stale.map((host) => `${host.displayName}: ${host.scriptPath ?? 'script'} (missing)`),
+    };
+  }
+
+  if (wired.length === 0) {
+    const detail = [
+      ...wiring.hosts
+        .filter((host) => host.parseError)
+        .map((host) => `${host.displayName}: config present but unreadable`),
+      ...wiring.hosts
+        .filter((host) => !host.parseError && (host.installed || host.configFound))
+        .map((host) => `${host.displayName}: installed but not wired`),
+    ];
+    return {
+      id: 'hosts.wiring',
+      status: 'warn',
+      summary: `No MCP host on this machine is wired to run canvas-toolchain. ${remedy}`,
+      ...(detail.length > 0 ? { detail } : {}),
+    };
+  }
+
+  return {
+    id: 'hosts.wiring',
+    status: 'ok',
+    summary: `canvas-toolchain is wired into ${wired.map((host) => host.displayName).join(', ')}.`,
+    detail: wired
+      .filter((host) => host.scriptPath !== null)
+      .map((host) => `${host.displayName}: ${host.scriptPath}`),
+  };
+}
+
 /** Apply a journey's blockers to warnings, so an explicit ask is answered plainly. */
 function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): DoctorCheck[] {
   const blockers = JOURNEY_BLOCKERS[journey];
@@ -558,7 +655,8 @@ function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): Docto
  */
 export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorReport> {
   const journey = opts.journey ?? 'full';
-  const state = opts.state ?? (await readSetupState({ probe: opts.probe === true }));
+  const state = opts.state ??
+    (await readSetupState({ probe: opts.probe === true, hosts: opts.hosts !== false }));
 
   const checks = escalateForJourney([
     coursesRootCheck(state),
@@ -570,6 +668,7 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
     transcriptCheck(state),
     backupCheck(state),
     modulesCheck(state),
+    hostsWiringCheck(state),
   ], journey);
 
   const considered = new Set(JOURNEY_CHECKS[journey]);
