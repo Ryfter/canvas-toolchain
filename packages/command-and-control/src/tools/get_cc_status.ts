@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
 import { getCcHomePath, loadConfig } from '../kb/config.js';
 import type { CcConfig, Mode, ProviderName } from '../types.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
@@ -51,10 +52,18 @@ function configFilePresent(name: string): boolean {
 }
 
 async function pingOllama(baseUrl: string): Promise<boolean> {
+  // SSRF guard: a saved config may hold a now-blocked URL — report unreachable
+  // rather than crashing the status probe or fetching the blocked target.
+  let endpoint: Awaited<ReturnType<typeof assertEndpointAllowed>>;
+  try {
+    endpoint = await assertEndpointAllowed(baseUrl);
+  } catch {
+    return false;
+  }
   try {
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${baseUrl}/api/tags`, { signal: controller.signal });
+    const res = await fetch(`${endpoint.url}/api/tags`, { signal: controller.signal, redirect: 'manual' });
     clearTimeout(tid);
     return res.ok;
   } catch {

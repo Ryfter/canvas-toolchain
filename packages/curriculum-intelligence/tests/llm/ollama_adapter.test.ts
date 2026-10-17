@@ -88,4 +88,21 @@ describe('OllamaAdapter.isReachable', () => {
     const adapter = new OllamaAdapter('http://localhost:11434', 'llama3.2');
     expect(await adapter.isReachable()).toBe(false);
   });
+
+  it('refuses a blocked endpoint without calling fetch', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const adapter = new OllamaAdapter('http://169.254.169.254/', 'llama3.2');
+
+    await expect(adapter.complete('hi')).rejects.toMatchObject({ code: 'ENDPOINT_BLOCKED' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('isReachable returns false for a blocked endpoint without fetching', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const adapter = new OllamaAdapter('http://169.254.169.254/', 'llama3.2');
+    expect(await adapter.isReachable()).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

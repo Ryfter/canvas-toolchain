@@ -1,5 +1,6 @@
 // packages/command-and-control/src/tools/workflows/setup_lecture_answers.ts
 
+import { assertEndpointAllowed, EndpointBlockedError } from '@canvas-toolchain/shared-llm';
 import { saveLectureAnswersConfig } from '../answers/config.js';
 import { autoDetect } from '../answers/provider/resolve.js';
 import type { EmbeddingProviderKind, LectureAnswersConfig } from '../answers/types.js';
@@ -43,6 +44,18 @@ export async function setupLectureAnswers(input: SetupLectureAnswersInput = {}):
       message: 'provider=voyage requires voyageApiKey.',
       fix: ['Re-call setup_lecture_answers with provider="voyage" and voyageApiKey="vk-..." (https://www.voyageai.com/).'],
     };
+  }
+
+  // SSRF guard: validate a user-supplied Ollama URL before persisting it.
+  if (kind === 'ollama' && input.ollamaBaseUrl) {
+    try {
+      await assertEndpointAllowed(input.ollamaBaseUrl);
+    } catch (err) {
+      if (err instanceof EndpointBlockedError) {
+        return { configured: false, message: err.message, fix: err.fix };
+      }
+      throw err;
+    }
   }
 
   const cfg: LectureAnswersConfig = { provider: kind, model: input.model };

@@ -107,6 +107,32 @@ describe('setup_ollama commit mode', () => {
     expect(result.fix).toEqual(expect.arrayContaining([expect.stringMatching(/ollama pull qwen2.5:14b/)]));
     expect(existsSync(join(ccHomeDir, 'ollama-config.json'))).toBe(false);
   });
+
+  it('returns ENDPOINT_BLOCKED for a blocked baseUrl — does NOT fetch or write config', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await setupOllama({ baseUrl: 'http://169.254.169.254', model: 'qwen2.5:14b' });
+
+    expect(result.mode).toBe('commit');
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('ENDPOINT_BLOCKED');
+    expect(result.message).toMatch(/metadata/i);
+    expect(result.fix).toEqual(expect.arrayContaining([expect.stringMatching(/localhost|192\.168/i)]));
+    expect(existsSync(join(ccHomeDir, 'ollama-config.json'))).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('returns ENDPOINT_BLOCKED for a non-http scheme', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await setupOllama({ baseUrl: 'file:///etc/passwd', model: 'qwen2.5:14b' });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('ENDPOINT_BLOCKED');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('loadOllamaConfig', () => {

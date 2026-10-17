@@ -26,4 +26,23 @@ describe('OllamaEmbeddingProvider', () => {
     const ok = await OllamaEmbeddingProvider.isAvailable('http://localhost:11434');
     expect(ok).toBe(true);
   });
+
+  it('refuses a blocked endpoint without calling fetch', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const p = new OllamaEmbeddingProvider({ baseUrl: 'http://169.254.169.254/', model: 'nomic-embed-text' });
+
+    await expect(p.embed(['x'])).rejects.toMatchObject({
+      code: 'ENDPOINT_BLOCKED',
+      reason: 'metadata',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('isAvailable returns false for a blocked endpoint without fetching', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await OllamaEmbeddingProvider.isAvailable('http://169.254.169.254/')).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

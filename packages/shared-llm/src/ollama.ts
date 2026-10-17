@@ -1,5 +1,6 @@
 import type { LlmClient, LlmResponse } from './index.js';
 import { LlmProviderError } from './errors.js';
+import { assertEndpointAllowed, redirectBlocked } from './endpoint-guard.js';
 
 export interface OllamaConfig {
   baseUrl: string;
@@ -35,16 +36,21 @@ export class OllamaLlmClient implements LlmClient {
       body.options = { num_predict: opts.maxTokens };
     }
 
+    // Re-check the user-supplied endpoint (SSRF guard) immediately before the
+    // request; a blocked endpoint never reaches fetch. Throws ENDPOINT_BLOCKED.
+    const endpoint = await assertEndpointAllowed(this.cfg.baseUrl);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     let response: Response;
     try {
-      response = await fetch(`${this.cfg.baseUrl}/api/generate`, {
+      response = await fetch(`${endpoint.url}/api/generate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
         signal: controller.signal,
+        redirect: 'manual',
       });
     } catch (err) {
       clearTimeout(timeoutId);
@@ -73,6 +79,10 @@ export class OllamaLlmClient implements LlmClient {
       );
     }
     clearTimeout(timeoutId);
+
+    if (response.status >= 300 && response.status < 400) {
+      throw redirectBlocked(`${endpoint.url}/api/generate`);
+    }
 
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
