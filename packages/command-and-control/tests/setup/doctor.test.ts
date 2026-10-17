@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:f
 import { tmpdir, platform } from 'node:os';
 import { join } from 'node:path';
 import { runDoctor } from '../../src/setup/doctor.js';
+import { readSetupState } from '../../src/setup/read_state.js';
 import { buildRegistry } from '../../src/surface/registry.js';
 import { dispatchSurface } from '../../src/surface/dispatch.js';
 
@@ -356,6 +357,15 @@ describe('runDoctor probe', () => {
     expect(report.probed).toBe(false);
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(check(report, 'canvas.credentials').status).toBe('ok');
+  });
+
+  it('reports probed when only the LM Studio probe ran', async () => {
+    const state = await readSetupState();
+    state.llm.lmstudio.probe = { attempted: true, reachable: true, status: 200 };
+
+    const report = await runDoctor({ state });
+
+    expect(report.probed).toBe(true);
   });
 
   it('reports an unreachable Canvas when probe is on', async () => {

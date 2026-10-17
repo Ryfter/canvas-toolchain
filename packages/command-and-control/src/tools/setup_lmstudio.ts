@@ -104,10 +104,12 @@ export async function setupLmStudio(input: SetupLmStudioInput): Promise<SetupLmS
   // LM Studio serves an OpenAI-compatible surface. Listing models is both the
   // discovery answer and the reachability probe the commit path validates
   // against, so it runs through the guard (which re-resolves the host) and
-  // refuses redirects.
+  // refuses redirects. A remote/LAN server may require Bearer auth; the key
+  // arrives via the environment and is sent as a header only — never persisted.
+  const apiKey = process.env.LMSTUDIO_API_KEY;
   let models: string[];
   try {
-    models = await listLmStudioModels(baseUrl);
+    models = await listLmStudioModels(baseUrl, apiKey ? { apiKey } : {});
   } catch (err) {
     if (err instanceof EndpointBlockedError) {
       return { mode: 'blocked', ok: false, error: 'ENDPOINT_BLOCKED', message: err.message, fix: err.fix };
