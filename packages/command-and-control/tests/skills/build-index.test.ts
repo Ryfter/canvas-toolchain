@@ -159,11 +159,15 @@ describe('build-index', () => {
     }
   });
 
-  it('seeds related from the shared intent tool', () => {
+  it('seeds related from the shared intent tool and merges the curated links', () => {
     const { data } = parseFrontMatter(readFileSync(join(sharedRoot, 'ops', 'validate_quiz.md'), 'utf8'));
     expect(data?.intent_tool).toBe('ct_review');
-    expect(data?.related).toContain('review_canvas_rubric');
-    expect((data?.related as string[]).length).toBeLessThanOrEqual(8);
+    expect(data?.related).toContain('review_canvas_rubric'); // seed: same intent tool
+    expect(data?.related).toContain('generate_quiz'); // curated: author the draft, then check it
+    expect((data?.related as string[]).length).toBeLessThanOrEqual(12);
+
+    const { data: build } = parseFrontMatter(readFileSync(join(sharedRoot, 'ops', 'generate_quiz.md'), 'utf8'));
+    expect(build?.related).toContain('validate_quiz'); // curated: the reverse direction
   });
 });
 

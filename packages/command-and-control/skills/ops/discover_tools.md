@@ -5,7 +5,7 @@ section: "modules"
 intent_tool: ""
 intent_action: ""
 exposure: "advanced"
-related: [set_module_enabled, list_modules, browse_module_catalog, install_module, uninstall_module]
+related: [browse_module_catalog, install_module, list_modules, save_institution_profile, set_module_enabled, submit_usage_feedback, uninstall_module]
 ---
 <!-- generated:end -->
 

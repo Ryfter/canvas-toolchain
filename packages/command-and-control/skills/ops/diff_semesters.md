@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_analyze"
 intent_action: "diff_semesters"
 exposure: "intent"
-related: [analyze_course, extract_lecture_topics, find_off_syllabus_topics, suggest_topics, score_topic_currency]
+related: [analyze_course, extract_lecture_topics, find_off_syllabus_topics, generate_recommended_outline, ingest_canvas_archive, score_topic_currency, suggest_topics]
 ---
 <!-- generated:end -->
 

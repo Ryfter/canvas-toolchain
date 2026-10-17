@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "courses_root"
 exposure: "intent"
-related: [setup_cc, setup_anthropic, setup_canvas, setup_ollama, get_cc_status, setup_transcript_source, setup_lecture_answers, setup_spot_check]
+related: [get_cc_status, open_dashboard, setup_anthropic, setup_canvas, setup_cc, setup_lecture_answers, setup_ollama, setup_spot_check, setup_transcript_source]
 ---
 <!-- generated:end -->
 

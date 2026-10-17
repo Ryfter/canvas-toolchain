@@ -5,7 +5,7 @@ section: "design"
 intent_tool: "ct_review"
 intent_action: "rubric"
 exposure: "intent"
-related: [check_shell_readiness, validate_quiz, accessibility_review_queue, audit_course_accessibility, review_accessibility_policy]
+related: [accessibility_review_queue, audit_course_accessibility, check_shell_readiness, draft_student_rubric, review_accessibility_policy, validate_quiz]
 ---
 <!-- generated:end -->
 

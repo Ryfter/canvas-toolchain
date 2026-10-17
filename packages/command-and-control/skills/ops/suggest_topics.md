@@ -5,7 +5,7 @@ section: "research"
 intent_tool: "ct_analyze"
 intent_action: "suggest_topics"
 exposure: "intent"
-related: [analyze_course, diff_semesters, extract_lecture_topics, find_off_syllabus_topics, score_topic_currency]
+related: [analyze_course, diff_semesters, extract_lecture_topics, fetch_news_feed, find_off_syllabus_topics, scan_recent_developments, score_topic_currency]
 ---
 <!-- generated:end -->
 

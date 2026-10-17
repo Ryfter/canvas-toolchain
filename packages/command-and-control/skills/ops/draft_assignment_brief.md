@@ -5,7 +5,7 @@ section: "design"
 intent_tool: "ct_plan"
 intent_action: "assignment_brief"
 exposure: "intent"
-related: [plan_next_semester, shift_dates, generate_recommended_outline]
+related: [analyze_course, generate_recommended_outline, plan_next_semester, shift_dates, update_course_materials]
 ---
 <!-- generated:end -->
 

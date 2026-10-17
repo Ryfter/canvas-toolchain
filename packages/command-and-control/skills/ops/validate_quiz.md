@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_review"
 intent_action: "quiz"
 exposure: "intent"
-related: [review_canvas_rubric, check_shell_readiness, accessibility_review_queue, audit_course_accessibility, review_accessibility_policy]
+related: [accessibility_review_queue, audit_course_accessibility, check_shell_readiness, generate_quiz, review_accessibility_policy, review_canvas_rubric, setup_spot_check]
 ---
 <!-- generated:end -->
 

@@ -80,3 +80,29 @@ export function seedRelated(operations, { max = 8 } = {}) {
   }
   return related;
 }
+
+/** Upper bound on a merged `related` list: the seed cap (8) plus the curated budget. */
+export const MAX_RELATED = 12;
+
+/**
+ * Merge the curated links (J8) into the deterministic seed. Curated links are
+ * never dropped: they are taken first, the seed fills the remaining slots, and
+ * the result is deduped, self-free, and sorted by id so the output does not
+ * depend on the order a human happened to write the data file in.
+ *
+ * @param seeded Map<opId, opId[]> from `seedRelated`.
+ * @param curated Map<from, to[]> from `curatedRelatedFrom(...).byFrom`.
+ */
+export function mergeRelated(seeded, curated = new Map(), { max = MAX_RELATED } = {}) {
+  const merged = new Map();
+  for (const [id, seedList] of seeded) {
+    const curatedList = [...new Set(curated.get(id) ?? [])].filter((to) => to && to !== id);
+    const curatedSet = new Set(curatedList);
+    const seedRoom = Math.max(0, max - curatedList.length);
+    const keptSeed = seedList
+      .filter((to) => to && to !== id && !curatedSet.has(to))
+      .slice(0, seedRoom);
+    merged.set(id, [...new Set([...curatedList, ...keptSeed])].sort());
+  }
+  return merged;
+}

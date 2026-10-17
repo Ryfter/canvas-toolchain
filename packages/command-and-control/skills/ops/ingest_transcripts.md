@@ -5,7 +5,7 @@ section: "transcripts"
 intent_tool: "ct_import"
 intent_action: "transcripts_ingest"
 exposure: "intent"
-related: [bulk_fetch_panopto_transcripts, ingest_canvas_archive, import_previous_shell, download_canvas_archive, download_transcripts, import_course]
+related: [bulk_fetch_panopto_transcripts, download_canvas_archive, download_transcripts, import_course, import_previous_shell, index_course_for_answers, ingest_canvas_archive, map_transcripts_to_weeks]
 ---
 <!-- generated:end -->
 
