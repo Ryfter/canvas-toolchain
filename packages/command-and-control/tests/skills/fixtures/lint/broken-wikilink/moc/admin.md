@@ -3,7 +3,7 @@ id: "admin"
 kind: "section"
 description: "Institution profile, dashboard, feedback, defaults."
 ops: 1
-related: []
+related: [ghost_moc_related]
 ---
 # admin section
 

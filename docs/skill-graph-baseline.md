@@ -33,6 +33,7 @@ pretty-printed form is reported separately and is larger).
 | old surface: ct_advanced section index | 2042 | 511 |
 | old surface: full ct_advanced catalog | 26838 | 6710 |
 | **old surface: total** | **45066** | **11267** |
+| old surface: floor (tools + section index) | 20270 | 5068 |
 | registry dump (metadata) | 27621 | 6905 |
 | registry dump (with schemas) | 60704 | 15176 |
 | **new path A: index + op file (average)** | **20318** | **5080** |
@@ -52,6 +53,14 @@ Reduction against the old-surface total:
 | C — MOC + op file | 10.32x |
 | index.md only | 2.3x |
 
+Against a *thrifty* old path (tools list + the ct_advanced section index, no
+schemas), the comparison is less flattering and the more honest one to quote:
+
+| New path | Factor |
+| --- | --- |
+| A — index + op file | 1x |
+| C — MOC + op file | 4.64x |
+
 Reduction against the metadata registry dump:
 
 | New path | Factor |
@@ -61,11 +70,13 @@ Reduction against the metadata registry dump:
 
 ## Verdict against the plan's ≥5x target
 
-**Path A does not hit 5x.** It measures 2.22x, and the
-reason is structural rather than a measurement artefact: `index.md` contains all
-86 full descriptions (19629 chars, 4907 tokens), which
-is essentially the metadata registry dump plus prose, and reading it costs
-almost as much as reading the schemas it replaces.
+**Path A does not hit 5x.** It measures 2.22x against the full
+old-surface read, and only 1x against a thrifty old path
+that reads the tools list and the ct_advanced section index without ever pulling
+a parameter schema. The reason is structural rather than a measurement artefact:
+`index.md` contains all 86 full descriptions (19629 chars,
+4907 tokens), which is essentially the metadata registry dump plus
+prose, so reading it costs about what it replaces.
 
 Two levers were measured rather than guessed:
 

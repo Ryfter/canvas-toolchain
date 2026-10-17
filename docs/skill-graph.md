@@ -164,9 +164,14 @@ non-zero; `--json` prints the machine-readable report.
 | `too-long` | ops | `description` longer than `--max-description` (default 200). |
 | `duplicate` | ops | Two ops whose normalized descriptions are identical. |
 | `near-duplicate` | ops | Normalized trigram Jaccard ≥ `--similarity` (default 0.8). |
-| `broken-wikilink` | all files | `[[x]]` where `x` is not an op, MOC, or concept id. |
+| `broken-wikilink` | all files | A `[[x]]` body link or a `related:` entry where `x` is not an op, MOC, or concept id. |
 | `orphan` | ops | Op in no MOC (`moc/*.md` no longer mentions it). |
-| `drift` | ops | Frontmatter `description` ≠ registry `description`. |
+| `drift` | ops, concepts | Ops — frontmatter `description` ≠ registry, frontmatter `id` ≠ file name, an op file the registry no longer declares, or a registry operation with no op file. Concepts — a frontmatter fence that never closes, or a concept id that collides with an operation id. |
+
+`missing-description` short-circuits only the other *description* checks: the id
+drift, registry drift, and `related:` link checks still run on an op whose
+description is empty, so one empty field cannot hide the rest of the file's
+problems.
 
 Normalization for the duplicate rules: lowercase, strip the `[@canvas-toolchain/…]`
 co-package prefix that several pass-through descriptions carry, collapse

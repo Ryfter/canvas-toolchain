@@ -1,4 +1,5 @@
-import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const SPEC = {
   '--check': { key: 'check', type: 'boolean' },
@@ -49,10 +50,17 @@ export function parseArgs(argv, allowed = Object.keys(SPEC)) {
   return out;
 }
 
-/** True when this module is the process entry point rather than an import. */
+/**
+ * True when this module is the process entry point rather than an import.
+ *
+ * Both sides are resolved with realpathSync because a bin shim (and `npm exec`)
+ * reaches the script through a symlink: `process.argv[1]` is then the link while
+ * the ESM loader has already resolved `import.meta.url` to the real file, so a
+ * plain URL comparison would say "not main" and the command would do nothing.
+ */
 export function isMain(importMetaUrl) {
   if (!process.argv[1]) return false;
-  return importMetaUrl === pathToFileURL(process.argv[1]).href;
+  return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(importMetaUrl));
 }
 
 /** Shared entrypoint wrapper: a thrown error is a message and exit 1, not a stack. */

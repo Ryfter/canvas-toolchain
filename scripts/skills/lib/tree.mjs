@@ -9,11 +9,13 @@ function listMarkdown(dir) {
 
 function readDocument(dir, name, prefix) {
   const text = readFileSync(join(dir, name), 'utf8');
-  const { data, body } = parseFrontMatter(text);
+  const { data, hasFence, body } = parseFrontMatter(text);
   return {
     id: name.replace(/\.md$/, ''),
     path: prefix ? `${prefix}/${name}` : name,
     frontMatter: data ?? {},
+    /** Declared a frontmatter fence that never terminated — see parseFrontMatter. */
+    frontMatterUnparsed: hasFence && data === null,
     body,
     text,
   };

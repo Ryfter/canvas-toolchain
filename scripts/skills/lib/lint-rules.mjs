@@ -51,21 +51,30 @@ export function lintSkills(tree, operations, options = {}) {
   };
 
   const registry = new Map(operations.map((op) => [op.id, op]));
+  const opIds = new Set(tree.ops.map((op) => op.id));
   const knownIds = new Set([
-    ...tree.ops.map((op) => op.id),
+    ...opIds,
     ...tree.mocs.map((moc) => moc.id),
     ...tree.concepts.map((concept) => concept.id),
     'index',
   ]);
 
+  for (const operation of operations) {
+    if (!opIds.has(operation.id)) {
+      add('drift', `ops/${operation.id}.md`, operation.id, 'no file for this registry operation');
+    }
+  }
+
   for (const op of tree.ops) {
     const description = String(op.frontMatter.description ?? '').trim();
+    const hasDescription = description.length > 0;
 
-    if (!description) {
+    if (!hasDescription) {
+      // The description rules stop here, but nothing else does: an empty
+      // description must not hide id drift, an unregistered op, or a broken
+      // `related` target.
       add('missing-description', op.path, op.id, 'no description in frontmatter');
-      continue;
-    }
-    if (description.length > opts.maxDescription) {
+    } else if (description.length > opts.maxDescription) {
       add('too-long', op.path, op.id, `${description.length} characters (max ${opts.maxDescription})`);
     }
 
@@ -77,13 +86,26 @@ export function lintSkills(tree, operations, options = {}) {
     const registered = registry.get(op.id);
     if (!registered) {
       add('drift', op.path, op.id, 'no operation with this id in the registry');
-    } else if (String(registered.description ?? '') !== String(op.frontMatter.description ?? '')) {
+    } else if (hasDescription && String(registered.description ?? '') !== String(op.frontMatter.description ?? '')) {
       add('drift', op.path, op.id, 'frontmatter description differs from the registry');
     }
+  }
 
-    for (const target of op.frontMatter.related ?? []) {
+  for (const concept of tree.concepts) {
+    if (concept.frontMatterUnparsed) {
+      add('drift', concept.path, concept.id, 'frontmatter block does not parse');
+    }
+    if (opIds.has(concept.id)) {
+      add('drift', concept.path, concept.id, `concept id "${concept.id}" collides with an operation id`);
+    }
+  }
+
+  // `related:` is the machine-readable twin of a body wikilink, so an op, a MOC,
+  // and a concept all resolve it against the same id set.
+  for (const document of [...tree.ops, ...tree.mocs, ...tree.concepts]) {
+    for (const target of document.frontMatter.related ?? []) {
       if (!knownIds.has(String(target))) {
-        add('broken-wikilink', op.path, op.id, `related:[${target}] resolves to nothing`, { target });
+        add('broken-wikilink', document.path, document.id, `related:[${target}] resolves to nothing`, { target });
       }
     }
   }

@@ -42,13 +42,13 @@ describe('lintSkills against one fixture per rule', () => {
     expect(rulesFor('near-duplicate')).toEqual(['near-duplicate']);
   });
 
-  it('reports a broken body wikilink, a broken MOC wikilink, and a broken related entry', () => {
+  it('reports a broken body link, a broken MOC link, and a broken related entry on every file kind', () => {
     const { tree, operations } = fixture('broken-wikilink');
     const violations = lintSkills(tree, operations).filter((v: { rule: string }) => v.rule === 'broken-wikilink');
 
-    expect(violations).toHaveLength(3);
+    expect(violations).toHaveLength(5);
     expect(violations.map((v: { target: string }) => v.target).sort()).toEqual([
-      'ghost_body', 'ghost_moc', 'ghost_related',
+      'ghost_body', 'ghost_concept_related', 'ghost_moc', 'ghost_moc_related', 'ghost_related',
     ]);
   });
 
@@ -77,6 +77,44 @@ describe('lintSkills against one fixture per rule', () => {
     expect(violations.map((v: { rule: string; message: string }) => `${v.rule}:${v.message}`)).toEqual([
       expect.stringContaining('does not match the file name'),
     ]);
+  });
+
+  it('still reports drift and broken related links when the description is empty', () => {
+    const { tree, operations } = fixture('missing-description-drift');
+    const violations = lintSkills(tree, operations);
+
+    expect([...new Set(violations.map((v: { rule: string }) => v.rule))].sort())
+      .toEqual(['broken-wikilink', 'drift', 'missing-description']);
+    expect(violations.filter((v: { rule: string }) => v.rule === 'drift').map((v: { message: string }) => v.message))
+      .toEqual([
+        expect.stringContaining('does not match the file name'),
+        expect.stringContaining('no operation with this id'),
+      ]);
+  });
+
+  it('reports drift for a registry operation with no op file on disk', () => {
+    const { tree, operations } = fixture('missing-op-file');
+    const violations = lintSkills(tree, operations);
+
+    expect(violations.map((v: { rule: string; file: string }) => `${v.rule}:${v.file}`)).toEqual(['drift:ops/gamma.md']);
+    expect(violations[0].message).toContain('no file');
+  });
+
+  it('reports a concept id that collides with an operation id as drift', () => {
+    const { tree, operations } = fixture('concept-id-collision');
+    const violations = lintSkills(tree, operations);
+
+    expect(violations.map((v: { rule: string; id: string }) => `${v.rule}:${v.id}`)).toEqual(['drift:review']);
+    expect(violations[0].message).toContain('collides');
+  });
+
+  it('reports a concept whose frontmatter block never closes as drift', () => {
+    const { tree, operations } = fixture('concept-frontmatter');
+    const violations = lintSkills(tree, operations);
+
+    expect(violations.map((v: { rule: string; file: string }) => `${v.rule}:${v.file}`))
+      .toEqual(['drift:concepts/broken.md']);
+    expect(violations[0].message).toContain('frontmatter');
   });
 });
 

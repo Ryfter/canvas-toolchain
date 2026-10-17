@@ -54,19 +54,21 @@ function parseBlock(block) {
 }
 
 /**
- * @returns {{ data: Record<string, unknown> | null, body: string }}
+ * @returns {{ data: Record<string, unknown> | null, hasFence: boolean, body: string }}
  *   `data` is null when there is no terminated frontmatter block, in which case
- *   `body` is the whole input.
+ *   `body` is the whole input. `hasFence` distinguishes "declared no frontmatter"
+ *   (false) from "declared one that never terminated" (true, data null), which
+ *   the concept rule needs to tell a plain note from a broken one.
  */
 export function parseFrontMatter(text) {
   if (!text.startsWith(`${FENCE}\n`) && !text.startsWith(`${FENCE}\r\n`)) {
-    return { data: null, body: text };
+    return { data: null, hasFence: false, body: text };
   }
   const firstBreak = text.indexOf('\n');
   const end = text.indexOf(`\n${FENCE}`, firstBreak);
-  if (end === -1) return { data: null, body: text };
+  if (end === -1) return { data: null, hasFence: true, body: text };
 
   const block = text.slice(firstBreak + 1, end);
   const rest = text.slice(end + 1 + FENCE.length);
-  return { data: parseBlock(block), body: rest.startsWith('\n') ? rest.slice(1) : rest };
+  return { data: parseBlock(block), hasFence: true, body: rest.startsWith('\n') ? rest.slice(1) : rest };
 }
