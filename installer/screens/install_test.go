@@ -1,13 +1,89 @@
 package screens
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
 	"fyne.io/fyne/v2/test"
+
+	"github.com/Ryfter/canvas-toolchain/installer/tasks"
 )
+
+// findStep returns one step by name, so a test drives the real pipeline
+// closure rather than a copy of it.
+func findStep(t *testing.T, steps []tasks.Step, name string) tasks.Step {
+	t.Helper()
+	for _, s := range steps {
+		if s.Name == name {
+			return s
+		}
+	}
+	t.Fatalf("no step named %q", name)
+	return tasks.Step{}
+}
+
+// The setup check must never be able to abort an install: driven through the
+// real runner, a doctor that cannot run leaves a warning, not a failure.
+func TestSetupCheckStepNeverFailsTheInstall(t *testing.T) {
+	st := NewState("2.3.0")
+	st.InstallDir = t.TempDir()
+
+	step := findStep(t, buildSteps(st, func(string) {}), "Setup check (doctor)")
+	results := (&tasks.Runner{Steps: []tasks.Step{step}}).Run(context.Background())
+
+	if results[0].Status != tasks.StepWarn {
+		t.Errorf("status = %v, want StepWarn", results[0].Status)
+	}
+	if st.DoctorErr == nil {
+		t.Error("the failure must be recorded for the summary to render")
+	}
+	if st.Doctor != nil {
+		t.Error("no report must leave the summary on its fallback path")
+	}
+}
+
+// The version marker is the installer's "this install is complete" record; the
+// doctor's verdict decides whether it is stamped.
+func TestVersionMarkerStep_FollowsTheDoctor(t *testing.T) {
+	tests := []struct {
+		name       string
+		report     *tasks.DoctorReport
+		doctorErr  error
+		wantMarker bool
+	}{
+		{name: "doctor is ready", report: &tasks.DoctorReport{OverallStatus: "ok"}, wantMarker: true},
+		{name: "doctor warns only", report: &tasks.DoctorReport{OverallStatus: "warn"}, wantMarker: true},
+		{name: "doctor could not run", report: nil, doctorErr: os.ErrNotExist, wantMarker: true},
+		{name: "doctor reports a failure", report: &tasks.DoctorReport{OverallStatus: "fail"}, wantMarker: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			st := NewState("2.3.0")
+			st.InstallDir = t.TempDir()
+			st.Doctor, st.DoctorErr = tc.report, tc.doctorErr
+
+			step := findStep(t, buildSteps(st, func(string) {}), "Version marker")
+			if err := step.Run(context.Background()); err != nil {
+				t.Fatalf("version marker step: %v", err)
+			}
+
+			_, statErr := os.Stat(filepath.Join(st.InstallDir, ".canvas-toolchain-version"))
+			if wrote := statErr == nil; wrote != tc.wantMarker {
+				t.Errorf("marker written = %v, want %v", wrote, tc.wantMarker)
+			}
+			if st.MarkerWithheld == tc.wantMarker {
+				t.Errorf("MarkerWithheld = %v, want %v", st.MarkerWithheld, !tc.wantMarker)
+			}
+			if st.MarkerWithheld && st.MarkerReason == "" {
+				t.Error("a withheld marker must carry a reason for the summary")
+			}
+		})
+	}
+}
 
 func TestNewInstallScreen_RendersWithoutPanic(t *testing.T) {
 	a := test.NewApp()
