@@ -453,7 +453,7 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'setup_doctor',
     section: 'admin',
-    description: 'Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic checks.',
+    description: 'Run a read-only readiness check: what is configured, what is broken, and the ct_setup action that fixes each item. probe:true adds live Canvas and Anthropic probes; detects MCP host wiring.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -463,6 +463,7 @@ export const CORE_OPERATIONS: Operation[] = [
           enum: ['local-authoring', 'canvas-connected', 'ai-assisted', 'full'],
           description: 'Which capability the verdict is for. A narrower journey ignores unconfigured checks it does not need. Default full.',
         },
+        hosts: { type: 'boolean', description: 'Read the other MCP clients\' config files (never write) to report whether canvas-toolchain is wired into each. Default true.' },
       },
     },
     handler: (args) => runDoctor(args as never),
