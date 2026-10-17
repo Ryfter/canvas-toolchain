@@ -107,6 +107,7 @@ Every credential is **validated against the live service before it's saved**, wr
 Check everything is wired up:
 
 ```text
+get_started       # what is ready, and the exact next step for each thing that isn't
 get_cc_status     # shows which packages, keys, and providers are live
 ```
 
@@ -197,6 +198,7 @@ Every command, organized by the job it does. For each: **what it is**, **how it 
 | `setup_ollama` | **What:** point at a local Ollama server as your LLM. **How:** no-model call returns a recommended-models list; with a model it checks the model is pulled, then saves. **Why:** run generation locally/offline instead of via Anthropic. |
 | `set_active_llm_provider` | **What:** switch between Anthropic and Ollama. **How:** flips the active provider; refuses if that provider isn't configured. **Why:** move between cloud and local without re-running setup. |
 | `get_cc_status` | **What:** a health snapshot. **How:** reports installed packages, key/provider availability, routing, last-run times. **Why:** your first stop when something "isn't working" — it tells you what's actually configured. |
+| `get_started` | **What:** first-run orientation built on the setup doctor. **How:** reports which capabilities are ready (local authoring / Canvas connected / AI assisted) and the exact call that finishes each remaining step, plus what to have on hand. Read-only and offline. **Why:** the "where do I begin?" command — and the quickest way to see that a half-finished setup still works, because local authoring never needs credentials. (`ct_setup` action `get_started`; different tool from Design Studio's standalone `get_started`, section 6.7.) |
 
 ### 6.2 Getting a course in
 
@@ -276,7 +278,7 @@ These tools require the **Canvas Design Studio** MCP server. Asking C&C for them
 | `load_canvas_page` / `save_canvas_page` *(CDS only)* | **What:** load/save generated HTML in `output/`. **How:** save auto-creates a `.bak`. **Why:** safe round-tripping while you iterate on a page. |
 | `fetch_brand_colors` *(CDS only)* | **What:** extract brand colors from a standards page. **How:** returns ranked candidates with a suggested primary/secondary. **Why:** match your institution's palette without eyedropping by hand. |
 | `setup_institution` / `get_setup_worksheet` / `validate_worksheet` *(CDS only)* | **What:** institution config (brand, Canvas URL, token) at `~/.canvas-design-mcp/institution.json`. **How:** fill a worksheet then submit it, or run the wizard; validate before applying. **Why:** set brand + connection once and reuse across courses. **Not on C&C** — from C&C use `setup_canvas` for the Canvas token. |
-| `get_started` *(CDS only)* | **What:** a tailored Design Studio orientation. **How:** reads your current CDS config and suggests next steps. **Why:** the "where do I begin?" command **on the Design Studio server**. From C&C, ask for `get_cc_status` instead. |
+| `get_started` *(CDS tool)* | **What:** a tailored Design Studio orientation. **How:** reads your current CDS config and suggests next steps. **Why:** the "where do I begin?" command **on the Design Studio server** — a different tool from C&C's `get_started` (section 6.1), which reports what is ready on C&C and the exact call that finishes each step. |
 
 ### 6.8 Teaching-philosophy & student-persona context
 
@@ -416,4 +418,4 @@ Full detail, including the env-var table and validation endpoints, is in the [Co
 
 ---
 
-*Last reconciled against the source tree on 2026-08-13 for: C&C vs Design Studio tool reachability (`import_course` / `generate_course` are the only CDS passthroughs; `get_started`, `setup_institution`, `get_setup_worksheet`, and CDS's `setup_course` are Design Studio only; C&C's `setup_course` is Curriculum Intelligence's `id`+`title` tool); C&C CI passthroughs (26 tools in `ci_tools.ts`; `get_course_trajectory` is CI-standalone only; C&C's `analyze_course` is a native workflow wrapper); `publish_course` requiring a prior `preview_course_publish`; and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*
+*Last reconciled against the source tree on 2026-10-17 for: C&C vs Design Studio tool reachability (`import_course` / `generate_course` are the only CDS passthroughs; `setup_institution`, `get_setup_worksheet`, and CDS's `setup_course` are Design Studio only, while `get_started` exists on **both** surfaces as two different tools — C&C's `ct_setup` action `get_started` is not the CDS one; C&C's `setup_course` is Curriculum Intelligence's `id`+`title` tool); C&C CI passthroughs (26 tools in `ci_tools.ts`; `get_course_trajectory` is CI-standalone only; C&C's `analyze_course` is a native workflow wrapper); `publish_course` requiring a prior `preview_course_publish`; and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool. For exact parameters see the [Commands & Credentials reference](commands-and-credentials.md); for the code's building blocks see the [Module view](architecture-modules.md); for diagrams see the [Visual guide](visual-guide/README.md).*
