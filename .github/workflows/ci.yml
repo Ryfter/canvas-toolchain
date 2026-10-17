@@ -16,7 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 20 = engines floor; 24 = the runtime bundled by the installer; 26 = current.
+        # 20 = engines floor (setup-node '20' resolves to the latest 20.x, >= 20.19);
+        # 24 = the runtime bundled by the installer; 26 = current.
         # Node 18 is NOT supported: cheerio -> undici 7 requires the global
         # File API, which landed in Node 20.
         node: ['20', '24', '26']
