@@ -1,7 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchRecommendedModels } from '@canvas-toolchain/shared-llm';
+import {
+  fetchRecommendedModels,
+  parseEndpointUrl,
+  assertEndpointAllowed,
+  redirectBlocked,
+  EndpointBlockedError,
+} from '@canvas-toolchain/shared-llm';
 import { getCcHomePath } from '../kb/config.js';
 
 const DEFAULT_BASE_URL = 'http://localhost:11434';
@@ -22,6 +28,7 @@ export interface SetupOllamaInput {
 export type SetupOllamaResult =
   | {
       mode: 'discovery';
+      ok: true;
       baseUrl: string;
       recommendations: string;
       nextStep: string;
@@ -37,6 +44,15 @@ export type SetupOllamaResult =
       mode: 'commit';
       ok: false;
       error: string;
+      message: string;
+      fix: string[];
+    }
+  | {
+      /** The supplied baseUrl never passed URL validation (scheme, userinfo,
+       *  host). No request was made and nothing was written. */
+      mode: 'blocked';
+      ok: false;
+      error: 'ENDPOINT_BLOCKED';
       message: string;
       fix: string[];
     };
@@ -70,23 +86,53 @@ export function loadOllamaConfig(): OllamaConfigFile {
   }
 }
 
-async function probeTags(baseUrl: string): Promise<{ ok: true; tags: string[] } | { ok: false }> {
+type ProbeResult =
+  | { ok: true; url: string; tags: string[] }
+  | { ok: false; blocked?: EndpointBlockedError };
+
+async function probeTags(baseUrl: string): Promise<ProbeResult> {
+  // SSRF guard: refuse blocked targets before any request. Re-checked here
+  // rather than only at the top of setupOllama so it runs immediately before
+  // the outbound call.
+  let endpoint: Awaited<ReturnType<typeof assertEndpointAllowed>>;
+  try {
+    endpoint = await assertEndpointAllowed(baseUrl);
+  } catch (err) {
+    return { ok: false, blocked: err instanceof EndpointBlockedError ? err : undefined };
+  }
   try {
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), 3000);
-    const response = await fetch(`${baseUrl}/api/tags`, { signal: controller.signal });
+    const response = await fetch(`${endpoint.url}/api/tags`, {
+      signal: controller.signal,
+      redirect: 'manual',
+    });
     clearTimeout(tid);
+    if (response.status >= 300 && response.status < 400) {
+      return { ok: false, blocked: redirectBlocked(`${endpoint.url}/api/tags`) };
+    }
     if (!response.ok) return { ok: false };
     const payload = (await response.json()) as { models?: Array<{ name?: string }> };
     const tags = (payload.models ?? []).map((m) => m.name ?? '').filter(Boolean);
-    return { ok: true, tags };
+    return { ok: true, url: endpoint.url, tags };
   } catch {
     return { ok: false };
   }
 }
 
 export async function setupOllama(input: SetupOllamaInput): Promise<SetupOllamaResult> {
-  const baseUrl = input.baseUrl ?? DEFAULT_BASE_URL;
+  // SSRF guard, parse pass (all modes): validate + canonicalize the endpoint up
+  // front so every path — discovery included — echoes and persists only a
+  // vetted URL, with any query/fragment/userinfo already stripped.
+  let baseUrl: string;
+  try {
+    baseUrl = parseEndpointUrl(input.baseUrl ?? DEFAULT_BASE_URL).url;
+  } catch (err) {
+    if (err instanceof EndpointBlockedError) {
+      return { mode: 'blocked', ok: false, error: 'ENDPOINT_BLOCKED', message: err.message, fix: err.fix };
+    }
+    throw err;
+  }
   const recommendationsUrl = process.env.CC_RECOMMENDED_MODELS_URL ?? DEFAULT_RECOMMENDATIONS_URL;
 
   if (!input.model) {
@@ -98,6 +144,7 @@ export async function setupOllama(input: SetupOllamaInput): Promise<SetupOllamaR
     });
     return {
       mode: 'discovery',
+      ok: true,
       baseUrl,
       recommendations,
       nextStep: 'Pick a model from above and re-run setup_ollama with { model: "<id>" }.',
@@ -106,6 +153,15 @@ export async function setupOllama(input: SetupOllamaInput): Promise<SetupOllamaR
 
   const probe = await probeTags(baseUrl);
   if (!probe.ok) {
+    if (probe.blocked) {
+      return {
+        mode: 'commit',
+        ok: false,
+        error: 'ENDPOINT_BLOCKED',
+        message: probe.blocked.message,
+        fix: probe.blocked.fix,
+      };
+    }
     return {
       mode: 'commit',
       ok: false,
@@ -124,7 +180,8 @@ export async function setupOllama(input: SetupOllamaInput): Promise<SetupOllamaR
     };
   }
 
-  const config: OllamaConfigFile = { baseUrl, model: input.model };
+  // Persist the canonical (query/fragment-free) URL the guard vetted.
+  const config: OllamaConfigFile = { baseUrl: probe.url, model: input.model };
   const home = getCcHomePath();
   mkdirSync(home, { recursive: true });
   const configPath = getOllamaConfigPath();
@@ -135,7 +192,7 @@ export async function setupOllama(input: SetupOllamaInput): Promise<SetupOllamaR
   return {
     mode: 'commit',
     ok: true,
-    baseUrl,
+    baseUrl: probe.url,
     model: input.model,
     configPath,
   };
