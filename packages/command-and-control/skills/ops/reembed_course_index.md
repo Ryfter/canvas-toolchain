@@ -1,6 +1,6 @@
 ---
 id: "reembed_course_index"
-description: "Switch embedding providers and rebuild the per-course index in one call. Convenience wrapper over `ct_setup` action `lecture_answers` + `ct_ask` action `index` --rebuild. Use when migrating from Ollama to Voyage (or vice versa), since vector dimensions are not interchangeable."
+description: "Switch embedding providers and rebuild the course index in one call (ct_setup lecture_answers + ct_ask index --rebuild). Use when migrating providers — vector dimensions are not interchangeable."
 section: "admin"
 intent_tool: ""
 intent_action: ""

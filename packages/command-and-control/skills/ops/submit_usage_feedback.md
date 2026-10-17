@@ -1,6 +1,6 @@
 ---
 id: "submit_usage_feedback"
-description: "Submit an anonymized inventory of your institution's tools as a GitHub issue, so the author can prioritize integrations. Opt-in. Two-call gate: call once to review the exact payload, then call again with confirm:true to submit via gh. named:true includes full identifiers (default is anonymized)."
+description: "Submit an anonymized inventory of your institution's tools as a GitHub issue so the author can prioritize integrations. Opt-in two-call gate: review, then confirm:true via gh. named:true adds ids."
 section: "admin"
 intent_tool: ""
 intent_action: ""

@@ -1,6 +1,6 @@
 ---
 id: "preview_canvas_pattern"
-description: "Renders a specific Canvas capability pattern to a standalone HTML file that can be opened in any browser. Use this after `ct_advanced` run `show_canvas_capabilities` to actually see a pattern in action."
+description: "Render a Canvas capability pattern to a standalone HTML file openable in any browser. Use after `ct_advanced` run `show_canvas_capabilities` to see a pattern in action."
 section: "design"
 intent_tool: "ct_build"
 intent_action: "preview_pattern"

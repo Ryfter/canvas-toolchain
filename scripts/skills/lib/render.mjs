@@ -59,14 +59,16 @@ export function renderOpFile(op, related = []) {
 }
 
 /**
- * The only thing an agent reads first: every operation, one line each, grouped
- * by section so the scan has landmarks.
+ * The full-catalog fallback, not the first read: an agent that has already
+ * chosen its `ct_*` tool starts at `moc/<intent tool>.md` (path C), and only
+ * falls back to this full operation list when it does not yet know which tool it
+ * is in. Both route to the same `ops/<id>.md` files.
  */
 export function renderIndexFile(source) {
   const frontMatter = stringifyFrontMatter({
     id: INDEX_ID,
     kind: 'index',
-    description: `One line per operation (${source.operations.length} total). Read this first, then open ops/<id>.md for the one you picked.`,
+    description: `Full catalog: one line per operation (${source.operations.length} total), grouped by section. To act, start from moc/<intent tool>.md (e.g. moc/ct_build.md), then open ops/<id>.md for the one you picked.`,
     ops: source.operations.length,
     related: source.sections.map((s) => s.id),
   });

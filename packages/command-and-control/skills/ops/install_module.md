@@ -1,6 +1,6 @@
 ---
 id: "install_module"
-description: "Install (or upgrade) a module from the catalog. Two-call gate: first call previews name/version/size/source/sha256 with NO side effects; call again with confirm: true to download, verify the pinned sha256, and install. Takes effect on the next reconnect."
+description: "Install/upgrade a catalog module. Two-call gate: first call previews name/version/size/source/sha256 (no side effects); re-call with confirm:true to verify the sha256 and install. Needs a reconnect."
 section: "modules"
 intent_tool: ""
 intent_action: ""

@@ -12,7 +12,7 @@ News feeds, recent developments, quote banks, calendars.
 ## Operations (12)
 
 - [[analyze_course]] — Answer "how stale is my course?" — ingests the Canvas archive, scores topic currency, and generates KEEP/UPDATE/DROP/ADD verdicts in one step.
-- [[brainstorm_interactive]] — Propose interactive Canvas widget concepts for a given topic + learning goal. Returns 2-3 distinct widget specs (kind, purpose, content schema, initial sample data, dimensions, accessibility notes) plus rationale and pedagogical fit. Returns SPECS only — a future render step compiles a chosen spec into a hostable HTML/JS bundle. Uses the Anthropic API via `ct_setup` action `anthropic`.
+- [[brainstorm_interactive]] — Propose interactive Canvas widget concepts for a topic + learning goal: 2-3 specs (kind, purpose, content schema, sample data, accessibility notes) with rationale. Returns SPECS only. Needs Anthropic.
 - [[extract_lecture_topics]] — Return lecture chunks shaped for the model to reason over.
 - [[find_off_syllabus_topics]] — Compare lecture transcripts against module/page text and return novel tokens.
 - [[build_quote_bank]] — Scan lecture transcripts for notable lines. Writes quote-bank.json.

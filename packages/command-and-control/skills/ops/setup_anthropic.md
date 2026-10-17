@@ -1,6 +1,6 @@
 ---
 id: "setup_anthropic"
-description: "Configure the Anthropic API key used by all AI-powered tools. Validates the key against the Anthropic API before saving. Stored locally at ~/.command-and-control/anthropic-config.json with 0o600 permissions."
+description: "Configure the Anthropic API key used by all AI tools. Validates it against the Anthropic API before saving, then stores it locally with 0o600 permissions."
 section: "admin"
 intent_tool: "ct_setup"
 intent_action: "anthropic"

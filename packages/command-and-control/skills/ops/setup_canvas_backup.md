@@ -1,6 +1,6 @@
 ---
 id: "setup_canvas_backup"
-description: "[canvas-backup] Generate a Canvas Backup config from the Canvas connection already configured in Command and Control. Writes ~/.command-and-control/canvas-backup.generated.toml (token stays out of the file; passed via CANVAS_TOKEN at archive time). Run this once per semester so `ct_import` action `canvas_archive_download` can find base_url / archive root / year / semester."
+description: "[canvas-backup] Generate the Canvas Backup config from your Canvas connection. Writes the toml without the token (passed via CANVAS_TOKEN). Run once per semester so canvas_archive_download works."
 section: "admin"
 intent_tool: "ct_setup"
 intent_action: "backup"

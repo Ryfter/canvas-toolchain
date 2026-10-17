@@ -1,6 +1,6 @@
 ---
 id: "list_publish_snapshots"
-description: "List all publish snapshots for a course in oldest-to-newest order, showing which is currently live in Canvas and which can be rolled back to / rolled forward to. Pipe the snapshotId from a row into `ct_publish` action `rollback` to restore that version."
+description: "List a course's publish snapshots oldest-to-newest, marking the one live in Canvas and which can be rolled back/forward. Feed a row's snapshotId to ct_publish rollback."
 section: "snapshots"
 intent_tool: "ct_publish"
 intent_action: "snapshots"

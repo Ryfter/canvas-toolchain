@@ -11,8 +11,8 @@ Index a course and answer questions from its own materials.
 
 ## Operations (2)
 
-- [[index_course_for_answers]] — Build or incrementally update a per-course hybrid (FTS5 + vec) index over enriched lecture transcripts, CDS markdown, slide PDFs (under <courseDir>/slides/), and the canonical FAQ (<courseDir>/answers/canonical.md). Auto-incremental on subsequent calls based on file mtimes. Pass rebuild=true to wipe and re-embed everything (provider switch, suspected corruption).
-- [[ask_course]] — Faculty-facing Q&A against the per-course hybrid index. Auto-incrementally re-indexes any changed source files before retrieving. Returns the LLM-generated answer plus citations (with deep-link URLs for transcript chunks where the source platform provided a deepLinkTemplate). Degrades to keyword-only retrieval when the embedding provider is unavailable.
+- [[index_course_for_answers]] — Build/update a per-course hybrid (FTS5 + vec) index over transcripts, CDS markdown, slides/ PDFs, and answers/canonical.md. Incremental by mtime; rebuild:true wipes and re-embeds all.
+- [[ask_course]] — Faculty Q&A over the course hybrid index: auto-reindexes changed sources, returns an LLM answer + citations (deep links where available), falling back to keyword-only if the embedder is missing.
 <!-- generated:end -->
 
 # Notes
