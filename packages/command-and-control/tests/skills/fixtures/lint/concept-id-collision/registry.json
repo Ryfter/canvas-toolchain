@@ -1,0 +1,3 @@
+[
+  { "id": "review", "section": "admin", "exposure": "advanced", "description": "Fetch the weekly widget feed." }
+]

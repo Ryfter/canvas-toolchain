@@ -1,0 +1,4 @@
+[
+  { "id": "alpha", "section": "admin", "exposure": "advanced", "description": "Fetch the weekly widget feed." },
+  { "id": "gamma", "section": "admin", "exposure": "advanced", "description": "A registry operation with no file on disk." }
+]

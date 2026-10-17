@@ -1,0 +1,99 @@
+{
+  "note": "Professor asks mapped to the operation a correct selection should land on. Scoring counts expectedOp plus anything in alsoAcceptable as correct. Every id must exist as a generated op file (asserted by selection-fixtures.test.ts). Selection accuracy itself is measured by J10; this file is the input to that measurement and to the token baseline.",
+  "fixtures": [
+    {
+      "ask": "import last spring's Canvas backup",
+      "expectedOp": "download_canvas_archive",
+      "alsoAcceptable": ["ingest_canvas_archive", "import_course"],
+      "why": "Downloading the archive is the first step of every import chain; the ingest and CDS-import ops are legitimate next steps for the same intent."
+    },
+    {
+      "ask": "check my quiz before the New Quizzes migration",
+      "expectedOp": "validate_quiz",
+      "why": "The description names the Classic Quizzes migration hazard check and the questions API."
+    },
+    {
+      "ask": "roll back yesterday's publish",
+      "expectedOp": "rollback_course_publish",
+      "why": "Restore a previous publish snapshot."
+    },
+    {
+      "ask": "make a rubric students can read",
+      "expectedOp": "draft_student_rubric",
+      "why": "The student-facing rewrite half of the rubric system."
+    },
+    {
+      "ask": "find off-syllabus topics in my lectures",
+      "expectedOp": "find_off_syllabus_topics",
+      "why": "Drift between what the syllabus promises and what the lectures actually cover."
+    },
+    {
+      "ask": "prune old publish snapshots",
+      "expectedOp": "prune_publish_snapshots",
+      "why": "Deletes snapshots by retention policy."
+    },
+    {
+      "ask": "install the roster module",
+      "expectedOp": "install_module",
+      "why": "Catalog install with the two-call preview gate."
+    },
+    {
+      "ask": "set my institution profile",
+      "expectedOp": "save_institution_profile",
+      "why": "Writes the accreting institution profile used by tool discovery and feedback."
+    },
+    {
+      "ask": "audit accessibility",
+      "expectedOp": "audit_course_accessibility",
+      "alsoAcceptable": ["accessibility_review_queue"],
+      "why": "The full WCAG 2.2 engine stack across every generated page; the review queue is the follow-up worklist."
+    },
+    {
+      "ask": "fetch the Panopto transcripts",
+      "expectedOp": "bulk_fetch_panopto_transcripts",
+      "alsoAcceptable": ["setup_transcript_source"],
+      "why": "Bulk fetch for a course; setup_transcript_source configures the source first."
+    },
+    {
+      "ask": "ask the course a question",
+      "expectedOp": "ask_course",
+      "why": "Answer from the course's own indexed materials."
+    },
+    {
+      "ask": "shift my dates to next semester",
+      "expectedOp": "shift_dates",
+      "alsoAcceptable": ["plan_next_semester", "fetch_academic_calendar"],
+      "why": "The date-shifting op; planning and the academic calendar feed it."
+    },
+    {
+      "ask": "generate a quiz",
+      "expectedOp": "generate_quiz",
+      "why": "Authoring side, distinct from validate_quiz's check."
+    },
+    {
+      "ask": "preview the publish",
+      "expectedOp": "preview_course_publish",
+      "why": "Dry run of the publish."
+    },
+    {
+      "ask": "compare the transcripts",
+      "expectedOp": "compare_transcripts",
+      "why": "Transcript comparison workflow."
+    },
+    {
+      "ask": "save this layout as a template",
+      "expectedOp": "save_layout_as_template",
+      "why": "Persists a reviewed layout for reuse."
+    },
+    {
+      "ask": "recommend something for this topic",
+      "expectedOp": "recommend_for_topic",
+      "why": "Topic-level recommendation, not the generic news feed."
+    },
+    {
+      "ask": "check my shell readiness",
+      "expectedOp": "check_shell_readiness",
+      "why": "The advisory live-shell spot check."
+    }
+  ]
+}

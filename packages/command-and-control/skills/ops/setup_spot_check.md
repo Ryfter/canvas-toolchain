@@ -1,0 +1,18 @@
+---
+id: "setup_spot_check"
+description: "Opt in/out of a weekly shell (+ quiz validate) spot-check reminder day. Recommends Saturday. Persists weeklyCheckEnabled + weeklyCheckDay under ~/.command-and-control/spot-check.json (no secrets). Manual `ct_review` action `shell_readiness` always works. Does not install OS cron (fast-follow)."
+section: "admin"
+intent_tool: "ct_setup"
+intent_action: "spot_check"
+exposure: "intent"
+related: [setup_cc, setup_anthropic, setup_canvas, setup_ollama, set_courses_root, get_cc_status, setup_transcript_source, setup_lecture_answers]
+---
+<!-- generated:end -->
+
+# setup_spot_check
+
+## When to use
+
+<!-- Hand-written guidance starts here. The generator only rewrites the frontmatter above the marker. -->
+
+## Pitfalls
