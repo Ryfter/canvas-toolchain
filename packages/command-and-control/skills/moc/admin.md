@@ -45,6 +45,13 @@ Institution profile, dashboard, feedback, defaults.
 - [[export_course_folder]] — Strip CI fields and write CDS course/ format; one folder per section.
 - [[setup_canvas_backup]] — [canvas-backup] Generate the Canvas Backup config from your Canvas connection. Writes the toml without the token (passed via CANVAS_TOKEN). Run once per semester so canvas_archive_download works.
 - [[download_canvas_archive]] — [canvas-backup] Archive a Canvas course shell locally by invoking the Canvas Backup CLI.
+
+## Concepts (4)
+
+- [[provider_setup]] — Credentials and model backends: which file each setup too...
+- [[quiz_migration]] — Classic Quizzes still work, but Canvas is migrating them:...
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest ...
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, ...
 <!-- generated:end -->
 
 # Notes

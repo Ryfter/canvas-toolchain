@@ -17,6 +17,11 @@ Find what is stale: topic currency, semester diffs, off-syllabus drift.
 - [[find_off_syllabus_topics]] — Compare lecture transcripts against module/page text and return novel tokens.
 - [[suggest_topics]] — Merge RSS feed items and LLM scan developments into ranked topic candidates. Reads news-cache.json if no inline items are supplied.
 - [[score_topic_currency]] — Classify a topic as evergreen / current / dated using news-hit count and how recently it was taught.
+
+## Concepts (2)
+
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest ...
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, ...
 <!-- generated:end -->
 
 # Notes

@@ -1,5 +1,5 @@
 import { CURATED_RELATED_FILE } from './related.mjs';
-import { wikilinks } from './tree.mjs';
+import { relatedList, wikilinks } from './tree.mjs';
 
 /**
  * The lint rules, as pure functions of a skills tree and the registry it was
@@ -11,7 +11,7 @@ export const DEFAULT_LINT_OPTIONS = { maxDescription: 200, similarity: 0.8 };
 
 export const RULES = [
   'missing-description', 'too-long', 'duplicate', 'near-duplicate',
-  'broken-wikilink', 'orphan', 'drift', 'curated-link',
+  'broken-wikilink', 'orphan', 'drift', 'concept-related', 'curated-link',
 ];
 
 /** Lowercase, drop the co-package prefix several pass-through descriptions
@@ -53,9 +53,10 @@ export function lintSkills(tree, operations, options = {}) {
 
   const registry = new Map(operations.map((op) => [op.id, op]));
   const opIds = new Set(tree.ops.map((op) => op.id));
+  const mocIds = new Set(tree.mocs.map((moc) => moc.id));
   const knownIds = new Set([
     ...opIds,
-    ...tree.mocs.map((moc) => moc.id),
+    ...mocIds,
     ...tree.concepts.map((concept) => concept.id),
     'index',
   ]);
@@ -117,20 +118,60 @@ export function lintSkills(tree, operations, options = {}) {
     }
   }
 
+  // Concept notes are hand-written, so they carry the two rules an op carries
+  // from the registry — a description that exists and fits the budget — plus the
+  // id rules that keep `[[id]]` unambiguous. A note whose fence never closes is
+  // reported once, as drift: there is nothing to read out of it.
   for (const concept of tree.concepts) {
     if (concept.frontMatterUnparsed) {
       add('drift', concept.path, concept.id, 'frontmatter block does not parse');
+    } else {
+      const description = String(concept.frontMatter.description ?? '').trim();
+      if (!description) {
+        add('missing-description', concept.path, concept.id, 'no description in frontmatter');
+      } else if (description.length > opts.maxDescription) {
+        add('too-long', concept.path, concept.id, `${description.length} characters (max ${opts.maxDescription})`);
+      }
+
+      // The file name is the id every link resolves against, so a frontmatter id
+      // that disagrees renames the note out from under its own links.
+      const declaredId = String(concept.frontMatter.id ?? '');
+      if (declaredId !== concept.id) {
+        add('drift', concept.path, concept.id, `frontmatter id "${declaredId}" does not match the file name`);
+      }
     }
+
+    // A concept id that shadows an operation or a map id makes every `[[id]]`
+    // ambiguous, because link resolution is one flat id space.
     if (opIds.has(concept.id)) {
       add('drift', concept.path, concept.id, `concept id "${concept.id}" collides with an operation id`);
+    } else if (mocIds.has(concept.id) || concept.id === 'index') {
+      add('drift', concept.path, concept.id, `concept id "${concept.id}" collides with a map id`);
+    }
+
+    // `related:` is the note's only authored edge, and it has to name operations
+    // an agent can actually call: an empty list reaches no map at all, and an
+    // internal operation is uncallable however the note is filed. A target that
+    // is not an operation at all is left to `broken-wikilink`, which reports it
+    // against the same id set.
+    if (!concept.frontMatterUnparsed) {
+      const related = relatedList(concept.frontMatter);
+      if (!related.length) {
+        add('concept-related', concept.path, concept.id, 'concept lists no operations, so no map can reach it');
+      }
+      for (const target of related) {
+        if (registry.get(target)?.exposure === 'internal') {
+          add('concept-related', concept.path, concept.id, `related:[${target}] is an internal operation and cannot be called`, { target });
+        }
+      }
     }
   }
 
   // `related:` is the machine-readable twin of a body wikilink, so an op, a MOC,
   // and a concept all resolve it against the same id set.
   for (const document of [...tree.ops, ...tree.mocs, ...tree.concepts]) {
-    for (const target of document.frontMatter.related ?? []) {
-      if (!knownIds.has(String(target))) {
+    for (const target of relatedList(document.frontMatter)) {
+      if (!knownIds.has(target)) {
         add('broken-wikilink', document.path, document.id, `related:[${target}] resolves to nothing`, { target });
       }
     }

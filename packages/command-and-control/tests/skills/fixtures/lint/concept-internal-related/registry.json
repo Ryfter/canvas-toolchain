@@ -1,0 +1,3 @@
+[
+  { "id": "hidden", "section": "admin", "exposure": "internal", "description": "An internal-only operation, callable by no agent." }
+]

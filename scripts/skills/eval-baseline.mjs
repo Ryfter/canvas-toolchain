@@ -323,6 +323,13 @@ ${rows.join('\n')}
 
 ${SELECTION_RESULTS}
 
+* **The maps carry the concept lines too.** \`index.md\` lists every hand-written
+  concept note once, and each MOC lists the notes whose \`related:\` operations it
+  owns (J9) — each as one compact line, the id plus the description capped at
+  \`CONCEPT_LINE_CAP\` characters (\`lib/render.mjs\`), so both new-path numbers
+  include those lines. They are part of the read rather than overhead: a concept
+  is the cross-cutting guidance no single operation description can carry, and it
+  is why path C is still the only route that clears the target.
 * **chars/4 is an approximation.** It under-counts code and over-counts prose;
   both surfaces are prose-heavy, so the *ratio* is the more trustworthy number
   than either absolute value.

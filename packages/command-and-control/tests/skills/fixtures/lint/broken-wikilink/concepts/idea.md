@@ -1,5 +1,6 @@
 ---
 id: "idea"
+description: "A hand-written concept whose related entry resolves to nothing."
 related: [ghost_concept_related]
 ---
 # idea

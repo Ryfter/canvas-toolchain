@@ -18,6 +18,10 @@ Transcript enrichment, comparison, and week mapping.
 - [[ingest_transcripts]] — Read .vtt/.srt/.md transcript files from a folder and write transcripts.json.
 - [[map_transcripts_to_weeks]] — Match each ingested transcript to a course week. Writes week-map.json.
 - [[download_transcripts]] — [canvas-backup] Placeholder for future bulk Panopto transcript download.
+
+## Concepts (1)
+
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, ...
 <!-- generated:end -->
 
 # Notes

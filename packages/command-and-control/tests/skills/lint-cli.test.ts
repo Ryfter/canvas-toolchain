@@ -49,7 +49,9 @@ describe('lint CLI', () => {
   it('exits non-zero when a violation is reported', () => {
     const { stdout, status } = run('--json', '--max-description', '1');
     const report = JSON.parse(stdout);
-    expect(report.summary.byRule['too-long']).toBe(report.operations);
+    // The one budget covers operation files and hand-written concept notes alike.
+    expect(report.concepts).toBeGreaterThan(0);
+    expect(report.summary.byRule['too-long']).toBe(report.operations + report.concepts);
     expect(status).toBe(1);
   }, SPAWN_TIMEOUT_MS);
 

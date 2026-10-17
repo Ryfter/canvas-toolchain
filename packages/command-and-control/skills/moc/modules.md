@@ -17,6 +17,10 @@ Plug-in module discovery, install, enable/disable.
 - [[install_module]] — Install/upgrade a catalog module. Two-call gate: first call previews name/version/size/source/sha256 (no side effects); re-call with confirm:true to verify the sha256 and install. Needs a reconnect.
 - [[uninstall_module]] — Remove a channel-installed module (artifact + record) and disable it. Bundled modules cannot be uninstalled — disable those with set_module_enabled.
 - [[discover_tools]] — Discover institutional tools: scans Canvas (account → course → self-report), matches findings to modules, and returns detected tools, enable suggestions, unmatched tools, and a pick-list. Read-only.
+
+## Concepts (1)
+
+- [[module_channel]] — Plug-in modules and Canvas modules share a word, not a sy...
 <!-- generated:end -->
 
 # Notes

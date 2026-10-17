@@ -1,6 +1,7 @@
 ---
 id: "review"
-related: []
+description: "A concept whose id squats on an operation id."
+related: [review]
 ---
 # review
 

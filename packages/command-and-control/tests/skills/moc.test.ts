@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,9 +7,11 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { buildIndex } from '../../../../scripts/skills/build-index.mjs';
 import { buildMocs } from '../../../../scripts/skills/moc.mjs';
 import { parseFrontMatter } from '../../../../scripts/skills/lib/frontmatter.mjs';
+import { CONCEPT_LINE_CAP, conceptLine } from '../../../../scripts/skills/lib/render.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../../../../scripts/skills/moc.mjs', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
+const SKILLS_ROOT = fileURLToPath(new URL('../../skills', import.meta.url));
 
 /**
  * A spawned writer boots node and imports the built registry from `dist`, which
@@ -56,10 +58,38 @@ function runMocCli(...args: string[]): { stdout: string; status: number } {
  * build-index then moc, called in-process. The writers are exported and their
  * `isMain` guard keeps the CLI out of the way, so the built registry is imported
  * once per test file instead of once per spawned process.
+ *
+ * The hand-written concept notes are committed, not generated, so they are copied
+ * into each temp root: a skills tree is only complete with its concepts, and the
+ * MOC generator reads them from the root it is given.
  */
 async function buildBoth(root: string): Promise<void> {
+  seedConcepts(root);
   await buildIndex({ root });
   await buildMocs({ root });
+}
+
+function seedConcepts(root: string): void {
+  const source = join(SKILLS_ROOT, 'concepts');
+  if (existsSync(source)) cpSync(source, join(root, 'concepts'), { recursive: true });
+}
+
+/** The committed concepts, as the generator reads them out of frontmatter. */
+function readConcepts(): Array<{ id: string; description: string; related: string[] }> {
+  return readdirSync(join(SKILLS_ROOT, 'concepts')).map((name) => {
+    const { data } = parseFrontMatter(readFileSync(join(SKILLS_ROOT, 'concepts', name), 'utf8'));
+    return {
+      id: name.replace(/\.md$/, ''),
+      description: String(data?.description ?? ''),
+      related: (data?.related as string[] | undefined) ?? [],
+    };
+  });
+}
+
+/** The concept ids a MOC body links, in the order the generator wrote them. */
+function conceptIdsIn(body: string): string[] {
+  const [, section = ''] = body.split('## Concepts (');
+  return [...section.matchAll(/^- \[\[([^\]]+)\]\] — /gm)].map((match) => match[1] as string);
 }
 
 function readMocs(root: string): Array<{ id: string; data: Record<string, unknown>; body: string }> {
@@ -134,7 +164,8 @@ describe('moc', () => {
     for (const moc of readMocs(sharedRoot)) {
       expect(Object.keys(moc.data), moc.id).toEqual(['id', 'kind', 'description', 'ops', 'related']);
       expect(typeof moc.data.ops, moc.id).toBe('number');
-      const listed = [...moc.body.matchAll(/^- \[\[/gm)].length;
+      const [operationsSection] = moc.body.split('\n## Concepts (');
+      const listed = [...(operationsSection ?? '').matchAll(/^- \[\[/gm)].length;
       expect(listed, moc.id).toBe(moc.data.ops);
     }
   });
@@ -144,6 +175,47 @@ describe('moc', () => {
     expect(mocs.get('ct_review')?.data.related).toEqual(['accessibility']);
     expect(String(mocs.get('design')?.data.related)).toContain('ct_build');
     expect(String(mocs.get('design')?.data.related)).toContain('ct_advanced');
+  });
+
+  it('lists each concept under exactly the MOCs that own one of its related operations', () => {
+    const mocs = readMocs(sharedRoot);
+
+    for (const concept of readConcepts()) {
+      const expected = mocs
+        .filter((moc) => concept.related.some((id) => moc.body.includes(`[[${id}]]`)))
+        .map((moc) => moc.id)
+        .sort();
+      const actual = mocs
+        .filter((moc) => conceptIdsIn(moc.body).includes(concept.id))
+        .map((moc) => moc.id)
+        .sort();
+
+      expect(actual, `${concept.id} should be listed by exactly these MOCs`).toEqual(expected);
+      expect(expected.length, `${concept.id} is listed by no MOC`).toBeGreaterThan(0);
+    }
+  });
+
+  it('renders a compact MOC concept line from the concept frontmatter, sorted by id', () => {
+    const snapshots = readMocs(sharedRoot).find((moc) => moc.id === 'snapshots');
+    const ids = conceptIdsIn(snapshots?.body ?? '');
+
+    expect(ids).toEqual([...ids].sort());
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) {
+      const concept = readConcepts().find((c) => c.id === id);
+      expect(concept, id).toBeDefined();
+      expect(snapshots?.body).toContain(conceptLine(concept!));
+    }
+  });
+
+  it('omits the concept section from a MOC no concept names', () => {
+    const mocs = readMocs(sharedRoot);
+    const concepts = readConcepts();
+    const unclaimed = mocs.filter((moc) => !concepts.some((concept) =>
+      concept.related.some((id) => moc.body.includes(`[[${id}]]`))));
+
+    expect(unclaimed.length).toBeGreaterThan(0);
+    for (const moc of unclaimed) expect(moc.body, moc.id).not.toContain('## Concepts');
   });
 
   it('is idempotent and never rewrites a hand-written MOC body', async () => {
@@ -174,6 +246,21 @@ describe('moc', () => {
     expect(wouldWrite.files.created).toBe(18);
     expect(readdirSync(fresh)).toEqual([]);
     expect(snapshotMocs(root)).toEqual(before);
+  });
+});
+
+describe('conceptLine', () => {
+  it('renders the id plus the description when it fits', () => {
+    expect(conceptLine({ id: 'idea', description: 'A short hint.' })).toBe('- [[idea]] — A short hint.');
+  });
+
+  it('caps a long description so a map line stays compact', () => {
+    const line = conceptLine({ id: 'idea', description: 'x'.repeat(CONCEPT_LINE_CAP + 40) });
+    expect(line).toBe(`- [[idea]] — ${'x'.repeat(CONCEPT_LINE_CAP - 3)}...`);
+  });
+
+  it('flattens a description that contains a newline, so a line is always one line', () => {
+    expect(conceptLine({ id: 'idea', description: 'one\ntwo' })).toBe('- [[idea]] — one two');
   });
 });
 

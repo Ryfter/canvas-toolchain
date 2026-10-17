@@ -22,6 +22,10 @@ Configure credentials, providers, and paths. Run first.
 - [[setup_spot_check]] — Opt in/out of a weekly shell + quiz spot-check reminder day (recommends Saturday). Persists the setting only; no OS cron installed. Manual ct_review shell_readiness always works.
 - [[setup_course]] — Register a new course in Curriculum Intelligence. Creates a course folder on disk and records its location in the app config so other tools can find it by id alone.
 - [[setup_canvas_backup]] — [canvas-backup] Generate the Canvas Backup config from your Canvas connection. Writes the toml without the token (passed via CANVAS_TOKEN). Run once per semester so canvas_archive_download works.
+
+## Concepts (1)
+
+- [[provider_setup]] — Credentials and model backends: which file each setup too...
 <!-- generated:end -->
 
 # Notes

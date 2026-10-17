@@ -110,6 +110,52 @@ describe('lintSkills against one fixture per rule', () => {
     expect(violations[0].message).toContain('collides');
   });
 
+  it('reports a concept id that collides with a map id as drift', () => {
+    const { tree, operations } = fixture('concept-map-id-collision');
+    const violations = lintSkills(tree, operations);
+
+    expect(violations.map((v: { rule: string; id: string }) => `${v.rule}:${v.id}`)).toEqual(['drift:accessibility']);
+    expect(violations[0].message).toContain('collides with a map id');
+  });
+
+  it('reports a concept with no description', () => {
+    expect(rulesFor('concept-no-description')).toEqual(['missing-description']);
+  });
+
+  it('reports a concept description over the budget, and nothing at a wider budget', () => {
+    expect(rulesFor('concept-too-long')).toEqual(['too-long']);
+    expect(rulesFor('concept-too-long', { maxDescription: 1000 })).toEqual([]);
+  });
+
+  it('reports nothing for a concept with a description, resolvable links, and a unique id', () => {
+    expect(rulesFor('concept-clean')).toEqual([]);
+  });
+
+  it('reports a concept whose frontmatter id does not match the file name as drift', () => {
+    const { tree, operations } = fixture('concept-id-drift');
+    const violations = lintSkills(tree, operations);
+
+    expect(violations.map((v: { rule: string; id: string }) => `${v.rule}:${v.id}`)).toEqual(['drift:idea']);
+    expect(violations[0].message).toContain('does not match the file name');
+  });
+
+  it('reports a concept that names no operation, so no map can reach it', () => {
+    const { tree, operations } = fixture('concept-empty-related');
+    const violations = lintSkills(tree, operations);
+
+    expect(violations.map((v: { rule: string; id: string }) => `${v.rule}:${v.id}`)).toEqual(['concept-related:idea']);
+    expect(violations[0].message).toContain('no operations');
+  });
+
+  it('reports a concept whose related entry is an internal-only operation', () => {
+    const { tree, operations } = fixture('concept-internal-related');
+    const violations = lintSkills(tree, operations);
+
+    expect(violations.map((v: { rule: string; id: string }) => `${v.rule}:${v.id}`)).toEqual(['concept-related:idea']);
+    expect(violations[0].message).toContain('internal');
+    expect(violations[0].target).toBe('hidden');
+  });
+
   it('reports a concept whose frontmatter block never closes as drift', () => {
     const { tree, operations } = fixture('concept-frontmatter');
     const violations = lintSkills(tree, operations);

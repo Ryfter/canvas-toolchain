@@ -23,6 +23,11 @@ News feeds, recent developments, quote banks, calendars.
 - [[recommend_for_topic]] — Return a KEEP / UPDATE / DROP / ADD verdict for a topic based on its currency class and teaching history.
 - [[generate_ideas_file]] — Write ideas.md with follow-on development ideas based on what the professor used.
 - [[fetch_academic_calendar]] — Parse registrar URL or accept manual dates into calendar.json.
+
+## Concepts (2)
+
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest ...
+- [[transcript_pipeline]] — Panopto transcripts from fetch to answer: bulk download, ...
 <!-- generated:end -->
 
 # Notes

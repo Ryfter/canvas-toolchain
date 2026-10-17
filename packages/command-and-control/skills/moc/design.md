@@ -23,6 +23,11 @@ Canvas pattern catalog, previews, layout templates.
 - [[update_examples]] — Mechanical year/tool-name replacement pass + optional LLM proposed rewrites.
 - [[import_course]] — [@canvas-toolchain/canvas-design-studio] Import a Canvas Backup archive into a Canvas Design Studio course folder.
 - [[generate_course]] — [@canvas-toolchain/canvas-design-studio] Generate Canvas-safe HTML for every page in a Canvas Design Studio course folder.
+
+## Concepts (2)
+
+- [[quiz_migration]] — Classic Quizzes still work, but Canvas is migrating them:...
+- [[semester_rollover]] — Rolling a course into a new semester: archive and ingest ...
 <!-- generated:end -->
 
 # Notes
