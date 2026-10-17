@@ -35,6 +35,28 @@ async function importDist(repoRoot, relativePath) {
 }
 
 /**
+ * The pieces of the live surface the token baseline has to measure: the tools
+ * list an MCP client is handed, and ct_advanced's describe output, which is what
+ * an agent must read today to pick an operation.
+ */
+export async function loadSurfaceProbe(repoRoot = REPO_ROOT) {
+  const registry = await importDist(repoRoot, 'surface/registry.js');
+  const { listTools } = await importDist(repoRoot, 'surface/list_tools.js');
+  const { runAdvanced } = await importDist(repoRoot, 'surface/advanced.js');
+
+  const reg = registry.buildRegistry();
+  return {
+    tools: listTools(reg),
+    coreOperations: registry.CORE_OPERATIONS,
+    /** The JSON text a describe call returns, as the model would read it. */
+    describeText: async (args) => {
+      const result = await runAdvanced(reg, args);
+      return result.content[0].text;
+    },
+  };
+}
+
+/**
  * Map loaded modules onto operations, keyed as the host namespaces them.
  * Exported so the mapping is testable with a fabricated module map, without
  * enabling a real module.

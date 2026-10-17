@@ -6,6 +6,7 @@ const SPEC = {
   '--json': { key: 'json', type: 'boolean' },
   '--root': { key: 'root', type: 'string' },
   '--repo-root': { key: 'repoRoot', type: 'string' },
+  '--out': { key: 'out', type: 'string' },
   '--max-description': { key: 'maxDescription', type: 'number' },
   '--similarity': { key: 'similarity', type: 'number' },
 };
