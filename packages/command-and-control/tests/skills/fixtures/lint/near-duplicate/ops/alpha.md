@@ -1,0 +1,10 @@
+---
+id: "alpha"
+description: "Fetch the weekly widget feed from the institution news service and cache it locally."
+section: "admin"
+intent_tool: ""
+intent_action: ""
+exposure: "advanced"
+related: [beta]
+---
+<!-- generated:end -->

@@ -1,0 +1,6 @@
+[
+  { "id": "alpha", "section": "admin", "exposure": "advanced",
+    "description": "Fetch the weekly widget feed from the institution news service and cache it locally." },
+  { "id": "beta", "section": "admin", "exposure": "advanced",
+    "description": "Fetch the weekly widget feed from the institution news services and cache it locally." }
+]

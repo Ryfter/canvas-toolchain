@@ -1,0 +1,4 @@
+[
+  { "id": "alpha", "section": "admin", "exposure": "advanced", "description": "Fetch the weekly widget feed." },
+  { "id": "beta", "section": "admin", "exposure": "advanced", "description": "Fetch the weekly widget feed." }
+]

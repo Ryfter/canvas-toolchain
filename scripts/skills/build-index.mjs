@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { join } from 'node:path';
-import { isMain, parseArgs, runMain } from './lib/cli.mjs';
+import { isMain, parseArgs, runMain, WRITER_FLAGS } from './lib/cli.mjs';
 import { summarize, writeGeneratedFile } from './lib/emit.mjs';
 import { seedRelated } from './lib/graph.mjs';
 import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource } from './lib/registry.mjs';
@@ -33,7 +33,7 @@ export async function buildIndex({
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseArgs(process.argv.slice(2), WRITER_FLAGS);
   const summary = await buildIndex({
     ...(args.root ? { root: args.root } : {}),
     ...(args.repoRoot ? { repoRoot: args.repoRoot } : {}),

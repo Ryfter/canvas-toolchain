@@ -1,0 +1,6 @@
+[
+  { "id": "alpha", "section": "admin", "exposure": "intent", "intentTool": "ct_setup", "intentAction": "alpha",
+    "description": "Alpha configures the widget for the current term." },
+  { "id": "beta", "section": "admin", "exposure": "intent", "intentTool": "ct_setup", "intentAction": "beta",
+    "description": "Beta reports the widget state back to the professor." }
+]

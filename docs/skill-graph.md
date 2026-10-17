@@ -179,6 +179,28 @@ counts as a MOC.
 Deliberately **not** in v1: any rule on prose quality, any tokenizer-based
 length rule, and any rule that requires an LLM.
 
+### 6.1 Measured against the real registry (2026-10-17)
+
+`node scripts/skills/lint.mjs` on the 86 generated op files:
+
+| Rule | Violations |
+| --- | --- |
+| `too-long` | 31 |
+| everything else | 0 |
+
+Description lengths: min 58, median 145, max 562. The nearest near-duplicate
+pair is `list_assignments` ↔ `list_pages` at **0.750** — real, below the 0.8
+threshold, and worth a human look rather than a rewrite.
+
+The `too-long` result is the interesting one. These descriptions are
+model-facing tool descriptions, and they are long on purpose (`validate_quiz` at
+562 characters explains live-vs-local mode, prerequisites, and what it does
+*not* do). A 200-character budget would strip exactly the caveats that make
+operation selection correct. **Recommendation for J7: raise the default to 600
+(where the corpus is clean) and treat the 31 as evidence that the budget is
+miscalibrated, not as 31 descriptions to shorten.** Note this is a lint default,
+not a description problem — the descriptions were not modified by this work.
+
 ## 7. Generator flow
 
 ```text

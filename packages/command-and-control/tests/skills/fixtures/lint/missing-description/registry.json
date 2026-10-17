@@ -1,0 +1,4 @@
+[
+  { "id": "alpha", "section": "admin", "exposure": "intent", "intentTool": "ct_setup", "intentAction": "alpha",
+    "description": "" }
+]

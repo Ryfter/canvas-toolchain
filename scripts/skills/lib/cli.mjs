@@ -1,28 +1,49 @@
 import { pathToFileURL } from 'node:url';
 
-const BOOLEAN_FLAGS = {
-  '--check': 'check',
-  '--include-modules': 'includeModules',
-  '--json': 'json',
+const SPEC = {
+  '--check': { key: 'check', type: 'boolean' },
+  '--include-modules': { key: 'includeModules', type: 'boolean' },
+  '--json': { key: 'json', type: 'boolean' },
+  '--root': { key: 'root', type: 'string' },
+  '--repo-root': { key: 'repoRoot', type: 'string' },
+  '--max-description': { key: 'maxDescription', type: 'number' },
+  '--similarity': { key: 'similarity', type: 'number' },
 };
 
-const VALUE_FLAGS = {
-  '--root': 'root',
-  '--repo-root': 'repoRoot',
-};
+/** Flags the two writers implement. */
+export const WRITER_FLAGS = ['--root', '--repo-root', '--check', '--include-modules', '--json'];
 
-/** Flat flag parsing, shared by the CLIs so they accept the same flags. */
-export function parseArgs(argv) {
-  const out = { root: null, repoRoot: null, check: false, includeModules: false, json: false };
+/** Flags the lint implements. It is read-only, so it has no --check. */
+export const LINT_FLAGS = ['--root', '--repo-root', '--include-modules', '--json', '--max-description', '--similarity'];
+
+const DEFAULTS = { root: null, repoRoot: null, check: false, includeModules: false, json: false };
+
+/**
+ * Flat flag parsing. Each command passes the flags it implements, so a flag it
+ * would silently ignore is rejected instead.
+ */
+export function parseArgs(argv, allowed = Object.keys(SPEC)) {
+  const out = { ...DEFAULTS };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (Object.hasOwn(BOOLEAN_FLAGS, arg)) out[BOOLEAN_FLAGS[arg]] = true;
-    else if (Object.hasOwn(VALUE_FLAGS, arg)) {
-      const value = argv[i + 1];
-      if (value === undefined) throw new Error(`${arg} needs a value`);
-      out[VALUE_FLAGS[arg]] = value;
-      i += 1;
-    } else throw new Error(`unknown argument: ${arg}`);
+    if (!Object.hasOwn(SPEC, arg) || !allowed.includes(arg)) throw new Error(`unknown argument: ${arg}`);
+
+    const spec = SPEC[arg];
+    if (spec.type === 'boolean') {
+      out[spec.key] = true;
+      continue;
+    }
+
+    const raw = argv[i + 1];
+    if (raw === undefined) throw new Error(`${arg} needs a value`);
+    if (spec.type === 'number') {
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value <= 0) throw new Error(`${arg} needs a positive number, got "${raw}"`);
+      out[spec.key] = value;
+    } else {
+      out[spec.key] = raw;
+    }
+    i += 1;
   }
   return out;
 }
