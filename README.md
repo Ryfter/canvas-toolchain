@@ -34,7 +34,7 @@ toolchain, and an auto-updater, and writes the MCP config for every client it de
 
 ### With Node.js: `npx`
 
-If you already have Node ≥ 20, you can start the unified MCP server without cloning the repo:
+If you already have Node 20.19+ (or 22.12+), you can start the unified MCP server without cloning the repo:
 
 ```bash
 npx canvas-toolchain
@@ -51,7 +51,7 @@ npm install        # install IS the build — no separate build step
 npx canvas-toolchain   # smoke: starts the MCP server (Ctrl+C to stop)
 ```
 
-> Requires Node ≥ 20. If your checkout lives in a folder with spaces (e.g.
+> Requires Node 20.19+ (or 22.12+). If your checkout lives in a folder with spaces (e.g.
 > `~/Documents/Canvas Toolchain`), quote the path anywhere it appears in JSON config.
 
 ### What you'll see during `npm install`

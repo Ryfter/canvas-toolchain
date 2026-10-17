@@ -39,10 +39,10 @@
     "pdf-lib": "^1.17.1",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^3.2.6"
+    "vitest": "^4.1.12"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.19 || >=22.12"
   },
   "publishConfig": {
     "access": "public"

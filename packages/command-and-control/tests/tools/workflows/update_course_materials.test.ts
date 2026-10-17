@@ -98,7 +98,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.CURRICULUM_INTELLIGENCE_HOME;
   rmSync(tmpHome, { recursive: true, force: true });
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 function makeBrief(courseId: string, semesterId: string, name: string): string {

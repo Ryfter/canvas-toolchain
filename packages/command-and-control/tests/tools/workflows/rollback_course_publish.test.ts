@@ -6,7 +6,7 @@ import { join } from 'node:path';
 vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/restore-page.js', () => ({ restorePage: vi.fn() }));
 vi.mock('@canvas-toolchain/canvas-design-studio/dist/tools/update-assignment-description.js', () => ({ updateAssignmentDescription: vi.fn() }));
 vi.mock('@canvas-toolchain/canvas-design-studio/dist/canvas-api.js', () => ({
-  CanvasApiClient: vi.fn().mockImplementation(() => ({})),
+  CanvasApiClient: vi.fn(function () { return {}; }),
   CanvasApiError: class extends Error {
     constructor(public status: number, public code: string, message: string, public details?: unknown) { super(message); }
   },
