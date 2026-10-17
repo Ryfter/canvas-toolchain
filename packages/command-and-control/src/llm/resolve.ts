@@ -60,31 +60,41 @@ export function resolveActiveLlmClient(): LlmClient {
     }
   }
 
-  try {
-    const cfg = loadLmStudioConfig();
-    const timeoutOverride = process.env.CC_LMSTUDIO_TIMEOUT_MS
-      ? Number(process.env.CC_LMSTUDIO_TIMEOUT_MS)
-      : undefined;
-    // The saved config holds no secret. A remote/LAN server may require a key;
-    // when supplied it arrives via the environment and is sent as a Bearer
-    // header only — never logged or echoed.
-    const apiKey = process.env.LMSTUDIO_API_KEY;
-    return resolveLlmClient({
-      provider: 'lmstudio',
-      lmstudio: {
-        baseUrl: cfg.baseUrl,
-        model: cfg.model,
-        ...(apiKey ? { apiKey } : {}),
-        ...(timeoutOverride !== undefined && !Number.isNaN(timeoutOverride) ? { timeoutMs: timeoutOverride } : {}),
-      },
-    });
-  } catch (err) {
-    if (err instanceof LlmProviderError) throw err;
-    throw new LlmProviderError(
-      'LLM_PROVIDER_CONFIG_MISSING',
-      err instanceof Error ? err.message : String(err),
-      'lmstudio',
-      ['Run setup_lmstudio'],
-    );
+  if (provider === 'lmstudio') {
+    try {
+      const cfg = loadLmStudioConfig();
+      const timeoutOverride = process.env.CC_LMSTUDIO_TIMEOUT_MS
+        ? Number(process.env.CC_LMSTUDIO_TIMEOUT_MS)
+        : undefined;
+      // The saved config holds no secret. A remote/LAN server may require a key;
+      // when supplied it arrives via the environment and is sent as a Bearer
+      // header only — never logged or echoed.
+      const apiKey = process.env.LMSTUDIO_API_KEY;
+      return resolveLlmClient({
+        provider: 'lmstudio',
+        lmstudio: {
+          baseUrl: cfg.baseUrl,
+          model: cfg.model,
+          ...(apiKey ? { apiKey } : {}),
+          ...(timeoutOverride !== undefined && !Number.isNaN(timeoutOverride) ? { timeoutMs: timeoutOverride } : {}),
+        },
+      });
+    } catch (err) {
+      if (err instanceof LlmProviderError) throw err;
+      throw new LlmProviderError(
+        'LLM_PROVIDER_CONFIG_MISSING',
+        err instanceof Error ? err.message : String(err),
+        'lmstudio',
+        ['Run setup_lmstudio'],
+      );
+    }
   }
+
+  // Unreachable: loadActiveProvider only returns the providers handled above.
+  throw new LlmProviderError(
+    'LLM_PROVIDER_NOT_SET',
+    `Unsupported LLM provider '${String(provider)}'`,
+    'unknown',
+    ['Run set_active_llm_provider to choose anthropic, ollama or lmstudio'],
+  );
 }

@@ -568,7 +568,10 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
     journey,
     // Read off the state, not the option: a caller-supplied state is the truth
     // about whether probes actually ran.
-    probed: state.canvas.probe !== undefined || state.llm.anthropic.probe !== undefined,
+    probed:
+      state.canvas.probe !== undefined ||
+      state.llm.anthropic.probe !== undefined ||
+      state.llm.lmstudio.probe !== undefined,
     checkedAt: new Date().toISOString(),
     checks,
     readyJourneys: {

@@ -144,20 +144,26 @@ export class LmStudioLlmClient implements LlmClient {
  * Throws `EndpointBlockedError` for a refused endpoint and
  * `LlmProviderError('LMSTUDIO_UNREACHABLE' | 'LMSTUDIO_TIMEOUT')` when the
  * server cannot be reached, so callers can report a precise code.
+ *
+ * A remote/LAN server may require Bearer auth; when `apiKey` is supplied it is
+ * sent as an Authorization header and never logged or echoed.
  */
 export async function listLmStudioModels(
   baseUrl: string,
-  opts: { timeoutMs?: number } = {},
+  opts: { timeoutMs?: number; apiKey?: string } = {},
 ): Promise<string[]> {
   const endpoint = await assertEndpointAllowed(baseUrl);
   const url = `${endpoint.url}/models`;
   const timeoutMs = opts.timeoutMs ?? MODELS_TIMEOUT_MS;
 
+  const headers: Record<string, string> = {};
+  if (opts.apiKey) headers.authorization = `Bearer ${opts.apiKey}`;
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   let response: Response;
   try {
-    response = await fetch(url, { signal: controller.signal, redirect: 'manual' });
+    response = await fetch(url, { headers, signal: controller.signal, redirect: 'manual' });
   } catch (err) {
     const e = err as { name?: string };
     if (e?.name === 'AbortError') {

@@ -6,10 +6,12 @@ import { setupLmStudio, loadLmStudioConfig } from '../../src/tools/setup_lmstudi
 
 let ccHomeDir: string;
 const ORIGINAL_CC_HOME = process.env.CC_HOME;
+const ORIGINAL_LMSTUDIO_KEY = process.env.LMSTUDIO_API_KEY;
 
 beforeEach(() => {
   ccHomeDir = mkdtempSync(join(tmpdir(), 'cc-home-'));
   process.env.CC_HOME = ccHomeDir;
+  delete process.env.LMSTUDIO_API_KEY;
   vi.stubGlobal('fetch', vi.fn());
 });
 
@@ -17,6 +19,8 @@ afterEach(() => {
   rmSync(ccHomeDir, { recursive: true, force: true });
   if (ORIGINAL_CC_HOME === undefined) delete process.env.CC_HOME;
   else process.env.CC_HOME = ORIGINAL_CC_HOME;
+  if (ORIGINAL_LMSTUDIO_KEY === undefined) delete process.env.LMSTUDIO_API_KEY;
+  else process.env.LMSTUDIO_API_KEY = ORIGINAL_LMSTUDIO_KEY;
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -41,6 +45,17 @@ describe('setup_lmstudio discovery mode', () => {
     expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe(
       'http://localhost:1234/v1/models',
     );
+  });
+
+  it('forwards LMSTUDIO_API_KEY as a Bearer header when set', async () => {
+    process.env.LMSTUDIO_API_KEY = 'lm-secret-key';
+    mockModels(['qwen2.5-14b-instruct']);
+
+    const result = await setupLmStudio({ model: 'qwen2.5-14b-instruct' });
+
+    expect(result.ok).toBe(true);
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer lm-secret-key');
   });
 
   it('explains how to start the server when it is off', async () => {

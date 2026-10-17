@@ -142,7 +142,9 @@ async function probeRequest(url: string, headers: Record<string, string>): Promi
 /**
  * Guarded LM Studio reachability check (`GET {baseUrl}/models`). The endpoint is
  * user-supplied, so it re-runs the SSRF guard before the request; a refused or
- * unresolvable endpoint is reduced to a machine code, never a message.
+ * unresolvable endpoint is reduced to a machine code, never a message. A
+ * remote/LAN server may require Bearer auth; the key comes from the environment
+ * and is sent as a header only.
  */
 async function probeLmStudio(baseUrl: string): Promise<ProbeResult> {
   let url: string;
@@ -151,7 +153,8 @@ async function probeLmStudio(baseUrl: string): Promise<ProbeResult> {
   } catch {
     return { attempted: true, reachable: false, errorCode: 'ENDPOINT_BLOCKED' };
   }
-  return probeRequest(url, {});
+  const apiKey = process.env.LMSTUDIO_API_KEY;
+  return probeRequest(url, apiKey ? { authorization: `Bearer ${apiKey}` } : {});
 }
 
 /**

@@ -192,6 +192,32 @@ describe('listLmStudioModels', () => {
     expect(models).toEqual(['qwen2.5-14b-instruct', 'llama-3.1-8b-instruct']);
   });
 
+  it('sends an optional API key as a Bearer header and never leaks it', async () => {
+    fetchMock().mockResolvedValue(new Response('unauthorized', { status: 401 }));
+
+    const err = await listLmStudioModels(BASE, { apiKey: 'lm-secret-key' }).then(
+      () => null,
+      (e: unknown) => e as LlmProviderError,
+    );
+
+    expect(fetchMock().mock.calls[0][1].headers.authorization).toBe('Bearer lm-secret-key');
+    expect(err).toBeInstanceOf(LlmProviderError);
+    expect(JSON.stringify(err)).not.toContain('lm-secret-key');
+    expect(err!.message).not.toContain('lm-secret-key');
+    expect(err!.fix.join(' ')).not.toContain('lm-secret-key');
+  });
+
+  it('sends no authorization header when no key is supplied', async () => {
+    fetchMock().mockResolvedValue(new Response(
+      JSON.stringify(LMSTUDIO_MODELS_OK),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    ));
+
+    await listLmStudioModels(BASE);
+
+    expect(fetchMock().mock.calls[0][1].headers.authorization).toBeUndefined();
+  });
+
   it('throws LMSTUDIO_UNREACHABLE when the server is off', async () => {
     fetchMock().mockRejectedValue(Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } }));
 
