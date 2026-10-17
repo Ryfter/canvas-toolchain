@@ -1,6 +1,6 @@
 ---
 id: "discover_tools"
-description: "Discover what tools the institution/professor uses: scans the Canvas instance (account → per-course → self-report cascade), matches findings against available modules, and returns detected tools, module-enable suggestions, unmatched tools, and a catalog pick-list. Read-only."
+description: "Discover institutional tools: scans Canvas (account → course → self-report), matches findings to modules, and returns detected tools, enable suggestions, unmatched tools, and a pick-list. Read-only."
 section: "modules"
 intent_tool: ""
 intent_action: ""

@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { isMain, parseArgs, runMain } from './lib/cli.mjs';
 import { mocIdsFor } from './lib/graph.mjs';
+import { DEFAULT_LINT_OPTIONS } from './lib/lint-rules.mjs';
 import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource, loadSurfaceProbe } from './lib/registry.mjs';
 
 const FIXTURES = join(REPO_ROOT, 'packages/command-and-control/tests/skills/selection.fixtures.json');
@@ -143,6 +144,7 @@ export async function evaluate({ repoRoot = REPO_ROOT, skillsRoot = SKILLS_ROOT 
       note: 'No offline tokenizer is available and no dependency may be added; every token number is Math.round(chars/4), reported alongside raw chars. Old-surface text is measured minified (the wire shape) with the pretty-printed form reported separately.',
     },
     operations: source.operations.length,
+    descriptionStats: describeLengths(source.operations),
     indexCap: INDEX_CAP,
     tokens,
     chars,
@@ -157,6 +159,20 @@ export async function evaluate({ repoRoot = REPO_ROOT, skillsRoot = SKILLS_ROOT 
       oldSurfaceMinimalOverMocPath: Number((tokens.oldSurface.minimal / tokens.newPath.mocAverage).toFixed(2)),
     },
     fixtures: perAsk,
+  };
+}
+
+/** Min / median / max description length, measured rather than quoted, so the
+ *  prose in the generated document cannot go stale when descriptions change. */
+function describeLengths(operations) {
+  const lengths = operations.map((op) => op.description.length).sort((a, b) => a - b);
+  const middle = lengths.length / 2;
+  return {
+    min: lengths[0],
+    median: lengths.length % 2 ? lengths[(lengths.length - 1) / 2] : Math.round((lengths[middle - 1] + lengths[middle]) / 2),
+    max: lengths[lengths.length - 1],
+    overBudget: lengths.filter((length) => length > DEFAULT_LINT_OPTIONS.maxDescription).length,
+    budget: DEFAULT_LINT_OPTIONS.maxDescription,
   };
 }
 
@@ -185,9 +201,9 @@ pretty-printed form is reported separately and is larger).
 | old surface: total | Tools list + full catalog — everything an agent reads today to pick one operation. |
 | registry dump (metadata) | All ${report.operations} operations as \`{id, section, description, exposure, intentTool, intentAction}\` JSON. The alternative "read the source of truth" path. |
 | registry dump (with schemas) | The same dump including every \`inputSchema\`. |
-| new path (A) | \`skills/index.md\` plus the single \`ops/<id>.md\` the pick implies, averaged over the 18 fixture asks. |
+| new path (A) | \`skills/index.md\` plus the single \`ops/<id>.md\` the pick implies, averaged over the 18 fixture asks. The full-catalog fallback, for the "which tool am I in?" step. |
 | new path (B) | As A, with each index line's description capped at ${report.indexCap} characters — the summary width convention. |
-| new path (C) | \`moc/<intent tool>.md\` plus the single op file. Skips the ${report.operations}-operation index entirely, because the agent already knows which intent tool it is calling. |
+| new path (C) | **The routed path.** \`moc/<intent tool>.md\` plus the single op file. Skips the ${report.operations}-operation index entirely, because the agent already knows which intent tool it is calling. |
 | new path: index only | \`index.md\` alone — a lower bound for asks obvious enough to skip the op file. |
 
 ## Result
@@ -258,9 +274,10 @@ it has decided to act (that is the whole point of the nine intent tools), so
 the correct first read. \`index.md\` remains right for the "which tool am I in?"
 step, a decision the model makes from the tool descriptions it already has.
 
-**Recommendation for J10:** score selection on paths A and C. If C holds up on
-accuracy, the surface hook (J11) should route \`ct_ask\`/\`ct_advanced\` to the MOC
-for the current tool rather than to the flat index.
+**The routing decision.** Agents are routed through C: the first read is the
+intent tool's topic map, then the one op file the pick implies. \`index.md\` stays
+as the full-catalog fallback rather than the entry point, and path A is retained
+as the comparison. J10 scores selection on C, with A as the fallback measurement.
 
 ## Per-ask detail
 
@@ -278,9 +295,11 @@ ${rows.join('\n')}
   both surfaces are prose-heavy, so the *ratio* is the more trustworthy number
   than either absolute value.
 * **The index is not free.** \`index.md\` carries all ${report.operations} full
-  descriptions (median 145 characters, max 562), so it costs about as much as the
-  metadata registry dump. The saving over the old path comes from not reading the
-  parameter schemas and not reading the ct_advanced catalog twice.
+  descriptions — min ${report.descriptionStats.min}, median ${report.descriptionStats.median}, max ${report.descriptionStats.max}
+  characters, ${report.descriptionStats.overBudget} over the ${report.descriptionStats.budget}-character budget — so it costs
+  about as much as the metadata registry dump. The saving over the old path comes
+  from not reading the parameter schemas and not reading the ct_advanced catalog
+  twice.
 * **Module operations are excluded.** They exist only at runtime behind
   \`modules.json\`, so the baseline is the core surface (${report.operations} operations).
 * **Reading one op file is an assumption.** An agent that picks from the index

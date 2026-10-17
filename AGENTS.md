@@ -56,6 +56,21 @@ did it.
 
 ---
 
+## Skill graph: start at the tool's topic map
+
+To pick an operation, **start from its intent tool's topic map** —
+`packages/command-and-control/skills/moc/<intent tool>.md` (e.g. `moc/ct_build.md`) —
+then open the one `skills/ops/<id>.md` it names. `skills/index.md` is the full
+86-operation catalog, kept as the fallback for the "which tool am I in?" step.
+
+The tree is generated from `src/surface/registry.ts` by `scripts/skills/*.mjs` and gated
+in CI: `node scripts/skills/lint.mjs` (200-character descriptions), plus
+`build-index.mjs --check` and `moc.mjs --check` for freshness. Edit the registry and
+regenerate — never hand-edit a generated region. Design and rationale:
+[`docs/skill-graph.md`](docs/skill-graph.md).
+
+---
+
 ## Tool overview maintenance
 
 When adding, removing, or substantially changing a professor-facing capability, update

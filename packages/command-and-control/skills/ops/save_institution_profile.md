@@ -1,6 +1,6 @@
 ---
 id: "save_institution_profile"
-description: "Write/merge the institution profile (the master tool library) and optional per-class tool deltas. Accretive — new tools are added, existing preserved. The profile is the payload for usage feedback (#77)."
+description: "Write/merge the institution profile (master tool library) plus optional per-class deltas. Accretive — new tools added, existing preserved. This profile is the payload for usage feedback."
 section: "admin"
 intent_tool: ""
 intent_action: ""

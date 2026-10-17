@@ -1,6 +1,6 @@
 ---
 id: "audit_course_accessibility"
-description: "Run the full WCAG 2.2 engine stack (in-house + axe-core) across every generated page of a course project, report per-page verdicts against the required level, and refresh the borderline review queue. The regular between-semesters check."
+description: "Run the full WCAG 2.2 stack (in-house + axe-core) over every generated page, report per-page verdicts vs the required level, and refresh the borderline queue. The between-semesters check."
 section: "accessibility"
 intent_tool: "ct_review"
 intent_action: "accessibility"

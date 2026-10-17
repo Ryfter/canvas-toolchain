@@ -50,9 +50,7 @@ jobs:
 
       - name: Skill graph lint
         if: matrix.node == '20'
-        # 600 is a temporary ceiling: 31 descriptions exceed the 200 target.
-        # J7 tightens this to 200 once those descriptions are rewritten.
-        run: node scripts/skills/lint.mjs --max-description 600
+        run: node scripts/skills/lint.mjs
 
       - name: Run full test suite
         run: npm test

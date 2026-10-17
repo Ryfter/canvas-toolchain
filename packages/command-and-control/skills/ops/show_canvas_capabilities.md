@@ -1,6 +1,6 @@
 ---
 id: "show_canvas_capabilities"
-description: "Returns the catalog of Canvas-safe design patterns. Optionally filter by category (layout, information, interactive, pedagogical, branded) or supportStatus (supported, partial, aspirational). Use this to discover what patterns exist; then call `ct_build` action `preview_pattern` to see any specific pattern rendered."
+description: "Canvas-safe pattern catalog: filter by category (layout, information, interactive, pedagogical, branded) or supportStatus (supported/partial/aspirational). Then ct_build preview_pattern renders one."
 section: "design"
 intent_tool: ""
 intent_action: ""
