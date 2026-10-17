@@ -1,7 +1,7 @@
 ---
 id: "index"
 kind: "index"
-description: "One line per operation (86 total). Read this first, then open ops/<id>.md for the one you picked."
+description: "Full catalog: one line per operation (86 total), grouped by section. To act, start from moc/<intent tool>.md (e.g. moc/ct_build.md), then open ops/<id>.md for the one you picked."
 ops: 86
 related: [modules, registry, transcripts, research, accessibility, snapshots, design, admin]
 ---

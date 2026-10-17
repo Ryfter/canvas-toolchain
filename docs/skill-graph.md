@@ -4,16 +4,16 @@ Status: design + generated drafts. This document is the contract for
 `scripts/skills/*.mjs` and the generated tree under
 `packages/command-and-control/skills/`.
 
-The goal: an agent that wants to run one operation should read **one index line
-and one operation file**, not ten tool schemas plus an operation catalog.
-`packages/command-and-control/src/surface/registry.ts` stays the single source of
-truth; everything here is generated from it.
+The goal: an agent that wants to run one operation should read **its intent
+tool's topic map and one operation file**, not ten tool schemas plus an operation
+catalog. `packages/command-and-control/src/surface/registry.ts` stays the single
+source of truth; everything here is generated from it.
 
 ## 1. Layout
 
 ```text
 packages/command-and-control/skills/
-  index.md                  # generated: one line per operation, grouped by section
+  index.md                  # generated: full catalog, one line per operation (fallback)
   moc/<section>.md          # generated: one per SectionId (8)
   moc/<intentTool>.md       # generated: one per intent tool (9) + moc/ct_advanced.md
   ops/<operation-id>.md     # one per Operation: frontmatter + hand-written body
@@ -33,6 +33,27 @@ Scope note: this tree is **not** shipped in the npm package
 (`packages/command-and-control/package.json` `files` is `["dist", "data"]`), so
 nothing here can change the MCP server's runtime behavior. Module operations
 only exist at runtime, after a module is enabled; see §9.
+
+### 1.1 Path C — the agent's first read
+
+Three candidate reads were measured (the numbers are in
+[`skill-graph-baseline.md`](./skill-graph-baseline.md)). The plan routes agents
+through **C**:
+
+| Path | First read | Then | When it is the right start |
+| --- | --- | --- | --- |
+| A | `index.md` | `ops/<id>.md` | Fallback: the model does not yet know which `ct_*` tool it is in. |
+| B | `index.md`, descriptions capped at 140 chars | `ops/<id>.md` | Measured only and rejected: capping drops the caveats selection needs. |
+| **C** | **`moc/<intent tool>.md`** | **`ops/<id>.md`** | **The routed path.** The agent is dispatching an action, so it already knows its `ct_*` tool. |
+
+So the first read is the public tool's topic map — `moc/ct_build.md`,
+`moc/ct_review.md`, … — not `index.md`. A MOC is the same operation list already
+filtered to one tool, so the read is smaller than the index *and* carries the
+full uncapped descriptions. **`index.md` stays as the full 86-operation catalog**,
+the fallback for the "which tool am I in?" step, which the model decides from the
+tool descriptions it already holds.
+
+Both routes end at the same file: the one `ops/<id>.md` the pick implies.
 
 ## 2. Frontmatter schema
 

@@ -185,9 +185,9 @@ pretty-printed form is reported separately and is larger).
 | old surface: total | Tools list + full catalog — everything an agent reads today to pick one operation. |
 | registry dump (metadata) | All ${report.operations} operations as \`{id, section, description, exposure, intentTool, intentAction}\` JSON. The alternative "read the source of truth" path. |
 | registry dump (with schemas) | The same dump including every \`inputSchema\`. |
-| new path (A) | \`skills/index.md\` plus the single \`ops/<id>.md\` the pick implies, averaged over the 18 fixture asks. |
+| new path (A) | \`skills/index.md\` plus the single \`ops/<id>.md\` the pick implies, averaged over the 18 fixture asks. The full-catalog fallback, for the "which tool am I in?" step. |
 | new path (B) | As A, with each index line's description capped at ${report.indexCap} characters — the summary width convention. |
-| new path (C) | \`moc/<intent tool>.md\` plus the single op file. Skips the ${report.operations}-operation index entirely, because the agent already knows which intent tool it is calling. |
+| new path (C) | **The routed path.** \`moc/<intent tool>.md\` plus the single op file. Skips the ${report.operations}-operation index entirely, because the agent already knows which intent tool it is calling. |
 | new path: index only | \`index.md\` alone — a lower bound for asks obvious enough to skip the op file. |
 
 ## Result
@@ -258,9 +258,10 @@ it has decided to act (that is the whole point of the nine intent tools), so
 the correct first read. \`index.md\` remains right for the "which tool am I in?"
 step, a decision the model makes from the tool descriptions it already has.
 
-**Recommendation for J10:** score selection on paths A and C. If C holds up on
-accuracy, the surface hook (J11) should route \`ct_ask\`/\`ct_advanced\` to the MOC
-for the current tool rather than to the flat index.
+**The routing decision.** Agents are routed through C: the first read is the
+intent tool's topic map, then the one op file the pick implies. \`index.md\` stays
+as the full-catalog fallback rather than the entry point, and path A is retained
+as the comparison. J10 scores selection on C, with A as the fallback measurement.
 
 ## Per-ask detail
 
