@@ -1,5 +1,6 @@
 // packages/command-and-control/src/tools/workflows/setup_lecture_answers.ts
 
+import { assertEndpointAllowed, EndpointBlockedError } from '@canvas-toolchain/shared-llm';
 import { saveLectureAnswersConfig } from '../answers/config.js';
 import { autoDetect } from '../answers/provider/resolve.js';
 import type { EmbeddingProviderKind, LectureAnswersConfig } from '../answers/types.js';
@@ -20,9 +21,24 @@ export interface SetupLectureAnswersResult {
 }
 
 export async function setupLectureAnswers(input: SetupLectureAnswersInput = {}): Promise<SetupLectureAnswersResult> {
+  // SSRF guard, first thing: a blocked URL must surface its own reason rather
+  // than being swallowed by autoDetect into generic "install Ollama" advice.
+  // The canonical (query/fragment-free) URL is what gets probed and persisted.
+  let ollamaBaseUrl = input.ollamaBaseUrl;
+  if (input.ollamaBaseUrl) {
+    try {
+      ollamaBaseUrl = (await assertEndpointAllowed(input.ollamaBaseUrl)).url;
+    } catch (err) {
+      if (err instanceof EndpointBlockedError) {
+        return { configured: false, message: err.message, fix: err.fix };
+      }
+      throw err;
+    }
+  }
+
   let kind = input.provider;
   if (!kind) {
-    const detected = await autoDetect(input.ollamaBaseUrl);
+    const detected = await autoDetect(ollamaBaseUrl);
     if (detected.kind === 'ollama') kind = 'ollama';
     else {
       return {
@@ -46,7 +62,7 @@ export async function setupLectureAnswers(input: SetupLectureAnswersInput = {}):
   }
 
   const cfg: LectureAnswersConfig = { provider: kind, model: input.model };
-  if (kind === 'ollama' && input.ollamaBaseUrl) cfg.ollamaBaseUrl = input.ollamaBaseUrl;
+  if (kind === 'ollama' && ollamaBaseUrl) cfg.ollamaBaseUrl = ollamaBaseUrl;
   if (kind === 'voyage') cfg.voyageApiKey = input.voyageApiKey;
   saveLectureAnswersConfig(cfg);
 

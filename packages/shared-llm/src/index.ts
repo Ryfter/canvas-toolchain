@@ -103,3 +103,19 @@ export { LlmProviderError } from './errors.js';
 export type { LlmProvider } from './errors.js';
 export { fetchRecommendedModels } from './recommendations.js';
 export type { FetchRecommendedModelsInput } from './recommendations.js';
+export {
+  assertEndpointAllowed,
+  isEndpointAllowed,
+  parseEndpointUrl,
+  classifyIpAddress,
+  redirectBlocked,
+  EndpointBlockedError,
+} from './endpoint-guard.js';
+export type {
+  EndpointBlockReason,
+  EndpointGuardOptions,
+  EndpointInfo,
+  IpClassification,
+  LookupFn,
+  ParsedEndpointUrl,
+} from './endpoint-guard.js';
