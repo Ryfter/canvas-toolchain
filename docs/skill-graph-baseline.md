@@ -99,9 +99,10 @@ as the comparison. J10 scores selection on C, with A as the fallback measurement
 
 ## Per-ask detail
 
-Selection accuracy is **not** measured here — J10 runs the same model over the
-old surface and the index and scores it against these expectations. This is the
-harness's accounting of what the new path would read for each ask.
+Selection accuracy is **not** computed here — the generator calls no model. J10
+runs the same model over the old surface and the routed path and scores it
+against these expectations; the 'Selection results' section below records that
+run. This is the harness's accounting of what the new path would read per ask.
 
 | Ask | Expected operation | Path A files | A tokens | Path C files | C tokens |
 | --- | --- | --- | --- | --- | --- |
@@ -123,6 +124,28 @@ harness's accounting of what the new path would read for each ask.
 | save this layout as a template | `save_layout_as_template` | index.md + ops/save_layout_as_template.md | 4141 | moc/ct_advanced.md + ops/save_layout_as_template.md | 1758 |
 | recommend something for this topic | `recommend_for_topic` | index.md + ops/recommend_for_topic.md | 4140 | moc/ct_advanced.md + ops/recommend_for_topic.md | 1757 |
 | check my shell readiness | `check_shell_readiness` | index.md + ops/check_shell_readiness.md | 4166 | moc/ct_review.md + ops/check_shell_readiness.md | 663 |
+
+## Selection results
+
+Measured per seat with `node scripts/skills/eval-selection.mjs --set <set> --score <answers.json>`,
+both paths and both fixture sets. This is a **recorded snapshot of an external
+run** — the generator calls no model — so it is carried verbatim, and `agy` /
+`devstral:24b` (local Ollama) are the two seats that were run. `old` is the flat
+surface (ten tool schemas + the full `ct_advanced` catalog), `pathc` the routed
+path (topic maps).
+
+| Seat | Path | easy | hard |
+| --- | --- | --- | --- |
+| agy | old | 18/18 | 15/15 |
+| agy | pathc | 18/18 | 15/15 |
+| devstral:24b (Ollama) | old | 12/18 | 13/15 |
+| devstral:24b (Ollama) | pathc | 17/18 | 14/15 |
+
+The `--score` address mapping moves two of these rows: `agy` old/hard reads 15/15
+only once the section-qualified `ct_advanced.<section>.<op id>` address resolves,
+and `devstral:24b` old/easy only once the space-separated form (`ct_review quiz`)
+does. Its six remaining old/easy misses are all the bare `ct_advanced.run`, an
+address that names no operation and is scored wrong on purpose.
 
 ## Honest caveats
 

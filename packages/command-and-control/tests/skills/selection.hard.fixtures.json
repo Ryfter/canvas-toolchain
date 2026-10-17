@@ -1,0 +1,128 @@
+{
+  "note": "Hard selection fixtures: asks written to defeat a shallow pick. Same schema as selection.fixtures.json (ask, expectedOp, alsoAcceptable, why) plus `category`, `chain`, and `decoys`. Categories: ambiguous-multi (an umbrella op beats its sub-steps and its over-reach neighbours), chain (a multi-step workflow — the expected answer is the FIRST op of `chain`), decoy (a keyword points at the wrong namespace), vague (the ask never names the operation), none (no operation can do it: the correct answer is the literal \"NONE\", the agent would ask a clarifying question). `decoys` are real operation ids a naive pick lands on; they are never scored as correct. Every non-NONE expectedOp, alsoAcceptable, chain entry, and decoy must exist as a generated op file (asserted by eval-selection.test.ts).",
+  "fixtures": [
+    {
+      "ask": "I have my Fall 2025 Canvas backup export sitting on disk — tell me which assignments are dated vs evergreen and give me KEEP/UPDATE/DROP/ADD verdicts without creating a new semester plan yet.",
+      "category": "ambiguous-multi",
+      "expectedOp": "analyze_course",
+      "alsoAcceptable": ["ingest_canvas_archive", "score_topic_currency", "recommend_for_topic"],
+      "decoys": ["full_pipeline", "plan_next_semester"],
+      "why": "analyze_course (packages/command-and-control/src/tools/workflows/analyze_course.ts -> packages/curriculum-intelligence/src/tools/analyze_course.ts) ingests the Canvas archive, runs scoreTopicCurrency and recommendForTopic per assignment, and persists KEEP/UPDATE/DROP/ADD verdicts in one call. ingest_canvas_archive (packages/curriculum-intelligence/src/tools/ingest_canvas_archive.ts), score_topic_currency (packages/curriculum-intelligence/src/tools/score_topic_currency.ts), and recommend_for_topic (packages/curriculum-intelligence/src/tools/recommend_for_topic.ts) are the individual sub-steps, whereas full_pipeline (packages/command-and-control/src/tools/workflows/full_pipeline.ts) and plan_next_semester (packages/command-and-control/src/tools/workflows/plan_next_semester.ts) go further and create/populate next-plan/."
+    },
+    {
+      "ask": "My next-plan/ folder already has all the date-shifted briefs for Spring 2026; now render each non-dropped brief with its verdict-matched template, apply mechanical fixes, and export the section folders into Canvas Design Studio format.",
+      "category": "ambiguous-multi",
+      "expectedOp": "update_course_materials",
+      "alsoAcceptable": ["export_course_folder", "draft_assignment_brief", "update_examples"],
+      "decoys": ["full_pipeline", "generate_course"],
+      "why": "update_course_materials (packages/command-and-control/src/tools/workflows/update_course_materials.ts) iterates over next-plan/week-*/ briefs, skips DROP verdicts, renders pages via renderPageWithA11y (packages/command-and-control/src/lib/page-renderer.ts), and calls exportCourseFolder (packages/curriculum-intelligence/src/tools/export_course_folder.ts). draft_assignment_brief (packages/curriculum-intelligence/src/tools/draft_assignment_brief.ts) and update_examples (packages/curriculum-intelligence/src/tools/update_examples.ts) only operate on a single briefPath, full_pipeline (packages/command-and-control/src/tools/workflows/full_pipeline.ts) re-runs analyzeCourse and planNextSemester from an archive, and generate_course (packages/canvas-design-studio/src/tools/generate-course.ts, exposed through packages/command-and-control/src/passthrough/design_tools.ts) only compiles an already-exported CDS folder."
+    },
+    {
+      "ask": "I'm moving my course Q&A bot off local Ollama embeddings onto Voyage AI cloud embeddings — switch the embedding provider and wipe and rebuild the vector index so the dimensions don't collide.",
+      "category": "ambiguous-multi",
+      "expectedOp": "reembed_course_index",
+      "alsoAcceptable": ["setup_lecture_answers", "index_course_for_answers"],
+      "decoys": ["set_active_llm_provider", "ask_course"],
+      "why": "reembed_course_index (packages/command-and-control/src/tools/workflows/reembed_course_index.ts) is the dedicated atomic migration workflow that calls setupLectureAnswers (packages/command-and-control/src/tools/workflows/setup_lecture_answers.ts, where Ollama is 768-dim and Voyage is 1024-dim) and then indexCourseForAnswers with rebuild:true (packages/command-and-control/src/tools/workflows/index_course_for_answers.ts). set_active_llm_provider (packages/command-and-control/src/surface/registry.ts) only switches the text-generation LLM between anthropic and ollama, and ask_course (packages/command-and-control/src/tools/workflows/ask_course.ts) only performs incremental indexing (rebuild:false)."
+    },
+    {
+      "ask": "Check whether the rubric attached to Assignment 8812 in Canvas has drifted from my last rendered rubric markdown, and if the triage says needs-update, generate the new student-facing rubric page with worked examples.",
+      "category": "chain",
+      "expectedOp": "review_canvas_rubric",
+      "alsoAcceptable": [],
+      "chain": ["review_canvas_rubric", "draft_student_rubric"],
+      "decoys": ["list_assignments", "publish_course"],
+      "why": "review_canvas_rubric (packages/command-and-control/src/tools/workflows/review_canvas_rubric.ts) pulls the live Canvas rubric via pullRubric (packages/command-and-control/src/tools/rubric/canvas_fetch.ts), diffs it against priorRenderedPath, and runs triageRubric (packages/command-and-control/src/tools/rubric/triage.ts) to produce proposedFacultyRubric on a 'needs-update' verdict without writing files. That proposedFacultyRubric is then passed as facultyRubricText to draft_student_rubric (packages/command-and-control/src/tools/workflows/draft_student_rubric.ts) to write the student-facing CDS markdown. The chain's first op is the expected answer; draft_student_rubric alone cannot do the drift check, so it is listed in `chain` but not in alsoAcceptable."
+    },
+    {
+      "ask": "Here is the raw HTML and CSS I exported from Figma for a weekly overview banner — sanitize it into a Canvas-safe slotted layout and register it in my local template registry as `weekly-banner` v1.0.0.",
+      "category": "chain",
+      "expectedOp": "paste_layout",
+      "alsoAcceptable": [],
+      "chain": ["paste_layout", "save_layout_as_template"],
+      "decoys": ["install_resource", "preview_canvas_pattern"],
+      "why": "In packages/command-and-control/src/tools/layout_adapter.ts, pasteLayout transforms raw HTML/CSS via canvasSafeTransform, extracts {{slot:...}} placeholders into an AdaptedLayout object ({ canvasSafeHtml, slotMap, removed, violations, accessibility }), and audits accessibility. saveLayoutAsTemplate (also in packages/command-and-control/src/tools/layout_adapter.ts) requires that exact AdaptedLayout object as its `layout` input to write structure.html and slots.json into the local registry. install_resource (packages/command-and-control/src/registry/install_resource.ts) installs pre-packaged github://, ryfter://, or file:// URLs, not raw HTML/CSS. The chain's first op is the expected answer; save_layout_as_template cannot accept raw HTML/CSS, so it is listed in `chain` but not in alsoAcceptable."
+    },
+    {
+      "ask": "Download all the lecture VTT captions from my Panopto folder for this course and then turn those VTTs into cleaned-up markdown lecture notes with 5-minute deep links, stripped filler words, and blockquoted key takeaways.",
+      "category": "chain",
+      "expectedOp": "bulk_fetch_panopto_transcripts",
+      "alsoAcceptable": [],
+      "chain": ["bulk_fetch_panopto_transcripts", "enrich_panopto_transcripts"],
+      "decoys": ["download_transcripts", "ingest_transcripts"],
+      "why": "bulk_fetch_panopto_transcripts (packages/command-and-control/src/tools/workflows/bulk_fetch_panopto_transcripts.ts) downloads the folder's VTT captions via bulkDownloadPanoptoCaptions (packages/module-video/src/panopto/client.ts) and writes _sessions.json into outputPath. enrich_panopto_transcripts (packages/command-and-control/src/tools/workflows/enrich_panopto_transcripts.ts) requires _sessions.json in transcriptsPath (returning MANIFEST_NOT_FOUND if bulk_fetch_panopto_transcripts has not run first) and writes .enriched.md files. Decoy download_transcripts (packages/command-and-control/src/passthrough/downloader_tools.ts) is an unimplemented stub that only returns an error object, and ingest_transcripts (packages/curriculum-intelligence/src/tools/ingest_transcripts.ts) writes transcripts.json for CI analysis rather than enriched markdown notes. The chain's first op is the expected answer; enrich_panopto_transcripts fails without the manifest it writes, so it is listed in `chain` but not in alsoAcceptable."
+    },
+    {
+      "ask": "Take a snapshot of my live Canvas course's module structure, assignment groups, and identifiers into a local markdown doc where my hand-written notes outside the auto-generated markers stay intact on future refreshes.",
+      "category": "decoy",
+      "expectedOp": "snapshot_course",
+      "alsoAcceptable": [],
+      "decoys": ["list_publish_snapshots", "preview_course_publish", "download_canvas_archive"],
+      "why": "Despite the word 'snapshot', publish snapshots in list_publish_snapshots (packages/command-and-control/src/tools/workflows/list_publish_snapshots.ts) and preview_course_publish (packages/command-and-control/src/tools/workflows/preview_course_publish.ts) track HTML publish manifests and rollback states under snapshotsRootFor(courseDir). download_canvas_archive (packages/command-and-control/src/passthrough/downloader_tools.ts) archives a Canvas shell via the Canvas Backup CLI. snapshot_course (packages/command-and-control/src/tools/workflows/snapshot_course.ts) fetches live course structure via fetchCourseSnapshot and writes a markdown reference document that regenerates only `<!-- AUTO:start ... -->` sections while preserving hand-written prose and appending to the Update Log."
+    },
+    {
+      "ask": "List all the modules in my Fall 2025 course topic map along with every page and assignment item nested inside each module.",
+      "category": "decoy",
+      "expectedOp": "list_canvas_modules",
+      "alsoAcceptable": [],
+      "decoys": ["list_modules", "browse_module_catalog", "discover_tools"],
+      "why": "list_canvas_modules (mapped in packages/command-and-control/src/surface/registry.ts to listModules from packages/curriculum-intelligence/src/tools/list_modules.ts) reads a course/semester topic-map.json and returns Canvas course modules with their items when expandItems:true. Decoy list_modules (packages/command-and-control/src/tools/list_modules.ts) lists C&C plug-in modules (e.g. video, oral-assessment, roster) from ~/.command-and-control/modules.json, browse_module_catalog (packages/command-and-control/src/tools/module_channel_tools.ts) queries the downloadable plug-in channel catalog, and discover_tools (packages/command-and-control/src/tools/discover_tools.ts) scans Canvas for institutional LTI tools rather than course modules."
+    },
+    {
+      "ask": "I just hand-edited a quiz markdown file at `week-03/quizzes/reading-quiz.md` on disk — before I publish anything to Canvas, check my local file for missing answer keys, duplicate question stems, or point total mismatches.",
+      "category": "decoy",
+      "expectedOp": "validate_quiz",
+      "alsoAcceptable": [],
+      "decoys": ["generate_quiz", "check_shell_readiness"],
+      "why": "validate_quiz (packages/command-and-control/src/tools/workflows/validate_quiz.ts) accepts a local draft via `quizPath` or `quizMarkdown` (parsed by itemsFromDraftMarkdown and checked deterministically by validateQuizItems with source:'local-draft'), not just live Canvas courseId+quizId. Decoy generate_quiz (packages/command-and-control/src/tools/workflows/generate_quiz.ts) authors a brand-new quiz draft from source readings using an LLM, and check_shell_readiness (packages/command-and-control/src/tools/workflows/check_shell_readiness.ts) only inspects a live Canvas shell via fetchShellGraph. Caveat verified in packages/command-and-control/src/tools/quiz/validate.ts: the POINTS_MISMATCH finding is gated on live metadata (pointsPossible), so a pure local draft surfaces missing keys and duplicate stems but not the point-total check — validate_quiz is still the only op that inspects the on-disk draft."
+    },
+    {
+      "ask": "Did I spend time lecturing on any concepts in class this term that never actually show up anywhere in the written weekly module pages?",
+      "category": "vague",
+      "expectedOp": "find_off_syllabus_topics",
+      "alsoAcceptable": ["extract_lecture_topics"],
+      "decoys": ["diff_semesters", "ask_course", "build_quote_bank"],
+      "why": "find_off_syllabus_topics (packages/curriculum-intelligence/src/tools/find_off_syllabus_topics.ts) tokenizes each week's lecture transcripts against the module/page text collected for that week (collectPageTextForWeek) and returns novelTokens and sampleCues for lecture topics absent from the written pages. extract_lecture_topics (packages/curriculum-intelligence/src/tools/extract_lecture_topics.ts) is an acceptable fallback that returns week-mapped lecture text chunks for model reasoning, whereas diff_semesters (packages/curriculum-intelligence/src/tools/diff_semesters.ts) compares two semesters' topic maps, ask_course (packages/command-and-control/src/tools/workflows/ask_course.ts) answers a specific question over the hybrid index, and build_quote_bank (packages/curriculum-intelligence/src/tools/build_quote_bank.ts) harvests quotable lines."
+    },
+    {
+      "ask": "All my assignments were due on Mondays last year, so what happens when Labor Day or Fall Break lands on a Monday in the new semester?",
+      "category": "vague",
+      "expectedOp": "shift_dates",
+      "alsoAcceptable": ["plan_next_semester", "fetch_academic_calendar"],
+      "decoys": ["check_shell_readiness", "diff_semesters"],
+      "why": "shift_dates (packages/curriculum-intelligence/src/tools/shift_dates.ts) computes target due dates from originalDue against the target SemesterCalendar, checks isOnBreak against cal.breaks, and resolves holiday/break collisions using onBreakCollision ('bump-before', 'bump-after', or 'flag'). plan_next_semester (packages/command-and-control/src/tools/workflows/plan_next_semester.ts) wraps fetchAcademicCalendar (packages/curriculum-intelligence/src/tools/fetch_academic_calendar.ts) and shiftDates, whereas check_shell_readiness (packages/command-and-control/src/tools/workflows/check_shell_readiness.ts) only audits unlock/due/lock dates on a live Canvas shell and diff_semesters has no calendar logic at all."
+    },
+    {
+      "ask": "Show me the pages where the contrast ratio or accessibility check barely squeaked by or was acknowledged at publish time so I can eyeball them and sign off.",
+      "category": "vague",
+      "expectedOp": "accessibility_review_queue",
+      "alsoAcceptable": ["audit_course_accessibility"],
+      "decoys": ["review_accessibility_policy", "wave_deep_check"],
+      "why": "accessibility_review_queue (packages/command-and-control/src/tools/workflows/accessibility_review_queue.ts) loads the course's .a11y/ review queue (borderline findings >=85% of threshold, needs-human-review criteria, and acknowledged publishes), sorts them worst-margin first via sortWorstFirst, and lets the professor mark entries reviewed-by-human with action:'resolve'. audit_course_accessibility (packages/command-and-control/src/tools/workflows/audit_course_accessibility.ts) refreshes that queue across all generated HTML, whereas review_accessibility_policy (packages/command-and-control/src/tools/review_accessibility_policy.ts) manages institution policy metadata and wave_deep_check (packages/command-and-control/src/tools/wave_deep_check.ts) runs paid WAVE API checks on a single public URL."
+    },
+    {
+      "ask": "Grade all the ungraded student essay submissions for Assignment 4 in Canvas using the attached rubric and post the point scores and feedback comments to the Canvas gradebook.",
+      "category": "none",
+      "expectedOp": "NONE",
+      "alsoAcceptable": [],
+      "decoys": ["review_canvas_rubric", "draft_student_rubric", "list_assignments"],
+      "why": "Verified against all 86 operations in packages/command-and-control/src/surface/registry.ts and every Canvas client (packages/canvas-design-studio/src/canvas-api.ts, packages/command-and-control/src/tools/rubric/canvas_fetch.ts, packages/command-and-control/src/tools/quiz/canvas_fetch.ts): no operation fetches student submissions for grading and none writes scores/comments to the Canvas gradebook. The only submissions read in the repo is a GET used for a grouping metric (packages/module-group-builder/src/data/canvas-client.ts listSubmissions, consumed in run.ts), and the only assignment mutation is updateAssignmentDescription (description field only). review_canvas_rubric only reads rubric criterion definitions, draft_student_rubric rewrites rubric criteria into local student-facing markdown, and list_assignments reads the ingested topic map."
+    },
+    {
+      "ask": "Send a Canvas Inbox message and reminder email to every student in my section who hasn't submitted the Week 3 quiz yet.",
+      "category": "none",
+      "expectedOp": "NONE",
+      "alsoAcceptable": [],
+      "decoys": ["validate_quiz", "check_shell_readiness"],
+      "why": "Verified across all 86 operations in packages/command-and-control/src/surface/registry.ts and every Canvas client: no operation queries student quiz submission status, and there is no Canvas Conversations (Inbox) or email/SMTP path anywhere under packages/. validate_quiz (packages/command-and-control/src/tools/workflows/validate_quiz.ts) and check_shell_readiness (packages/command-and-control/src/tools/workflows/check_shell_readiness.ts) are strictly read-only inspections of quiz structure and module/assignment dates. The announcements module can POST a course-wide announcement (packages/module-announcements/src/canvas.ts is_announcement:true), but it cannot select the non-submitters, target individuals, or send Inbox/email — so it does not support this ask."
+    },
+    {
+      "ask": "Drop the four waitlisted students who missed the first week of class from my live Canvas roster and enroll the next four students from my PeopleSoft waitlist CSV directly into Canvas.",
+      "category": "none",
+      "expectedOp": "NONE",
+      "alsoAcceptable": [],
+      "decoys": ["setup_course", "publish_course", "install_module"],
+      "why": "Verified across all 86 operations in packages/command-and-control/src/surface/registry.ts and every Canvas client (packages/canvas-design-studio/src/canvas-api.ts only exposes listCourses, listPages, listAssignments, createPage, updatePage, updateAssignmentDescription, deletePage, and getFileContent): no operation creates, modifies, or deletes student enrollments in Canvas. Every enrollment touch is a filtered GET (packages/module-group-builder/src/data/canvas-client.ts, packages/module-roster/src/canvas/client.ts, packages/module-peerassessment/src/canvas/client.ts, packages/command-and-control/src/discovery/canvas_scan.ts). Even the optional roster and peerassessment modules only match PeopleSoft CSVs to read-only Canvas user lists for local pseudonym/group CSV generation and never mutate Canvas enrollments."
+    }
+  ]
+}

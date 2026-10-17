@@ -13,6 +13,37 @@ const DEFAULT_OUT = join(REPO_ROOT, 'docs/skill-graph-baseline.md');
 const INDEX_CAP = 140;
 
 /**
+ * J10's selection accuracy, as measured per seat with
+ * `node scripts/skills/eval-selection.mjs --set <set> --score <answers.json>`.
+ * The generator calls no model, so this is a recorded snapshot of an external
+ * run rather than a computed number — it is carried verbatim so that
+ * regenerating the document preserves it.
+ */
+const SELECTION_RESULTS = `## Selection results
+
+Measured per seat with \`node scripts/skills/eval-selection.mjs --set <set> --score <answers.json>\`,
+both paths and both fixture sets. This is a **recorded snapshot of an external
+run** — the generator calls no model — so it is carried verbatim, and \`agy\` /
+\`devstral:24b\` (local Ollama) are the two seats that were run. \`old\` is the flat
+surface (ten tool schemas + the full \`ct_advanced\` catalog), \`pathc\` the routed
+path (topic maps).
+
+| Seat | Path | easy | hard |
+| --- | --- | --- | --- |
+| agy | old | 18/18 | 15/15 |
+| agy | pathc | 18/18 | 15/15 |
+| devstral:24b (Ollama) | old | 12/18 | 13/15 |
+| devstral:24b (Ollama) | pathc | 17/18 | 14/15 |
+
+The \`--score\` address mapping moves two of these rows: \`agy\` old/hard reads 15/15
+only once the section-qualified \`ct_advanced.<section>.<op id>\` address resolves,
+and \`devstral:24b\` old/easy only once the space-separated form (\`ct_review quiz\`)
+does. Its six remaining old/easy misses are all the bare \`ct_advanced.run\`, an
+address that names no operation and is scored wrong on purpose.
+
+## Honest caveats`;
+
+/**
  * "Count with a fixed tokenizer script" (plan §3) — there is no offline
  * tokenizer available here and no dependency may be added, so this is the
  * documented chars/4 approximation. Every number in the report is this
@@ -281,15 +312,16 @@ as the comparison. J10 scores selection on C, with A as the fallback measurement
 
 ## Per-ask detail
 
-Selection accuracy is **not** measured here — J10 runs the same model over the
-old surface and the index and scores it against these expectations. This is the
-harness's accounting of what the new path would read for each ask.
+Selection accuracy is **not** computed here — the generator calls no model. J10
+runs the same model over the old surface and the routed path and scores it
+against these expectations; the 'Selection results' section below records that
+run. This is the harness's accounting of what the new path would read per ask.
 
 | Ask | Expected operation | Path A files | A tokens | Path C files | C tokens |
 | --- | --- | --- | --- | --- | --- |
 ${rows.join('\n')}
 
-## Honest caveats
+${SELECTION_RESULTS}
 
 * **The maps carry the concept lines too.** \`index.md\` lists every hand-written
   concept note once, and each MOC lists the notes whose \`related:\` operations it
