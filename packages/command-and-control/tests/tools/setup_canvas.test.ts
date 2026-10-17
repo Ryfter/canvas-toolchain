@@ -225,3 +225,95 @@ describe('bare-subdomain hosts (regression)', () => {
     expect(existsSync(join(tmpHome, 'canvas-config.json'))).toBe(false);
   });
 });
+
+// setupCanvas owns host/token/timestamps only. A professor re-running it to
+// rotate a token — or to fix a host — must not silently lose the retention and
+// breadcrumb settings that snapshot_store/pruning/publish_course read back.
+describe('setupCanvas preserves existing settings (regression)', () => {
+  const configPath = () => join(tmpHome, 'canvas-config.json');
+
+  const EXISTING = {
+    host: 'old.instructure.com',
+    token: 'old-canvas-token',
+    configuredAt: '2026-01-01T00:00:00.000Z',
+    lastValidatedAt: '2026-01-01T00:00:00.000Z',
+    snapshotsLocation: 'global',
+    snapshotRetentionCount: 7,
+    snapshotRetentionDays: 90,
+    canvasBreadcrumbs: 'disabled',
+    backupOverride: 'none',
+  };
+
+  function seed(config: Record<string, unknown>): void {
+    writeFileSync(configPath(), JSON.stringify(config, null, 2), 'utf-8');
+  }
+
+  it('keeps optional settings while replacing host and token', async () => {
+    seed(EXISTING);
+
+    const result = await setupCanvas({ host: 'example.instructure.com', token: 'new-canvas-token', test: false });
+
+    expect(result.configured).toBe(true);
+    const saved = JSON.parse(readFileSync(configPath(), 'utf-8'));
+    expect(saved.host).toBe('example.instructure.com');
+    expect(saved.token).toBe('new-canvas-token');
+    expect(saved.snapshotsLocation).toBe('global');
+    expect(saved.snapshotRetentionCount).toBe(7);
+    expect(saved.snapshotRetentionDays).toBe(90);
+    expect(saved.canvasBreadcrumbs).toBe('disabled');
+    expect(saved.backupOverride).toBe('none');
+  });
+
+  it('does not resurrect the previous host or token', async () => {
+    seed(EXISTING);
+
+    await setupCanvas({ host: 'example.instructure.com', token: 'new-canvas-token', test: false });
+
+    const raw = readFileSync(configPath(), 'utf-8');
+    expect(raw).not.toContain('old-canvas-token');
+    expect(raw).not.toContain('old.instructure.com');
+  });
+
+  it('preserves settings the TypeScript type does not know about', async () => {
+    // The Go installer writes this file too; a field it adds must survive a
+    // setup_canvas run rather than being dropped by the TS writer.
+    seed({ ...EXISTING, installerExtras: { future: true } });
+
+    await setupCanvas({ host: 'example.instructure.com', token: 'new-canvas-token', test: false });
+
+    const saved = JSON.parse(readFileSync(configPath(), 'utf-8'));
+    expect(saved.installerExtras).toEqual({ future: true });
+  });
+
+  it('preserves settings through a validated save (test:true)', async () => {
+    seed(EXISTING);
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ id: 1 }) } as Response);
+
+    await setupCanvas({ host: 'example.instructure.com', token: 'new-canvas-token' });
+
+    const loaded = loadCanvasConfig();
+    expect(loaded.token).toBe('new-canvas-token');
+    expect(loaded.snapshotRetentionCount).toBe(7);
+    expect(loaded.lastValidatedAt).not.toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('overwrites a corrupt config without crashing', async () => {
+    writeFileSync(configPath(), '{ this is not json', 'utf-8');
+
+    const result = await setupCanvas({ ...TEST_INPUT, test: false });
+
+    expect(result.configured).toBe(true);
+    const saved = JSON.parse(readFileSync(configPath(), 'utf-8'));
+    expect(saved.host).toBe('example.instructure.com');
+    expect(saved.token).toBe('canvas-test-token');
+  });
+
+  it('overwrites a non-object JSON payload without crashing', async () => {
+    writeFileSync(configPath(), 'null', 'utf-8');
+
+    const result = await setupCanvas({ ...TEST_INPUT, test: false });
+
+    expect(result.configured).toBe(true);
+    expect(JSON.parse(readFileSync(configPath(), 'utf-8')).host).toBe('example.instructure.com');
+  });
+});
