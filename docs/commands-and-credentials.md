@@ -2,7 +2,7 @@
 
 > Full documentation of **what the application does**, **every command (MCP tool) it exposes**, and **every API key / secret it asks for and why**.
 >
-> Audience: professors evaluating or operating the toolchain, IT/security reviewers, and contributors. Last reconciled against the source tree on 2026-08-13 for: C&C vs Design Studio tool reachability (only `import_course` and `generate_course` pass through; `get_started` / `setup_institution` / `get_setup_worksheet` are Design Studio only; C&C `setup_course` is CI's); C&C CI passthroughs (26 tools in `ci_tools.ts`; `get_course_trajectory` is CI-standalone only; C&C's `analyze_course` is a native workflow wrapper, not a CI passthrough); and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool.
+> Audience: professors evaluating or operating the toolchain, IT/security reviewers, and contributors. Last reconciled against the source tree on 2026-10-17 for: C&C vs Design Studio tool reachability (only `import_course` and `generate_course` pass through; `setup_institution` / `get_setup_worksheet` are Design Studio only, while `get_started` exists on **both** surfaces as two different tools — C&C's `ct_setup` action `get_started` and Design Studio's standalone one; C&C `setup_course` is CI's); C&C CI passthroughs (26 tools in `ci_tools.ts`; `get_course_trajectory` is CI-standalone only; C&C's `analyze_course` is a native workflow wrapper, not a CI passthrough); and installer-wired hosts vs other MCP clients. Not a full parameter-by-parameter reconciliation of every tool.
 >
 > **Want how-to / why-to instead of a lookup table?** Read the [User Guide & Tutorial](user-guide.md) — it walks the toolchain end to end and explains *why* you'd reach for each command.
 
@@ -44,7 +44,7 @@ Professors drive everything by **talking to the Command & Control (C&C) MCP serv
 
 ## 2. Command (MCP tool) reference
 
-All commands are **MCP tools**. You invoke them by asking your AI client in natural language ("analyze how stale my course is"); the client calls the matching tool. Command & Control exposes its own tools **plus** Curriculum Intelligence pass-throughs, the Canvas Backup downloader bridge, and **exactly two** Design Studio tools (`import_course`, `generate_course`). Design Studio's other tools — including `get_started`, `setup_institution`, and `get_setup_worksheet` — require the Design Studio server.
+All commands are **MCP tools**. You invoke them by asking your AI client in natural language ("analyze how stale my course is"); the client calls the matching tool. Command & Control exposes its own tools **plus** Curriculum Intelligence pass-throughs, the Canvas Backup downloader bridge, and **exactly two** Design Studio tools (`import_course`, `generate_course`). Design Studio's other tools — `setup_institution`, `get_setup_worksheet`, and Design Studio's own standalone `get_started` — require the Design Studio server. (C&C has its own first-run guide with the same name, the `ct_setup` action `get_started` — a different tool with different arguments; see §2.1.)
 
 Legend: **R** = required parameter, *italic* = optional.
 
@@ -61,6 +61,7 @@ Legend: **R** = required parameter, *italic* = optional.
 | `setup_doctor` | *probe*, *journey* | Read-only readiness check (reached as `ct_setup {action: "doctor"}`): what is configured, what is broken, and the `ct_setup` action that fixes each item, plus per-capability `readyJourneys` (local-authoring / canvas-connected / ai-assisted). No credentials needed; no network unless `probe: true`, which adds live Canvas (`/api/v1/users/self`) and Anthropic probes (Ollama is never probed). Reports presence, validity, and permissions only — never secret values. |
 | `show_canvas_capabilities` | *category*, *supportStatus* | Return the Canvas design-pattern catalog as markdown. |
 | `preview_canvas_pattern` | **patternId** | Render one pattern to a standalone HTML preview (file:// URL). |
+| `get_started` | *journey* (local-authoring/canvas-connected/ai-assisted/full) | First-run orientation (`ct_setup` action `get_started`): which capabilities are ready and the exact call to finish each step. Read-only, no network. **Different tool** from Design Studio's standalone `get_started` (§2.11). |
 
 ### 2.2 Command & Control — plug-in modules & institution discovery
 
@@ -156,7 +157,7 @@ These run through C&C but are owned by other packages.
 
 **From Curriculum Intelligence (26 tools — the `CI_TOOLS` list in `ci_tools.ts`).** Course setup/state (`setup_course`, `get_course_state`), archive ingestion (`ingest_canvas_archive`), content analysis (`list_assignments`, `list_pages`, `list_modules`, `list_resources`, `diff_semesters`), transcript processing (`ingest_transcripts`, `map_transcripts_to_weeks`, `extract_lecture_topics`, `find_off_syllabus_topics`, `build_quote_bank`), topic currency (`fetch_news_feed`, `scan_recent_developments`, `suggest_topics`, `score_topic_currency`, `recommend_for_topic`), and planning (`generate_ideas_file`, `import_previous_shell`, `fetch_academic_calendar`, `shift_dates`, `generate_recommended_outline`, `draft_assignment_brief`, `update_examples`, `export_course_folder`). `analyze_course` is a C&C-owned workflow wrapper (§2.4), not a CI passthrough. `get_course_trajectory` is **not** on C&C — it is registered only on the standalone Curriculum Intelligence server (§2.10). See §2.10 for the CI-direct detail.
 
-**From Canvas Design Studio (these two only):** `import_course`, `generate_course`. Every other CDS tool — including `get_started`, `setup_institution`, `get_setup_worksheet`, and CDS's own `setup_course` — is **not** registered on C&C; see §2.11.
+**From Canvas Design Studio (these two only):** `import_course`, `generate_course`. Every other CDS tool — `setup_institution`, `get_setup_worksheet`, and CDS's own `setup_course` — is **not** registered on C&C; see §2.11. (`get_started` exists on both surfaces as two different tools: CDS's standalone `get_started` is not on C&C, while C&C's own orientation is the `ct_setup` action `get_started` in §2.1.)
 
 ### 2.10 Curriculum Intelligence (when run standalone)
 
@@ -190,11 +191,11 @@ These run through C&C but are owned by other packages.
 
 ### 2.11 Canvas Design Studio (own MCP server)
 
-Connect the **Canvas Design Studio** server to use these. C&C does **not** expose them, except the two passthroughs already listed in §2.9 (`import_course`, `generate_course`). `get_started`, `setup_institution`, and `get_setup_worksheet` are Design Studio only.
+Connect the **Canvas Design Studio** server to use these. C&C does **not** expose them, except the two passthroughs already listed in §2.9 (`import_course`, `generate_course`). `setup_institution` and `get_setup_worksheet` are Design Studio only. The `get_started` below is Design Studio's own tool and is **not** on C&C — C&C has a separate first-run guide that happens to share the name (`ct_setup` action `get_started`, §2.1).
 
 | Tool | Key parameters | What it does |
 | --- | --- | --- |
-| `get_started` | — | Tailored orientation based on current CDS config. **Not on C&C** — from C&C use `get_cc_status`. |
+| `get_started` | — | Tailored orientation based on current CDS config. **This CDS tool is not on C&C** — C&C's equivalent is the `ct_setup` action `get_started` (§2.1), or `get_cc_status` for a plain health snapshot. |
 | `get_setup_worksheet` | — | Return a blank setup worksheet for the professor to fill in. **Not on C&C.** |
 | `setup_institution` | *worksheetContent* | Set/update institution config (brand colors, Canvas URL, API token) at `~/.canvas-design-mcp/institution.json`. **Not on C&C** — from C&C use `setup_canvas` for the Canvas token. |
 | `validate_canvas_html` | **html** | Check HTML against Canvas RCE rules + WCAG 2.1 AA; list violations. |

@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "courses_root"
 exposure: "intent"
-related: [get_cc_status, open_dashboard, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_lecture_answers, setup_ollama, setup_transcript_source]
+related: [get_cc_status, get_started, open_dashboard, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_ollama, setup_transcript_source]
 deprecated: "Deprecated — use ct_setup {action: \"courses_root\"}; removed in 2.5.0."
 ---
 <!-- generated:end -->

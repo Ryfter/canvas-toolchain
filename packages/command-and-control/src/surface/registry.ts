@@ -19,6 +19,7 @@ import { setCoursesRoot } from '../tools/set_courses_root.js';
 import { openDashboard } from '../tools/open_dashboard.js';
 import { getCcStatus } from '../tools/get_cc_status.js';
 import { runDoctor } from '../setup/doctor.js';
+import { getStarted } from '../setup/get_started.js';
 import { analyzeCourse } from '../tools/workflows/analyze_course.js';
 import { planNextSemester } from '../tools/workflows/plan_next_semester.js';
 import { updateCourseMaterials } from '../tools/workflows/update_course_materials.js';
@@ -471,6 +472,26 @@ export const CORE_OPERATIONS: Operation[] = [
     exposure: 'intent',
     intentTool: 'ct_setup',
     intentAction: 'doctor',
+  },
+  {
+    id: 'get_started',
+    section: 'admin',
+    description: 'First-run guidance built from the setup doctor: which capabilities are ready and the exact ct_setup or ct_advanced call that finishes each one. Read-only and offline.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        journey: {
+          type: 'string',
+          enum: ['local-authoring', 'canvas-connected', 'ai-assisted', 'full'],
+          description: 'Which capability to guide toward. Default full: courses root required, Canvas and AI optional.',
+        },
+      },
+    },
+    handler: (args) => getStarted(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'get_started',
   },
   {
     id: 'analyze_course',
