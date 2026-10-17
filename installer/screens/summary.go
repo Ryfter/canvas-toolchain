@@ -76,7 +76,7 @@ func NewSummaryScreen(parent fyne.Window, st *State, onClose func()) fyne.Canvas
 	)
 
 	bottom := container.NewBorder(nil, nil, done, launchBtn)
-	return container.NewBorder(container.NewVScroll(body), bottom, nil, nil)
+	return container.NewBorder(nil, bottom, nil, nil, container.NewVScroll(body))
 }
 
 // setupSection renders the doctor's verdict on this machine. Every readiness
@@ -134,8 +134,10 @@ func fallbackSetupSection(st *State) fyne.CanvasObject {
 
 // addPanoptoNote is the installer's own question, not the doctor's: the doctor
 // inspects no Panopto config, and the professor chose this workflow on the
-// workflows screen. The installer no longer collects Panopto credentials, so
-// this is a pointer to where they are added, on both summary paths.
+// workflows screen. Panopto is opt-in, so the note only applies when the
+// workflow was chosen — and because the installer no longer collects Panopto
+// credentials, a chosen workflow is always incomplete here, so the note is a
+// pointer to where the credentials are added. It shows on both summary paths.
 func addPanoptoNote(box *fyne.Container, st *State) {
 	if !st.WorkflowPanopto {
 		return
