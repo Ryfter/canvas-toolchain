@@ -71,7 +71,7 @@ maps, not skills:
 ```yaml
 ---
 id: ct_review
-kind: intent        # index | section | intent
+kind: intent        # index | section | intent | advanced
 description: "Accessibility and quality gates before students see anything."
 ops: 6
 related: [accessibility, design]
@@ -127,6 +127,17 @@ one MOC**, so an orphan is always a generator bug or a hand-deleted file.
 | `intent` | `moc/<intent_tool>.md` and `moc/<section>.md` |
 | `advanced` | `moc/ct_advanced.md` and `moc/<section>.md` |
 | `internal` | `moc/<section>.md` only (never callable) |
+
+There are 18 MOCs — 9 intent tools, `ct_advanced`, and 8 sections — because those
+are exactly the closed sets the registry declares. A section MOC's `related`
+lists every tool that reaches into it (the intent tools with operations there,
+plus `ct_advanced` when the section has advanced operations); an intent MOC's
+`related` lists the section that extends it, per `INTENT_TOOLS[].extendedBy`.
+That makes the two directions of the same edge visible from either end.
+
+A stale MOC (an id the registry no longer declares) is **left in place**: the
+generator's job is to write, not to delete files a human may have annotated. The
+`orphan` rule is the detector for that drift.
 
 `related` seeding (`seedRelated`) is deterministic and capped at 8 ids:
 
