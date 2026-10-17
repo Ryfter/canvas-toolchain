@@ -5,6 +5,8 @@
     { "from": "set_active_llm_provider", "to": "setup_anthropic", "reason": "Configure the Anthropic key before activating it." },
     { "from": "setup_ollama", "to": "set_active_llm_provider", "reason": "Activate Ollama once a model is pulled and configured." },
     { "from": "set_active_llm_provider", "to": "setup_ollama", "reason": "Pull and configure the local model before activating Ollama." },
+    { "from": "setup_lmstudio", "to": "set_active_llm_provider", "reason": "Activate LM Studio once a model is loaded and configured." },
+    { "from": "set_active_llm_provider", "to": "setup_lmstudio", "reason": "Load a model in the local LM Studio server before activating it." },
     { "from": "set_active_llm_provider", "to": "get_cc_status", "reason": "Check which providers are actually configured before switching." },
     { "from": "get_cc_status", "to": "set_active_llm_provider", "reason": "Switch the active provider when the snapshot shows a key or local model missing." },
     { "from": "setup_doctor", "to": "get_cc_status", "reason": "The presence-only snapshot: installed packages, key present, config files present." },

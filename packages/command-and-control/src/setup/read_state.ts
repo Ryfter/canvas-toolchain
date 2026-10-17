@@ -2,11 +2,13 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import { normalizeCanvasHost } from '@canvas-toolchain/shared-types';
+import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
 import { loadConfig as loadInstitutionConfig } from '@canvas-toolchain/canvas-design-studio/dist/config.js';
 import { getCcHomePath, loadConfig } from '../kb/config.js';
 import { loadCanvasConfig } from '../tools/setup_canvas.js';
 import { loadAnthropicConfig } from '../tools/setup_anthropic.js';
 import { loadOllamaConfig } from '../tools/setup_ollama.js';
+import { loadLmStudioConfig } from '../tools/setup_lmstudio.js';
 import { loadActiveProvider } from '../tools/set_active_llm_provider.js';
 import { loadTranscriptConfig } from '../tools/setup_transcript_source.js';
 import { loadLectureAnswersConfig } from '../tools/answers/config.js';
@@ -43,6 +45,7 @@ function filePaths(): Record<ConfigFileKey, string> {
     ),
     'anthropic-config': join(ccHome, 'anthropic-config.json'),
     'ollama-config': join(ccHome, 'ollama-config.json'),
+    'lmstudio-config': join(ccHome, 'lmstudio-config.json'),
     'llm-provider': join(ccHome, 'llm-provider.json'),
     'transcript-config': join(ccHome, 'transcript-config.json'),
     'lecture-answers-config': lectureAnswersConfigPath(),
@@ -137,6 +140,21 @@ async function probeRequest(url: string, headers: Record<string, string>): Promi
 }
 
 /**
+ * Guarded LM Studio reachability check (`GET {baseUrl}/models`). The endpoint is
+ * user-supplied, so it re-runs the SSRF guard before the request; a refused or
+ * unresolvable endpoint is reduced to a machine code, never a message.
+ */
+async function probeLmStudio(baseUrl: string): Promise<ProbeResult> {
+  let url: string;
+  try {
+    url = `${(await assertEndpointAllowed(baseUrl)).url}/models`;
+  } catch {
+    return { attempted: true, reachable: false, errorCode: 'ENDPOINT_BLOCKED' };
+  }
+  return probeRequest(url, {});
+}
+
+/**
  * One read-only pass over the machine's setup. Never throws, never returns a
  * secret, and makes no network call unless `probe` is explicitly true.
  */
@@ -169,6 +187,7 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
 
   const anthropic = safely(loadAnthropicConfig);
   const ollama = safely(loadOllamaConfig);
+  const lmstudio = safely(loadLmStudioConfig);
   const answers = loadLectureAnswersConfig();
   const envKeyPresent = nonEmpty(process.env.ANTHROPIC_API_KEY);
   const anthropicSource =
@@ -215,6 +234,11 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
         host: ollama?.baseUrl ?? null,
         model: ollama?.model ?? null,
       },
+      lmstudio: {
+        configured: lmstudio !== undefined,
+        host: lmstudio?.baseUrl ?? null,
+        model: lmstudio?.model ?? null,
+      },
       lectureAnswers: {
         configured: answers !== null,
         provider: answers?.provider ?? null,
@@ -253,6 +277,9 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
           'x-api-key': anthropic.apiKey,
           'anthropic-version': '2023-06-01',
         })
+      : { attempted: false, reachable: false };
+    state.llm.lmstudio.probe = lmstudio
+      ? await probeLmStudio(lmstudio.baseUrl)
       : { attempted: false, reachable: false };
   }
 

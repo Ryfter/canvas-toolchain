@@ -34,7 +34,7 @@ Professors drive everything by **talking to the Command & Control (C&C) MCP serv
 | `command-and-control` | The single MCP entrypoint: workflow orchestration, registry, brand/layout adapters, module loader. Re-exports 26 CI tools (not `get_course_trajectory`) and two CDS tools (`import_course`, `generate_course`). |
 | `curriculum-intelligence` | Reads past course archives + lecture transcripts, scores topic currency, plans the next semester. |
 | `canvas-design-studio` | Generates Canvas-safe HTML, design review/critique, publishing to Canvas. |
-| `shared-llm` | Shared LLM client (Anthropic + Ollama providers). |
+| `shared-llm` | Shared LLM client (Anthropic + Ollama + LM Studio providers). |
 | `shared-types` | TypeScript contracts shared across packages. |
 | `module-contract` | The `CanvasToolchainModule` plug-in contract for opt-in capability modules. |
 | `module-video` | First plug-in module: Lecture Video (Panopto provider) — embeds + transcripts. |
@@ -56,7 +56,8 @@ Legend: **R** = required parameter, *italic* = optional.
 | `setup_anthropic` | **apiKey**, *model*, *test* | Configure the Anthropic API key; validates against the Anthropic API before saving (0o600). |
 | `setup_canvas` | **host**, **token**, *test* | Configure Canvas host + API token; validates against `/api/v1/users/self` before saving (0o600). |
 | `setup_ollama` | *baseUrl*, *model* | Configure local Ollama as a generation provider. No-model call returns recommended-models markdown; with a model it validates and saves. |
-| `set_active_llm_provider` | **provider** (anthropic/ollama) | Switch the active generation provider; refuses if that provider's config is absent. |
+| `setup_lmstudio` | *baseUrl*, *model* | Configure LM Studio's OpenAI-compatible local server as a generation provider. No-model call lists the models the running server reports (default base `http://localhost:1234/v1`); with a model it validates the model is loaded and saves. |
+| `set_active_llm_provider` | **provider** (anthropic/ollama/lmstudio) | Switch the active generation provider; refuses if that provider's config is absent. |
 | `get_cc_status` | — | Health snapshot: installed packages, Anthropic/Ollama availability, routing config, last-run timestamps. |
 | `show_canvas_capabilities` | *category*, *supportStatus* | Return the Canvas design-pattern catalog as markdown. |
 | `preview_canvas_pattern` | **patternId** | Render one pattern to a standalone HTML preview (file:// URL). |
@@ -291,6 +292,7 @@ All secrets are stored **locally** under `~/.command-and-control/` (override wit
 | **Premium registry token** | Ryfter premium resource registry (`ryfter://`) | Authenticates premium template/theme downloads. The free GitHub registry always works without it. | No | `config.json` (`registry.token`, redacted in responses) | `setup_cc` |
 | **WAVE API key** | WebAIM WAVE API | Paid deep accessibility checks of publicly visible pages via `wave_deep_check`. Every call is preceded by a preview + explicit `confirm` (nothing spends credits silently). | No | `~/.canvas-design-mcp/institution.json` (`waveApiKey`) — legacy data dir for Design Studio / CDS-owned config (not the npm package name), same atomic `0o600` write discipline | `wave_deep_check` (*apiKey*, persisted on first use) |
 | **Ollama base URL + model** | Local Ollama server (not a secret) | Local LLM alternative to Anthropic for generation. No key — just an endpoint, usually `http://localhost:11434`. | No | `ollama-config.json` | `setup_ollama` |
+| **LM Studio base URL + model** | Local LM Studio server (not a secret) | OpenAI-compatible local LLM alternative to Anthropic for generation. No key needed locally; a remote/LAN server may use `LMSTUDIO_API_KEY` (env only, sent as a Bearer header, never persisted or logged). | No | `lmstudio-config.json` | `setup_lmstudio` |
 
 > Note: `Canvas API token` and `Voyage API key` are **config-file keys, not environment variables** — they are not read from `process.env`. (See §3.2 for the actual env-var list.)
 
@@ -304,6 +306,8 @@ These are the only environment variables read anywhere in the TypeScript package
 | `BRAVE_SEARCH_API_KEY` | **Yes** | Optional Brave Search key for `scan_recent_developments` / topic-currency web search. **Env-var only — never persisted.** Without it, analysis degrades gracefully (LLM-only / offline). Free tier ~2,000 queries/month. |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | No | Point CI at a local Ollama instance/model. |
 | `CC_OLLAMA_TIMEOUT_MS` | No | Override the Ollama request timeout. |
+| `LMSTUDIO_API_KEY` | **Yes** | Optional Bearer token for a remote/LAN LM Studio server. Env-var only — never persisted by `setup_lmstudio` and never logged. |
+| `CC_LMSTUDIO_TIMEOUT_MS` | No | Override the LM Studio request timeout. |
 | `CC_HOME` | No | Relocate the config directory (default `~/.command-and-control`). |
 | `CC_INSTALL_DIR` | No | Installer marker for the update-version check. |
 | `CC_RECOMMENDED_MODELS_URL` | No | Override the source URL for the Ollama recommended-models list. |
@@ -322,6 +326,7 @@ The Go installer additionally reads OS env vars `CC_HOME` (config location) and 
 | Panopto | `POST /Panopto/oauth2/connect/token` (client_credentials) | 200 |
 | Voyage | `POST /v1/embeddings` (ping embed) | 200 |
 | Ollama | `GET /api/tags` | 200 (server up + model pulled) |
+| LM Studio | `GET {baseUrl}/models` | 200 (server up + model loaded) |
 
 ---
 

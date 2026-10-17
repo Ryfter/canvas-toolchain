@@ -26,6 +26,13 @@ function seedOllamaConfig() {
   writeFileSync(join(ccHomeDir, 'ollama-config.json'), JSON.stringify({ baseUrl: 'http://localhost:11434', model: 'qwen2.5:14b' }));
 }
 
+function seedLmStudioConfig() {
+  writeFileSync(
+    join(ccHomeDir, 'lmstudio-config.json'),
+    JSON.stringify({ baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' }),
+  );
+}
+
 describe('setActiveLlmProvider', () => {
   it('writes llm-provider.json with provider=anthropic when anthropic-config.json exists', async () => {
     seedAnthropicConfig();
@@ -50,6 +57,15 @@ describe('setActiveLlmProvider', () => {
     expect(JSON.parse(readFileSync(join(ccHomeDir, 'llm-provider.json'), 'utf-8'))).toEqual({ provider: 'ollama' });
   });
 
+  it('writes llm-provider.json with provider=lmstudio when lmstudio-config.json exists', async () => {
+    seedLmStudioConfig();
+    const result = await setActiveLlmProvider({ provider: 'lmstudio' });
+
+    expect(result.ok).toBe(true);
+    expect(result.provider).toBe('lmstudio');
+    expect(JSON.parse(readFileSync(join(ccHomeDir, 'llm-provider.json'), 'utf-8'))).toEqual({ provider: 'lmstudio' });
+  });
+
   it('returns PROVIDER_NOT_CONFIGURED when anthropic chosen but config missing', async () => {
     const result = await setActiveLlmProvider({ provider: 'anthropic' });
     expect(result.ok).toBe(false);
@@ -63,6 +79,14 @@ describe('setActiveLlmProvider', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBe('PROVIDER_NOT_CONFIGURED');
     expect(result.fix).toEqual(['Run setup_ollama first']);
+    expect(existsSync(join(ccHomeDir, 'llm-provider.json'))).toBe(false);
+  });
+
+  it('returns PROVIDER_NOT_CONFIGURED when lmstudio chosen but config missing', async () => {
+    const result = await setActiveLlmProvider({ provider: 'lmstudio' });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('PROVIDER_NOT_CONFIGURED');
+    expect(result.fix).toEqual(['Run setup_lmstudio first']);
     expect(existsSync(join(ccHomeDir, 'llm-provider.json'))).toBe(false);
   });
 
@@ -83,6 +107,12 @@ describe('loadActiveProvider', () => {
     mkdirSync(ccHomeDir, { recursive: true });
     writeFileSync(join(ccHomeDir, 'llm-provider.json'), JSON.stringify({ provider: 'ollama' }));
     expect(loadActiveProvider()).toBe('ollama');
+  });
+
+  it('accepts lmstudio as a saved provider', () => {
+    mkdirSync(ccHomeDir, { recursive: true });
+    writeFileSync(join(ccHomeDir, 'llm-provider.json'), JSON.stringify({ provider: 'lmstudio' }));
+    expect(loadActiveProvider()).toBe('lmstudio');
   });
 
   it('throws when file is corrupt', () => {

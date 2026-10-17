@@ -128,6 +128,38 @@ describe('runDoctor checks', () => {
     expect(check(await runDoctor(), 'llm.active_provider').status).toBe('warn');
   });
 
+  it('accepts LM Studio as an active provider', async () => {
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+    seed('llm-provider.json', { provider: 'lmstudio' });
+
+    const report = await runDoctor();
+
+    expect(check(report, 'llm.active_provider').status).toBe('ok');
+    expect(check(report, 'llm.credentials').status).toBe('ok');
+    expect(check(report, 'llm.credentials').summary).toMatch(/LM Studio/);
+    expect(report.readyJourneys.aiAssisted).toBe(true);
+  });
+
+  it('warns when LM Studio is configured but no provider is active', async () => {
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+
+    const active = check(await runDoctor(), 'llm.active_provider');
+
+    expect(active.status).toBe('warn');
+    expect(active.fix).toEqual({
+      tool: 'ct_advanced', action: 'set_active_llm_provider', hint: expect.stringContaining('lmstudio'),
+    });
+  });
+
+  it('reports a corrupt lmstudio-config.json instead of throwing', async () => {
+    writeFileSync(join(ccHome, 'lmstudio-config.json'), '{ nope', 'utf-8');
+
+    const credentials = check(await runDoctor(), 'llm.credentials');
+
+    expect(credentials.status).toBe('warn');
+    expect(credentials.summary.toLowerCase()).toContain('lmstudio-config.json');
+  });
+
   it('reports a corrupt llm-provider.json instead of throwing', async () => {
     writeFileSync(join(ccHome, 'llm-provider.json'), '{ nope', 'utf-8');
     const active = check(await runDoctor(), 'llm.active_provider');
@@ -376,6 +408,21 @@ describe('runDoctor probe', () => {
 
     expect(check(report, 'llm.credentials').status).toBe('ok');
     expect(report.readyJourneys.aiAssisted).toBe(true);
+  });
+
+  it('reports an LM Studio probe that cannot reach the server, and drops ai-assisted readiness', async () => {
+    seed('lmstudio-config.json', { baseUrl: 'http://localhost:1234/v1', model: 'qwen2.5-14b-instruct' });
+    seed('llm-provider.json', { provider: 'lmstudio' });
+    vi.stubGlobal('fetch', vi.fn(async () => { throw Object.assign(new Error('x'), { code: 'ECONNREFUSED' }); }));
+
+    const report = await runDoctor({ probe: true });
+    const credentials = check(report, 'llm.credentials');
+
+    expect(credentials.status).toBe('warn');
+    expect(credentials.summary).toMatch(/LM Studio/);
+    expect(credentials.summary).toMatch(/ECONNREFUSED/);
+    expect(credentials.fix?.action).toBe('lmstudio');
+    expect(report.readyJourneys.aiAssisted).toBe(false);
   });
 });
 

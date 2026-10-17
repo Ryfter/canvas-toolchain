@@ -18,7 +18,7 @@ export type SetupJourney =
   | 'ai-assisted'
   | 'full';
 
-export type ActiveProvider = 'anthropic' | 'ollama';
+export type ActiveProvider = 'anthropic' | 'ollama' | 'lmstudio';
 
 /**
  * Every config file the engine inspects. Logical keys, not paths, so the doctor
@@ -30,6 +30,7 @@ export type ConfigFileKey =
   | 'institution-config'
   | 'anthropic-config'
   | 'ollama-config'
+  | 'lmstudio-config'
   | 'llm-provider'
   | 'transcript-config'
   | 'lecture-answers-config'
@@ -108,6 +109,12 @@ export interface SetupState {
       configured: boolean;
       host: string | null;
       model: string | null;
+    };
+    lmstudio: {
+      configured: boolean;
+      host: string | null;
+      model: string | null;
+      probe?: ProbeResult;
     };
     lectureAnswers: {
       configured: boolean;

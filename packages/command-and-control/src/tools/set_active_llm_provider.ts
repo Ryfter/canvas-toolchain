@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join } from 'node:path';
 import { getCcHomePath } from '../kb/config.js';
 
-export type ActiveProvider = 'anthropic' | 'ollama';
+export type ActiveProvider = 'anthropic' | 'ollama' | 'lmstudio';
 
 export interface SetActiveLlmProviderInput {
   provider: ActiveProvider;
@@ -24,10 +24,16 @@ function getOllamaConfigPath(): string {
   return join(getCcHomePath(), 'ollama-config.json');
 }
 
+function getLmStudioConfigPath(): string {
+  return join(getCcHomePath(), 'lmstudio-config.json');
+}
+
+const VALID_PROVIDERS: readonly ActiveProvider[] = ['anthropic', 'ollama', 'lmstudio'];
+
 export function loadActiveProvider(): ActiveProvider {
   const path = getActiveProviderPath();
   if (!existsSync(path)) {
-    throw new Error('LLM_PROVIDER_NOT_SET: Run set_active_llm_provider with anthropic or ollama.');
+    throw new Error('LLM_PROVIDER_NOT_SET: Run set_active_llm_provider with anthropic, ollama or lmstudio.');
   }
   let parsed: { provider?: string };
   try {
@@ -35,19 +41,19 @@ export function loadActiveProvider(): ActiveProvider {
   } catch {
     throw new Error('LLM_PROVIDER_NOT_SET: llm-provider.json is corrupt. Re-run set_active_llm_provider.');
   }
-  if (parsed.provider !== 'anthropic' && parsed.provider !== 'ollama') {
+  if (!VALID_PROVIDERS.includes(parsed.provider as ActiveProvider)) {
     throw new Error(`LLM_PROVIDER_NOT_SET: invalid provider '${parsed.provider}'. Re-run set_active_llm_provider.`);
   }
-  return parsed.provider;
+  return parsed.provider as ActiveProvider;
 }
 
 export async function setActiveLlmProvider(input: SetActiveLlmProviderInput): Promise<SetActiveLlmProviderResult> {
-  if (input.provider !== 'anthropic' && input.provider !== 'ollama') {
+  if (!VALID_PROVIDERS.includes(input.provider)) {
     return {
       ok: false,
       error: 'INVALID_PROVIDER',
-      message: `Provider must be 'anthropic' or 'ollama', got '${String(input.provider)}'`,
-      fix: [`Provider must be 'anthropic' or 'ollama'`],
+      message: `Provider must be one of ${VALID_PROVIDERS.map((p) => `'${p}'`).join(', ')}, got '${String(input.provider)}'`,
+      fix: [`Provider must be one of ${VALID_PROVIDERS.map((p) => `'${p}'`).join(', ')}`],
     };
   }
 
@@ -65,6 +71,14 @@ export async function setActiveLlmProvider(input: SetActiveLlmProviderInput): Pr
       error: 'PROVIDER_NOT_CONFIGURED',
       message: 'ollama-config.json is missing',
       fix: ['Run setup_ollama first'],
+    };
+  }
+  if (input.provider === 'lmstudio' && !existsSync(getLmStudioConfigPath())) {
+    return {
+      ok: false,
+      error: 'PROVIDER_NOT_CONFIGURED',
+      message: 'lmstudio-config.json is missing',
+      fix: ['Run setup_lmstudio first'],
     };
   }
 

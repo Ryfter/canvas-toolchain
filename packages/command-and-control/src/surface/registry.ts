@@ -4,6 +4,7 @@ import { setupCc } from '../tools/setup_cc.js';
 import { setupAnthropic } from '../tools/setup_anthropic.js';
 import { setupCanvas } from '../tools/setup_canvas.js';
 import { setupOllama } from '../tools/setup_ollama.js';
+import { setupLmStudio } from '../tools/setup_lmstudio.js';
 import { showCanvasCapabilities } from '../tools/showcase/show_canvas_capabilities.js';
 import { previewCanvasPattern } from '../tools/showcase/preview_canvas_pattern.js';
 import { setActiveLlmProvider } from '../tools/set_active_llm_provider.js';
@@ -117,8 +118,8 @@ export const CORE_OPERATIONS: Operation[] = [
         anthropicModel: { type: 'string', description: 'Anthropic model name, e.g. "claude-sonnet-4-6".' },
         ollamaBaseUrl: { type: 'string', description: 'Ollama server URL, e.g. "http://localhost:11434".' },
         ollamaModel: { type: 'string', description: 'Ollama model name, e.g. "llama3.2".' },
-        routingFast: { type: 'string', enum: ['anthropic', 'ollama'] },
-        routingJudgment: { type: 'string', enum: ['anthropic', 'ollama'] },
+        routingFast: { type: 'string', enum: ['anthropic', 'ollama', 'lmstudio'] },
+        routingJudgment: { type: 'string', enum: ['anthropic', 'ollama', 'lmstudio'] },
         downloaderPath: { type: 'string', description: 'Absolute path to the canvas-backup executable (or canvas-backup.exe). Persisted in config — professors set this once instead of managing env vars.' },
         registryToken: { type: 'string', description: 'Premium registry token for ryfter:// resources. Stored locally and never echoed back.' },
         premiumRegistryBaseUrl: { type: 'string', description: 'Optional premium registry API base URL override.' },
@@ -187,6 +188,23 @@ export const CORE_OPERATIONS: Operation[] = [
     intentAction: 'ollama',
   },
   {
+    id: 'setup_lmstudio',
+    section: 'admin',
+    description: 'Configure LM Studio (OpenAI-compatible local server) as the generation LLM. Discovery mode lists loaded models from the running server; commit mode validates the model and writes lmstudio-config.json.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        baseUrl: { type: 'string', description: 'LM Studio base URL. Default http://localhost:1234/v1.' },
+        model: { type: 'string', description: 'Model ID to activate. Omit for discovery mode.' },
+      },
+    },
+    handler: (args) => setupLmStudio(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'lmstudio',
+  },
+  {
     id: 'show_canvas_capabilities',
     section: 'design',
     description:
@@ -227,12 +245,12 @@ export const CORE_OPERATIONS: Operation[] = [
   {
     id: 'set_active_llm_provider',
     section: 'admin',
-    description: 'Set the active generation LLM provider. Must be anthropic or ollama. Refuses to set a provider whose config file is absent.',
+    description: 'Set the active generation LLM provider. Must be anthropic, ollama or lmstudio. Refuses to set a provider whose config file is absent.',
     inputSchema: {
       type: 'object' as const,
       required: ['provider'],
       properties: {
-        provider: { type: 'string', enum: ['anthropic', 'ollama'], description: 'anthropic or ollama' },
+        provider: { type: 'string', enum: ['anthropic', 'ollama', 'lmstudio'], description: 'anthropic, ollama or lmstudio' },
       },
     },
     handler: (args) => setActiveLlmProvider(args as never),
