@@ -95,13 +95,13 @@ function nextStepsFor(
   const steps: string[] = [];
 
   if (activeProvider !== null && !configured.includes(activeProvider)) {
+    // The selector points at a provider with no config file: it is not usable, so
+    // do not also call it the active provider — that reads as a contradiction.
     steps.push(
       `llm-provider.json selects ${activeProvider}, but ${activeProvider}-config.json is missing; ` +
       `run ct_setup action ${activeProvider} to configure it.`,
     );
-  }
-
-  if (activeProvider !== null) {
+  } else if (activeProvider !== null) {
     steps.push(`Active LLM provider: ${activeProvider}.`);
     const alternates = configured.filter((p) => p !== activeProvider);
     if (alternates.length > 0) {

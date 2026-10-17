@@ -1,5 +1,6 @@
 import { readSetupState } from './read_state.js';
 import type {
+  ActiveProvider,
   DoctorCheck,
   DoctorCheckId,
   DoctorReport,
@@ -335,18 +336,44 @@ function activeProviderCheck(state: SetupState): DoctorCheck {
     };
   }
 
-  if (anthropicFileConfigured || ollamaConfigured || lmstudioConfigured) {
-    const configured = anthropicFileConfigured ? 'anthropic' : ollamaConfigured ? 'ollama' : 'lmstudio';
+  // Several providers can be configured at once. With no active provider this is
+  // a genuine choice, so name them all and let the professor pick — never
+  // silently prefer one (the whole point of "no preferred default").
+  const configured: ActiveProvider[] = [
+    anthropicFileConfigured && 'anthropic',
+    ollamaConfigured && 'ollama',
+    lmstudioConfigured && 'lmstudio',
+  ].filter((p): p is ActiveProvider => p !== false);
+
+  if (configured.length === 1) {
+    const only = configured[0];
     return {
       id: 'llm.active_provider',
       status: 'warn',
       summary:
-        `${configured} is configured but no active provider is set, so AI tools fail with ` +
+        `${only} is configured but no active provider is set, so AI tools fail with ` +
         'LLM_PROVIDER_NOT_SET.',
       fix: {
         tool: 'ct_setup',
         action: 'llm_provider',
-        hint: `Activate it: ct_setup action llm_provider with provider "${configured}".`,
+        hint: `Activate it: ct_setup action llm_provider with provider "${only}".`,
+      },
+    };
+  }
+
+  if (configured.length > 1) {
+    return {
+      id: 'llm.active_provider',
+      status: 'warn',
+      summary:
+        `Multiple LLM providers are configured (${configured.join(', ')}) but no active provider ` +
+        'is set, so AI tools fail with LLM_PROVIDER_NOT_SET.',
+      fix: {
+        tool: 'ct_setup',
+        action: 'llm_provider',
+        hint:
+          `Run ct_setup action llm_provider to choose one of your configured providers: ` +
+          `${configured.join(', ')}.`,
       },
     };
   }

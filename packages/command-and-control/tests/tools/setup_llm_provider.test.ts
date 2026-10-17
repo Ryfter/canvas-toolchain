@@ -116,6 +116,19 @@ describe('setup_llm_provider report mode (local detection)', () => {
     expect(result.nextSteps.join(' ')).toMatch(/Switch with ct_setup action llm_provider/);
   });
 
+  it('does not call a provider with no config file active', async () => {
+    mockServers(null, null);
+    seedProvider('lmstudio'); // no lmstudio-config.json on disk
+
+    const result = await setupLlmProvider({});
+
+    if (result.mode !== 'report') throw new Error('expected report');
+    const steps = result.nextSteps.join(' ');
+    expect(steps).toContain('lmstudio-config.json is missing');
+    expect(steps).not.toContain('Active LLM provider: lmstudio');
+    expect(steps).not.toContain('No other provider is configured');
+  });
+
   it('never echoes a stored secret', async () => {
     mockServers(null, null);
     seedProvider('anthropic');

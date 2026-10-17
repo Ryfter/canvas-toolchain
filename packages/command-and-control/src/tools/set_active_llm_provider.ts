@@ -102,9 +102,10 @@ export function autoActivateProvider(provider: ActiveProvider): AutoActivateResu
     return {
       activated: false,
       activeProvider: current,
-      note:
-        `Active LLM provider is already ${current}; ` +
-        `run ct_setup action llm_provider to switch to ${provider}.`,
+      note: current === provider
+        ? `${current} is already the active LLM provider.`
+        : `Active LLM provider is already ${current}; ` +
+          `run ct_setup action llm_provider to switch to ${provider}.`,
     };
   }
   writeActiveProviderFile(provider);
