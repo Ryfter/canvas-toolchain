@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_plan"
 intent_action: "outline"
 exposure: "intent"
-related: [plan_next_semester, shift_dates, draft_assignment_brief]
+related: [diff_semesters, draft_assignment_brief, plan_next_semester, shift_dates, update_course_materials]
 ---
 <!-- generated:end -->
 

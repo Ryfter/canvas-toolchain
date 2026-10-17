@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_plan"
 intent_action: "semester"
 exposure: "intent"
-related: [shift_dates, generate_recommended_outline, draft_assignment_brief]
+related: [analyze_course, draft_assignment_brief, fetch_academic_calendar, full_pipeline, generate_recommended_outline, import_previous_shell, shift_dates]
 ---
 <!-- generated:end -->
 

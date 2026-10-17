@@ -5,7 +5,7 @@ section: "accessibility"
 intent_tool: "ct_review"
 intent_action: "queue"
 exposure: "intent"
-related: [review_canvas_rubric, check_shell_readiness, validate_quiz, audit_course_accessibility, review_accessibility_policy]
+related: [audit_course_accessibility, check_shell_readiness, publish_course, review_accessibility_policy, review_canvas_rubric, validate_quiz]
 ---
 <!-- generated:end -->
 

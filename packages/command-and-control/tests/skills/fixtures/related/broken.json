@@ -1,0 +1,10 @@
+{
+  "note": "Fixture for the curated-link lint rule. The clean lint fixture's registry (alpha, beta) is used, so this file must yield exactly four violations: an unknown `to`, an unknown `from`, a self link, and a duplicate pair.",
+  "links": [
+    { "from": "alpha", "to": "ghost_op", "reason": "unknown target id" },
+    { "from": "ghost_op", "to": "beta", "reason": "unknown source id" },
+    { "from": "alpha", "to": "alpha", "reason": "self link" },
+    { "from": "beta", "to": "alpha", "reason": "valid link" },
+    { "from": "beta", "to": "alpha", "reason": "duplicate of the valid link" }
+  ]
+}

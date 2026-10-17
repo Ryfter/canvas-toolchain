@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_ask"
 intent_action: "index"
 exposure: "intent"
-related: [ask_course]
+related: [ask_course, enrich_panopto_transcripts, reembed_course_index, setup_lecture_answers]
 ---
 <!-- generated:end -->
 

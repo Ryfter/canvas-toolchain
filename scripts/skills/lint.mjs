@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { isMain, LINT_FLAGS, parseArgs, runMain } from './lib/cli.mjs';
 import { DEFAULT_LINT_OPTIONS, lintSkills, summarizeViolations } from './lib/lint-rules.mjs';
+import { curatedRelatedPath, loadCuratedRelated } from './lib/related.mjs';
 import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource } from './lib/registry.mjs';
 import { readSkillsTree } from './lib/tree.mjs';
 
@@ -13,19 +14,23 @@ export async function lintProject({
 } = {}) {
   const source = await loadRegistrySource({ repoRoot, includeModules });
   const tree = readSkillsTree(root);
+  const curated = loadCuratedRelated(curatedRelatedPath(repoRoot));
 
   const options = {
     ...DEFAULT_LINT_OPTIONS,
     ...(maxDescription ? { maxDescription } : {}),
     ...(similarity ? { similarity } : {}),
   };
-  const violations = lintSkills(tree, source.operations, options);
+  // The curated link data is an input to the `curated-link` rule, not a rule
+  // option: report only the options, or `--json` would dump all ~130 links.
+  const violations = lintSkills(tree, source.operations, { ...options, curated });
 
   return {
     root,
     operations: source.operations.length,
     mocs: tree.mocs.length,
     concepts: tree.concepts.length,
+    curatedLinks: curated.links.length,
     options,
     violations,
     summary: summarizeViolations(violations),

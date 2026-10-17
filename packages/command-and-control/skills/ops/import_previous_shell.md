@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_import"
 intent_action: "previous_shell"
 exposure: "intent"
-related: [bulk_fetch_panopto_transcripts, ingest_canvas_archive, ingest_transcripts, download_canvas_archive, download_transcripts, import_course]
+related: [bulk_fetch_panopto_transcripts, download_canvas_archive, download_transcripts, import_course, ingest_canvas_archive, ingest_transcripts, plan_next_semester, shift_dates]
 ---
 <!-- generated:end -->
 

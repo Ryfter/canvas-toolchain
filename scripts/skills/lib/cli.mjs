@@ -8,6 +8,7 @@ const SPEC = {
   '--root': { key: 'root', type: 'string' },
   '--repo-root': { key: 'repoRoot', type: 'string' },
   '--out': { key: 'out', type: 'string' },
+  '--score': { key: 'score', type: 'string' },
   '--max-description': { key: 'maxDescription', type: 'number' },
   '--similarity': { key: 'similarity', type: 'number' },
 };
@@ -17,6 +18,9 @@ export const WRITER_FLAGS = ['--root', '--repo-root', '--check', '--include-modu
 
 /** Flags the lint implements. It is read-only, so it has no --check. */
 export const LINT_FLAGS = ['--root', '--repo-root', '--include-modules', '--json', '--max-description', '--similarity'];
+
+/** Flags the selection harness implements. */
+export const SELECTION_FLAGS = ['--out', '--score', '--repo-root', '--json'];
 
 const DEFAULTS = { root: null, repoRoot: null, check: false, includeModules: false, json: false };
 

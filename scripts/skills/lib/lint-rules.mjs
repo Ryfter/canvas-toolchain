@@ -1,3 +1,4 @@
+import { CURATED_RELATED_FILE } from './related.mjs';
 import { wikilinks } from './tree.mjs';
 
 /**
@@ -10,7 +11,7 @@ export const DEFAULT_LINT_OPTIONS = { maxDescription: 200, similarity: 0.8 };
 
 export const RULES = [
   'missing-description', 'too-long', 'duplicate', 'near-duplicate',
-  'broken-wikilink', 'orphan', 'drift',
+  'broken-wikilink', 'orphan', 'drift', 'curated-link',
 ];
 
 /** Lowercase, drop the co-package prefix several pass-through descriptions
@@ -58,6 +59,31 @@ export function lintSkills(tree, operations, options = {}) {
     ...tree.concepts.map((concept) => concept.id),
     'index',
   ]);
+
+  // The curated `related:` data is hand-authored input, not a generated file, so
+  // it is validated against the registry rather than the tree: an id that is not
+  // a registered operation can never become a link, and a duplicate or a self
+  // link is an authoring mistake the reviewer should see.
+  const pairCounts = new Map();
+  for (const link of options.curated?.links ?? []) {
+    const from = String(link.from ?? '');
+    const to = String(link.to ?? '');
+    if (!registry.has(from)) {
+      add('curated-link', CURATED_RELATED_FILE, from, `curated "from" id "${from}" is not a registered operation`, { target: from });
+    }
+    if (!registry.has(to)) {
+      add('curated-link', CURATED_RELATED_FILE, to, `curated "to" id "${to}" is not a registered operation`, { target: to });
+    }
+    if (from && from === to) {
+      add('curated-link', CURATED_RELATED_FILE, from, 'curated link points at its own operation', { target: to });
+    }
+    const key = `${from}->${to}`;
+    const seen = (pairCounts.get(key) ?? 0) + 1;
+    pairCounts.set(key, seen);
+    if (seen > 1) {
+      add('curated-link', CURATED_RELATED_FILE, from, `duplicate curated link ${key}`, { target: to });
+    }
+  }
 
   for (const operation of operations) {
     if (!opIds.has(operation.id)) {

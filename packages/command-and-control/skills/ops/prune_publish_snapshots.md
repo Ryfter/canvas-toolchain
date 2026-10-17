@@ -5,7 +5,7 @@ section: "snapshots"
 intent_tool: ""
 intent_action: ""
 exposure: "advanced"
-related: [preview_course_publish, publish_course, rollback_course_publish, list_publish_snapshots, snapshot_course]
+related: [list_publish_snapshots, preview_course_publish, publish_course, rollback_course_publish, snapshot_course]
 ---
 <!-- generated:end -->
 

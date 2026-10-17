@@ -36,21 +36,21 @@ pretty-printed form is reported separately and is larger).
 | old surface: floor (tools + section index) | 17559 | 4390 |
 | registry dump (metadata) | 23237 | 5809 |
 | registry dump (with schemas) | 56320 | 14080 |
-| **new path A: index + op file (average)** | **15923** | **3981** |
-| new path A: worst ask | 15997 | 3999 |
+| **new path A: index + op file (average)** | **15952** | **3988** |
+| new path A: worst ask | 16046 | 4012 |
 | new path A: index.md only | 15330 | 3833 |
-| new path B: capped index + op file (average) | 14024 | 3506 |
+| new path B: capped index + op file (average) | 14053 | 3514 |
 | new path B: capped index only | 13431 | 3358 |
-| **new path C: MOC + op file (average)** | **3434** | **859** |
-| new path C: worst ask | 6551 | 1638 |
+| **new path C: MOC + op file (average)** | **3463** | **866** |
+| new path C: worst ask | 6556 | 1639 |
 
 Reduction against the old-surface total:
 
 | New path | Factor |
 | --- | --- |
 | A — index + op file | 2.55x |
-| B — capped index + op file | 2.9x |
-| C — MOC + op file | 11.84x |
+| B — capped index + op file | 2.89x |
+| C — MOC + op file | 11.74x |
 | index.md only | 2.65x |
 
 Against a *thrifty* old path (tools list + the ct_advanced section index, no
@@ -59,14 +59,14 @@ schemas), the comparison is less flattering and the more honest one to quote:
 | New path | Factor |
 | --- | --- |
 | A — index + op file | 1.1x |
-| C — MOC + op file | 5.11x |
+| C — MOC + op file | 5.07x |
 
 Reduction against the metadata registry dump:
 
 | New path | Factor |
 | --- | --- |
 | A — index + op file | 1.46x |
-| C — MOC + op file | 6.76x |
+| C — MOC + op file | 6.71x |
 
 ## Verdict against the plan's ≥5x target
 
@@ -80,10 +80,10 @@ prose, so reading it costs about what it replaces.
 
 Two levers were measured rather than guessed:
 
-* **B — cap the index lines at 140 characters**: 2.9x. Still short.
+* **B — cap the index lines at 140 characters**: 2.89x. Still short.
   Capping at 140 costs the caveats that make selection correct, so this is a
   bad trade even before the number is good enough.
-* **C — start from the intent tool's MOC, not the flat index**: **11.84x**, which
+* **C — start from the intent tool's MOC, not the flat index**: **11.74x**, which
   clears the target comfortably.
 
 Path C is not a hack: the model already knows which `ct_*` tool it is calling when
@@ -105,24 +105,24 @@ harness's accounting of what the new path would read for each ask.
 
 | Ask | Expected operation | Path A files | A tokens | Path C files | C tokens |
 | --- | --- | --- | --- | --- | --- |
-| import last spring's Canvas backup | `download_canvas_archive` | index.md + ops/download_canvas_archive.md | 3976 | moc/ct_import.md + ops/download_canvas_archive.md | 457 |
-| check my quiz before the New Quizzes migration | `validate_quiz` | index.md + ops/validate_quiz.md | 3993 | moc/ct_review.md + ops/validate_quiz.md | 597 |
+| import last spring's Canvas backup | `download_canvas_archive` | index.md + ops/download_canvas_archive.md | 3986 | moc/ct_import.md + ops/download_canvas_archive.md | 466 |
+| check my quiz before the New Quizzes migration | `validate_quiz` | index.md + ops/validate_quiz.md | 4002 | moc/ct_review.md + ops/validate_quiz.md | 606 |
 | roll back yesterday's publish | `rollback_course_publish` | index.md + ops/rollback_course_publish.md | 3955 | moc/ct_publish.md + ops/rollback_course_publish.md | 354 |
-| make a rubric students can read | `draft_student_rubric` | index.md + ops/draft_student_rubric.md | 3995 | moc/ct_build.md + ops/draft_student_rubric.md | 599 |
-| find off-syllabus topics in my lectures | `find_off_syllabus_topics` | index.md + ops/find_off_syllabus_topics.md | 3962 | moc/ct_analyze.md + ops/find_off_syllabus_topics.md | 410 |
+| make a rubric students can read | `draft_student_rubric` | index.md + ops/draft_student_rubric.md | 4001 | moc/ct_build.md + ops/draft_student_rubric.md | 604 |
+| find off-syllabus topics in my lectures | `find_off_syllabus_topics` | index.md + ops/find_off_syllabus_topics.md | 3967 | moc/ct_analyze.md + ops/find_off_syllabus_topics.md | 415 |
 | prune old publish snapshots | `prune_publish_snapshots` | index.md + ops/prune_publish_snapshots.md | 3988 | moc/ct_advanced.md + ops/prune_publish_snapshots.md | 1626 |
 | install the roster module | `install_module` | index.md + ops/install_module.md | 3981 | moc/ct_advanced.md + ops/install_module.md | 1620 |
-| set my institution profile | `save_institution_profile` | index.md + ops/save_institution_profile.md | 3997 | moc/ct_advanced.md + ops/save_institution_profile.md | 1635 |
-| audit accessibility | `audit_course_accessibility` | index.md + ops/audit_course_accessibility.md | 3998 | moc/ct_review.md + ops/audit_course_accessibility.md | 602 |
-| fetch the Panopto transcripts | `bulk_fetch_panopto_transcripts` | index.md + ops/bulk_fetch_panopto_transcripts.md | 3997 | moc/ct_import.md + ops/bulk_fetch_panopto_transcripts.md | 477 |
-| ask the course a question | `ask_course` | index.md + ops/ask_course.md | 3963 | moc/ct_ask.md + ops/ask_course.md | 326 |
-| shift my dates to next semester | `shift_dates` | index.md + ops/shift_dates.md | 3945 | moc/ct_plan.md + ops/shift_dates.md | 325 |
-| generate a quiz | `generate_quiz` | index.md + ops/generate_quiz.md | 3991 | moc/ct_build.md + ops/generate_quiz.md | 595 |
-| preview the publish | `preview_course_publish` | index.md + ops/preview_course_publish.md | 3957 | moc/ct_publish.md + ops/preview_course_publish.md | 355 |
+| set my institution profile | `save_institution_profile` | index.md + ops/save_institution_profile.md | 4001 | moc/ct_advanced.md + ops/save_institution_profile.md | 1639 |
+| audit accessibility | `audit_course_accessibility` | index.md + ops/audit_course_accessibility.md | 4006 | moc/ct_review.md + ops/audit_course_accessibility.md | 610 |
+| fetch the Panopto transcripts | `bulk_fetch_panopto_transcripts` | index.md + ops/bulk_fetch_panopto_transcripts.md | 4009 | moc/ct_import.md + ops/bulk_fetch_panopto_transcripts.md | 489 |
+| ask the course a question | `ask_course` | index.md + ops/ask_course.md | 3975 | moc/ct_ask.md + ops/ask_course.md | 337 |
+| shift my dates to next semester | `shift_dates` | index.md + ops/shift_dates.md | 3963 | moc/ct_plan.md + ops/shift_dates.md | 343 |
+| generate a quiz | `generate_quiz` | index.md + ops/generate_quiz.md | 3995 | moc/ct_build.md + ops/generate_quiz.md | 598 |
+| preview the publish | `preview_course_publish` | index.md + ops/preview_course_publish.md | 3977 | moc/ct_publish.md + ops/preview_course_publish.md | 375 |
 | compare the transcripts | `compare_transcripts` | index.md + ops/compare_transcripts.md | 3999 | moc/ct_advanced.md + ops/compare_transcripts.md | 1638 |
-| save this layout as a template | `save_layout_as_template` | index.md + ops/save_layout_as_template.md | 3980 | moc/ct_advanced.md + ops/save_layout_as_template.md | 1618 |
-| recommend something for this topic | `recommend_for_topic` | index.md + ops/recommend_for_topic.md | 3980 | moc/ct_advanced.md + ops/recommend_for_topic.md | 1618 |
-| check my shell readiness | `check_shell_readiness` | index.md + ops/check_shell_readiness.md | 3998 | moc/ct_review.md + ops/check_shell_readiness.md | 602 |
+| save this layout as a template | `save_layout_as_template` | index.md + ops/save_layout_as_template.md | 3986 | moc/ct_advanced.md + ops/save_layout_as_template.md | 1625 |
+| recommend something for this topic | `recommend_for_topic` | index.md + ops/recommend_for_topic.md | 3985 | moc/ct_advanced.md + ops/recommend_for_topic.md | 1624 |
+| check my shell readiness | `check_shell_readiness` | index.md + ops/check_shell_readiness.md | 4012 | moc/ct_review.md + ops/check_shell_readiness.md | 616 |
 
 ## Honest caveats
 

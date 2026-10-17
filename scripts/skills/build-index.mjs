@@ -2,21 +2,24 @@
 import { join } from 'node:path';
 import { isMain, parseArgs, runMain, WRITER_FLAGS } from './lib/cli.mjs';
 import { summarize, writeGeneratedFile } from './lib/emit.mjs';
-import { seedRelated } from './lib/graph.mjs';
+import { mergeRelated, seedRelated } from './lib/graph.mjs';
+import { curatedRelatedPath, loadCuratedRelated } from './lib/related.mjs';
 import { REPO_ROOT, SKILLS_ROOT, loadRegistrySource } from './lib/registry.mjs';
 import { indexStubBody, opStubBody, renderIndexFile, renderOpFile } from './lib/render.mjs';
 
 /**
  * Write index.md and one ops/<id>.md per operation.
  *
- * Idempotent: the operation order is the registry order and nothing embeds a
- * timestamp, so a second run over an unchanged registry writes nothing.
+ * Idempotent: the operation order is the registry order, the curated `related`
+ * links are merged in a sorted order, and nothing embeds a timestamp, so a
+ * second run over an unchanged registry writes nothing.
  */
 export async function buildIndex({
   root = SKILLS_ROOT, repoRoot = REPO_ROOT, includeModules = false, check = false,
 } = {}) {
   const source = await loadRegistrySource({ repoRoot, includeModules });
-  const related = seedRelated(source.operations);
+  const curated = loadCuratedRelated(curatedRelatedPath(repoRoot));
+  const related = mergeRelated(seedRelated(source.operations), curated.byFrom);
 
   const results = [
     writeGeneratedFile(join(root, 'index.md'), renderIndexFile(source), { check, stub: indexStubBody() }),

@@ -5,7 +5,7 @@ section: "design"
 intent_tool: ""
 intent_action: ""
 exposure: "advanced"
-related: [preview_canvas_pattern, update_course_materials, draft_student_rubric, review_canvas_rubric, generate_quiz, paste_layout, save_layout_as_template, draft_assignment_brief]
+related: [draft_assignment_brief, draft_student_rubric, generate_quiz, paste_layout, preview_canvas_pattern, review_canvas_rubric, save_layout_as_template, update_course_materials]
 ---
 <!-- generated:end -->
 

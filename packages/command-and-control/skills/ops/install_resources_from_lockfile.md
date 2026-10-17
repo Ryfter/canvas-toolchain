@@ -5,7 +5,7 @@ section: "registry"
 intent_tool: ""
 intent_action: ""
 exposure: "advanced"
-related: [install_resource, list_installed_resources, uninstall_resource, search_registry]
+related: [install_resource, list_installed_resources, search_registry, uninstall_resource]
 ---
 <!-- generated:end -->
 

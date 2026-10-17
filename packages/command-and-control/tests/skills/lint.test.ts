@@ -3,9 +3,11 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_LINT_OPTIONS, lintSkills, normalizeDescription, trigramSimilarity } from '../../../../scripts/skills/lib/lint-rules.mjs';
+import { curatedRelatedFrom } from '../../../../scripts/skills/lib/related.mjs';
 import { readSkillsTree } from '../../../../scripts/skills/lib/tree.mjs';
 
 const FIXTURES = fileURLToPath(new URL('./fixtures/lint', import.meta.url));
+const RELATED_FIXTURES = fileURLToPath(new URL('./fixtures/related', import.meta.url));
 
 function fixture(name: string): { tree: ReturnType<typeof readSkillsTree>; operations: unknown[] } {
   const root = join(FIXTURES, name);
@@ -115,6 +117,40 @@ describe('lintSkills against one fixture per rule', () => {
     expect(violations.map((v: { rule: string; file: string }) => `${v.rule}:${v.file}`))
       .toEqual(['drift:concepts/broken.md']);
     expect(violations[0].message).toContain('frontmatter');
+  });
+});
+
+describe('curated-link rule', () => {
+  // The curated data file is hand-authored input, so the rule validates it
+  // against the registry rather than the generated tree. The fixture pairs the
+  // clean tree/registry with a deliberately broken links file.
+  const clean = fixture('clean');
+  const brokenFixture = JSON.parse(readFileSync(join(RELATED_FIXTURES, 'broken.json'), 'utf8'));
+
+  it('reports a broken id in the curated data file', () => {
+    const curated = curatedRelatedFrom(brokenFixture);
+    const violations = lintSkills(clean.tree, clean.operations, { curated })
+      .filter((v: { rule: string }) => v.rule === 'curated-link');
+
+    expect(violations).toHaveLength(4);
+    expect(violations.map((v: { message: string }) => v.message)).toEqual([
+      expect.stringContaining('"ghost_op" is not a registered operation'),
+      expect.stringContaining('"ghost_op" is not a registered operation'),
+      expect.stringContaining('points at its own operation'),
+      expect.stringContaining('duplicate curated link beta->alpha'),
+    ]);
+    for (const violation of violations) {
+      expect(violation.file).toBe('scripts/skills/data/related.json');
+    }
+  });
+
+  it('reports nothing when every curated id resolves', () => {
+    const curated = curatedRelatedFrom({ links: [{ from: 'alpha', to: 'beta', reason: 'a real link' }] });
+    expect(lintSkills(clean.tree, clean.operations, { curated })).toEqual([]);
+  });
+
+  it('is inert when no curated data is supplied', () => {
+    expect(rulesFor('clean')).toEqual([]);
   });
 });
 

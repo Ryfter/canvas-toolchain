@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_build"
 intent_action: "full_pipeline"
 exposure: "intent"
-related: [preview_canvas_pattern, update_course_materials, draft_student_rubric, generate_quiz, paste_layout, update_examples, generate_course]
+related: [analyze_course, draft_student_rubric, generate_course, generate_quiz, paste_layout, plan_next_semester, preview_canvas_pattern, update_course_materials, update_examples]
 ---
 <!-- generated:end -->
 

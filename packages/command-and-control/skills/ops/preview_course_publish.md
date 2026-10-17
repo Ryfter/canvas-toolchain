@@ -5,7 +5,7 @@ section: "snapshots"
 intent_tool: "ct_publish"
 intent_action: "preview"
 exposure: "intent"
-related: [publish_course, rollback_course_publish, list_publish_snapshots]
+related: [check_shell_readiness, generate_course, list_publish_snapshots, publish_course, rollback_course_publish, setup_canvas, update_course_materials]
 ---
 <!-- generated:end -->
 

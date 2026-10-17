@@ -5,7 +5,7 @@ section: "design"
 intent_tool: "ct_build"
 intent_action: "quiz"
 exposure: "intent"
-related: [preview_canvas_pattern, update_course_materials, full_pipeline, draft_student_rubric, paste_layout, update_examples, generate_course]
+related: [draft_student_rubric, full_pipeline, generate_course, paste_layout, preview_canvas_pattern, update_course_materials, update_examples, validate_quiz]
 ---
 <!-- generated:end -->
 
