@@ -32,6 +32,17 @@ export interface PassthroughTool {
   handler: (args: unknown) => unknown | Promise<unknown>;
 }
 
+/**
+ * Reuse a pass-through tool's existing handler by reference, so a caller never
+ * copies or reimplements that tool's logic. Two callers share it: the registry,
+ * which exposes the tools, and `apply_setup`, which delegates a section to one.
+ */
+export function passthroughHandler(tools: PassthroughTool[], name: string): PassthroughTool['handler'] {
+  const tool = tools.find((candidate) => candidate.name === name);
+  if (!tool) throw new Error(`pass-through tool not found: ${name}`);
+  return tool.handler;
+}
+
 export const CI_TOOLS: PassthroughTool[] = [
   {
     name: 'setup_course',

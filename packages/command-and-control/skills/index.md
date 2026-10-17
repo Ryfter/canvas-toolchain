@@ -1,8 +1,8 @@
 ---
 id: "index"
 kind: "index"
-description: "Full catalog: one line per operation (90 total), grouped by section. To act, start from moc/<intent tool>.md (e.g. moc/ct_build.md), then open ops/<id>.md for the one you picked."
-ops: 90
+description: "Full catalog: one line per operation (91 total), grouped by section. To act, start from moc/<intent tool>.md (e.g. moc/ct_build.md), then open ops/<id>.md for the one you picked."
+ops: 91
 related: [modules, registry, transcripts, research, accessibility, snapshots, design, admin]
 ---
 # Operation index
@@ -122,6 +122,7 @@ Sections: [[modules]] [[registry]] [[transcripts]] [[research]] [[accessibility]
 - [[export_course_folder]] — Strip CI fields and write CDS course/ format; one folder per section.
 - [[setup_canvas_backup]] — [canvas-backup] Generate the Canvas Backup config from your Canvas connection. Writes the toml without the token (passed via CANVAS_TOKEN). Run once per semester so canvas_archive_download works.
 - [[download_canvas_archive]] — [canvas-backup] Archive a Canvas course shell locally by invoking the Canvas Backup CLI.
+- [[apply_setup]] — Run several setup steps from one patch (courses root, Canvas, LLM provider, activation, transcripts, embeddings, spot check, backup), continuing past a failed step, then report the doctor.
 
 ## Concepts (7)
 
