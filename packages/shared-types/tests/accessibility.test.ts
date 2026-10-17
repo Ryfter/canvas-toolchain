@@ -71,7 +71,7 @@ describe('computeVerdict', () => {
 
 import {
   evaluateAckAgainst, evaluateAcknowledgment, clearFailureScs,
-  type AccessibilityFinding, type ConformanceReport, DEFAULT_REQUIRED_LEVEL,
+  type ConformanceReport,
 } from '../src/accessibility.js';
 
 function findingAck(over: Partial<AccessibilityFinding>): AccessibilityFinding {

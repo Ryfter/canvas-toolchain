@@ -74,7 +74,7 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('enrichPanoptoTranscripts', () => {
