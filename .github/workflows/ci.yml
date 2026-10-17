@@ -37,6 +37,23 @@ jobs:
       - name: Build all packages
         run: npm run build
 
+      # Both skill-graph checks read the built registry
+      # (packages/command-and-control/dist/surface/registry.js), so they must stay
+      # below "Build all packages". They are pure filesystem reads, so they run on
+      # one matrix node only. If Node 20 ever leaves the matrix, move the gate with
+      # it — a gate on a version that is gone silently stops running the check.
+      - name: Skill graph is up to date
+        if: matrix.node == '20'
+        run: |
+          node scripts/skills/build-index.mjs --check
+          node scripts/skills/moc.mjs --check
+
+      - name: Skill graph lint
+        if: matrix.node == '20'
+        # 600 is a temporary ceiling: 31 descriptions exceed the 200 target.
+        # J7 tightens this to 200 once those descriptions are rewritten.
+        run: node scripts/skills/lint.mjs --max-description 600
+
       - name: Run full test suite
         run: npm test
 
