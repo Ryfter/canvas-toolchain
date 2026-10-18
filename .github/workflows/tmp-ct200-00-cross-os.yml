@@ -30,6 +30,7 @@ jobs:
         run: npm run build
       - name: Test per package (never fails the job)
         run: |
+          set +e +o pipefail
           for d in packages/*/; do
             p=$(basename "$d")
             grep -q '"test"' "$d/package.json" 2>/dev/null || { echo "CT200SUM $p rc=skip(no test script)"; continue; }
