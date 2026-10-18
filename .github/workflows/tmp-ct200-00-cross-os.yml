@@ -1,0 +1,43 @@
+name: TMP CT200-00 cross-OS discovery (throwaway, do not merge)
+on:
+  push:
+    branches: [ci/ct200-00-cross-os-discovery]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  discover:
+    name: discover (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Build
+        continue-on-error: true
+        run: npm run build
+      - name: Test per package (never fails the job)
+        run: |
+          for d in packages/*/; do
+            p=$(basename "$d")
+            grep -q '"test"' "$d/package.json" 2>/dev/null || { echo "CT200SUM $p rc=skip(no test script)"; continue; }
+            npm test --workspace="packages/$p" > "/tmp/t-$p.txt" 2>&1; rc=$?
+            echo "CT200SUM $p rc=$rc"
+            if [ $rc -ne 0 ]; then
+              grep -E "FAIL|✗|×|not ok|Error:" "/tmp/t-$p.txt" | grep -v "^ *$" | head -60 | sed "s/^/CT200FAIL $p | /"
+              tail -8 "/tmp/t-$p.txt" | sed "s/^/CT200TAIL $p | /"
+            fi
+          done
+          exit 0
