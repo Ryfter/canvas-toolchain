@@ -1,0 +1,453 @@
+# Per-OS app paths (#200) and per-module credentials (#201): design and job list
+
+- **Status:** draft for Kevin's review. Docs only, no product code.
+- **Issues:** Ryfter/canvas-toolchain#200, Ryfter/canvas-toolchain#201
+- **Baseline:** `main` @ `36bd43a`
+- **Why one spec:** both issues rewrite the same seam. That seam is "where does a module find its home folder and its Canvas token". Each module package hand-rolls both today. Fixing paths first and credentials second would touch every module twice. The design below gives modules both through one host-provided context, so each module changes once.
+
+---
+
+## 1. Problem
+
+1. **#200.** Every app folder is `join(homedir(), '.<app>')`. On Windows that puts config, secrets and large data in dot-folders under `C:\Users\<name>\`, not in `%APPDATA%` / `%LOCALAPPDATA%`. The resolution rule is copy-pasted about 25 times and has already drifted (§2.1). `0o600` writes are a no-op on Windows.
+2. **#201.** Every module reads the professor's single shared `canvas-config.json` / `anthropic-config.json` itself. A catalog-installed module gets the full Canvas token and LLM key whether it needs them or not. A professor also cannot give one module a different Canvas identity (for example, an account that can see `sis_user_id`). The module contract has no way to say which credentials a module uses.
+
+## 2. What the codebase actually does (research, `main` @ 36bd43a)
+
+### 2.1 App-home resolution sites (production code, tests excluded)
+
+**Command & Control home `~/.command-and-control` (`CC_HOME`):**
+
+| Site | Notes |
+|---|---|
+| `packages/shared-types/src/canvas-store.ts:47` `ccHome()` | canonical Canvas store |
+| `packages/command-and-control/src/kb/config.ts:7` `getCcHomePath()` | used by **~20 C&C files**, all via this one function (setup_*, channel/*, registry, publish, discovery, answers, spot-check, canvas_backup_config) |
+| `packages/canvas-design-studio/src/utils/registry.ts:71` `getCcHomePath()` | a second copy, honours `CC_HOME` |
+| `packages/canvas-design-studio/src/tools/showcase/render_preview.ts:74` | inline copy |
+| `packages/module-video/src/cc-home.ts:5` | used by `panopto/setup.ts`, `panopto/vocab.ts`, `resolve.ts` |
+| `packages/module-roster/src/paths.ts:5` | used by the vault, aliases, column-map and LLM reader. **peerassessment reuses roster's vault** |
+| `packages/module-peerassessment/src/paths.ts:5` | |
+| `packages/module-oral-assessment/src/llm.ts:6` | private copy |
+| `packages/module-group-builder/src/{buckets,history}/store.ts`, `src/data/canvas-client.ts:42` | three inline copies |
+| `packages/module-announcements/src/canvas.ts:11` | inline |
+| `modules/announcements/1.1.0/announcements-1.1.0.mjs:34` | **shipped, hash-pinned artifact; cannot be edited** |
+| `installer/tasks/configs.go:12` `CcHomePath()` | Go. Writes `modules.json` and `pending-module-installs.json` (`installer/screens/install.go:189,193`) |
+
+**Canvas Design Studio home `~/.canvas-design-mcp` (`CANVAS_DESIGN_HOME`):**
+
+| Site | Notes |
+|---|---|
+| `packages/shared-types/src/canvas-store.ts:51` | |
+| `packages/canvas-design-studio/src/config.ts:37` | |
+| `packages/canvas-design-studio/src/tools/update-kb.ts:5`, `philosophy.ts:5`, `personas.ts:5` | **Missed by #200's framing: these ignore `CANVAS_DESIGN_HOME` entirely** and are module-level `const`s evaluated at import time. That is a latent test-isolation hole: `tests/setup-sandbox-home.ts` cannot redirect them. |
+| `packages/module-video/src/panopto/client.ts:239` | transcripts, ignores env (as #200 says) |
+| `packages/command-and-control/src/setup/read_state.ts:46`, `src/lib/kb-bridge.ts:26` | |
+| `scripts/shell-edit-doctor.mjs:63` | uses **`.canvas-design-studio`**, the wrong folder name |
+
+**Curriculum Intelligence home `~/.curriculum-intelligence` (`CURRICULUM_INTELLIGENCE_HOME`):**
+`packages/curriculum-intelligence/src/config.ts:13` (uses `||`, the others use `??`, so an empty env var behaves differently: drift), `command-and-control/src/tools/workflows/{ask_course.ts:81,index_course_for_answers.ts:43,update_course_materials.ts:34}`, `src/lib/kb-bridge.ts:22`, `scripts/shell-edit-doctor.mjs:62`.
+
+**Missed by the issue, but correctly out of scope:**
+- `command-and-control/src/setup/hosts.ts:741`: MCP *host* config detection. It already uses `%APPDATA%` with a `home\AppData\Roaming` fallback (`hosts.ts:77-81`). This is the pattern to mirror.
+- `command-and-control/src/passthrough/canvas_backup_config.ts:40`: the default `~/CanvasArchive` is a **user-visible documents folder**, not app data. It stays as it is.
+- `installer/screens/state.go:85` `DefaultInstallDir()`: the program install location, not config or data. See Q4.
+
+**Hard-coded `~/.command-and-control/...` in user-facing strings:** `canvas-design-studio/src/index.ts:517,653` (error causes), `command-and-control/src/tools/review_accessibility_policy.ts:87`, `src/tools/open_dashboard.ts:22`, `src/cli/dashboard.ts:11`, `src/tools/showcase/preview_canvas_pattern.ts:73`, `src/setup/doctor.ts:131,231`. All are wrong on Windows after this change.
+
+### 2.2 What lives in each home (config vs data)
+
+Built from `join(<home>, '<name>')` call sites:
+
+| App | Config (small, user-authored, often secret) | Data (large, cached or regenerable) |
+|---|---|---|
+| C&C | `config.json` (premium registry token), `canvas-config.json`, `anthropic-config.json`, `ollama-config.json`, `lmstudio-config.json`, `llm-provider.json`, `transcript-config.json`, `panopto-config.json`, `panopto-vocab.json`, `spot-check.json`, `modules.json`, `installed-modules.json`, `pending-module-installs.json`, `channel-notice-state.json`, `canvas-store-migration.json`, `institution-profile.md`, `canvas-backup.generated.toml`, lecture-answers config, `roster-vault/` (pseudonym vault), `groups/` (pairing history), `peerassessment/` | `modules/` (channel artifacts), `registry/` (downloaded resources), `publish-snapshots/`, `showcase-previews/`, `cache/`, `module-catalog-cache.json` |
+| CDS | `institution.json` (mirrors Canvas token), `professor-philosophy.md`, `philosophy-kb.md`, `student-personas.md`, `course/` | `kb/`, `transcripts/` |
+| CI | `config.json` | `courses/`, `panopto/` |
+
+The pairing history, roster vault and per-course bucket maps are **state, not cache**. Nothing regenerates them, so they are classed as config: they go wherever config goes and are never auto-cleaned.
+
+### 2.3 Credential readers
+
+| Kind | Writer | Readers that bypass any shared loader |
+|---|---|---|
+| Canvas `host`+`token` | `shared-types/canvas-store.ts` (C&C `setup_canvas`, the CDS mirror) | `module-group-builder/src/data/canvas-client.ts:41`, `module-roster/src/canvas/client.ts:41`, `module-peerassessment/src/canvas/client.ts:39`, `module-announcements/src/canvas.ts:10`, artifact `announcements-1.1.0.mjs:33`. Each **re-implements host normalization** because modules have no `shared-types` dependency (`canvas-store.ts:15-16`). |
+| Anthropic `apiKey`+`model` | C&C `setup_anthropic.ts` | `module-oral-assessment/src/llm.ts:18` (throws), `module-roster/src/major/llm.ts:11` (returns null, so normalization degrades) |
+| Panopto OAuth | `module-video/src/panopto/setup.ts:97` (the module's own tool) | the same module only |
+| `CANVAS_TOKEN` env | injected into the Canvas Backup child only (`passthrough/downloader_tools.ts:140`) | none. The runtime deliberately ignores `ANTHROPIC_API_KEY` (`get_cc_status.ts:14-17`) |
+
+### 2.4 Module loading facts that constrain the design
+
+- **Module packages depend only on `@canvas-toolchain/module-contract`** (plus `shared-llm` for two of them). None depend on `shared-types`. Channel artifacts are esbuild bundles of a module plus **all** of its runtime deps (`scripts/build-module.mjs:26-35`). Any path or credential logic a module imports gets **frozen into a hash-pinned artifact**, so a future path change would need a new artifact version for every channel module.
+- Built-in modules load through `KNOWN_MODULES` dynamic imports (`modules/registry.ts:19-25`). Channel artifacts load through `import(fileURL?sha256=…)` (`registry.ts:73`). Both run in-process. The contract hands a module nothing: `ModuleTool.handler(args)` only (`module-contract/src/index.ts`).
+- **`<cc-home>/modules/` is already taken** by channel artifacts (`channel/installed.ts:23`). `uninstall_module` runs `rmSync(join(modulesRoot, id), {recursive:true})` (`channel/install.ts:360`), and retired-version pruning runs `rmSync` under it (`registry.ts:92`). **The issue's proposed `<cc-home>/modules/<id>/credentials.json` would be silently deleted on every uninstall, and also on reinstall, which uninstalls first.** It would also land in `%LOCALAPPDATA%` (data) on Windows. The store must live elsewhere (§4.2).
+- The workspace has a **version-lockstep guard**. `module-contract` cannot get its own semver bump, so the contract needs an explicit `contractVersion` field. `module-announcements` (1.1.0) is outside the lockstep.
+- `module-catalog.json` on `main` **is the live catalog**. Each id has one entry, and `minHostVersion` is enforced at install (`channel/install.ts:216`). If the catalog points at an artifact that needs an unreleased host, every professor on the current release loses the ability to install that module.
+
+### 2.5 CI facts
+
+- TypeScript CI (`ci.yml`) is **ubuntu-only**. Only `installer-ci.yml` runs ubuntu/macos/windows, and it only triggers on `installer/**` + `module-catalog.json` (the PR #152 lesson).
+- There is no evidence the full TS suite passes on Windows. Many tests assert POSIX modes. Gating the whole suite on Windows in one step would block this work on unrelated failures (§7, job CT200-00).
+
+---
+
+## 3. Constraints (stated and unstated)
+
+1. **Zero data loss on migration.** No overwrite, no delete, idempotent, safe to interrupt, and safe when two servers start at once (C&C, standalone CDS and standalone CI can all boot together).
+2. **macOS and Linux stay byte-for-byte unchanged.** There is no user complaint, and moving secrets on POSIX is risk with no evidence behind it (law #7). XDG is not adopted (Q3).
+3. **Env overrides keep top priority** and keep meaning "one folder for everything". Test sandboxes (`canvas-design-studio/tests/setup-sandbox-home.ts`) rely on that.
+4. **The Go installer and Node must resolve the same C&C home on every OS, at every point in the upgrade.** That includes "new installer, old data, Node not yet run".
+5. **Shipped artifacts cannot change.** `announcements-1.1.0.mjs` keeps reading `CC_HOME ?? ~/.command-and-control/canvas-config.json` forever.
+6. **No re-entry of secrets** for existing installs, for any module.
+7. **Secrets never reach results, logs or journals.** Presence only (the AGENTS.md rule for status tools, asserted in `get_cc_status.test.ts`).
+8. **The manual, no-token path stays first-class.** None of this may make Canvas credentials mandatory for tools that don't need them.
+9. **Cross-language contracts get a shared fixture.** The `canvas-host.test.ts` ↔ `canvashost.go` precedent applies, and the fixture must be in `installer-ci.yml`'s path filter.
+10. **Skill graph is generated.** Any registry description change needs `build-index.mjs` + `moc.mjs` regenerated and `lint.mjs` passing.
+11. **`docs/modules.md` is generated** from the catalog. Module-authoring guidance goes in `docs/architecture-modules.md` and `docs/module-channel.md`, never hand-edited into `modules.md`. (#201 asks to "update modules.md". That means regenerate it.)
+
+---
+
+## 4. Design
+
+### 4.1 #200: one path resolver, plus a Go twin
+
+**New `packages/shared-types/src/app-paths.ts`** (pure; `platform`, `env` and `homedir` injectable for tests):
+
+```ts
+export type AppId = 'cc' | 'cds' | 'ci';
+export interface AppPaths {
+  config: string;   // settings, secrets, irreplaceable state
+  data: string;     // caches, artifacts, snapshots, large regenerable data
+  source: 'env' | 'default';
+}
+export interface PathEnv { platform?: NodeJS.Platform; env?: Record<string, string | undefined>; homedir?: string }
+export function appPaths(app: AppId, o?: PathEnv): AppPaths;
+export function legacyAppHome(app: AppId, o?: PathEnv): string; // ~/.command-and-control etc.
+export const ccConfigHome, ccDataHome, cdsConfigHome, cdsDataHome, ciConfigHome, ciDataHome: () => string;
+```
+
+Resolution, in order:
+
+| # | Condition | config | data |
+|---|---|---|---|
+| 1 | env override set and non-empty after trim (`CC_HOME` / `CANVAS_DESIGN_HOME` / `CURRICULUM_INTELLIGENCE_HOME`) | override | **same override** (constraint 3) |
+| 2 | `win32` | `%APPDATA%\CanvasToolchain\<Sub>` | `%LOCALAPPDATA%\CanvasToolchain\<Sub>` |
+| 3 | anything else | `~/.<legacy>` | `~/.<legacy>` (same dir, unchanged) |
+
+- `<Sub>` = `CommandAndControl` / `CanvasDesignStudio` / `CurriculumIntelligence`.
+- If `APPDATA` / `LOCALAPPDATA` is unset or blank, fall back to `<home>\AppData\Roaming` / `<home>\AppData\Local`. That is the same fallback `hosts.ts:77-81` uses, and Go must match it.
+- An empty override counts as unset everywhere. This fixes the `||` vs `??` drift in `curriculum-intelligence/src/config.ts:13`.
+- On POSIX `config === data`, so the config/data classification (§2.2) is a no-op there. The migration only runs on Windows.
+
+**Upgrade window rule (C&C only, both languages).** On Windows, with no override, the effective C&C config home is `legacyAppHome('cc')` **if** the legacy folder exists **and** the new config home does not yet exist. Otherwise it is the new home. This is what makes constraint 4 hold. A new installer on an old machine writes `modules.json` into the legacy folder, and Node's first-boot migration then carries it across. Without the rule, the installer creates the new folder first, migration finds a conflict on `modules.json`, and the professor's legacy module choices lose. Node applies the same rule, but its migration runs before any read, so in practice Node always ends up on the new path.
+
+**Go twin, `installer/tasks/apppaths.go`.** `CcConfigHome()` implements rows 1–2 plus the upgrade-window rule. `configs.go` `CcHomePath()` delegates to it. Data paths are not needed in Go: the installer only writes `modules.json` and the pending-request file, both config.
+
+**Shared fixture `packages/shared-types/tests/fixtures/app-paths-cases.json`:** rows of `{platform, env, homedir, legacyExists, newExists, app, expectConfig, expectData}`. Both `app-paths.test.ts` and `installer/tasks/apppaths_test.go` iterate it. Add the fixture to `installer-ci.yml` `paths:`.
+
+**Call sites:** every site in §2.1 moves to the resolver. Data-class callers use the `*DataHome()` functions: C&C `channel/installed.ts` modules root, `channel/catalog.ts` cache, `registry/local_registry.ts`, `tools/publish/snapshot_store.ts`, `setup_ollama.ts` cache, CDS showcase previews, CDS `kb/` and `transcripts/`, CI `courses/` and `panopto/`. Everything else uses config. CDS's three import-time `const` paths become functions (this also closes the sandbox hole in §2.1). Module packages **do not import the resolver**. They receive paths from the host (§4.3).
+
+**Guard (law #7).** New `scripts/check-app-paths.mjs` fails CI when any non-test file under `packages/*/src`, `scripts/` or `installer/` (non-`_test.go`) calls `homedir()` / `os.UserHomeDir()` **and** names one of the three legacy folders, or joins `homedir()` with a dot-folder. It has an explicit allowlist with a reason per entry: `app-paths.ts`, `apppaths.go`, `hosts.ts` (host detection), `mcphost.go`, `shortcuts_windows.go`, `canvas_backup_config.ts` (`~/CanvasArchive`). This is the acceptance check "grep is clean" turned into a gate.
+
+### 4.2 #201: per-module credential store and one shared loader
+
+**Storage:** `<ccConfigHome>/module-credentials/<moduleId>.json`. It is deliberately **outside** `<cc>/modules/` (§2.4), so artifact pruning and uninstall can never touch it implicitly. The id must match `MODULE_ID_SEGMENT` (`channel/installed.ts:35`) before any path join. The directory is `0o700` and the file is `0o600` on POSIX. Writes are atomic with a unique temp name (the `canvas-store.ts` idiom).
+
+```json
+{
+  "schemaVersion": 1,
+  "share": { "canvas": true },
+  "credentials": {
+    "canvas": { "host": "school.instructure.com", "token": "<secret>" }
+  }
+}
+```
+
+**New `packages/shared-types/src/module-credentials.ts`** holds the **only** reader of the shared `canvas-config.json` / `anthropic-config.json` / `panopto-config.json` outside the writers that own them, and the only reader and writer of module credential files:
+
+```ts
+export type CredentialKind = 'canvas' | 'anthropic' | 'panopto';
+export interface CanvasCredential { host: string; token: string }        // host already normalizeCanvasHost'd
+export interface AnthropicCredential { apiKey: string; model?: string }
+export interface PanoptoCredential { /* exactly the PanoptoConfig shape in module-video/src/panopto/setup.ts */ }
+export type CredentialSource = 'module' | 'shared';
+export interface Resolved<T> { value: T; source: CredentialSource }
+
+export function resolveModuleCredential<K extends CredentialKind>(
+  moduleId: string, kind: K, policy: { shareDefault: boolean }, o?: PathEnv,
+): Resolved<ValueOf<K>> | { missing: 'none' | 'incomplete' | 'share-denied' };
+export function setModuleCredential(moduleId, kind, value): void;
+export function clearModuleCredential(moduleId, kind?): { removed: boolean };
+export function setModuleShare(moduleId, kind, allow: boolean): void;
+export function moduleCredentialPresence(moduleId): Record<CredentialKind, 'module' | 'none' | 'incomplete'>; // never values
+```
+
+**Resolution order for module M and kind K. First match wins, and nothing mixes:**
+1. **M's own entry** for K. If present and complete, use it (`source: 'module'`). If present but **incomplete** (for example a host with no token), stop with `missing: 'incomplete'`. **Never fill in the gaps from the shared file.** A module host paired with the shared token, or the reverse, would send one identity's token to another's host.
+2. **The shared global credential**, only if sharing is allowed for (M, K): the file's `share[K]` if set, else `policy.shareDefault`. A shared Canvas value is read through `canvas-store`'s existing loader (normalized host).
+3. **Otherwise missing.** The host turns this into a `*_NOT_CONFIGURED` error (§4.3).
+
+**No environment-variable tier.** The runtime deliberately ignores `ANTHROPIC_API_KEY` today, and adding per-module env vars would create a second credential surface the doctor would have to inspect (the "setup-status tools must read what setup tools write" rule).
+
+**Sharing default (least privilege with zero re-entry):**
+
+| Module origin | `shareDefault` | Why |
+|---|---|---|
+| Built-in (`KNOWN_MODULES`, shipped inside the install) | `true` | First-party code, already in the trusted install. Existing installs keep working with no prompt (constraint 6). The doctor still reports "shared". |
+| Channel artifact declaring `contractVersion: 2` | **`false`** | Downloaded code gets nothing until the professor says so, with one `ct_setup` call: `share` or `set`. That is a consent call, not a secret re-entry. See **Q2**. |
+| Legacy module (no `contractVersion`) | n/a | The host cannot scope it. It reads files itself. The doctor labels it "legacy: reads the shared credentials directly". |
+
+**Validation:** host-side, per kind, reusing the existing validators: Canvas `GET /api/v1/users/self` (as in `setup_canvas`), Anthropic (as in `setup_anthropic`), Panopto (as in `setup_panopto`). `set` validates before it saves. `test` validates the *resolved* credential and reports `ok` / an error code, never the value.
+
+### 4.3 Module contract v2: the host injects credentials and paths
+
+`packages/module-contract/src/index.ts` (additive; v1 modules unaffected):
+
+```ts
+export type CredentialKind = 'canvas' | 'anthropic' | 'panopto';
+export interface CredentialDeclaration {
+  kind: CredentialKind;
+  required: boolean;
+  /** One line shown to the professor: what the module does with it. */
+  purpose: string;
+}
+export interface ModuleContext {
+  moduleId: string;
+  paths: { config: string; data: string; designStudioData: string }; // C&C config/data homes; CDS data (module-video transcripts)
+  credentials: {
+    /** Throws `<KIND>_NOT_CONFIGURED: <Module name> (<id>) … ct_setup action module_credentials …`. */
+    get(kind: 'canvas'): Promise<CanvasCredential>;
+    get(kind: 'anthropic'): Promise<AnthropicCredential>;
+    get(kind: 'panopto'): Promise<PanoptoCredential>;
+    /** Optional credentials: null instead of throwing (roster's degrade path). */
+    tryGet(kind: CredentialKind): Promise<… | null>;
+  };
+}
+export interface CanvasToolchainModule {
+  // …existing fields…
+  contractVersion?: 2;
+  credentials?: CredentialDeclaration[];
+  /** Called once by the host before any tool is exposed. v2 modules keep ctx in module scope. */
+  init?(ctx: ModuleContext): void | Promise<void>;
+}
+```
+
+The credential value types are re-declared in `module-contract`, which has no `shared-types` dependency. A type-level test in C&C asserts the two declarations are mutually assignable, so they cannot drift.
+
+**Host behaviour (`command-and-control/src/modules/registry.ts` + new `src/modules/context.ts`):**
+- `contractVersion === 2`: the host validates `credentials` (known kinds, no duplicates, boolean `required`, non-empty `purpose`). A malformed module is **rejected** (fail-soft skip, as today). Then the host builds a `ModuleContext` bound to that module id and calls `init` before registering its tools. If `init` throws, the module is skipped.
+- `ctx.credentials.get(K)` for a kind the module **did not declare** throws `CREDENTIAL_NOT_DECLARED`. That keeps the declaration honest, and it is what lets the doctor report readiness from declarations alone.
+- Every `get` reads from disk fresh (no cache), matching today's readers. A `ct_setup` change takes effect without a restart.
+- No `contractVersion`: loaded exactly as today, no ctx. **Channel modules without declarations still load** (an acceptance check).
+- The error message is fixed: `CANVAS_NOT_CONFIGURED: Group Builder (group-builder) needs a Canvas connection. Run ct_setup action module_credentials with module "group-builder" to share your main Canvas connection or give it its own.` `incomplete` and `share-denied` get their own sentence. The message never includes a path to a secret file's contents, or a value.
+
+**Why injection, not "modules import the loader from module-contract":** (a) path and credential logic is never frozen into hash-pinned artifacts, so the next path change needs no channel re-publish (§2.4). (b) There is one implementation, in the host. (c) The host can enforce "declared kinds only". (d) Module tests inject a fake ctx, so they stay hermetic, as they are today. The cost is that a v2 module cannot run outside a host. Every module already can't.
+
+### 4.4 Setup, doctor, uninstall
+
+- **`ct_setup` action `module_credentials`** (new surface op, new tool file). Input: `{ module, kind, op: 'set' | 'test' | 'share' | 'unshare' | 'clear', host?, token?, apiKey?, model?, …panopto fields, confirm? }`.
+  - `set` validates and then saves.
+  - `clear` is two-call (preview, then `confirm: true`) because it can strand a working module.
+  - `module` must be a loaded or installed module id.
+  - `kind` must be declared by that module. Legacy modules are refused with an explanation.
+  - Results report presence and validation outcome only.
+  - `get_started` needs no new code. It already routes doctor `fix` hints into `ct_setup`, so the doctor check below is enough.
+- **Doctor check `modules.credentials`** (`read_state` + `doctor`). For each enabled built-in and each installed channel module it emits one row per declared kind: `module` / `shared` / `missing-required` / `missing-optional` / `incomplete`, plus `legacy` for undeclared modules. Status is `warn` if any required kind is missing, `info`-level ok otherwise. It lists which modules ride the shared fallback (an acceptance check). The serialized output test asserts that no token, key or host value appears.
+- **Doctor check `paths.homes`** (#200). It reports `appPaths()` for all three apps with `source`, the migration journal outcome, and on Windows: (a) any legacy folder still present with N unmigrated files; (b) a `warn` when a config home sits outside `%USERPROFILE%` (the realistic ACL hole, for example `CC_HOME=D:\shared`). `canvas-toolchain doctor --json` therefore shows real per-OS paths.
+- **`uninstall_module`**. If `module-credentials/<id>.json` exists, the existing preview gains "will also delete this module's stored credentials". The confirm call deletes the file. Without confirm, nothing is touched. Disabling a built-in module (`set_module_enabled false`) is **not** an uninstall and keeps its credentials.
+- **`install_module` is unchanged.** Credential declarations live inside the artifact, so surfacing them before download would need a catalog-schema change, which is a Go cross-language contract (PR #152). Instead the first tool call, and the doctor, name the missing consent. See §6.
+
+### 4.5 Per-module adoption
+
+Each built-in module moves to `contractVersion: 2`, declares its credentials, takes paths from `ctx.paths`, and deletes its private `cc-home.ts` / `paths.ts` / readers / host normalizer:
+
+| Module | Declares | Path users |
+|---|---|---|
+| group-builder | canvas (required) | `groups/` buckets + history |
+| roster | canvas (required), anthropic (optional; `tryGet`) | `roster-vault/`, aliases, column-map. **Exports a path-taking vault API for peerassessment** |
+| peerassessment | canvas (required) | `peerassessment/`, roster vault (through roster's new API) |
+| oral-assessment | anthropic (required) | none |
+| video | panopto (required) | `panopto-config.json`, `panopto-vocab.json` (config), transcripts → `ctx.paths.designStudioData/transcripts` (**fixes the ignored-`CANVAS_DESIGN_HOME` bug**) |
+| announcements | canvas (required) | none. Released as **1.2.0**. The catalog bump is gated on the host release (§5.4) |
+
+Panopto keeps `panopto-config.json` as the "shared" Panopto credential. `setup_panopto` still writes it, and it is read through `module-credentials.ts`. Only one module uses Panopto, so "shared" and "module" are the same in practice. That is fine and needs no special case.
+
+---
+
+## 5. Migration plan
+
+### 5.1 Path migration (Windows only, no override set)
+
+`packages/shared-types/src/app-home-migration.ts`: `migrateLegacyAppHome(app, o?)`. It is called **before any other file read** at startup by:
+- C&C, for all three apps (it reads CDS and CI homes through `kb-bridge`);
+- CDS standalone, for `cds`;
+- CI standalone, for `ci`.
+
+It never throws to the caller. Startup continues on any failure, as `bridgeCanvasStoresAtStartup` does today.
+
+Algorithm (all steps idempotent):
+1. Skip unless `platform === 'win32'`, there is no override, and `legacyAppHome(app)` exists **and is not already renamed**.
+2. Walk the legacy tree. For each regular file, compute its target root from §2.2 (top-level name → config or data; unknown names → **config**, the safe default). Then:
+   - target missing → copy to `target.tmp-<rand>` and `rename` into place (atomic; a concurrent second migrator's `rename` loses harmlessly to the first's identical bytes);
+   - target exists with **identical bytes** → skip;
+   - target exists and differs → **conflict**: leave both untouched and record it.
+   Symlinks and junctions are **not followed**. They are recorded as `skipped-link`, which avoids escaping the tree and copying something outside it.
+3. Verify. Every non-conflict file must now exist at its target with equal size and bytes. Compare in memory; **write no hashes of secret files to the journal**.
+4. If verification passes **and there are zero conflicts**, rename the legacy folder to `<legacy>.migrated-<YYYYMMDD>` (for example `.command-and-control.migrated-20261020`). This stops the stale copy from being read. Old artifacts then fail loudly instead of reading a stale token (§5.3). **Nothing is deleted.** If there are conflicts, leave the legacy folder in place. The upgrade-window rule no longer applies, because the new home exists.
+5. Write the journal `<config>/path-migration.json`: `{ app, at, outcome: 'migrated' | 'partial' | 'nothing-to-do' | 'failed', copied: n, identical: n, conflicts: [relative paths], skipped: [relative paths], legacyRenamedTo? }`. Relative paths only, never contents. The doctor reads it.
+6. Re-runs: legacy renamed means step 1 skips; legacy still present (conflicts) means steps 2–3 re-run as no-ops apart from still-unresolved conflicts.
+
+Concurrency: copy-if-absent with tmp+rename and identical-bytes skip is safe under two migrators. A rename of the legacy folder that fails with `ENOENT` or `EPERM` (the other process won, or a handle is open) is recorded as `partial` and retried on next boot. Files held open by another process (Windows sharing violations) are recorded as `skipped` and retried.
+
+Legacy-folder cleanup is **left to the professor**. The doctor says where the `.migrated-*` folder is and that it still holds old copies of secrets. No automated delete in this scope (§8).
+
+### 5.2 Credential migration
+
+**None needed.** Existing installs keep their shared files. Built-in modules resolve them through the shared fallback (`shareDefault: true`). No file is moved, rewritten or duplicated. The only state ever written is a module file, when the professor explicitly sets or shares.
+
+### 5.3 The frozen `announcements-1.1.0.mjs`
+
+- macOS/Linux: unaffected (paths unchanged).
+- Windows, after migration: its hard-coded `~\.command-and-control\canvas-config.json` is gone (renamed), so it throws its own `CANVAS_NOT_CONFIGURED`. When `registry.ts` builds the `handlers` map, it wraps each **legacy channel module** handler, and the wrapper appends to `*_NOT_CONFIGURED` errors only: "This module version predates Canvas Toolchain's Windows folders. Run `install_module announcements` to update it." The doctor's `modules.credentials` row also says `legacy` with the same hint.
+- The rejected alternative, setting `process.env.CC_HOME` as a compatibility shim, is in §8.
+
+### 5.4 Release ordering (blast radius)
+
+1. Host changes (paths, migration, contract v2, store, setup, doctor, built-in modules) ship in toolchain release **N** (version per Q5).
+2. `announcements` 1.2.0 can be **built and committed** in the same PR series. `modules/announcements/1.2.0/…` plus `npm run verify:modules` green is harmless on its own.
+3. **The `module-catalog.json` bump to 1.2.0 with `minHostVersion: N` merges only after tag `vN` is published.** Merging it earlier removes Announcements from every professor still on the current release (one catalog entry per id, `install.ts:216`). This is a Kevin-gated step (job CT201-12).
+
+---
+
+## 6. Security
+
+- **In-process trust caveat.** Built-in and channel modules run inside the C&C Node process with the professor's OS permissions. A malicious or compromised module can read `canvas-config.json`, other modules' credential files, or anything else in the profile, whatever the contract says. **Per-module credentials are a scoping, least-privilege and UX boundary, not a security boundary.** They stop well-behaved modules from receiving credentials they never declared, they let a professor give one module a different Canvas identity, and they make the doctor's "who uses what" accurate. The real defences against hostile code stay the same: catalog pinning to this repo, sha256 re-verification at every load, and PR review of artifacts. `docs/architecture-modules.md` must say this plainly.
+- **Token scope reality.** A Canvas personal access token carries the **full permissions of the account that made it**. Professors generally cannot mint a narrower token; scoped developer keys are admin-issued. So "a narrower token for a module" usually means "a token from a different account" (for example an account with SIS-id visibility for roster, as `module-roster/src/canvas/client.ts` notes). The docs must not promise scoping that Canvas does not offer.
+- **No credential mixing** (§4.2 step 1): one identity's token never travels to another's host.
+- **Declared-only access:** `CREDENTIAL_NOT_DECLARED` for undeclared kinds. The ctx is bound to one module id, so module A's ctx cannot resolve module B's file. Ids are validated against `MODULE_ID_SEGMENT` before any join (no `../`).
+- **File permissions:**
+  - POSIX: `module-credentials/` is `0o700`, files `0o600`, with an explicit `chmod` after write (the `mode` option is ignored on an existing temp file, the `kb/config.ts:26` lesson). The existing `security.file_permissions` doctor check is extended to module credential files.
+  - Windows: Node's `chmod` does not set ACLs. **This change does not apply ACLs.** It relies on the per-user profile ACL of `%APPDATA%` / `%LOCALAPPDATA%`, which grants the user, SYSTEM and Administrators, and not other standard users. That is documented in `docs/commands-and-credentials.md` §3. The doctor warns when a config home is outside `%USERPROFILE%`, which is where the profile ACL no longer protects it. `icacls` hardening is Q1(b).
+  - **Moving secrets into `%APPDATA%` (Roaming) means they sync to the institution's file server** on machines with roaming profiles or folder redirection, which are common on university-managed Windows. See Q1(a). It matters more for `roster-vault/` (student numbers).
+- **No secrets in logs or results:**
+  - migration journal: relative paths and counts only;
+  - doctor and `module_credentials` results: presence and outcome only (serialization tests assert absence);
+  - `*_NOT_CONFIGURED` messages: module name, id, kind and fix only;
+  - the loader never includes file contents in thrown errors;
+  - startup logs (`console.error` in `index.ts`) print outcome codes, never values.
+- **Uninstall cleanup** deletes credential files only on confirm. Disabling never deletes.
+- **Secrets through chat:** `module_credentials set` receives a token in tool args, exactly like today's `setup_canvas`. That is no new exposure, and the docs keep recommending the installer or settings path where one exists.
+
+---
+
+## 7. Testing and CI
+
+- **Unit, all in-process and hermetic:**
+  - `app-paths.test.ts`: win32/darwin/linux × `APPDATA`/`LOCALAPPDATA` set/unset/blank × override set/blank, plus upgrade-window rows. Driven by the shared fixture.
+  - `apppaths_test.go`: the same fixture.
+  - `app-home-migration.test.ts`, each with `platform: 'win32'` injected, so they run on any OS: seeded legacy tree → copied once; re-run → no-op; conflict → both untouched and legacy not renamed; symlink skipped; interrupted run (pre-seeded `.tmp-*`) → completes; two concurrent calls → one result.
+  - `module-credentials.test.ts`: two modules with different Canvas tokens at once; shared-only install resolves with `source: 'shared'`; share-denied → missing; incomplete entry never mixes; bad id refused; POSIX modes; never-returns-values.
+  - C&C `modules/context.test.ts` + `registry` tests: v2 module receives ctx before tools are exposed; undeclared kind refused; malformed declaration rejected; v1 module still loads; legacy `*_NOT_CONFIGURED` hint appended.
+  - Each module's tests: fake ctx, no fs credential reads.
+  - Doctor tests: per-module rows and the shared-fallback flag; secret-absence assertion.
+- **Cross-OS CI** (new `ci.yml` job `cross-os`, matrix ubuntu/macos/windows, Node 20). It runs a **named** subset: `shared-types` full suite, plus C&C `tests/modules/**`, `tests/setup/**`, `tests/tools/module_credentials*`. These are the suites this work adds or edits. Windows exposure of the full TS suite is measured first by CT200-00 and expanded later, so this work is not blocked on unrelated POSIX-isms.
+- **Guard:** `node scripts/check-app-paths.mjs` in `ci.yml`.
+- **Manual proof (Kevin, Windows VM):** seed a legacy `%USERPROFILE%\.command-and-control` with dummy values, run the new build, capture redacted `canvas-toolchain doctor --json` showing `%APPDATA%` / `%LOCALAPPDATA%` homes, the `migrated` outcome and per-module credential rows. Also capture a `ct_setup module_credentials set` transcript for one module.
+
+---
+
+## 8. Deliberately left out (overengineering check)
+
+| Left out | Why |
+|---|---|
+| XDG Base Directory on Linux/macOS `~/Library/Application Support` | No user evidence, and it would move secrets on platforms that work fine (law #7). The resolver makes it a one-row change later (Q3). |
+| Windows ACL hardening via `icacls` | The profile ACL already excludes other users. Removing SYSTEM/Administrators can break backup and management tooling. Parsing ACLs is localized by OS language. Documented limitation plus the outside-profile warning cover the realistic hole (Q1b). |
+| `process.env.CC_HOME` compatibility shim for `announcements-1.1.0` | Mutates global env (inherited by every child), and on Windows it would make the resolver treat the shim as an override and collapse data into the config folder unless a special "equals default" rule is added. Only one legacy artifact exists, first-party, with a one-call fix. A loud error with an exact hint is simpler and honest. |
+| `custom` credential kinds and module-supplied validation hooks | No module needs one today. A module-supplied validator runs module code on a secret before consent. Revisit when a real module needs it. `CredentialKind` is a union that can grow. |
+| Credential declarations in `module-catalog.json` (pre-install consent) | Catalog schema bump = Go installer contract change (PR #152) for one first-party module. The doctor and first-call message cover consent. |
+| Per-module LLM *provider* selection (Ollama/LM Studio per module) | The issue scopes Anthropic. Provider choice stays global through `llm-provider.json`. |
+| Per-module env-var credentials | A second surface the doctor must inspect, against the runtime's deliberate env-ignore stance. |
+| Automated deletion of `.migrated-*` folders | Irreversible, and the professor can delete it after checking. The doctor tells them where it is. |
+| OS keychain / Windows Credential Manager | Real improvement, large surface (native deps, three OS backends). Separate issue if wanted. |
+| Changing `DefaultInstallDir()` | Program location, not config or data. Touches updater and existing-install detection. Q4. |
+| Moving C&C's own (non-module) tools to per-module creds | They are the host. Out of #201's scope. |
+
+---
+
+## 9. Open questions for Kevin
+
+1. **(a) Roaming vs local for secrets and the roster vault.** The issue puts config *and secrets* in `%APPDATA%` (Roaming). On roaming-profile machines that copies Canvas tokens, API keys and the pseudonym vault to an institutional server. **Recommendation:** keep the issue's layout for ordinary config, but put secret-bearing files and `roster-vault/` in `%LOCALAPPDATA%`. Same resolver, one more column in the §2.2 table. **Needed before CT200-01 merges.** It is one constant table either way. **(b)** Do you want `icacls` hardening in this round (recommended: no, §8)?
+2. **Channel-module sharing default:** deny until consent (recommended; one extra `ct_setup` call after updating Announcements to 1.2.0), or allow-by-default for first-party catalog modules?
+3. **XDG on Linux:** keep `~/.<app>` (recommended) or adopt `$XDG_CONFIG_HOME` / `$XDG_DATA_HOME` with its own migration?
+4. **Install dir on Windows:** leave `~/canvas-toolchain` (recommended for this round) or move to `%LOCALAPPDATA%\Programs\CanvasToolchain` in a separate issue?
+5. **Release vehicle:** which version tag carries this (it is unreleased on top of the unreleased v2.2.0 line)? Announcements 1.2.0's `minHostVersion` depends on it.
+6. **Legacy-folder naming:** is `.command-and-control.migrated-YYYYMMDD` acceptable, or would you rather leave the legacy folder untouched and rely on the doctor? The second option is safer for data, but old artifacts keep reading a stale token.
+
+## 10. Risks
+
+| Risk | Mitigation |
+|---|---|
+| Migration copies secrets to a second place; the `.migrated` folder keeps old copies | Doctor names it; docs tell professors to delete it; nothing secret in the journal |
+| Installer and Node disagree mid-upgrade | Upgrade-window rule plus a shared fixture tested in both languages; fixture in `installer-ci.yml` path filter |
+| Catalog bump merged early breaks installs for every current-release professor | §5.4; CT201-12 is human-gated |
+| Windows TS suite has unknown unrelated failures | CT200-00 measures first; cross-os job runs a named subset |
+| A module forgets `init` handling and a tool runs before ctx exists | Contract helper `requireCtx()` throws a clear `MODULE_NOT_INITIALIZED`; registry test covers init-before-expose |
+| The roster ↔ peerassessment coupling breaks when roster's `paths.ts` goes away | Roster exports a path-taking vault API first; peerassessment depends on that job |
+| Import-time path constants evaluated before migration | Convert CDS constants to functions (CT200-05); the guard script also flags top-level `homedir()` consts |
+| A professor's `CC_HOME` points at a shared drive on Windows | Doctor `paths.homes` outside-profile warning |
+| Doc strings with `~/.command-and-control` mislead Windows users | CT200-11 replaces them with "your Canvas Toolchain settings folder (run the doctor to see it)" and regenerates skills |
+
+---
+
+## 11. Job list (ordered, atomized)
+
+Rules for builders:
+- One job = one PR into a long-lived integration branch `feat/200-201` (or straight to `main` if Kevin prefers).
+- TDD.
+- Never touch a file outside the job's "may touch" list. If you need to, stop and report.
+- "Must not touch" always includes `main`, `module-catalog.json` (except CT201-12), and `modules/announcements/1.1.0/**`.
+- Every job's proof includes `npm test --workspace=<pkg>` output and `npm run build` green.
+
+**Parallel lanes** (no shared files within a wave):
+- Wave 0: CT200-00, CT200-01, CT201-01
+- Wave 1: CT200-02, CT200-03, CT200-05, CT200-06
+- Wave 2: CT200-04a, CT201-02
+- Wave 3: CT200-04b, CT201-03, CT201-04, CT201-05, CT201-07, CT201-08
+- Wave 4: CT200-07, CT201-06, CT201-09
+- Wave 5: CT200-08, CT201-10, CT201-11
+- Wave 6: CT201-13, CT200-09
+- Wave 7: CT200-10, CT200-11
+- Wave 8: CT201-14
+- After release: CT201-12, CT-99
+
+| id | domain | may touch | must not touch | deps | acceptance checks | proof | size |
+|---|---|---|---|---|---|---|---|
+| **CT200-00** | CI discovery (read-only) | none (a throwaway branch running `npm test` on `windows-latest` and `macos-latest` via a temporary workflow file, **not merged**) | everything on the PR branch | — | Workflow ran to completion | Comment on #200 with failing-test inventory per package | S |
+| **CT200-01** | shared-types: path resolver | `packages/shared-types/src/app-paths.ts` (new), `packages/shared-types/tests/app-paths.test.ts` (new), `packages/shared-types/tests/fixtures/app-paths-cases.json` (new), `packages/shared-types/src/index.ts` (export line) | `canvas-store.ts`, every other package | Q1a answered (default: issue layout) | `npm test --workspace=packages/shared-types` covers every §4.1 row, including blank env and upgrade-window rows | Test output | M |
+| **CT200-02** | Go installer: path twin | `installer/tasks/apppaths.go` (new), `installer/tasks/apppaths_test.go` (new), `installer/tasks/configs.go`, `.github/workflows/installer-ci.yml` (paths filter only) | `installer/screens/**`, `mcphost*.go`, any TS | CT200-01 | `cd installer && go test ./tasks/...`; test iterates the shared fixture; `CcHomePath()` delegates | installer-ci green on ubuntu/macos/windows | S |
+| **CT200-03** | shared-types: Windows migration | `packages/shared-types/src/app-home-migration.ts` (new), `packages/shared-types/tests/app-home-migration.test.ts` (new), `packages/shared-types/src/index.ts` | `app-paths.ts` (read-only), other packages | CT200-01 | All §7 migration cases (copy once, re-run no-op, conflict untouched and no rename, symlink skipped, interrupted resume, concurrent) pass with `platform: 'win32'` injected | Test output | M |
+| **CT200-04a** | C&C: own config/data homes | `packages/command-and-control/src/kb/config.ts`, `src/channel/installed.ts`, `src/channel/catalog.ts`, `src/registry/local_registry.ts`, `src/tools/publish/snapshot_store.ts`, `src/tools/publish/snapshot_location.ts` (comment), `src/tools/setup_ollama.ts` (cache path only), matching existing tests under `packages/command-and-control/tests/{kb,channel,registry,publish}/` | `src/setup/**`, `src/modules/**`, `src/lib/**`, `src/tools/workflows/**` | CT200-01 | `getCcHomePath()` returns `ccConfigHome()`; data callers use `ccDataHome()`; C&C test suite green; existing `CC_HOME` tests unchanged | Test output | M |
+| **CT200-04b** | C&C: cross-app readers | `packages/command-and-control/src/lib/kb-bridge.ts`, `src/tools/workflows/{ask_course,index_course_for_answers,update_course_materials}.ts`, `src/setup/read_state.ts` (institution path line only), their existing tests | `src/setup/doctor.ts`, `src/setup/types.ts`, `src/modules/**` | CT200-04a | `grep -n "homedir()" ` in those files is empty; C&C tests green | Test output plus grep | S |
+| **CT200-05** | CDS paths | `packages/canvas-design-studio/src/config.ts`, `src/tools/{update-kb,personas,philosophy}.ts` (const → function), `src/utils/registry.ts`, `src/tools/showcase/render_preview.ts`, matching tests under `packages/canvas-design-studio/tests/` | `src/index.ts`, other packages | CT200-01 | CDS suite green; new test: `CANVAS_DESIGN_HOME` redirects personas/philosophy/kb paths | Test output | S |
+| **CT200-06** | CI paths | `packages/curriculum-intelligence/src/config.ts`, its config test | everything else | CT200-01 | Blank `CURRICULUM_INTELLIGENCE_HOME` treated as unset; CI suite green | Test output | S |
+| **CT200-07** | Startup migration wiring | `packages/command-and-control/src/setup/app_home_boot.ts` (new) + test, `packages/command-and-control/src/index.ts` (one call before `bridgeCanvasStoresAtStartup`), `packages/canvas-design-studio/src/index.ts` (boot call, plus the two `~/.canvas-design-mcp` error strings at :517/:653), `packages/curriculum-intelligence/src/index.ts` (boot call) | `src/setup/{read_state,doctor,types}.ts` | CT200-03, -04b, -05, -06 | Boot never throws (test with an unwritable home); migration runs before the first config read; `npm run smoke:integration --workspace=packages/command-and-control` green | Test plus smoke output | S |
+| **CT200-08** | Doctor: paths | `packages/command-and-control/src/setup/{read_state,doctor,types}.ts`, `tests/setup/{read_state,doctor}*.test.ts` | `src/modules/**`, tools | CT200-04b, CT200-07 | Doctor `paths.homes` reports three apps with source, journal outcome, legacy-present and outside-profile warn (win32 injected); hard-coded `~/.command-and-control` strings in `doctor.ts:131,231` replaced with resolved paths; secret-absence test still passes | Test output plus a redacted `canvas-toolchain doctor --json` sample on macOS | M |
+| **CT200-09** | Path guard + script fix | `scripts/check-app-paths.mjs` (new), `scripts/shell-edit-doctor.mjs`, root `package.json` (script entry), `.github/workflows/ci.yml` (one step) | product `src/**` | all of CT200-04a…07 and CT201-04…09 (the guard must start green) | `node scripts/check-app-paths.mjs` exits 0 on the branch and exits 1 on a planted violation (test) | Before/after grep output for `homedir()` attached | S |
+| **CT200-10** | Cross-OS CI job | `.github/workflows/ci.yml` (new `cross-os` job only) | other workflows | CT200-09 (same file), CT200-00 | Job runs the §7 named subset on ubuntu/macos/windows | CI green on all three OSes | S |
+| **CT200-11** | Docs + strings (#200) | `docs/commands-and-credentials.md` (§3 paths, Windows ACL limitation, §4), `docs/user-guide.md` (path mentions), `packages/command-and-control/src/tools/{review_accessibility_policy,open_dashboard}.ts`, `src/tools/showcase/preview_canvas_pattern.ts`, `src/cli/dashboard.ts` (strings only), regenerated `packages/command-and-control/skills/**` if any description changed | `src/setup/**`, `module-catalog.json`, `docs/modules.md` | CT200-08 | `node scripts/skills/lint.mjs`, `build-index.mjs --check`, `moc.mjs --check` pass; per-OS path table present | Doc diff | S |
+| **CT201-01** | Module contract v2 | `packages/module-contract/src/index.ts`, `packages/module-contract/tests/*.test.ts` (new or existing) | every other package | — | Guard accepts v1 unchanged; v2 with valid declarations accepted; malformed declarations rejected; `requireCtx()` throws `MODULE_NOT_INITIALIZED` before init | Test output | S |
+| **CT201-02** | shared-types: credential store + loader | `packages/shared-types/src/module-credentials.ts` (new), `packages/shared-types/tests/module-credentials.test.ts` (new), `packages/shared-types/src/index.ts` | `canvas-store.ts` (call its loader, don't edit), other packages | CT200-01, CT200-03 (index.ts), Q2 | Tests: two modules with different tokens at once; shared-only → `source:'shared'`; share-denied; incomplete never mixes; bad id refused; `0o700`/`0o600` on POSIX; no value in any thrown message | Test output | M |
+| **CT201-03** | C&C host: ctx + registry | `packages/command-and-control/src/modules/registry.ts`, `src/modules/context.ts` (new), `tests/modules/**` (legacy-hint wrapper lives in `registry.ts`; `src/index.ts` is not touched) | `src/setup/**`, module packages | CT201-01, CT201-02, CT200-04a | Tests: v2 init before tools are exposed; undeclared kind → `CREDENTIAL_NOT_DECLARED`; v1 module loads with no ctx; legacy `*_NOT_CONFIGURED` hint; type-level contract ↔ shared-types assignability test | Test output | M |
+| **CT201-04** | module-group-builder | `packages/module-group-builder/**` | other packages | CT201-01 | No `homedir`/`canvas-config.json` in `src/`; tests use fake ctx; suite green | Test output plus grep | S |
+| **CT201-05** | module-roster | `packages/module-roster/**` (incl. a path-taking vault API export) | other packages | CT201-01 | As CT201-04, plus anthropic via `tryGet` (degrade path tested) | Test output plus grep | M |
+| **CT201-06** | module-peerassessment | `packages/module-peerassessment/**` | other packages | CT201-05 | As CT201-04; uses roster's new vault API | Test output plus grep | S |
+| **CT201-07** | module-oral-assessment | `packages/module-oral-assessment/**` | other packages | CT201-01 | As CT201-04 for anthropic | Test output plus grep | S |
+| **CT201-08** | module-video | `packages/module-video/**` | other packages | CT201-01 | Panopto via ctx; transcripts under `ctx.paths.designStudioData`; `cc-home.ts` deleted | Test output plus grep | M |
+| **CT201-09** | module-announcements 1.2.0 source + artifact | `packages/module-announcements/**` (version → 1.2.0), `modules/announcements/1.2.0/announcements-1.2.0.mjs` (new, built by `npm run build:module -- announcements`) | `module-catalog.json`, `modules/announcements/1.1.0/**`, `docs/modules.md` | CT201-01 | Module suite green; artifact bytes reproducible (`npm run build:module -- announcements` twice gives the same sha256) | Test output plus sha256 | S |
+| **CT201-10** | `ct_setup module_credentials` | `packages/command-and-control/src/tools/setup_module_credentials.ts` (new) + test, `src/surface/registry.ts` (new op), regenerated `packages/command-and-control/skills/**` | `src/setup/{read_state,doctor}.ts`, `src/modules/registry.ts` | CT201-02, CT201-03 | set validates then saves; test/share/unshare; clear is two-call; undeclared kind and legacy module refused; results contain no secret (assert); skills lint/index/moc checks pass | Test output plus transcript (redacted) | M |
+| **CT201-11** | Uninstall cleanup | `packages/command-and-control/src/tools/module_channel_tools.ts`, `src/channel/install.ts` (uninstall only), their tests | `src/modules/**`, setup | CT201-02, CT200-04a | Preview mentions credentials when the file exists; confirm deletes it; no confirm deletes nothing; disable never deletes | Test output | S |
+| **CT201-13** | Doctor: per-module credentials | `packages/command-and-control/src/setup/{read_state,doctor,types}.ts`, `tests/setup/**` | modules, tools | CT200-08 (same files), CT201-03 | `modules.credentials` rows per declared kind; shared-fallback list; legacy label; module credential files included in `security.file_permissions`; secret-absence test extended | Test output plus redacted doctor JSON | M |
+| **CT201-14** | Docs (#201) | `docs/commands-and-credentials.md` (§3 intro line "channel adds no new credentials", §3.1 table), `docs/architecture-modules.md` (contract v2, ctx, declarations, trust caveat, token-scope reality), `docs/module-channel.md` (publishing a v2 module) | `docs/modules.md` (generated), code | CT200-11 (same file), CT201-10, CT201-13 | Docs match shipped behaviour; storage layout, fallback rules and in-process caveat present | Doc diff | S |
+| **CT201-12** | Catalog bump (**Kevin-gated, after the `vN` release tag**) | `module-catalog.json`, `docs/modules.md` (via `npm run docs:modules`) | everything else | CT201-09, release vN published, Kevin OK | `npm run verify:modules` and docs drift check green; `minHostVersion` = N | CI green; release URL | S |
+| **CT-99** | Manual Windows proof (Kevin) | none | — | all above | Seeded legacy home migrates; doctor JSON shows `%APPDATA%`/`%LOCALAPPDATA%`; module-specific Canvas token set through `ct_setup` | Redacted doctor JSON plus transcript attached to the PR | S |
+
+*Note on CT200-09 ordering:* the guard lands only after every module job, because module packages still contain `homedir()` until their CT201 job runs. Builders on CT201-04…09 should run the guard locally as a self-check.
