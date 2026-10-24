@@ -413,6 +413,7 @@ Full detail, including the env-var table and validation endpoints, is in the [Co
 | Video tools aren't available | The Lecture Video module is off. `set_module_enabled { module: "video", enabled: true }`, reconnect your client, then `setup_panopto`. |
 | Dashboard is empty | Run `set_courses_root` pointing at the folder that contains your `course-config.md` directories. |
 | Canvas page looks broken after pasting | On the **Design Studio** server, run `validate_canvas_html` — Canvas strips disallowed markup. Regenerate with Design Studio's `generate_page`, or from C&C re-run `generate_course`. |
+| Codex desktop on Windows: `Invoke-RestMethod` fails with *"The SSL connection could not be established"* and, deep in the inner exceptions, *"No credentials are available in the security package"* (no HTTP response) | **Codex's command sandbox, not your network, Canvas host, or token.** Windows can't set up a TLS client under the sandbox's restricted account, so every HTTPS call from PowerShell fails before it reaches the server. Confirm: the same `Invoke-RestMethod https://api.github.com` works in a normal PowerShell window. Fix: allow the command to run outside the sandbox when Codex asks, or tell Codex once (e.g. in its memory/instructions): *"When using Canvas Toolchain, don't use the sandbox."* If it also fails in a normal window, TLS 1.2 is disabled in the machine's Schannel registry settings or by a hardening policy. |
 
 ---
 
