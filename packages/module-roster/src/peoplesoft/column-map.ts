@@ -1,10 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { columnMapPath, rosterVaultDir } from '../paths.js';
+import { join } from 'node:path';
 import type { ColumnMapping } from '../types.js';
 
-/** Load the remembered PeopleSoft column mapping, or null if none saved. */
-export function loadColumnMap(): ColumnMapping | null {
-  const path = columnMapPath();
+/** `<configDir>/roster-vault/column-map.json`. Callers pass the host's config root (`ctx.paths.config`). */
+export function columnMapPath(configDir: string): string {
+  return join(configDir, 'roster-vault', 'column-map.json');
+}
+
+/** Load the remembered PeopleSoft column mapping from `configDir`, or null if none saved. */
+export function loadColumnMap(configDir: string): ColumnMapping | null {
+  const path = columnMapPath(configDir);
   if (!existsSync(path)) return null;
   try {
     return JSON.parse(readFileSync(path, 'utf-8')) as ColumnMapping;
@@ -13,10 +18,10 @@ export function loadColumnMap(): ColumnMapping | null {
   }
 }
 
-/** Persist the column mapping for reuse next term. Returns the path. */
-export function saveColumnMap(mapping: ColumnMapping): string {
-  mkdirSync(rosterVaultDir(), { recursive: true });
-  const path = columnMapPath();
+/** Persist the column mapping under `configDir` for reuse next term. Returns the path. */
+export function saveColumnMap(configDir: string, mapping: ColumnMapping): string {
+  const path = columnMapPath(configDir);
+  mkdirSync(join(configDir, 'roster-vault'), { recursive: true });
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, JSON.stringify(mapping, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmp, path);

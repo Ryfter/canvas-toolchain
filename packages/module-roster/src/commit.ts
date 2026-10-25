@@ -14,8 +14,9 @@ export interface CommitResult {
  * Returning students (already in the vault) are left untouched, so re-commit is idempotent.
  * Refuses to run if the report carries unresolved collisions OR if a fresh check against the
  * live vault finds any (so a hand-built proposal cannot bypass the guard).
+ * `secretsDir` is the host's secrets root (`ctx.paths.secrets`) that holds `roster-vault/`.
  */
-export function commitRoster(report: ProposalReport, rosterPath: string): CommitResult {
+export function commitRoster(report: ProposalReport, rosterPath: string, secretsDir: string): CommitResult {
   if (report.collisions.length > 0) {
     throw new Error(
       `COMMIT_BLOCKED: ${report.collisions.length} vault collision(s) must be resolved before commit ` +
@@ -24,7 +25,7 @@ export function commitRoster(report: ProposalReport, rosterPath: string): Commit
   }
 
   // Re-validate against the LIVE vault — never trust the caller-supplied report alone.
-  const vault = loadVault();
+  const vault = loadVault(secretsDir);
   const idx = indexByStudentNumber(vault);
   const liveCollisions: VaultCollision[] = [];
   for (const r of report.rows) {
@@ -51,7 +52,7 @@ export function commitRoster(report: ProposalReport, rosterPath: string): Commit
       });
     }
   }
-  const vaultPathWritten = saveVault([...vault, ...additions]);
+  const vaultPathWritten = saveVault(secretsDir, [...vault, ...additions]);
 
   return {
     rosterPath: rosterPathWritten,
