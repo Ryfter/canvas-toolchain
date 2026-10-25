@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadConfig, saveConfig, getCcHomePath } from '../../src/kb/config.js';
+import { loadConfig, saveConfig, getCcHomePath, getCcDataPath, getCcSecretsPath } from '../../src/kb/config.js';
 import { DEFAULT_CONFIG } from '../../src/types.js';
 
 let tmpHome: string;
@@ -91,5 +91,31 @@ describe('saveConfig storage hardening', () => {
     expect(statSync(configPath()).ino).not.toBe(before);
     expect(loadConfig().mode).toBe('advanced');
     expect(existsSync(`${configPath()}.tmp`)).toBe(false);
+  });
+});
+
+describe('config/data/secrets roots (#200, CT200-04a)', () => {
+  const win = {
+    platform: 'win32' as const,
+    env: { APPDATA: 'C:\\R', LOCALAPPDATA: 'C:\\L' },
+    homedir: 'C:\\Users\\p',
+    legacyExists: false,
+  };
+
+  it('CC_HOME override collapses all three roots to one folder', () => {
+    expect(getCcDataPath()).toBe(tmpHome);
+    expect(getCcSecretsPath()).toBe(tmpHome);
+    expect(getCcHomePath()).toBe(tmpHome);
+  });
+
+  it('on win32 the roots are split: config roaming, data local, secrets under local', () => {
+    expect(getCcHomePath(win)).toBe('C:\\R\\CanvasToolchain\\CommandAndControl');
+    expect(getCcDataPath(win)).toBe('C:\\L\\CanvasToolchain\\CommandAndControl');
+    expect(getCcSecretsPath(win)).toBe('C:\\L\\CanvasToolchain\\CommandAndControl\\secrets');
+  });
+
+  it('config.json (registry token) is saved under the secrets root', () => {
+    saveConfig(DEFAULT_CONFIG);
+    expect(existsSync(join(getCcSecretsPath(), 'config.json'))).toBe(true);
   });
 });

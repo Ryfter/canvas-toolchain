@@ -8,7 +8,7 @@ import {
   redirectBlocked,
   EndpointBlockedError,
 } from '@canvas-toolchain/shared-llm';
-import { getCcHomePath } from '../kb/config.js';
+import { getCcDataPath, getCcHomePath } from '../kb/config.js';
 import { autoActivateProvider, type AutoActivateResult } from './set_active_llm_provider.js';
 
 const DEFAULT_BASE_URL = 'http://localhost:11434';
@@ -66,7 +66,8 @@ function getOllamaConfigPath(): string {
 }
 
 function getCachePath(): string {
-  return join(getCcHomePath(), 'cache', 'recommended-models.md');
+  // data-class (legacyEntryRoot): regenerable cache. ollama-config.json stays config-class (no secret).
+  return join(getCcDataPath(), 'cache', 'recommended-models.md');
 }
 
 function getFallbackPath(): string {

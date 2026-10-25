@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { getCcHomePath } from '../../kb/config.js';
+import { getCcDataPath } from '../../kb/config.js';
 import { loadCanvasConfig } from '../setup_canvas.js';
 import {
   resolveSnapshotsRoot, resolveSnapshotDir, type SnapshotsLocation,
@@ -11,7 +11,7 @@ import type { PreviewManifest, PublishState, StaleSnapshotPointer } from './mani
 /** Legacy global root — the path used before V&R Plan A. Lookups for old
  *  snapshots still resolve through this via the snapshot_location fallback. */
 function legacyGlobalRoot(): string {
-  const root = join(getCcHomePath(), 'publish-snapshots');
+  const root = join(getCcDataPath(), 'publish-snapshots') // data-class (legacyEntryRoot);
   if (!existsSync(root)) mkdirSync(root, { recursive: true });
   return root;
 }
