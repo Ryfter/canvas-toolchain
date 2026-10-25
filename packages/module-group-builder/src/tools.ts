@@ -93,7 +93,7 @@ const createGroupsTool: ModuleTool = {
             'Falls back to the saved major-buckets.json when omitted.',
         },
         seed: { type: 'number', description: 'RNG seed for deterministic output (default 1).' },
-        outputDir: { type: 'string', description: 'Directory for the CSV + markdown (default under CC_HOME).' },
+        outputDir: { type: 'string', description: 'Directory for the CSV + markdown (default under the module config folder).' },
         pushToCanvas: { type: 'boolean', description: 'When true, also create the groups in Canvas.' },
         canvasCategoryName: { type: 'string', description: 'Group-set name used when pushing to Canvas.' },
       },

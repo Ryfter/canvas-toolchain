@@ -1,5 +1,6 @@
 import type { CanvasToolchainModule } from '@canvas-toolchain/module-contract';
 import { groupBuilderTools } from './tools.js';
+import { setCtx } from './ctx.js';
 
 export const MODULE_ID = 'group-builder';
 
@@ -12,6 +13,11 @@ const groupBuilderModule: CanvasToolchainModule = {
   version: '1.0.0',
   handles: [],
   tools: groupBuilderTools,
+  contractVersion: 2,
+  credentials: [
+    { kind: 'canvas', required: true, purpose: 'Read course enrollments and submissions, and optionally create Canvas groups.' },
+  ],
+  init(ctx) { setCtx(ctx); },
 };
 
 export default groupBuilderModule;
