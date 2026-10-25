@@ -194,6 +194,7 @@ export interface PageClos {
 // ── Canvas host ──────────────────────────────────────────────────────────────
 
 export { normalizeCanvasHost, canvasBaseUrl } from './canvas-host.js';
+export * from './app-paths.js';
 
 // ── Canvas credential stores ─────────────────────────────────────────────────
 // Only what the two apps actually call. The rest of canvas-store.ts is internal

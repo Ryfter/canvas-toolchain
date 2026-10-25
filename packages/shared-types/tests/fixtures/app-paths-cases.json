@@ -1,0 +1,1226 @@
+{
+  "_comment": "Language-neutral cases for the app-path resolver. All paths use forward slashes; compare after normalising separators. An absent env key means unset. legacyExists/newExists stand in for filesystem probes (new = the new config home).",
+  "cases": [
+    {
+      "name": "cc darwin default is legacy dot-folder",
+      "app": "cc",
+      "platform": "darwin",
+      "env": {},
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.command-and-control",
+      "expectData": "/Users/kev/.command-and-control",
+      "expectSecrets": "/Users/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc darwin env override wins for all roots",
+      "app": "cc",
+      "platform": "darwin",
+      "env": {
+        "CC_HOME": "/srv/x"
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/srv/x",
+      "expectData": "/srv/x",
+      "expectSecrets": "/srv/x",
+      "expectSource": "env"
+    },
+    {
+      "name": "cc darwin blank env override is unset",
+      "app": "cc",
+      "platform": "darwin",
+      "env": {
+        "CC_HOME": "   "
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.command-and-control",
+      "expectData": "/Users/kev/.command-and-control",
+      "expectSecrets": "/Users/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc darwin empty env override is unset",
+      "app": "cc",
+      "platform": "darwin",
+      "env": {
+        "CC_HOME": ""
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.command-and-control",
+      "expectData": "/Users/kev/.command-and-control",
+      "expectSecrets": "/Users/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc darwin legacy flags ignored on posix",
+      "app": "cc",
+      "platform": "darwin",
+      "env": {},
+      "homedir": "/Users/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.command-and-control",
+      "expectData": "/Users/kev/.command-and-control",
+      "expectSecrets": "/Users/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc darwin APPDATA ignored on posix",
+      "app": "cc",
+      "platform": "darwin",
+      "env": {
+        "APPDATA": "/x",
+        "LOCALAPPDATA": "/y"
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.command-and-control",
+      "expectData": "/Users/kev/.command-and-control",
+      "expectSecrets": "/Users/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc linux default is legacy dot-folder",
+      "app": "cc",
+      "platform": "linux",
+      "env": {},
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.command-and-control",
+      "expectData": "/home/kev/.command-and-control",
+      "expectSecrets": "/home/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc linux env override wins for all roots",
+      "app": "cc",
+      "platform": "linux",
+      "env": {
+        "CC_HOME": "/srv/x"
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/srv/x",
+      "expectData": "/srv/x",
+      "expectSecrets": "/srv/x",
+      "expectSource": "env"
+    },
+    {
+      "name": "cc linux blank env override is unset",
+      "app": "cc",
+      "platform": "linux",
+      "env": {
+        "CC_HOME": "   "
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.command-and-control",
+      "expectData": "/home/kev/.command-and-control",
+      "expectSecrets": "/home/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc linux empty env override is unset",
+      "app": "cc",
+      "platform": "linux",
+      "env": {
+        "CC_HOME": ""
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.command-and-control",
+      "expectData": "/home/kev/.command-and-control",
+      "expectSecrets": "/home/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc linux legacy flags ignored on posix",
+      "app": "cc",
+      "platform": "linux",
+      "env": {},
+      "homedir": "/home/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.command-and-control",
+      "expectData": "/home/kev/.command-and-control",
+      "expectSecrets": "/home/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc linux APPDATA ignored on posix",
+      "app": "cc",
+      "platform": "linux",
+      "env": {
+        "APPDATA": "/x",
+        "LOCALAPPDATA": "/y"
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.command-and-control",
+      "expectData": "/home/kev/.command-and-control",
+      "expectSecrets": "/home/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 fresh machine uses new homes",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 env override wins for all roots",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CC_HOME": "D:/portable"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "D:/portable",
+      "expectData": "D:/portable",
+      "expectSecrets": "D:/portable",
+      "expectSource": "env"
+    },
+    {
+      "name": "cc win32 blank env override is unset",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CC_HOME": "  "
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 env override is trimmed",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CC_HOME": "  D:/portable  "
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "D:/portable",
+      "expectData": "D:/portable",
+      "expectSecrets": "D:/portable",
+      "expectSource": "env"
+    },
+    {
+      "name": "cc win32 unset APPDATA falls back to home AppData",
+      "app": "cc",
+      "platform": "win32",
+      "env": {},
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 blank APPDATA falls back",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "  ",
+        "LOCALAPPDATA": ""
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 custom APPDATA honoured",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "E:/Roam",
+        "LOCALAPPDATA": "E:/Loc"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "E:/Roam/CanvasToolchain/CommandAndControl",
+      "expectData": "E:/Loc/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "E:/Loc/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 APPDATA set but LOCALAPPDATA blank resolves independently",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "E:/Roam",
+        "LOCALAPPDATA": ""
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "E:/Roam/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 upgrade window: legacy exists, new absent, all roots legacy",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/.command-and-control",
+      "expectData": "C:/Users/kev/.command-and-control",
+      "expectSecrets": "C:/Users/kev/.command-and-control",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 legacy and new both exist uses new homes",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 only new exists uses new homes",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 neither exists uses new homes",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cc win32 ignoreUpgradeWindow resolves new homes inside window",
+      "app": "cc",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": true,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CommandAndControl",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CommandAndControl/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds darwin default is legacy dot-folder",
+      "app": "cds",
+      "platform": "darwin",
+      "env": {},
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.canvas-design-mcp",
+      "expectData": "/Users/kev/.canvas-design-mcp",
+      "expectSecrets": "/Users/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds darwin env override wins for all roots",
+      "app": "cds",
+      "platform": "darwin",
+      "env": {
+        "CANVAS_DESIGN_HOME": "/srv/x"
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/srv/x",
+      "expectData": "/srv/x",
+      "expectSecrets": "/srv/x",
+      "expectSource": "env"
+    },
+    {
+      "name": "cds darwin blank env override is unset",
+      "app": "cds",
+      "platform": "darwin",
+      "env": {
+        "CANVAS_DESIGN_HOME": "   "
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.canvas-design-mcp",
+      "expectData": "/Users/kev/.canvas-design-mcp",
+      "expectSecrets": "/Users/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds darwin empty env override is unset",
+      "app": "cds",
+      "platform": "darwin",
+      "env": {
+        "CANVAS_DESIGN_HOME": ""
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.canvas-design-mcp",
+      "expectData": "/Users/kev/.canvas-design-mcp",
+      "expectSecrets": "/Users/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds darwin legacy flags ignored on posix",
+      "app": "cds",
+      "platform": "darwin",
+      "env": {},
+      "homedir": "/Users/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.canvas-design-mcp",
+      "expectData": "/Users/kev/.canvas-design-mcp",
+      "expectSecrets": "/Users/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds darwin APPDATA ignored on posix",
+      "app": "cds",
+      "platform": "darwin",
+      "env": {
+        "APPDATA": "/x",
+        "LOCALAPPDATA": "/y"
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.canvas-design-mcp",
+      "expectData": "/Users/kev/.canvas-design-mcp",
+      "expectSecrets": "/Users/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds linux default is legacy dot-folder",
+      "app": "cds",
+      "platform": "linux",
+      "env": {},
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.canvas-design-mcp",
+      "expectData": "/home/kev/.canvas-design-mcp",
+      "expectSecrets": "/home/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds linux env override wins for all roots",
+      "app": "cds",
+      "platform": "linux",
+      "env": {
+        "CANVAS_DESIGN_HOME": "/srv/x"
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/srv/x",
+      "expectData": "/srv/x",
+      "expectSecrets": "/srv/x",
+      "expectSource": "env"
+    },
+    {
+      "name": "cds linux blank env override is unset",
+      "app": "cds",
+      "platform": "linux",
+      "env": {
+        "CANVAS_DESIGN_HOME": "   "
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.canvas-design-mcp",
+      "expectData": "/home/kev/.canvas-design-mcp",
+      "expectSecrets": "/home/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds linux empty env override is unset",
+      "app": "cds",
+      "platform": "linux",
+      "env": {
+        "CANVAS_DESIGN_HOME": ""
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.canvas-design-mcp",
+      "expectData": "/home/kev/.canvas-design-mcp",
+      "expectSecrets": "/home/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds linux legacy flags ignored on posix",
+      "app": "cds",
+      "platform": "linux",
+      "env": {},
+      "homedir": "/home/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.canvas-design-mcp",
+      "expectData": "/home/kev/.canvas-design-mcp",
+      "expectSecrets": "/home/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds linux APPDATA ignored on posix",
+      "app": "cds",
+      "platform": "linux",
+      "env": {
+        "APPDATA": "/x",
+        "LOCALAPPDATA": "/y"
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.canvas-design-mcp",
+      "expectData": "/home/kev/.canvas-design-mcp",
+      "expectSecrets": "/home/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 fresh machine uses new homes",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 env override wins for all roots",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CANVAS_DESIGN_HOME": "D:/portable"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "D:/portable",
+      "expectData": "D:/portable",
+      "expectSecrets": "D:/portable",
+      "expectSource": "env"
+    },
+    {
+      "name": "cds win32 blank env override is unset",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CANVAS_DESIGN_HOME": "  "
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 env override is trimmed",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CANVAS_DESIGN_HOME": "  D:/portable  "
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "D:/portable",
+      "expectData": "D:/portable",
+      "expectSecrets": "D:/portable",
+      "expectSource": "env"
+    },
+    {
+      "name": "cds win32 unset APPDATA falls back to home AppData",
+      "app": "cds",
+      "platform": "win32",
+      "env": {},
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 blank APPDATA falls back",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "  ",
+        "LOCALAPPDATA": ""
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 custom APPDATA honoured",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "E:/Roam",
+        "LOCALAPPDATA": "E:/Loc"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "E:/Roam/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "E:/Loc/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "E:/Loc/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 APPDATA set but LOCALAPPDATA blank resolves independently",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "E:/Roam",
+        "LOCALAPPDATA": ""
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "E:/Roam/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 upgrade window: legacy exists, new absent, all roots legacy",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/.canvas-design-mcp",
+      "expectData": "C:/Users/kev/.canvas-design-mcp",
+      "expectSecrets": "C:/Users/kev/.canvas-design-mcp",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 legacy and new both exist uses new homes",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 only new exists uses new homes",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 neither exists uses new homes",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "cds win32 ignoreUpgradeWindow resolves new homes inside window",
+      "app": "cds",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": true,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CanvasDesignStudio",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CanvasDesignStudio/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci darwin default is legacy dot-folder",
+      "app": "ci",
+      "platform": "darwin",
+      "env": {},
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.curriculum-intelligence",
+      "expectData": "/Users/kev/.curriculum-intelligence",
+      "expectSecrets": "/Users/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci darwin env override wins for all roots",
+      "app": "ci",
+      "platform": "darwin",
+      "env": {
+        "CURRICULUM_INTELLIGENCE_HOME": "/srv/x"
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/srv/x",
+      "expectData": "/srv/x",
+      "expectSecrets": "/srv/x",
+      "expectSource": "env"
+    },
+    {
+      "name": "ci darwin blank env override is unset",
+      "app": "ci",
+      "platform": "darwin",
+      "env": {
+        "CURRICULUM_INTELLIGENCE_HOME": "   "
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.curriculum-intelligence",
+      "expectData": "/Users/kev/.curriculum-intelligence",
+      "expectSecrets": "/Users/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci darwin empty env override is unset",
+      "app": "ci",
+      "platform": "darwin",
+      "env": {
+        "CURRICULUM_INTELLIGENCE_HOME": ""
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.curriculum-intelligence",
+      "expectData": "/Users/kev/.curriculum-intelligence",
+      "expectSecrets": "/Users/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci darwin legacy flags ignored on posix",
+      "app": "ci",
+      "platform": "darwin",
+      "env": {},
+      "homedir": "/Users/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.curriculum-intelligence",
+      "expectData": "/Users/kev/.curriculum-intelligence",
+      "expectSecrets": "/Users/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci darwin APPDATA ignored on posix",
+      "app": "ci",
+      "platform": "darwin",
+      "env": {
+        "APPDATA": "/x",
+        "LOCALAPPDATA": "/y"
+      },
+      "homedir": "/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/Users/kev/.curriculum-intelligence",
+      "expectData": "/Users/kev/.curriculum-intelligence",
+      "expectSecrets": "/Users/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci linux default is legacy dot-folder",
+      "app": "ci",
+      "platform": "linux",
+      "env": {},
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.curriculum-intelligence",
+      "expectData": "/home/kev/.curriculum-intelligence",
+      "expectSecrets": "/home/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci linux env override wins for all roots",
+      "app": "ci",
+      "platform": "linux",
+      "env": {
+        "CURRICULUM_INTELLIGENCE_HOME": "/srv/x"
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/srv/x",
+      "expectData": "/srv/x",
+      "expectSecrets": "/srv/x",
+      "expectSource": "env"
+    },
+    {
+      "name": "ci linux blank env override is unset",
+      "app": "ci",
+      "platform": "linux",
+      "env": {
+        "CURRICULUM_INTELLIGENCE_HOME": "   "
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.curriculum-intelligence",
+      "expectData": "/home/kev/.curriculum-intelligence",
+      "expectSecrets": "/home/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci linux empty env override is unset",
+      "app": "ci",
+      "platform": "linux",
+      "env": {
+        "CURRICULUM_INTELLIGENCE_HOME": ""
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.curriculum-intelligence",
+      "expectData": "/home/kev/.curriculum-intelligence",
+      "expectSecrets": "/home/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci linux legacy flags ignored on posix",
+      "app": "ci",
+      "platform": "linux",
+      "env": {},
+      "homedir": "/home/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.curriculum-intelligence",
+      "expectData": "/home/kev/.curriculum-intelligence",
+      "expectSecrets": "/home/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci linux APPDATA ignored on posix",
+      "app": "ci",
+      "platform": "linux",
+      "env": {
+        "APPDATA": "/x",
+        "LOCALAPPDATA": "/y"
+      },
+      "homedir": "/home/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "/home/kev/.curriculum-intelligence",
+      "expectData": "/home/kev/.curriculum-intelligence",
+      "expectSecrets": "/home/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 fresh machine uses new homes",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 env override wins for all roots",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CURRICULUM_INTELLIGENCE_HOME": "D:/portable"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "D:/portable",
+      "expectData": "D:/portable",
+      "expectSecrets": "D:/portable",
+      "expectSource": "env"
+    },
+    {
+      "name": "ci win32 blank env override is unset",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CURRICULUM_INTELLIGENCE_HOME": "  "
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 env override is trimmed",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local",
+        "CURRICULUM_INTELLIGENCE_HOME": "  D:/portable  "
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "D:/portable",
+      "expectData": "D:/portable",
+      "expectSecrets": "D:/portable",
+      "expectSource": "env"
+    },
+    {
+      "name": "ci win32 unset APPDATA falls back to home AppData",
+      "app": "ci",
+      "platform": "win32",
+      "env": {},
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 blank APPDATA falls back",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "  ",
+        "LOCALAPPDATA": ""
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 custom APPDATA honoured",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "E:/Roam",
+        "LOCALAPPDATA": "E:/Loc"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "E:/Roam/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "E:/Loc/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "E:/Loc/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 APPDATA set but LOCALAPPDATA blank resolves independently",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "E:/Roam",
+        "LOCALAPPDATA": ""
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "E:/Roam/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 upgrade window: legacy exists, new absent, all roots legacy",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/.curriculum-intelligence",
+      "expectData": "C:/Users/kev/.curriculum-intelligence",
+      "expectSecrets": "C:/Users/kev/.curriculum-intelligence",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 legacy and new both exist uses new homes",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 only new exists uses new homes",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": true,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 neither exists uses new homes",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": false,
+      "newExists": false,
+      "ignoreUpgradeWindow": false,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    },
+    {
+      "name": "ci win32 ignoreUpgradeWindow resolves new homes inside window",
+      "app": "ci",
+      "platform": "win32",
+      "env": {
+        "APPDATA": "C:/Users/kev/AppData/Roaming",
+        "LOCALAPPDATA": "C:/Users/kev/AppData/Local"
+      },
+      "homedir": "C:/Users/kev",
+      "legacyExists": true,
+      "newExists": false,
+      "ignoreUpgradeWindow": true,
+      "expectConfig": "C:/Users/kev/AppData/Roaming/CanvasToolchain/CurriculumIntelligence",
+      "expectData": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence",
+      "expectSecrets": "C:/Users/kev/AppData/Local/CanvasToolchain/CurriculumIntelligence/secrets",
+      "expectSource": "default"
+    }
+  ]
+}
