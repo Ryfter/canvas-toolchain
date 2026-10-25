@@ -5,10 +5,6 @@ import os from 'os';
 
 const TMP_KB = join(os.tmpdir(), 'canvas-mcp-test-kb-' + process.pid);
 
-vi.mock('os', async (importOriginal) => {
-  const actual = await importOriginal<typeof os>();
-  return { ...actual, default: { ...actual, homedir: () => TMP_KB } };
-});
 
 const MOCK_SANITIZE_SOURCE = `
 ALLOWED_ELEMENTS = %w[
@@ -31,9 +27,13 @@ ALLOWED_CSS_PROPERTIES = %w[
 ].freeze
 `;
 
+let prevHome: string | undefined;
+
 describe('updateCanvasKb', () => {
   beforeEach(() => {
     mkdirSync(TMP_KB, { recursive: true });
+    prevHome = process.env.CANVAS_DESIGN_HOME;
+    process.env.CANVAS_DESIGN_HOME = TMP_KB;
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -43,6 +43,7 @@ describe('updateCanvasKb', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    process.env.CANVAS_DESIGN_HOME = prevHome;
     if (existsSync(TMP_KB)) rmSync(TMP_KB, { recursive: true, force: true });
   });
 

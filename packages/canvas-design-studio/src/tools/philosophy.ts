@@ -1,8 +1,10 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { cdsConfigHome } from '@canvas-toolchain/shared-types';
 import { join, dirname } from 'node:path';
 
-export const PHILOSOPHY_KB_PATH = join(homedir(), '.canvas-design-mcp', 'professor-philosophy.md');
+export function philosophyKbPath(): string {
+  return join(cdsConfigHome(), 'professor-philosophy.md');
+}
 
 // Saved to disk (empty sections, no placeholder prose — clean slate for detection logic)
 export const PHILOSOPHY_TEMPLATE = [
@@ -53,7 +55,7 @@ function ensureDir(filePath: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
-export function savePhilosophyKb(content: string, kbPath = PHILOSOPHY_KB_PATH): void {
+export function savePhilosophyKb(content: string, kbPath = philosophyKbPath()): void {
   ensureDir(kbPath);
   writeFileSync(kbPath, content, 'utf-8');
 }
@@ -80,7 +82,7 @@ function detectSections(content: string): GetPhilosophyKbResult['sections'] {
   };
 }
 
-export function getPhilosophyKb(kbPath = PHILOSOPHY_KB_PATH): GetPhilosophyKbResult {
+export function getPhilosophyKb(kbPath = philosophyKbPath()): GetPhilosophyKbResult {
   if (!existsSync(kbPath)) {
     const content = PHILOSOPHY_TEMPLATE.replace(
       '## Core Teaching Philosophy\n',
@@ -162,7 +164,7 @@ function appendToSection(content: string, input: UpdatePhilosophyKbInput): strin
   return before + '\n' + entry + '\n' + after;
 }
 
-export function updatePhilosophyKb(input: UpdatePhilosophyKbInput, kbPath = PHILOSOPHY_KB_PATH): string {
+export function updatePhilosophyKb(input: UpdatePhilosophyKbInput, kbPath = philosophyKbPath()): string {
   if (input.section === 'course' && !input.courseKey) {
     throw new Error(
       "courseKey is required when section is 'course' — provide the course name, e.g. 'ITM 370 — AI Augmented Projects'"
