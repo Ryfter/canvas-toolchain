@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** `<configDir>/roster-vault/major-aliases.json`. Callers pass the host's config root (`ctx.paths.config`). */
+/** `<dir>/roster-vault/major-aliases.json`. Callers pass the host's secrets root (`ctx.paths.secrets`), beside the vault. */
 export function majorAliasesPath(configDir: string): string {
   return join(configDir, 'roster-vault', 'major-aliases.json');
 }

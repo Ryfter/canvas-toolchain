@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join } from 'node:path';
 import type { ColumnMapping } from '../types.js';
 
-/** `<configDir>/roster-vault/column-map.json`. Callers pass the host's config root (`ctx.paths.config`). */
+/** `<dir>/roster-vault/column-map.json`. Callers pass the host's secrets root (`ctx.paths.secrets`), beside the vault. */
 export function columnMapPath(configDir: string): string {
   return join(configDir, 'roster-vault', 'column-map.json');
 }

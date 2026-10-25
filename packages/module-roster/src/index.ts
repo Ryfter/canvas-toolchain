@@ -62,7 +62,7 @@ export { proposeRoster } from './propose.js';
 export { commitRoster } from './commit.js';
 export { resolveIdentity } from './resolve.js';
 // Reused by @canvas-toolchain/module-peerassessment (vault bridge + PeopleSoft fallback).
-// Path-taking: pass ctx.paths.secrets to loadVault and ctx.paths.config to loadColumnMap.
+// Path-taking: pass ctx.paths.secrets to both loadVault and loadColumnMap (roster-vault/ moves as one unit).
 export { loadVault } from './vault/store.js';
 export { loadColumnMap } from './peoplesoft/column-map.js';
 export { parseRosterFile } from './peoplesoft/parse.js';

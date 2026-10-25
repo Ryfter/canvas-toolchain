@@ -25,7 +25,7 @@ export interface RosterToolDeps {
 
 /**
  * Paths and credentials come only from the host context: the vault from `ctx.paths.secrets`,
- * the column map and major aliases from `ctx.paths.config`, Canvas from
+ * the column map and major aliases from `ctx.paths.secrets`, next to the vault (the migration moves the whole roster-vault/ folder as a unit), Canvas from
  * `ctx.credentials.get('canvas')` (required) and Anthropic from `tryGet('anthropic')`
  * (optional; null degrades major normalization to passthrough).
  */
@@ -71,9 +71,9 @@ export function createRosterTools(deps: RosterToolDeps): ModuleTool[] {
       if (!a.term || !/^[A-Za-z0-9]+$/.test(a.term)) {
         return json({ error: 'term must be a non-empty alphanumeric code like "FA26".' });
       }
-      const mapping = a.columnMap ?? loadColumnMap(ctx.paths.config);
+      const mapping = a.columnMap ?? loadColumnMap(ctx.paths.secrets);
       if (!mapping) return json({ error: 'No column mapping provided and none remembered. Pass columnMap once.' });
-      if (a.columnMap) saveColumnMap(ctx.paths.config, a.columnMap);
+      if (a.columnMap) saveColumnMap(ctx.paths.secrets, a.columnMap);
 
       const peopleSoft = parseRosterFile(a.peopleSoftFile, mapping);
       const canvas = await canvasClient(ctx);
@@ -82,7 +82,7 @@ export function createRosterTools(deps: RosterToolDeps): ModuleTool[] {
       const report = await proposeRoster({
         term: a.term, courseId: a.courseId, peopleSoft, canvasUsers,
         llm: llmFrom(await ctx.credentials.tryGet('anthropic')),
-        aliases: loadMajorAliases(ctx.paths.config),
+        aliases: loadMajorAliases(ctx.paths.secrets),
         secretsDir: ctx.paths.secrets,
       });
       return json(report);

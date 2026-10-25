@@ -111,7 +111,7 @@ describe('roster tools (fake ctx)', () => {
     expect(existsSync(join(secrets, 'roster-vault'))).toBe(false);
   });
 
-  it('propose -> commit -> resolve: canvas from ctx, column map in config, vault in secrets, no PII in the vault', async () => {
+  it('propose -> commit -> resolve: canvas from ctx, column map and vault in secrets, no PII in the vault', async () => {
     const m = createRosterModule({ fetchImpl: fakeFetch });
     const ctx = makeFakeCtx({ config, secrets, canvas: { host: HOST, token: TOKEN }, anthropic: null });
     await m.init!(ctx);
@@ -134,8 +134,8 @@ describe('roster tools (fake ctx)', () => {
     ]);
 
     // Column map remembered under config; propose wrote no vault anywhere.
-    expect(existsSync(join(config, 'roster-vault', 'column-map.json'))).toBe(true);
-    expect(existsSync(join(secrets, 'roster-vault', 'column-map.json'))).toBe(false);
+    expect(existsSync(join(secrets, 'roster-vault', 'column-map.json'))).toBe(true);
+    expect(existsSync(join(config, 'roster-vault', 'column-map.json'))).toBe(false);
     expect(existsSync(join(secrets, 'roster-vault', 'vault.json'))).toBe(false);
     expect(existsSync(join(config, 'roster-vault', 'vault.json'))).toBe(false);
 
