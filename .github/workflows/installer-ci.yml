@@ -6,11 +6,13 @@ on:
     paths:
       - 'installer/**'
       - 'module-catalog.json'
+      - 'packages/shared-types/tests/fixtures/app-paths-cases.json'
       - '.github/workflows/installer-ci.yml'
   pull_request:
     paths:
       - 'installer/**'
       - 'module-catalog.json'
+      - 'packages/shared-types/tests/fixtures/app-paths-cases.json'
       - '.github/workflows/installer-ci.yml'
 
 jobs:
