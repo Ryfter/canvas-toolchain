@@ -195,6 +195,14 @@ export interface PageClos {
 
 export { normalizeCanvasHost, canvasBaseUrl } from './canvas-host.js';
 export * from './app-paths.js';
+export { legacyEntryRoot, migrateLegacyAppHome, MIGRATION_JOURNAL_FILE } from './app-home-migration.js';
+export type {
+  MigrationJournal,
+  MigrationOptions,
+  MigrationOutcome,
+  MigrationRoot,
+  MigrationSkipReason,
+} from './app-home-migration.js';
 
 // ── Canvas credential stores ─────────────────────────────────────────────────
 // Only what the two apps actually call. The rest of canvas-store.ts is internal
