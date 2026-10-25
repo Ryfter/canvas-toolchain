@@ -1,7 +1,7 @@
 // packages/command-and-control/src/tools/workflows/index_course_for_answers.ts
 
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { ciDataHome } from '@canvas-toolchain/shared-types';
 import { ingestCourse, type IngestResult } from '../answers/ingest/orchestrator.js';
 import { providerFromConfig } from '../answers/provider/resolve.js';
 import type { EmbeddingProvider } from '../answers/provider/types.js';
@@ -40,6 +40,6 @@ export async function indexCourseForAnswers(
 function defaultTranscriptSources(courseId: number): string[] {
   // Convention: existing sub-project 2 writes enriched transcripts here.
   // If a different layout is in use, callers can pass transcriptSources explicitly.
-  const ciHome = process.env.CURRICULUM_INTELLIGENCE_HOME ?? join(homedir(), '.curriculum-intelligence');
+  const ciHome = ciDataHome();
   return [join(ciHome, 'panopto', String(courseId))];
 }

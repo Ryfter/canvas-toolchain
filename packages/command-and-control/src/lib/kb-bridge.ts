@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { ciDataHome, cdsConfigHome } from '@canvas-toolchain/shared-types';
 import type { TopicMap, TrajectoryEntry } from '@canvas-toolchain/curriculum-intelligence/dist/types.js';
 
 export type { TrajectoryEntry, TopicMap };
@@ -19,11 +19,13 @@ export interface BridgedKb {
 }
 
 function getCiHome(): string {
-  return process.env.CURRICULUM_INTELLIGENCE_HOME ?? join(homedir(), '.curriculum-intelligence');
+  // courses/ is data-class (spec 2.2)
+  return ciDataHome();
 }
 
 function getCdsHome(): string {
-  return process.env.CANVAS_DESIGN_HOME ?? join(homedir(), '.canvas-design-mcp');
+  // philosophy-kb.md, student-personas.md and course/ are config-class (spec 2.2)
+  return cdsConfigHome();
 }
 
 function safeReadFile(filePath: string): string | null {

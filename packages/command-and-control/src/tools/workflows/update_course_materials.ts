@@ -1,6 +1,6 @@
 import { readdirSync, existsSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
-import { homedir } from 'node:os';
+import { ciDataHome } from '@canvas-toolchain/shared-types';
 import { exportCourseFolder } from '@canvas-toolchain/curriculum-intelligence/dist/tools/export_course_folder.js';
 import type {
   UpdateCourseMaterialsResult,
@@ -31,7 +31,7 @@ export interface UpdateCourseMaterialsInput {
 }
 
 function getNextPlanDir(courseId: string, semesterId: string): string {
-  const home = process.env.CURRICULUM_INTELLIGENCE_HOME ?? join(homedir(), '.curriculum-intelligence');
+  const home = ciDataHome();
   return join(home, 'courses', courseId, 'semesters', semesterId, 'next-plan');
 }
 
