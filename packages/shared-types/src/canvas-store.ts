@@ -24,8 +24,9 @@ import { randomBytes } from 'node:crypto';
 import {
   chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync,
 } from 'node:fs';
-import { homedir, platform } from 'node:os';
+import { platform } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { ccSecretsHome, cdsSecretsHome } from './app-paths.js';
 import { normalizeCanvasHost } from './canvas-host.js';
 
 export const CC_HOME_ENV = 'CC_HOME';
@@ -44,12 +45,21 @@ export interface CanvasStoreLocations {
   institutionConfig: string;
 }
 
+/*
+ * Which root (spec 2026-10-18-paths-and-module-credentials, section 2.2 + Q1a
+ * ACCEPTED): both files this module owns, canvas-config.json and institution.json,
+ * carry the Canvas API token, so both live in the SECRETS root (on Windows
+ * %LOCALAPPDATA%, never roaming; on POSIX identical to the legacy dot-folder).
+ * The migration journal (canvas-store-migration.json) is token-free and nominally
+ * config-class, but journalPath() is outside this job's scope and still follows
+ * ccHome(); the resolver treats blank CC_HOME / CANVAS_DESIGN_HOME as unset.
+ */
 export function ccHome(): string {
-  return process.env[CC_HOME_ENV] ?? join(homedir(), '.command-and-control');
+  return ccSecretsHome();
 }
 
 export function canvasDesignHome(): string {
-  return process.env[CANVAS_DESIGN_HOME_ENV] ?? join(homedir(), '.canvas-design-mcp');
+  return cdsSecretsHome();
 }
 
 export function canvasStoreLocations(): CanvasStoreLocations {
