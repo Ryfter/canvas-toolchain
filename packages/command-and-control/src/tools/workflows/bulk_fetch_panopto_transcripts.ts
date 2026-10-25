@@ -1,4 +1,5 @@
-import { bulkDownloadPanoptoCaptions, loadPanoptoConfig, type ProgressCallback } from '@canvas-toolchain/module-video';
+import { bulkDownloadPanoptoCaptions, type ProgressCallback } from '@canvas-toolchain/module-video';
+import { resolveModuleCredential } from '@canvas-toolchain/shared-types';
 import { ingestTranscripts } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js';
 import type { IngestTranscriptsResult } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js';
 
@@ -29,6 +30,17 @@ export interface BulkFetchPanoptoTranscriptsResult {
   fix?: string[];
 }
 
+/** Resolve Panopto exactly as the video module would (own credential, else shared). Keeps the PANOPTO_NOT_CONFIGURED shape. */
+function resolvePanoptoConfig() {
+  const res = resolveModuleCredential('video', 'panopto', { shareDefault: true });
+  if ('value' in res) return res.value;
+  throw new Error(
+    res.missing === 'incomplete'
+      ? 'PANOPTO_NOT_CONFIGURED: the saved Panopto credential is missing required fields. Re-run setup_panopto.'
+      : 'PANOPTO_NOT_CONFIGURED: Run setup_panopto with your Panopto domain, clientId, and clientSecret.',
+  );
+}
+
 export type { ProgressCallback };
 
 export async function bulkFetchPanoptoTranscripts(
@@ -39,7 +51,7 @@ export async function bulkFetchPanoptoTranscripts(
 
   let panoptoConfig;
   try {
-    panoptoConfig = loadPanoptoConfig();
+    panoptoConfig = resolvePanoptoConfig();
   } catch (err) {
     return {
       folderId,

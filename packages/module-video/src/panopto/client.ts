@@ -1,10 +1,9 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import type { PanoptoConfig } from '../types.js';
 import { formatError } from '../utils/errors.js';
 
-// mkdirSync, writeFileSync, homedir, join will be used in Task 5 (fetchPanoptoCaptions)
+// mkdirSync, writeFileSync, join will be used in Task 5 (fetchPanoptoCaptions)
 
 export interface PanoptoSearchResult {
   id: string;
@@ -208,6 +207,8 @@ export async function searchPanoptoVideos(
 export async function fetchPanoptoCaptions(
   input: { videoId: string; title?: string },
   config: PanoptoConfig,
+  /** Directory transcripts are written to (host: `<designStudioData>/transcripts`). */
+  transcriptDir: string,
 ): Promise<string> {
   if (!config.clientId || !config.clientSecret) {
     return 'API_NOT_CONFIGURED: Panopto API credentials are not set. Run setup_institution to add your Panopto clientId and clientSecret.';
@@ -236,7 +237,6 @@ export async function fetchPanoptoCaptions(
 
   const title = input.title ?? input.videoId;
   const filename = `${sanitizeFilename(title)}-${sanitizeFilename(input.videoId)}.md`;
-  const transcriptDir = join(homedir(), '.canvas-design-mcp', 'transcripts');
   const filePath = join(transcriptDir, filename);
 
   mkdirSync(transcriptDir, { recursive: true });

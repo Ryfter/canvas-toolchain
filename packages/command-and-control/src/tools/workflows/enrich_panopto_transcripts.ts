@@ -12,10 +12,10 @@ import { join } from 'node:path';
 import {
   enrichVttFile,
   BUILTIN_FILLER_WORDS,
-  loadPanoptoConfig,
   loadPanoptoVocab,
   type SessionsManifest,
 } from '@canvas-toolchain/module-video';
+import { ccConfigHome, resolveModuleCredential } from '@canvas-toolchain/shared-types';
 import { loadTranscriptConfig } from '../setup_transcript_source.js';
 
 export interface EnrichPanoptoTranscriptsInput {
@@ -65,8 +65,9 @@ export async function enrichPanoptoTranscripts(
 
   let domain: string;
   try {
-    const config = loadPanoptoConfig();
-    domain = config.domain;
+    const res = resolveModuleCredential('video', 'panopto', { shareDefault: true });
+    if (!('value' in res)) throw new Error('PANOPTO_NOT_CONFIGURED');
+    domain = res.value.domain;
   } catch {
     return {
       transcriptsPath,
@@ -80,7 +81,7 @@ export async function enrichPanoptoTranscripts(
 
   let vocab: { fillerWords: string[]; corrections: { from: string; to: string }[] };
   try {
-    vocab = loadPanoptoVocab();
+    vocab = loadPanoptoVocab(ccConfigHome());
   } catch (err: any) {
     // loadPanoptoVocab throws a plain object { error, fix } on corrupt JSON.
     // The ?? guard handles a future regression where a real Error is thrown instead.

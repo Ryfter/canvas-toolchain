@@ -12,9 +12,16 @@ const fakeEngine = {
 vi.mock('@canvas-toolchain/curriculum-intelligence/dist/transcription/faster_whisper_engine.js', () => ({
   getTranscriptionEngine: () => fakeEngine,
 }));
+vi.mock('@canvas-toolchain/shared-types', async (orig) => ({
+  ...(await orig<typeof import('@canvas-toolchain/shared-types')>()),
+  resolveModuleCredential: () => ({
+    value: { domain: 'example.hosted.panopto.com', clientId: 'c', clientSecret: 's' },
+    source: 'shared',
+  }),
+  ccConfigHome: () => '/cfg-home',
+}));
 vi.mock('@canvas-toolchain/module-video', () => ({
   fetchSessionAudio: vi.fn().mockResolvedValue({ ok: true, path: '/tmp/a.mp4', source: 'manual' }),
-  loadPanoptoConfig: () => ({ domain: 'example.hosted.panopto.com', clientId: 'c', clientSecret: 's' }),
   loadPanoptoVocab: () => ({ fillerWords: [], corrections: [] }),
 }));
 

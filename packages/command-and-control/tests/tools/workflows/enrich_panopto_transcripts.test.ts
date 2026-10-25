@@ -4,16 +4,21 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 vi.mock('@canvas-toolchain/module-video', () => ({
-  loadPanoptoConfig: vi.fn(),
   loadPanoptoVocab: vi.fn(),
   enrichVttFile: vi.fn(),
   BUILTIN_FILLER_WORDS: ['uh', 'um'],
+}));
+vi.mock('@canvas-toolchain/shared-types', async (orig) => ({
+  ...(await orig<typeof import('@canvas-toolchain/shared-types')>()),
+  resolveModuleCredential: vi.fn(),
+  ccConfigHome: () => '/cfg-home',
 }));
 vi.mock('../../../src/tools/setup_transcript_source.js', () => ({
   loadTranscriptConfig: vi.fn(),
 }));
 
-import { loadPanoptoConfig, loadPanoptoVocab, enrichVttFile } from '@canvas-toolchain/module-video';
+import { loadPanoptoVocab, enrichVttFile } from '@canvas-toolchain/module-video';
+import { resolveModuleCredential } from '@canvas-toolchain/shared-types';
 import { loadTranscriptConfig } from '../../../src/tools/setup_transcript_source.js';
 import { enrichPanoptoTranscripts } from '../../../src/tools/workflows/enrich_panopto_transcripts.js';
 
@@ -61,7 +66,7 @@ let tmpDir: string;
 beforeEach(() => {
   tmpDir = join(tmpdir(), `enrich-test-${Date.now()}`);
   mkdirSync(tmpDir, { recursive: true });
-  vi.mocked(loadPanoptoConfig).mockReturnValue(MOCK_CONFIG);
+  vi.mocked(resolveModuleCredential).mockReturnValue({ value: MOCK_CONFIG, source: 'shared' } as never);
   vi.mocked(loadPanoptoVocab).mockReturnValue(MOCK_VOCAB);
   vi.mocked(enrichVttFile).mockReturnValue('# Lecture\n\nContent');
   vi.mocked(loadTranscriptConfig).mockReturnValue({
@@ -87,9 +92,7 @@ describe('enrichPanoptoTranscripts', () => {
   });
 
   it('returns PANOPTO_NOT_CONFIGURED when panopto config is absent', async () => {
-    vi.mocked(loadPanoptoConfig).mockImplementation(() => {
-      throw new Error('PANOPTO_NOT_CONFIGURED');
-    });
+    vi.mocked(resolveModuleCredential).mockReturnValue({ missing: 'none' } as never);
     writeFileSync(join(tmpDir, '_sessions.json'), JSON.stringify(MANIFEST), 'utf-8');
 
     const result = await enrichPanoptoTranscripts({ transcriptsPath: tmpDir });
