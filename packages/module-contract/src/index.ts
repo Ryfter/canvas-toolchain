@@ -39,7 +39,13 @@ export interface PanoptoCredential {
 /** Host-injected paths and credentials. v2 modules keep this in module scope. */
 export interface ModuleContext {
   moduleId: string;
-  paths: { config: string; data: string; designStudioData: string };
+  paths: {
+    config: string;
+    data: string;
+    designStudioData: string;
+    /** Secret-bearing root. Used only for the roster vault; other modules reach secrets via `credentials`. */
+    secrets: string;
+  };
   credentials: {
     get(kind: 'canvas'): Promise<CanvasCredential>;
     get(kind: 'anthropic'): Promise<AnthropicCredential>;
