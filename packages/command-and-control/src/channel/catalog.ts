@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getCcHomePath } from '../kb/config.js';
+import { getCcDataPath } from '../kb/config.js';
 import { VERSION_SEGMENT } from './installed.js';
 
 export const CATALOG_URL =
@@ -227,7 +227,8 @@ export interface FetchCatalogOptions {
 }
 
 function defaultCachePath(): string {
-  return join(getCcHomePath(), 'module-catalog-cache.json');
+  // data-class (legacyEntryRoot): a regenerable cache.
+  return join(getCcDataPath(), 'module-catalog-cache.json');
 }
 
 function readCache(path: string): CatalogCache | null {

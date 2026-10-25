@@ -7,7 +7,7 @@ export interface ResolveSnapshotsRootInput {
   courseDir: string;
   location: SnapshotsLocation;
   /** Absolute path to the legacy global snapshots root.
-   *  Typically: join(homedir(), '.command-and-control', 'publish-snapshots') */
+   *  Typically: join(<CC data root>, 'publish-snapshots') */
   legacyGlobalRoot: string;
 }
 

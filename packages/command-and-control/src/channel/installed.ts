@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getCcHomePath } from '../kb/config.js';
+import { getCcDataPath, getCcHomePath } from '../kb/config.js';
 
 export interface InstalledModuleEntry {
   id: string;
@@ -16,11 +16,13 @@ export interface InstalledModulesFile {
 }
 
 export function getInstalledModulesPath(): string {
+  // config-class (legacyEntryRoot falls through to config): the record of what the user installed.
   return join(getCcHomePath(), 'installed-modules.json');
 }
 
 export function getModulesRoot(): string {
-  return join(getCcHomePath(), 'modules');
+  // data-class (legacyEntryRoot): installed module bundles are regenerable artifacts.
+  return join(getCcDataPath(), 'modules');
 }
 
 export function getTmpDownloadDir(): string {
