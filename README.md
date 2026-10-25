@@ -161,6 +161,12 @@ after editing its config. That includes hosts the installer does not auto-wire.
 | ♿ [**Accessibility checks**](docs/accessibility.md) | Every automated accessibility check the toolchain runs — what each one catches, how it works (with the contrast math), where it runs (advisory vs blocking), how to fix findings, and its limitations |
 | 🎨 [**Visual guide**](docs/visual-guide/README.md) | Picture-first tour — diagrams of the pipeline, architecture, and setup ([rendered PNG/SVG](docs/visual-guide/images/) + an editable [Excalidraw scene](docs/visual-guide/pipeline.excalidraw)) |
 
+## Troubleshooting
+
+Full table: [User Guide §9](docs/user-guide.md#9-troubleshooting). The one that bites on Windows:
+
+- **Codex desktop on Windows: `Invoke-RestMethod` fails with "The SSL connection could not be established"** (inner exception: *"No credentials are available in the security package"*, no HTTP response). This is Codex's command **sandbox**, not your network, Canvas host, or token. Allow the command to run outside the sandbox when Codex asks, or tell Codex once: *"When using Canvas Toolchain, don't use the sandbox."* To confirm, run the same call in a normal PowerShell window; if it works there, it is the sandbox.
+
 ## What lives where
 
 | Path | Package | What it owns |
