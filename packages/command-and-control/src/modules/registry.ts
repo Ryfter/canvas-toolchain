@@ -8,6 +8,7 @@ import {
   type ModuleManifest,
 } from '@canvas-toolchain/module-contract';
 import { loadModuleManifest } from './manifest.js';
+import { createModuleContext, type ModuleOrigin } from './context.js';
 import { sha256File } from '../channel/hash.js';
 import {
   artifactPath, isSafeArtifactRef, VERSION_SEGMENT,
@@ -109,15 +110,86 @@ export async function loadInstalledArtifacts(
   return out;
 }
 
+export interface LoadModulesOptions {
+  /** Test seam for the Windows-only legacy hint (spec 5.3). Defaults to `process.platform`. */
+  platform?: NodeJS.Platform;
+}
+
+const LEGACY_NOT_CONFIGURED = /^[A-Z][A-Z0-9_]*_NOT_CONFIGURED\b/;
+
+/** Leading `CODE:` of an error message, else the error's name. Module error text can carry anything. */
+function errorCode(err: unknown): string {
+  if (err instanceof Error) {
+    const m = /^([A-Z][A-Z0-9_]+):/.exec(err.message);
+    return m ? m[1] : err.name;
+  }
+  return 'non-Error thrown';
+}
+
+/**
+ * Spec 5.3: a legacy (pre-v2) channel artifact reads the old `~\.command-and-control`
+ * itself, which is gone after the Windows migration. On win32 only, its
+ * `*_NOT_CONFIGURED` rejections get an update hint; everything else passes through.
+ */
+function withLegacyHint(
+  id: string,
+  handler: (args: unknown) => Promise<CallToolResult>,
+): (args: unknown) => Promise<CallToolResult> {
+  return async (args) => {
+    try {
+      return await handler(args);
+    } catch (err) {
+      if (!(err instanceof Error) || !LEGACY_NOT_CONFIGURED.test(err.message)) throw err;
+      const hinted = new Error(
+        `${err.message} This module version predates Canvas Toolchain's Windows folders. ` +
+        `Run \`install_module ${id}\` to update it.`,
+        { cause: err },
+      );
+      hinted.name = err.name;
+      throw hinted;
+    }
+  };
+}
+
+/**
+ * Make a precedence winner usable. v2: build its ctx and await `init` BEFORE its
+ * tools are exposed (null = skip). v1: unchanged, no ctx; a legacy channel module
+ * is stored as a shallow copy with hint-wrapped handlers on win32, so `byId` (the
+ * production dispatch path) and `handlers` both carry the wrapper.
+ */
+async function activate(
+  id: string,
+  mod: CanvasToolchainModule,
+  origin: ModuleOrigin,
+  platform: NodeJS.Platform,
+): Promise<CanvasToolchainModule | null> {
+  if (mod.contractVersion !== 2) {
+    if (origin !== 'channel' || platform !== 'win32') return mod;
+    return { ...mod, tools: mod.tools.map((t) => ({ ...t, handler: withLegacyHint(id, t.handler) })) };
+  }
+  // isCanvasToolchainModule already rejected malformed declarations.
+  const ctx = createModuleContext({ moduleId: id, moduleName: mod.name, declarations: mod.credentials ?? [], origin });
+  try {
+    await mod.init?.(ctx);
+  } catch (err) {
+    console.error(`[modules] '${id}' init failed (${errorCode(err)}); skipping, its tools are not exposed.`);
+    return null;
+  }
+  return mod;
+}
+
 /** Load all enabled modules; return their merged tool schemas + a name->handler map.
  *  An optional `known` map can be injected for testing (defaults to KNOWN_MODULES).
- *  If any module's loader throws or fails the contract check, it is skipped with a
- *  warning — a broken/optional module must NOT crash the host server (fail-soft). */
+ *  If any module's loader throws, fails the contract check, or (v2) its `init`
+ *  throws, it is skipped with a warning — a broken/optional module must NOT crash
+ *  the host server (fail-soft). */
 export async function loadModules(
   known: Record<string, () => Promise<CanvasToolchainModule>> = KNOWN_MODULES,
+  opts: LoadModulesOptions = {},
 ): Promise<LoadedModules> {
+  const platform = opts.platform ?? process.platform;
   const manifest = loadModuleManifest();
-  const active = new Map<string, CanvasToolchainModule>();
+  const winners = new Map<string, { mod: CanvasToolchainModule; origin: ModuleOrigin }>();
 
   // Phase 1: bundled modules (unchanged semantics).
   for (const [id, entry] of Object.entries(manifest.modules)) {
@@ -130,7 +202,7 @@ export async function loadModules(
         console.error(`[modules] '${id}' did not satisfy the module contract; skipping.`);
         continue;
       }
-      active.set(id, mod);
+      winners.set(id, { mod, origin: 'bundled' });
     } catch (err) {
       console.error(`[modules] failed to load '${id}'; skipping. ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -140,7 +212,7 @@ export async function loadModules(
   const dynamic = await loadInstalledArtifacts(manifest);
   for (const [id, mod] of dynamic) {
     try {
-      const bundled = active.get(id);
+      const bundled = winners.get(id)?.mod;
       if (bundled && compareVersions(mod.version, bundled.version) <= 0) {
         console.error(`[modules] '${id}': bundled v${bundled.version} >= installed v${mod.version}; using bundled.`);
         continue;
@@ -148,10 +220,17 @@ export async function loadModules(
       if (bundled) {
         console.error(`[modules] '${id}': installed v${mod.version} > bundled v${bundled.version}; using installed.`);
       }
-      active.set(id, mod);
+      winners.set(id, { mod, origin: 'channel' });
     } catch (err) {
       console.error(`[modules] precedence check failed for '${id}' (${err instanceof Error ? err.message : String(err)}); using bundled.`);
     }
+  }
+
+  // Phase 3: initialize only the precedence winners, so a losing bundled module never gets a ctx.
+  const active = new Map<string, CanvasToolchainModule>();
+  for (const [id, { mod, origin }] of winners) {
+    const ready = await activate(id, mod, origin, platform);
+    if (ready) active.set(id, ready);
   }
 
   const tools: Tool[] = [];
