@@ -6,6 +6,7 @@ import { resolveActiveOralAssessmentProvider } from './resolve.js';
 import { SYSTEM_PROMPT, buildUserPrompt } from './prompts.js';
 import { renderOralAssessmentMarkdown } from './render_md.js';
 import { makeAnthropicLlm } from './llm.js';
+import { getModuleCtx } from './ctx.js';
 
 export interface DesignOralAssessmentInput {
   assignmentBrief?: string;
@@ -67,7 +68,7 @@ export async function designOralAssessment(
   const intent = input.assignmentBrief ?? `${input.topic ?? ''} ${input.learningGoal ?? ''}`;
   const defaults = provider.defaults(intent);
 
-  const llm = hooks.llm ?? makeAnthropicLlm();
+  const llm = hooks.llm ?? (await makeAnthropicLlm(getModuleCtx()));
   const response = await llm.complete(SYSTEM_PROMPT, buildUserPrompt(input), { maxTokens: 2048 });
   const fields = parseFields(response.text);
 
