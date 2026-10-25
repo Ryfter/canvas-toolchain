@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { initFake } from "../helpers/fake-ctx.js";
 import { mkdtempSync, writeFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -6,8 +7,8 @@ import { createGroups } from '../../src/run.js';
 import { loadHistory } from '../../src/history/store.js';
 import { groupBuilderTools } from '../../src/tools.js';
 
-let home: string; const saved = process.env.CC_HOME;
-afterEach(() => { if (home) rmSync(home, { recursive: true, force: true }); if (saved === undefined) delete process.env.CC_HOME; else process.env.CC_HOME = saved; });
+let home: string;
+afterEach(() => { if (home) rmSync(home, { recursive: true, force: true }); });
 
 function fakeClient() {
   return {
@@ -24,7 +25,7 @@ function fakeClient() {
 
 describe('createGroups orchestration', () => {
   it('writes a CSV + markdown, returns diagnostics, does NOT mutate history', async () => {
-    home = mkdtempSync(join(tmpdir(), 'gb-run-')); process.env.CC_HOME = home;
+    home = mkdtempSync(join(tmpdir(), 'gb-run-')); initFake(home);
     const roster = join(home, 'roster.csv');
     writeFileSync(roster, 'canvas_id,pseudonym,major\n1,SU26-001,IT\n2,SU26-002,Marketing\n3,SU26-003,Accounting\n4,SU26-004,Finance\n');
     const out = join(home, 'out');
@@ -37,7 +38,7 @@ describe('createGroups orchestration', () => {
   });
 
   it('surfaces canvasIds with no roster pseudonym in diagnostics.missingPseudonyms', async () => {
-    home = mkdtempSync(join(tmpdir(), 'gb-miss-')); process.env.CC_HOME = home;
+    home = mkdtempSync(join(tmpdir(), 'gb-miss-')); initFake(home);
     const roster = join(home, 'roster.csv');
     // enrollment ids are 1..4; omit id 4 from the roster file
     writeFileSync(roster, 'canvas_id,pseudonym,major\n1,SU26-001,IT\n2,SU26-002,Marketing\n3,SU26-003,Accounting\n');
@@ -49,7 +50,7 @@ describe('createGroups orchestration', () => {
 
 describe('record_groups tool', () => {
   it('appends a grouping to history (so the next createGroups sees the pairs)', async () => {
-    home = mkdtempSync(join(tmpdir(), 'gb-rec-')); process.env.CC_HOME = home;
+    home = mkdtempSync(join(tmpdir(), 'gb-rec-')); initFake(home);
     const tool = groupBuilderTools.find((t) => t.schema.name === 'record_groups')!;
     expect(loadHistory('7').pairCounts).toEqual({});
     const res = await tool.handler({ courseId: '7', grouping: [['1', '2'], ['3', '4']] });

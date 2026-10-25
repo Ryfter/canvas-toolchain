@@ -1,13 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Grouping } from '../types.js';
+import { courseDir as dir } from '../ctx.js';
 
 export interface History { pairCounts: Record<string, number>; }
 
-function dir(courseId: string): string {
-  return join(process.env.CC_HOME ?? join(homedir(), '.command-and-control'), 'groups', courseId);
-}
 function histPath(courseId: string): string { return join(dir(courseId), 'pairing-history.json'); }
 
 export function pairKey(a: string, b: string): string { return a < b ? `${a}|${b}` : `${b}|${a}`; }

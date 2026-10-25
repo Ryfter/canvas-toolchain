@@ -1,11 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Bucket } from './heuristic.js';
+import { courseDir } from '../ctx.js';
 
-function courseDir(courseId: string): string {
-  return join(process.env.CC_HOME ?? join(homedir(), '.command-and-control'), 'groups', courseId);
-}
 function bucketsPath(courseId: string): string { return join(courseDir(courseId), 'major-buckets.json'); }
 
 export function loadMajorBuckets(courseId: string): Record<string, Bucket> | undefined {
