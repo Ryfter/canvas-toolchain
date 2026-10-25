@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { loadConfig, saveConfig, getCcHomePath } from '../kb/config.js';
+import { loadConfig, saveConfig, getCcSecretsPath } from '../kb/config.js';
 
 export interface SetCoursesRootInput {
   coursesRoot: string;
@@ -33,7 +33,7 @@ export async function setCoursesRoot(input: SetCoursesRootInput): Promise<SetCou
   config.coursesRoot = input.coursesRoot;
   saveConfig(config);
 
-  const configPath = join(getCcHomePath(), 'config.json');
+  const configPath = join(getCcSecretsPath(), 'config.json') // same file loadConfig/saveConfig use;
 
   return {
     ok: true,
