@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@canvas-toolchain/module-video', () => ({
-  loadPanoptoConfig: vi.fn(),
   bulkDownloadPanoptoCaptions: vi.fn(),
+}));
+vi.mock('@canvas-toolchain/shared-types', async (orig) => ({
+  ...(await orig<typeof import('@canvas-toolchain/shared-types')>()),
+  resolveModuleCredential: vi.fn(),
 }));
 vi.mock('@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js', () => ({
   ingestTranscripts: vi.fn(),
 }));
 
-import { loadPanoptoConfig, bulkDownloadPanoptoCaptions } from '@canvas-toolchain/module-video';
+import { bulkDownloadPanoptoCaptions } from '@canvas-toolchain/module-video';
+import { resolveModuleCredential } from '@canvas-toolchain/shared-types';
 import { ingestTranscripts } from '@canvas-toolchain/curriculum-intelligence/dist/tools/ingest_transcripts.js';
 import { bulkFetchPanoptoTranscripts } from '../../../src/tools/workflows/bulk_fetch_panopto_transcripts.js';
 
@@ -41,7 +45,7 @@ const MOCK_INGEST_RESULT = {
 };
 
 beforeEach(() => {
-  vi.mocked(loadPanoptoConfig).mockReturnValue(MOCK_CONFIG);
+  vi.mocked(resolveModuleCredential).mockReturnValue({ value: MOCK_CONFIG, source: 'shared' } as never);
   vi.mocked(bulkDownloadPanoptoCaptions).mockResolvedValue(MOCK_DOWNLOAD_RESULT);
   vi.mocked(ingestTranscripts).mockReturnValue(MOCK_INGEST_RESULT);
 });
@@ -52,9 +56,7 @@ afterEach(() => {
 
 describe('bulkFetchPanoptoTranscripts', () => {
   it('returns PANOPTO_NOT_CONFIGURED error when config is absent', async () => {
-    vi.mocked(loadPanoptoConfig).mockImplementation(() => {
-      throw new Error('PANOPTO_NOT_CONFIGURED: Run setup_panopto...');
-    });
+    vi.mocked(resolveModuleCredential).mockReturnValue({ missing: 'none' } as never);
 
     const result = await bulkFetchPanoptoTranscripts({
       folderId: 'folder-01',
@@ -62,6 +64,8 @@ describe('bulkFetchPanoptoTranscripts', () => {
     });
 
     expect(result.error).toBe('PANOPTO_NOT_CONFIGURED');
+    expect(result.message).toContain('PANOPTO_NOT_CONFIGURED: Run setup_panopto');
+    expect(resolveModuleCredential).toHaveBeenCalledWith('video', 'panopto', { shareDefault: true });
     expect(result.downloaded).toHaveLength(0);
     expect(bulkDownloadPanoptoCaptions).not.toHaveBeenCalled();
   });

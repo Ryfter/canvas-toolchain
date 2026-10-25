@@ -7,7 +7,8 @@ import {
   type SuggestedCorrection,
 } from '@canvas-toolchain/curriculum-intelligence/dist/transcription/compare.js';
 import { parseVtt } from '@canvas-toolchain/curriculum-intelligence/dist/parsers/transcript_vtt.js';
-import { fetchSessionAudio, loadPanoptoConfig, loadPanoptoVocab } from '@canvas-toolchain/module-video';
+import { fetchSessionAudio, loadPanoptoVocab } from '@canvas-toolchain/module-video';
+import { ccConfigHome, resolveModuleCredential } from '@canvas-toolchain/shared-types';
 import { loadTranscriptConfig } from '../setup_transcript_source.js';
 
 interface SessionEntry {
@@ -66,7 +67,9 @@ export async function compareTranscriptsWorkflow(
 
   let panoptoConfig;
   try {
-    panoptoConfig = loadPanoptoConfig();
+    const res = resolveModuleCredential('video', 'panopto', { shareDefault: true });
+    if (!('value' in res)) throw new Error('PANOPTO_NOT_CONFIGURED');
+    panoptoConfig = res.value;
   } catch {
     return { ...base, error: 'PANOPTO_NOT_CONFIGURED', fix: ['Run setup_panopto first'] };
   }
@@ -80,7 +83,7 @@ export async function compareTranscriptsWorkflow(
     return { ...base, error: 'ENGINE_UNAVAILABLE', setupSteps: status.setupSteps ?? [] };
   }
 
-  const vocab = loadPanoptoVocab();
+  const vocab = loadPanoptoVocab(ccConfigHome());
   const knownTerms = vocab.corrections.map((c) => c.to);
   const vocabHints = Array.from(new Set(knownTerms));
 

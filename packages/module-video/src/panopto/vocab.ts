@@ -2,11 +2,11 @@
  * Manages panopto-vocab.json: the professor's custom filler-word list and
  * vocabulary corrections used by enrich_panopto_transcripts.
  *
- * Config file: ~/.command-and-control/panopto-vocab.json (CC_HOME override for tests).
+ * Config file: `<configDir>/panopto-vocab.json`; the caller supplies the directory
+ * (module: `ctx.paths.config`; C&C workflows: `ccConfigHome()`).
  */
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getCcHomePath } from '../cc-home.js';
 
 export interface PanoptoVocab {
   fillerWords: string[];
@@ -28,8 +28,8 @@ export interface SetupPanoptoVocabResult {
   fix?: string[];
 }
 
-function getVocabPath(): string {
-  return join(getCcHomePath(), 'panopto-vocab.json');
+function getVocabPath(configDir: string): string {
+  return join(configDir, 'panopto-vocab.json');
 }
 
 /**
@@ -39,8 +39,8 @@ function getVocabPath(): string {
  * Callers (enrich_panopto_transcripts) catch it as `err: any` and forward
  * `err.error` + `err.fix` directly into the structured MCP result shape.
  */
-export function loadPanoptoVocab(): PanoptoVocab {
-  const vocabPath = getVocabPath();
+export function loadPanoptoVocab(configDir: string): PanoptoVocab {
+  const vocabPath = getVocabPath(configDir);
   if (!existsSync(vocabPath)) {
     return { fillerWords: [], corrections: [] };
   }
@@ -52,10 +52,9 @@ export function loadPanoptoVocab(): PanoptoVocab {
   }
 }
 
-function saveVocab(vocab: PanoptoVocab): void {
-  const home = getCcHomePath();
-  mkdirSync(home, { recursive: true });
-  const vocabPath = getVocabPath();
+function saveVocab(configDir: string, vocab: PanoptoVocab): void {
+  mkdirSync(configDir, { recursive: true });
+  const vocabPath = getVocabPath(configDir);
   const tmpPath = `${vocabPath}.tmp`;
   // Atomic write: tmp + rename prevents partial-write corruption on crash.
   // mode 0o600: shares directory with panopto-config.json (OAuth credentials).
@@ -63,12 +62,12 @@ function saveVocab(vocab: PanoptoVocab): void {
   renameSync(tmpPath, vocabPath);
 }
 
-export function setupPanoptoVocab(input: SetupPanoptoVocabInput): SetupPanoptoVocabResult {
+export function setupPanoptoVocab(input: SetupPanoptoVocabInput, configDir: string): SetupPanoptoVocabResult {
   const { action, from, to, word } = input;
 
   let vocab: PanoptoVocab;
   try {
-    vocab = loadPanoptoVocab();
+    vocab = loadPanoptoVocab(configDir);
   } catch (err: any) {
     return { action, vocab: { fillerWords: [], corrections: [] }, error: err.error, fix: err.fix };
   }
@@ -84,7 +83,7 @@ export function setupPanoptoVocab(input: SetupPanoptoVocabInput): SetupPanoptoVo
       const alreadyExists = vocab.corrections.some((c) => c.from === from && c.to === to);
       if (!alreadyExists) {
         vocab.corrections.push({ from, to });
-        saveVocab(vocab);
+        saveVocab(configDir, vocab);
       }
       return {
         action,
@@ -100,7 +99,7 @@ export function setupPanoptoVocab(input: SetupPanoptoVocabInput): SetupPanoptoVo
       const alreadyInList = vocab.fillerWords.includes(word);
       if (!alreadyInList) {
         vocab.fillerWords.push(word);
-        saveVocab(vocab);
+        saveVocab(configDir, vocab);
       }
       return {
         action,
@@ -114,7 +113,7 @@ export function setupPanoptoVocab(input: SetupPanoptoVocabInput): SetupPanoptoVo
         return { action, vocab, error: 'MISSING_FIELDS', fix: ['Provide from for remove-correction'] };
       }
       vocab.corrections = vocab.corrections.filter((c) => c.from !== from);
-      saveVocab(vocab);
+      saveVocab(configDir, vocab);
       return { action, vocab, message: `Removed correction for "${from}".` };
     }
   }

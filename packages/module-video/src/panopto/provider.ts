@@ -12,7 +12,10 @@ export class PanoptoProvider implements VideoProvider {
   readonly name = 'Panopto';
   readonly capabilities = { search: true, embed: true, fetchCaptions: true };
 
-  constructor(private readonly config: PanoptoConfig) {}
+  constructor(
+    private readonly config: PanoptoConfig,
+    private readonly transcriptDir: string,
+  ) {}
 
   async search(query: string): Promise<VideoResult[]> {
     // The MCP tool layer (tools.ts) calls searchPanoptoVideos directly to keep the
@@ -30,6 +33,6 @@ export class PanoptoProvider implements VideoProvider {
   }
 
   async fetchCaptions(ref: string): Promise<string> {
-    return fetchPanoptoCaptions({ videoId: ref }, this.config);
+    return fetchPanoptoCaptions({ videoId: ref }, this.config, this.transcriptDir);
   }
 }

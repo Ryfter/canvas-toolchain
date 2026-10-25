@@ -6,7 +6,7 @@ const cfg: PanoptoConfig = { domain: 'x.panopto.com', iframeWhitelisted: true, c
 
 describe('PanoptoProvider', () => {
   it('declares its capabilities', () => {
-    const p = new PanoptoProvider(cfg);
+    const p = new PanoptoProvider(cfg, '/unused/transcripts');
     expect(p.id).toBe('panopto');
     expect(p.name).toBe('Panopto');
     expect(p.capabilities).toEqual({ search: true, embed: true, fetchCaptions: true });
@@ -28,7 +28,7 @@ describe('PanoptoProvider', () => {
           json: async () => ({ Name: 'Test Video', HasCaptions: true }),
         } as Response);
 
-      const p = new PanoptoProvider(cfg);
+      const p = new PanoptoProvider(cfg, '/unused/transcripts');
       const html = await p.embed('vid-1', {});
       expect(typeof html).toBe('string');
       expect(html.length).toBeGreaterThan(0);
