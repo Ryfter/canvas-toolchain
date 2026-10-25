@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { ciConfigHome, ciDataHome } from '@canvas-toolchain/shared-types';
 import type { AppConfig } from './types.js';
 
 /**
@@ -10,7 +10,7 @@ import type { AppConfig } from './types.js';
  * to a temp dir per-test without caching surprises.
  */
 export function getAppHome(): string {
-  return process.env.CURRICULUM_INTELLIGENCE_HOME || join(homedir(), '.curriculum-intelligence');
+  return ciConfigHome();
 }
 
 export function getAppConfigPath(): string {
@@ -18,7 +18,7 @@ export function getAppConfigPath(): string {
 }
 
 export function getDefaultCourseRoot(): string {
-  return join(getAppHome(), 'courses');
+  return join(ciDataHome(), 'courses');
 }
 
 export function appConfigExists(): boolean {
