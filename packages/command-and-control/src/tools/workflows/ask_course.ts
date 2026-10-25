@@ -1,7 +1,7 @@
 // packages/command-and-control/src/tools/workflows/ask_course.ts
 
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { ciDataHome } from '@canvas-toolchain/shared-types';
 import { AnswersStore } from '../answers/store/store.js';
 import { readIndexMeta } from '../answers/store/index_meta.js';
 import { hybridRetrieve } from '../answers/retrieval/hybrid.js';
@@ -78,6 +78,6 @@ export async function askCourse(
 }
 
 function defaultTranscriptSources(courseId: number): string[] {
-  const ciHome = process.env.CURRICULUM_INTELLIGENCE_HOME ?? join(homedir(), '.curriculum-intelligence');
+  const ciHome = ciDataHome();
   return [join(ciHome, 'panopto', String(courseId))];
 }

@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { homedir, platform } from 'node:os';
+import { platform } from 'node:os';
 import { join } from 'node:path';
 import {
-  normalizeCanvasHost, readCanvasStoreJournal,
+  cdsSecretsHome, normalizeCanvasHost, readCanvasStoreJournal,
 } from '@canvas-toolchain/shared-types';
 import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
 import { getCcHomePath, loadConfig } from '../kb/config.js';
@@ -42,10 +42,7 @@ function filePaths(): Record<ConfigFileKey, string> {
     'canvas-config': join(ccHome, 'canvas-config.json'),
     // Canvas Design Studio's own home, the same rule its config.ts and C&C's
     // kb-bridge use. The two Canvas stores are the split this module reports on.
-    'institution-config': join(
-      process.env.CANVAS_DESIGN_HOME ?? join(homedir(), '.canvas-design-mcp'),
-      'institution.json',
-    ),
+    'institution-config': join(cdsSecretsHome(), 'institution.json'),
     'anthropic-config': join(ccHome, 'anthropic-config.json'),
     'ollama-config': join(ccHome, 'ollama-config.json'),
     'lmstudio-config': join(ccHome, 'lmstudio-config.json'),
