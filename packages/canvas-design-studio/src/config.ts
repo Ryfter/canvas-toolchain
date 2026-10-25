@@ -1,9 +1,8 @@
-import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import type { InstitutionConfig } from './types.js';
 import {
-  canvasBaseUrl, normalizeCanvasHost, readCanonicalCanvas, writeCanvasConfig, writeInstitutionConfig,
+  canvasBaseUrl, cdsSecretsHome, normalizeCanvasHost, readCanonicalCanvas, writeCanvasConfig, writeInstitutionConfig,
 } from '@canvas-toolchain/shared-types';
 
 /** Canonicalize canvasUrl to a bare origin ("https://example.instructure.com").
@@ -31,10 +30,10 @@ function withCanonicalCanvas(config: InstitutionConfig): InstitutionConfig {
   return { ...config, canvasUrl: canvasBaseUrl(canonical.host), apiToken: canonical.token };
 }
 
-// CANVAS_DESIGN_HOME overrides the app home — same env var C&C's kb-bridge
-// honors for this directory.
+// institution.json carries the Canvas API token and WAVE key, so it lives in
+// the secrets root (spec 9 Q1a). CANVAS_DESIGN_HOME overrides every root.
 function configDir(): string {
-  return process.env.CANVAS_DESIGN_HOME ?? join(homedir(), '.canvas-design-mcp');
+  return cdsSecretsHome();
 }
 
 function configPath(): string {

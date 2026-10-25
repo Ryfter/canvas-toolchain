@@ -1,8 +1,11 @@
-import { homedir } from 'os';
+import { cdsDataHome } from '@canvas-toolchain/shared-types';
 import { join } from 'path';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
 
-const KB_DIR = join(homedir(), '.canvas-design-mcp', 'kb');
+/** Regenerable allowlist cache: data class. */
+export function kbDir(): string {
+  return join(cdsDataHome(), 'kb');
+}
 const CANVAS_SANITIZE_URL =
   'https://raw.githubusercontent.com/instructure/canvas-lms/master/gems/canvas_sanitize/lib/canvas_sanitize/canvas_sanitize.rb';
 
@@ -56,6 +59,7 @@ function diff(prev: string[], next: string[]): { added: string[]; removed: strin
 }
 
 export async function updateCanvasKb(force = false): Promise<KbUpdateResult> {
+  const KB_DIR = kbDir();
   mkdirSync(KB_DIR, { recursive: true });
 
   const metaPath = join(KB_DIR, 'meta.json');
