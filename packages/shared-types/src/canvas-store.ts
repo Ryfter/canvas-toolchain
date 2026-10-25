@@ -26,7 +26,7 @@ import {
 } from 'node:fs';
 import { platform } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { ccSecretsHome, cdsSecretsHome } from './app-paths.js';
+import { ccConfigHome, ccSecretsHome, cdsSecretsHome } from './app-paths.js';
 import { normalizeCanvasHost } from './canvas-host.js';
 
 export const CC_HOME_ENV = 'CC_HOME';
@@ -50,9 +50,9 @@ export interface CanvasStoreLocations {
  * ACCEPTED): both files this module owns, canvas-config.json and institution.json,
  * carry the Canvas API token, so both live in the SECRETS root (on Windows
  * %LOCALAPPDATA%, never roaming; on POSIX identical to the legacy dot-folder).
- * The migration journal (canvas-store-migration.json) is token-free and nominally
- * config-class, but journalPath() is outside this job's scope and still follows
- * ccHome(); the resolver treats blank CC_HOME / CANVAS_DESIGN_HOME as unset.
+ * The migration journal (canvas-store-migration.json) is token-free and config-class
+ * (spec section 2.2), so journalPath() follows ccConfigHome(). The resolver treats blank
+ * CC_HOME / CANVAS_DESIGN_HOME as unset.
  */
 export function ccHome(): string {
   return ccSecretsHome();
@@ -499,7 +499,7 @@ export interface CanvasStoreJournalRecord {
 }
 
 function journalPath(): string {
-  return join(ccHome(), CANVAS_STORE_JOURNAL_FILENAME);
+  return join(ccConfigHome(), CANVAS_STORE_JOURNAL_FILENAME);
 }
 
 /**
