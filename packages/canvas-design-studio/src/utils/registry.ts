@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ccConfigHome } from '@canvas-toolchain/shared-types';
+import { ccDataHome } from '@canvas-toolchain/shared-types';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -69,7 +69,7 @@ export interface BundleResource {
  * Gets the home directory for Command & Control config and data.
  */
 export function getCcHomePath(): string {
-  return ccConfigHome();
+  return ccDataHome(); // data-class (legacyEntryRoot): matches C&C local_registry
 }
 
 /**

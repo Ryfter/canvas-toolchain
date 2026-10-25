@@ -11,7 +11,8 @@ import type { PreviewManifest, PublishState, StaleSnapshotPointer } from './mani
 /** Legacy global root — the path used before V&R Plan A. Lookups for old
  *  snapshots still resolve through this via the snapshot_location fallback. */
 function legacyGlobalRoot(): string {
-  const root = join(getCcDataPath(), 'publish-snapshots') // data-class (legacyEntryRoot);
+  // data-class (legacyEntryRoot)
+  const root = join(getCcDataPath(), 'publish-snapshots');
   if (!existsSync(root)) mkdirSync(root, { recursive: true });
   return root;
 }

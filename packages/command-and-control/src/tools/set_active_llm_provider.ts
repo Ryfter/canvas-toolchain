@@ -1,6 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getCcHomePath } from '../kb/config.js';
+import { legacyEntryRoot } from '@canvas-toolchain/shared-types';
+import { getCcHomePath, getCcSecretsPath } from '../kb/config.js';
 
 export type ActiveProvider = 'anthropic' | 'ollama' | 'lmstudio';
 
@@ -52,7 +53,11 @@ function getActiveProviderPath(): string {
 
 /** Each provider owns exactly one config file: `<provider>-config.json`. */
 function providerConfigPath(provider: ActiveProvider): string {
-  return join(getCcHomePath(), `${provider}-config.json`);
+  const file = `${provider}-config.json`;
+  // Classified per provider: anthropic-config.json holds the API key (secrets root);
+  // the local-server configs carry no credential (config root).
+  const root = legacyEntryRoot('cc', file) === 'secrets' ? getCcSecretsPath() : getCcHomePath();
+  return join(root, file);
 }
 
 /** A provider counts as configured when its config file is on disk. */
