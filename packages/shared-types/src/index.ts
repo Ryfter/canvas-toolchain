@@ -222,3 +222,7 @@ export type {
   CanvasStoreJournalRecord,
   CanvasStoreMigrationResult,
 } from './canvas-store.js';
+
+// ── Per-module credentials (#201) ────────────────────────────────────────────
+
+export * from './module-credentials.js';
