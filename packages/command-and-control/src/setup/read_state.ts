@@ -1,11 +1,13 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { platform } from 'node:os';
-import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { join, win32 } from 'node:path';
 import {
-  cdsSecretsHome, normalizeCanvasHost, readCanvasStoreJournal,
+  MIGRATION_JOURNAL_FILE, appPaths, cdsSecretsHome, legacyAppHome, legacyEntryRoot,
+  normalizeCanvasHost, readCanvasStoreJournal,
+  type AppId,
 } from '@canvas-toolchain/shared-types';
 import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
-import { getCcHomePath, loadConfig } from '../kb/config.js';
+import { loadConfig } from '../kb/config.js';
 import { loadCanvasConfig } from '../tools/setup_canvas.js';
 import { loadAnthropicConfig } from '../tools/setup_anthropic.js';
 import { loadOllamaConfig } from '../tools/setup_ollama.js';
@@ -22,6 +24,7 @@ import { managedCanvasBackupConfigExists } from '../passthrough/canvas_backup_co
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
 import { detectHostWiring } from './hosts.js';
 import type {
+  AppHomeState,
   CanvasStoreMigrationRecord,
   ConfigFileKey,
   ProbeResult,
@@ -36,21 +39,93 @@ import type {
  * all write into the same CC home this reads.
  */
 function filePaths(): Record<ConfigFileKey, string> {
-  const ccHome = getCcHomePath();
+  const cc = appPaths('cc');
+  // Classified by the same table the migration engine uses (#200): a
+  // secrets-class file lives in the secrets root (local, non-roaming on
+  // Windows), a settings file in the config root. Reading everything from the
+  // config root told a connected Windows professor Canvas was not connected.
+  const ccFile = (name: string): string => join(cc[legacyEntryRoot('cc', name)], name);
   return {
-    'cc-config': join(ccHome, 'config.json'),
-    'canvas-config': join(ccHome, 'canvas-config.json'),
+    'cc-config': ccFile('config.json'),
+    'canvas-config': ccFile('canvas-config.json'),
     // Canvas Design Studio's own home, the same rule its config.ts and C&C's
     // kb-bridge use. The two Canvas stores are the split this module reports on.
     'institution-config': join(cdsSecretsHome(), 'institution.json'),
-    'anthropic-config': join(ccHome, 'anthropic-config.json'),
-    'ollama-config': join(ccHome, 'ollama-config.json'),
-    'lmstudio-config': join(ccHome, 'lmstudio-config.json'),
-    'llm-provider': join(ccHome, 'llm-provider.json'),
-    'transcript-config': join(ccHome, 'transcript-config.json'),
+    'anthropic-config': ccFile('anthropic-config.json'),
+    'ollama-config': ccFile('ollama-config.json'),
+    'lmstudio-config': ccFile('lmstudio-config.json'),
+    'llm-provider': ccFile('llm-provider.json'),
+    'transcript-config': ccFile('transcript-config.json'),
     'lecture-answers-config': lectureAnswersConfigPath(),
     'modules-manifest': getModulesManifestPath(),
   };
+}
+
+const APP_LABELS: Record<AppId, string> = {
+  cc: 'Command & Control',
+  cds: 'Canvas Design Studio',
+  ci: 'Curriculum Intelligence',
+};
+
+const JOURNAL_OUTCOMES = new Set(['migrated', 'partial', 'nothing-to-do', 'failed']);
+
+/** The migration journal's outcome. Missing is `nothing-to-do`; garbage is `unreadable`. */
+function readMigrationOutcome(configRoot: string): AppHomeState['migration'] {
+  const file = join(configRoot, MIGRATION_JOURNAL_FILE);
+  try {
+    if (!existsSync(file)) return 'nothing-to-do';
+    const outcome = (JSON.parse(readFileSync(file, 'utf-8')) as { outcome?: unknown } | null)?.outcome;
+    return typeof outcome === 'string' && JOURNAL_OUTCOMES.has(outcome)
+      ? (outcome as 'migrated' | 'partial' | 'nothing-to-do' | 'failed')
+      : 'unreadable';
+  } catch {
+    return 'unreadable';
+  }
+}
+
+/** True when `target` is a UNC path or sits outside `profile` (Windows semantics). */
+function outsideWindowsProfile(target: string, profile: string): boolean {
+  const norm = (v: string): string => win32.normalize(v).replace(/[\\/]+$/, '').toLowerCase();
+  const t = norm(target);
+  if (t.startsWith('\\\\')) return true;
+  const p = norm(profile);
+  return t !== p && !t.startsWith(`${p}\\`);
+}
+
+/** Home-relative display form (`~/.x`), like the host wiring paths: a report is
+ *  pasted into chats, so it should not carry the OS account name. */
+function tildify(p: string, home: string): string {
+  const sep = process.platform === 'win32' ? '\\' : '/';
+  const h = home.replace(/[\\/]+$/, '');
+  return h && p.startsWith(h + sep) ? `~${p.slice(h.length)}` : p;
+}
+
+function readAppHomes(): AppHomeState[] {
+  const onWindows = process.platform === 'win32';
+  const home = homedir();
+  return (['cc', 'cds', 'ci'] as const).map((app) => {
+    const paths = appPaths(app);
+    let legacyPresent = false;
+    try {
+      const legacy = legacyAppHome(app);
+      legacyPresent = legacy !== paths.config && existsSync(legacy);
+    } catch {
+      legacyPresent = false;
+    }
+    const outsideProfile = onWindows &&
+      [paths.config, paths.data, paths.secrets].some((r) => outsideWindowsProfile(r, homedir()));
+    return {
+      app,
+      label: APP_LABELS[app],
+      source: paths.source,
+      config: tildify(paths.config, home),
+      data: tildify(paths.data, home),
+      secrets: tildify(paths.secrets, home),
+      migration: readMigrationOutcome(paths.config),
+      legacyPresent,
+      outsideProfile,
+    };
+  });
 }
 
 /** Presence, JSON validity, and POSIX permissions. Never the file body. */
@@ -76,7 +151,7 @@ function inspectFile(path: string): SecretFileHealth {
 
   // Windows reports synthetic mode bits, so a permissions verdict there would be
   // noise. Null means "not applicable", which the doctor reports as such.
-  const isPosix = platform() !== 'win32';
+  const isPosix = process.platform !== 'win32';
   return {
     path,
     present: true,
@@ -264,7 +339,7 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
   if (nonEmpty(answers?.voyageApiKey)) secretBearingFiles.push('lecture-answers-config');
 
   const state: SetupState = {
-    platform: platform(),
+    platform: process.platform,
     coursesRoot,
     coursesRootExists: coursesRoot !== null && existsSync(coursesRoot),
     files,
@@ -278,6 +353,7 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
     canvasConfig,
     storesInSync,
     canvasStoreMigration: safelyJournal(),
+    appHomes: readAppHomes(),
     llm: {
       activeProvider: safely(loadActiveProvider) ?? null,
       anthropic: {

@@ -23,6 +23,7 @@ const ALL_CHECKS: DoctorCheckId[] = [
   'backup.sidecar',
   'modules.pending',
   'hosts.wiring',
+  'paths.homes',
 ];
 
 /**
@@ -229,8 +230,8 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
     action: 'canvas',
     hint:
       'Re-run ct_setup action canvas (or restart Command & Control) to reconcile ' +
-      '~/.command-and-control/canvas-config.json with Canvas Design Studio\'s ' +
-      '~/.canvas-design-mcp/institution.json.',
+      `${state.files['canvas-config'].path} with Canvas Design Studio's ` +
+      `${state.files['institution-config'].path}.`,
   };
 
   // Neither store names a Canvas host: nothing to reconcile, even when one file
@@ -640,6 +641,52 @@ function hostsWiringCheck(state: SetupState): DoctorCheck {
   };
 }
 
+/**
+ * Where each app keeps its settings (#200): what decided the folder, how the
+ * Windows migration last went, whether the old folder is still around, and a
+ * warning for a folder on a shared drive. Directory paths and statuses only.
+ */
+function pathsHomesCheck(state: SetupState): DoctorCheck {
+  const homes = state.appHomes;
+  const detail = homes.flatMap((h) => [
+    `${h.label}: ${h.config} (${h.source === 'env' ? 'set by environment override' : 'default location'}; ` +
+      `migration: ${h.migration}; old folder ${h.legacyPresent ? 'still present' : 'not present'})`,
+    ...(h.secrets !== h.config ? [`${h.label} credentials: ${h.secrets}`] : []),
+  ]);
+  const outside = homes.filter((h) => h.outsideProfile);
+  if (outside.length > 0) {
+    return {
+      id: 'paths.homes',
+      status: 'warn',
+      summary:
+        `${outside.map((h) => h.label).join(', ')} keep settings outside your user profile ` +
+        '(a network or shared drive). Credentials stored there may be readable by others.',
+      detail: [
+        ...detail,
+        'To fix: point the CC_HOME, CANVAS_DESIGN_HOME or CURRICULUM_INTELLIGENCE_HOME override at a ' +
+          'folder on your own computer, or remove it to use the default location.',
+      ],
+    };
+  }
+  const bad = homes.filter((h) => h.migration === 'failed' || h.migration === 'partial');
+  if (bad.length > 0) {
+    return {
+      id: 'paths.homes',
+      status: 'warn',
+      summary:
+        `Moving settings to the new folder did not finish for ${bad.map((h) => h.label).join(', ')}; ` +
+        'the old folder is still used and nothing was lost.',
+      detail,
+    };
+  }
+  return {
+    id: 'paths.homes',
+    status: 'ok',
+    summary: `Settings folders resolved for ${homes.length} apps.`,
+    detail,
+  };
+}
+
 /** Apply a journey's blockers to warnings, so an explicit ask is answered plainly. */
 function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): DoctorCheck[] {
   const blockers = JOURNEY_BLOCKERS[journey];
@@ -671,6 +718,7 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
     backupCheck(state),
     modulesCheck(state),
     hostsWiringCheck(state),
+    pathsHomesCheck(state),
   ], journey);
 
   const considered = new Set(JOURNEY_CHECKS[journey]);

@@ -194,6 +194,10 @@ export interface SetupState {
    *  No secrets: this is what the doctor shows the professor. */
   canvasStoreMigration: CanvasStoreMigrationRecord | null;
 
+  /** The three app homes (#200): where each resolved, and how the Windows
+   *  migration last went. Directory paths and statuses only, never file bodies. */
+  appHomes: AppHomeState[];
+
   llm: {
     activeProvider: ActiveProvider | null;
     anthropic: {
@@ -247,6 +251,24 @@ export interface SetupState {
   hosts: HostWiringReport | null;
 }
 
+/** One app's resolved home, as the doctor reports it (#200). */
+export interface AppHomeState {
+  app: 'cc' | 'cds' | 'ci';
+  /** Professor-facing name. */
+  label: string;
+  /** What decided the home: the per-app environment override, or the OS default. */
+  source: 'env' | 'default';
+  config: string;
+  data: string;
+  secrets: string;
+  /** The migration journal's outcome. A missing journal is `nothing-to-do`, never an error. */
+  migration: 'migrated' | 'partial' | 'nothing-to-do' | 'failed' | 'unreadable';
+  /** The pre-#200 `~/.<app>` folder still exists and is not the active home. */
+  legacyPresent: boolean;
+  /** Windows only: a root resolves outside the user profile (UNC or shared drive). */
+  outsideProfile: boolean;
+}
+
 export interface ReadSetupStateOptions {
   /**
    * Default false: read-only, no network. True runs bounded live probes against
@@ -273,7 +295,8 @@ export type DoctorCheckId =
   | 'transcripts.source'
   | 'backup.sidecar'
   | 'modules.pending'
-  | 'hosts.wiring';
+  | 'hosts.wiring'
+  | 'paths.homes';
 
 /** The exact operation that fixes a check, naming a real registered action. */
 export interface DoctorFix {
