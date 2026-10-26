@@ -68,6 +68,7 @@ const CLASSES: Record<AppId, { data: readonly string[]; secrets: readonly string
     secrets: [
       'config.json', 'canvas-config.json', 'anthropic-config.json', 'panopto-config.json',
       'module-credentials', 'roster-vault',
+      'lecture-answers-config.json', // may hold voyageApiKey (CT200-04d)
     ],
   },
   cds: { data: ['kb', 'transcripts'], secrets: ['institution.json'] },
