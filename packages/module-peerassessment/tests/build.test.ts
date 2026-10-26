@@ -1,14 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildPeerAssessmentImport } from '../src/build.js';
 import type { PaGroup, PaCanvasUser } from '../src/types.js';
 
-const ORIG = process.env.CC_HOME;
 let home: string;
-beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'pa-build-')); process.env.CC_HOME = home; });
-afterEach(() => { if (ORIG === undefined) delete process.env.CC_HOME; else process.env.CC_HOME = ORIG; });
+beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'pa-build-')); });
 
 const groups: PaGroup[] = [
   { name: 'Team 1', members: [
@@ -24,7 +22,7 @@ describe('buildPeerAssessmentImport', () => {
   it('writes the CSV and reports rows, ungrouped, and warnings', () => {
     const report = buildPeerAssessmentImport({
       courseId: '5', groupSetName: 'Project Teams', groups, allStudents,
-      sources: { vaultIndex: new Map(), peopleSoftIndex: null },
+      sources: { vaultIndex: new Map(), peopleSoftIndex: null }, outputDir: home,
     });
     expect(report.rowsWritten).toBe(1);
     expect(report.totalStudents).toBe(1);
@@ -39,7 +37,7 @@ describe('buildPeerAssessmentImport', () => {
   it('dryRun writes nothing but still reports', () => {
     const report = buildPeerAssessmentImport({
       courseId: '5', groupSetName: 'Project Teams', groups, allStudents,
-      sources: { vaultIndex: new Map(), peopleSoftIndex: null }, dryRun: true,
+      sources: { vaultIndex: new Map(), peopleSoftIndex: null }, outputDir: home, dryRun: true,
     });
     expect(report.outputPath).toBeNull();
     expect(report.rowsWritten).toBe(0);
@@ -60,7 +58,7 @@ describe('buildPeerAssessmentImport', () => {
   it('writes no file when there are zero rows', () => {
     const report = buildPeerAssessmentImport({
       courseId: '5', groupSetName: 'P', groups: [], allStudents,
-      sources: { vaultIndex: new Map(), peopleSoftIndex: null },
+      sources: { vaultIndex: new Map(), peopleSoftIndex: null }, outputDir: home,
     });
     expect(report.outputPath).toBeNull();
     expect(report.rowsWritten).toBe(0);
