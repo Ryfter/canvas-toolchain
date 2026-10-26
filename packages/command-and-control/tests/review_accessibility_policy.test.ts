@@ -68,7 +68,7 @@ describe('review_accessibility_policy', () => {
     expect(r.ok).toBe(false);
     expect(r.error).toBe('NO_INSTITUTION_CONFIG');
     const fix = r.fix!.join(' ');
-    expect(fix).toContain('~/.canvas-design-mcp/institution.json');
+    expect(fix).toContain('institution.json file in your Canvas Toolchain settings folder');
     // #151 R7 review fix 1: the bridge no longer creates this file at startup, so
     // the recovery path has to name the action that does.
     expect(fix).toContain('ct_setup action canvas');

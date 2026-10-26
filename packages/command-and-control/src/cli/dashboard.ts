@@ -8,7 +8,7 @@ async function main(): Promise<void> {
   const coursesRoot = config.coursesRoot;
 
   if (!coursesRoot) {
-    console.error('Error: coursesRoot is not set in ~/.command-and-control/config.json.');
+    console.error('Error: coursesRoot is not set in config.json in your Canvas Toolchain settings folder (run the doctor to see it).');
     console.error('Run the set_courses_root MCP tool first, or edit config.json directly.');
     process.exit(1);
   }
