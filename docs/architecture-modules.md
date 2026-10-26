@@ -72,6 +72,29 @@ The Go + Fyne installer's "Additional modules" picker screen only *requests* a m
 
 **Commands.** `list_modules`, `set_module_enabled`, `browse_module_catalog`, `install_module`, `uninstall_module`.
 
+### 1.1 Contract v2: host-injected credentials and paths
+
+**What it is.** An additive extension of the `CanvasToolchainModule` contract (`packages/module-contract/src/index.ts`). A module opts in with `contractVersion: 2`; a module without it is a v1 module and loads exactly as before.
+
+**What a v2 module declares and receives.**
+
+- `credentials?: CredentialDeclaration[]`: each entry is `{ kind, required, purpose }` with `kind` one of `canvas` / `anthropic` / `panopto` and `purpose` a one-line statement of what the module does with it. The host validates the list (known kinds, no duplicates, boolean `required`, non-empty `purpose`); a malformed v2 module is skipped fail-soft like any other bad module.
+- `init?(ctx: ModuleContext)`: called once by the host before any of the module's tools are exposed. If it throws, the module is skipped. The module keeps `ctx` in module scope; `requireCtx(ctx)` throws `MODULE_NOT_INITIALIZED` if a tool somehow runs first.
+- `ModuleContext` (built by `createModuleContext` in `packages/command-and-control/src/modules/context.ts`, bound to one module id and frozen): `paths` (`config`, `data`, `designStudioData`, `secrets`, the host's folders from [`commands-and-credentials.md`](commands-and-credentials.md) §3.0) and `credentials.get(kind)` / `credentials.tryGet(kind)`. `get` throws `<KIND>_NOT_CONFIGURED: <name> (<id>) …` with the exact `ct_setup action module_credentials` fix; `tryGet` returns `null` instead (for optional credentials, as Roster does for Anthropic). Asking for a kind the module did not declare throws `CREDENTIAL_NOT_DECLARED`. Every call reads from disk fresh, so a `ct_setup` change needs no restart. Errors never contain a credential value.
+- Modules do not import the path resolver or read credential files. That logic lives once in the host (`@canvas-toolchain/shared-types` `resolveModuleCredential`), so a later path or storage change never needs a module re-publish. `secrets` exists only for module-owned secret files that cannot go through `credentials` (the Roster vault and its column map, used by Roster and by PeerAssessment through Roster's path-taking APIs).
+
+**How the credential is chosen.** Own credential, else the shared one if sharing is allowed, else missing; an incomplete own credential never borrows from the shared one. Storage layout, sharing defaults (built-in modules share by default, downloaded channel modules are denied until you consent), and the `ct_setup action module_credentials` operations are documented in [`commands-and-credentials.md`](commands-and-credentials.md) §3.1.1.
+
+**Who uses it.** Group Builder (Canvas), Roster (Canvas required, Anthropic optional), PeerAssessment (Canvas), Oral Assessment (Anthropic) and Lecture Video (Panopto) declare v2 credentials. Announcements Auditor 1.1.0 (the only channel module in the catalog today) is a frozen v1 artifact and still reads the shared Canvas file itself; this page does not describe a v2 Announcements release because none is published.
+
+**Trust caveat (be honest about what this buys).** Built-in and channel modules run **in the same Node process as Command & Control, with the professor's OS permissions**. Per-module credentials are a scoping, least-privilege and visibility feature, not a security boundary. They stop a well-behaved module from receiving credentials it never declared, let you give one module a different Canvas identity, and make the doctor's `modules.credentials` rows accurate. A malicious or compromised module could still read `canvas-config.json`, another module's credential file, or anything else in your profile. The real defences against hostile code are unchanged: catalog `artifactUrl` pinned to this repo, sha256 re-verification at every load, and PR review of every artifact.
+
+**Token-scope reality.** A Canvas personal access token has the full permissions of the account that created it, and professors cannot normally create a narrower one (scoped developer keys are issued by Canvas admins). So a "separate Canvas credential for a module" usually means a token from a *different account*, not a restricted token. A real example: Roster matches students by `login_id` / `sis_user_id`, which Canvas returns only when the token's account has permission to see them (`packages/module-roster/src/canvas/client.ts` notes this), so giving Roster its own token from an account with that visibility can be useful while the rest of the toolchain keeps your ordinary one.
+
+**Legacy v1 modules** keep working but the host cannot scope them: they read the shared files themselves, `ct_setup action module_credentials` refuses them (`LEGACY_MODULE`), and the doctor labels them "legacy". When a legacy *channel* module fails with a `*_NOT_CONFIGURED` error on Windows, the host appends a hint that the module version predates the Windows folder layout and should be updated (`install_module`). The hint is Windows-only.
+
+**Uninstall.** `uninstall_module` also deletes the module's stored credentials, behind a confirm gate that applies only when a credential file exists (see `commands-and-credentials.md` §3.1.1). The store sits outside the modules folder, so artifact pruning and version retirement never touch it.
+
 ---
 
 ## 2. Lecture Video (plug-in module)
