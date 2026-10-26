@@ -19,7 +19,7 @@ export async function openDashboard(input: OpenDashboardInput): Promise<OpenDash
     return {
       ok: false,
       error: 'COURSES_ROOT_NOT_SET',
-      message: 'coursesRoot is not set in ~/.command-and-control/config.json',
+      message: 'coursesRoot is not set in config.json in your Canvas Toolchain settings folder (run the doctor to see it)',
       fix: ['Run set_courses_root with the absolute path to your courses folder'],
     };
   }

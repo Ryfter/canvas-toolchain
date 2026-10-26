@@ -70,7 +70,7 @@ export async function previewCanvasPattern(
       ok: false,
       error: 'PREVIEW_WRITE_FAILED',
       message: err instanceof Error ? err.message : String(err),
-      fix: ['Check ~/.command-and-control/showcase-previews/ is writable'],
+      fix: ['Check that the showcase-previews folder inside your Canvas Toolchain settings folder (run the doctor to see it) is writable'],
     };
   }
 
