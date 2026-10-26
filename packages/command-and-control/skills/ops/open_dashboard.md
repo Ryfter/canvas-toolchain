@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: ""
 intent_action: ""
 exposure: "advanced"
-related: [save_institution_profile, set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_llm_provider, setup_lmstudio, setup_ollama]
+related: [set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_llm_provider, setup_lmstudio, setup_module_credentials, setup_ollama]
 ---
 <!-- generated:end -->
 
