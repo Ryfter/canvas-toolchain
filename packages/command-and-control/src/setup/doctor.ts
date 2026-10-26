@@ -1,4 +1,5 @@
 import { readSetupState } from './read_state.js';
+import { ALL_APP_HOMES, bootAppHomes } from './app_home_boot.js';
 import { PREFERRED_PROVIDER_ORDER } from '../tools/set_active_llm_provider.js';
 import type {
   ActiveProvider,
@@ -654,6 +655,7 @@ function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): Docto
  * and the exact operation that fixes each item.
  */
 export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorReport> {
+  if (!opts.state) await bootAppHomes(ALL_APP_HOMES);
   const journey = opts.journey ?? 'full';
   const state = opts.state ??
     (await readSetupState({ probe: opts.probe === true, hosts: opts.hosts !== false }));

@@ -195,6 +195,7 @@ export interface PageClos {
 
 export { normalizeCanvasHost, canvasBaseUrl } from './canvas-host.js';
 export * from './app-paths.js';
+export { remapLegacyPath } from './legacy-path-remap.js';
 export { legacyEntryRoot, migrateLegacyAppHome, MIGRATION_JOURNAL_FILE } from './app-home-migration.js';
 export type {
   MigrationJournal,

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { cdsSecretsHome, migrateLegacyAppHome, type MigrationJournal } from '@canvas-toolchain/shared-types';
 import { fileURLToPath } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -53,7 +55,54 @@ import { publishWidget } from './tools/publish-widget.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
+/** Where institution.json lives on this machine (it holds the Canvas token, so the secrets root). */
+function institutionConfigPath(): string {
+  return join(cdsSecretsHome(), 'institution.json');
+}
+
+/**
+ * Move a legacy Windows ~/.canvas-design-mcp into %APPDATA% / %LOCALAPPDATA%
+ * before any config read (#200, spec 5.1). Shares Command & Control's
+ * process-wide memo key so the migration runs once per process. Never throws,
+ * waits at most 20s (the engine stages and commits last, so moving on early is
+ * safe), and logs one line of outcome and counts only. No-op on macOS/Linux and
+ * under CANVAS_DESIGN_HOME.
+ */
+async function bootAppHome(): Promise<void> {
+  try {
+    const key = Symbol.for('canvas-toolchain.app-home-boot');
+    const g = globalThis as Record<symbol, unknown>;
+    if (!(g[key] instanceof Map)) g[key] = new Map();
+    const memo = g[key] as Map<string, Promise<MigrationJournal>>;
+    let run = memo.get('cds');
+    const started = !run;
+    if (!run) {
+      run = Promise.resolve().then(() => migrateLegacyAppHome('cds')).catch(() => ({
+        app: 'cds' as const, at: new Date().toISOString(), outcome: 'failed' as const,
+        copied: 0, identical: 0, conflicts: [], skipped: [], error: 'UNKNOWN',
+      }));
+      memo.set('cds', run);
+    }
+    let timer: NodeJS.Timeout | undefined;
+    const settled = await Promise.race([
+      run,
+      new Promise<'timed-out'>((r) => { timer = setTimeout(() => r('timed-out'), 20_000); timer.unref?.(); }),
+    ]);
+    if (timer) clearTimeout(timer);
+    if (started) {
+      const outcome = settled === 'timed-out' ? 'timed-out' : settled.outcome;
+      const counts = settled === 'timed-out' || outcome === 'nothing-to-do' ? '' :
+        `(copied=${settled.copied},identical=${settled.identical},conflicts=${settled.conflicts.length},skipped=${settled.skipped.length})`;
+      process.stderr.write(`[app-home] cds=${outcome}${counts}\n`);
+    }
+  } catch {
+    /* never fatal: the server boots on the paths the resolver gives it */
+  }
+}
+
 async function main() {
+  await bootAppHome();
+
   // Not `configExists()`: a file the Canvas store bridge synthesized while
   // setting up Canvas in Command & Control has no institution name or brand
   // colors, so brand setup must still run (#151 R7 review).
@@ -293,7 +342,7 @@ async function main() {
       },
       {
         name: 'generate_student_personas',
-        description: 'Generate statistically grounded student personas using real demographic distributions for race/ethnicity and learning disabilities/challenges, with randomized values across 21 other dimensions (age, work/study balance, financial situation, motivation, confidence, etc.). Saves to ~/.canvas-design-mcp/student-personas.md and returns the full content. Always overwrites any existing saved personas — this is a fresh start.',
+        description: 'Generate statistically grounded student personas using real demographic distributions for race/ethnicity and learning disabilities/challenges, with randomized values across 21 other dimensions (age, work/study balance, financial situation, motivation, confidence, etc.). Saves student-personas.md in your Canvas Design Studio settings folder and returns the full content. Always overwrites any existing saved personas — this is a fresh start.',
         inputSchema: {
           type: 'object' as const,
           properties: {
@@ -514,7 +563,7 @@ async function main() {
               text: formatError({
                 title: 'Setup Required',
                 message: 'Canvas Design Studio needs your institution setup before generating pages.',
-                cause: 'No complete institution.json found at ~/.canvas-design-mcp/institution.json.',
+                cause: `No complete institution.json found at ${institutionConfigPath()}.`,
                 fix: [
                   'Run setup_institution to set your institution name and brand colors',
                   'A Canvas host and token from ct_setup canvas are used automatically when present',
@@ -650,7 +699,7 @@ async function main() {
               text: formatError({
                 title: 'Setup Required',
                 message: 'Canvas Design Studio needs your institution setup before generating pages.',
-                cause: 'No complete institution.json found at ~/.canvas-design-mcp/institution.json.',
+                cause: `No complete institution.json found at ${institutionConfigPath()}.`,
                 fix: [
                   'Run setup_institution to set your institution name and brand colors',
                   'A Canvas host and token from ct_setup canvas are used automatically when present',

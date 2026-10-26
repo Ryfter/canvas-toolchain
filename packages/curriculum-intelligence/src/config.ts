@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ciConfigHome, ciDataHome } from '@canvas-toolchain/shared-types';
+import { ciConfigHome, ciDataHome, remapLegacyPath, type PathEnv } from '@canvas-toolchain/shared-types';
 import type { AppConfig } from './types.js';
 
 /**
@@ -25,12 +25,25 @@ export function appConfigExists(): boolean {
   return existsSync(getAppConfigPath());
 }
 
-export function loadAppConfig(): AppConfig {
+/**
+ * `remapEnv` is a test seam for the stored-path remap only (it never changes
+ * where config.json itself is read from).
+ */
+export function loadAppConfig(remapEnv?: PathEnv): AppConfig {
   if (!appConfigExists()) {
     return { version: 1, courses: {} };
   }
   const raw = readFileSync(getAppConfigPath(), 'utf-8');
-  return JSON.parse(raw) as AppConfig;
+  const config = JSON.parse(raw) as AppConfig;
+  // A courseRoot stored before the Windows migration points into the legacy
+  // ~/.curriculum-intelligence folder (or its .migrated-* rename). Remap it on
+  // read (spec Q7, option A); the file on disk is not rewritten here.
+  for (const course of Object.values(config.courses ?? {})) {
+    if (course && typeof course.courseRoot === 'string') {
+      course.courseRoot = remapLegacyPath(course.courseRoot, 'ci', remapEnv);
+    }
+  }
+  return config;
 }
 
 export function saveAppConfig(config: AppConfig): void {

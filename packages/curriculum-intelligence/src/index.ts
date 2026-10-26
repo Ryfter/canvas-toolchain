@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { migrateLegacyAppHome, type MigrationJournal } from '@canvas-toolchain/shared-types';
 import { fileURLToPath } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -833,7 +834,48 @@ function isMainModule(): boolean {
     return false;
   }
 }
+/**
+ * Move a legacy Windows ~/.curriculum-intelligence into %APPDATA% /
+ * %LOCALAPPDATA% before any config read (#200, spec 5.1). Shares Command &
+ * Control's process-wide memo key so the migration runs once per process.
+ * Never throws, waits at most 20s (the engine stages and commits last, so
+ * moving on early is safe), and logs one line of outcome and counts only.
+ * No-op on macOS/Linux and under CURRICULUM_INTELLIGENCE_HOME.
+ */
+async function bootAppHome(): Promise<void> {
+  try {
+    const key = Symbol.for('canvas-toolchain.app-home-boot');
+    const g = globalThis as Record<symbol, unknown>;
+    if (!(g[key] instanceof Map)) g[key] = new Map();
+    const memo = g[key] as Map<string, Promise<MigrationJournal>>;
+    let run = memo.get('ci');
+    const started = !run;
+    if (!run) {
+      run = Promise.resolve().then(() => migrateLegacyAppHome('ci')).catch(() => ({
+        app: 'ci' as const, at: new Date().toISOString(), outcome: 'failed' as const,
+        copied: 0, identical: 0, conflicts: [], skipped: [], error: 'UNKNOWN',
+      }));
+      memo.set('ci', run);
+    }
+    let timer: NodeJS.Timeout | undefined;
+    const settled = await Promise.race([
+      run,
+      new Promise<'timed-out'>((r) => { timer = setTimeout(() => r('timed-out'), 20_000); timer.unref?.(); }),
+    ]);
+    if (timer) clearTimeout(timer);
+    if (started) {
+      const outcome = settled === 'timed-out' ? 'timed-out' : settled.outcome;
+      const counts = settled === 'timed-out' || outcome === 'nothing-to-do' ? '' :
+        `(copied=${settled.copied},identical=${settled.identical},conflicts=${settled.conflicts.length},skipped=${settled.skipped.length})`;
+      process.stderr.write(`[app-home] ci=${outcome}${counts}\n`);
+    }
+  } catch {
+    /* never fatal: the server boots on the paths the resolver gives it */
+  }
+}
+
 if (isMainModule()) {
+  await bootAppHome();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
