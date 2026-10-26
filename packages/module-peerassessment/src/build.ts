@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { writeImportCsv } from './output.js';
-import { importCsvPath, importCsvFileName } from './paths.js';
+import { importCsvFileName } from './paths.js';
 import { resolveMembers, type ResolveSources } from './join/resolve.js';
 import { findIncomplete, findUngrouped, findDuplicateEmails, findMultiGrouped } from './report.js';
 import type { PaGroup, PaCanvasUser, ImportReport } from './types.js';
@@ -14,7 +14,8 @@ export interface BuildInput {
   groups: PaGroup[];
   allStudents: PaCanvasUser[];
   sources: ResolveSources;
-  outputDir?: string;
+  /** Directory the CSV is written into (the tool defaults it to <ctx.paths.config>/peerassessment). */
+  outputDir: string;
   dryRun?: boolean;
 }
 
@@ -31,9 +32,7 @@ export function buildPeerAssessmentImport(input: BuildInput): ImportReport {
   let outputPath: string | null = null;
   let rowsWritten = 0;
   if (!input.dryRun && rows.length > 0) {
-    const path = input.outputDir
-      ? join(input.outputDir, importCsvFileName(input.courseId, input.groupSetName))
-      : importCsvPath(input.courseId, input.groupSetName);
+    const path = join(input.outputDir, importCsvFileName(input.courseId, input.groupSetName));
     outputPath = writeImportCsv(path, rows);
     rowsWritten = rows.length;
   }

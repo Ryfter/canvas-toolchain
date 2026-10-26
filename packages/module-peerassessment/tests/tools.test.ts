@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { peerAssessmentTools } from '../src/tools.js';
+import type { ModuleContext } from '@canvas-toolchain/module-contract';
+import { createPeerAssessmentTools } from '../src/tools.js';
+
+const peerAssessmentTools = createPeerAssessmentTools(() => ({}) as ModuleContext);
 
 describe('peerAssessmentTools', () => {
   it('exposes exactly the build_peerassessment_import tool', () => {
