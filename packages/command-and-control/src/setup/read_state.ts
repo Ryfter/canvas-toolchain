@@ -1,9 +1,10 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, win32 } from 'node:path';
 import {
   MIGRATION_JOURNAL_FILE, appPaths, cdsSecretsHome, legacyAppHome, legacyEntryRoot,
   normalizeCanvasHost, readCanvasStoreJournal,
+  MODULE_CREDENTIALS_DIRNAME, moduleCredentialPresence, resolveModuleCredential,
   type AppId,
 } from '@canvas-toolchain/shared-types';
 import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
@@ -17,7 +18,9 @@ import { loadTranscriptConfig } from '../tools/setup_transcript_source.js';
 import { loadLectureAnswersConfig } from '../tools/answers/config.js';
 import { lectureAnswersConfigPath } from '../tools/answers/paths.js';
 import { getModulesManifestPath, loadModuleManifest } from '../modules/manifest.js';
-import { knownModuleIds } from '../modules/registry.js';
+import { KNOWN_MODULES, knownModuleIds, loadInstalledArtifacts } from '../modules/registry.js';
+import { compareVersions } from '../update/check.js';
+import { isCanvasToolchainModule, type ModuleManifest } from '@canvas-toolchain/module-contract';
 import { loadInstalledModules } from '../channel/installed.js';
 import { loadPendingRequests } from '../channel/pending.js';
 import { managedCanvasBackupConfigExists } from '../passthrough/canvas_backup_config.js';
@@ -27,6 +30,9 @@ import type {
   AppHomeState,
   CanvasStoreMigrationRecord,
   ConfigFileKey,
+  LoadedModuleDeclaration,
+  ModuleCredentialRow,
+  ModuleCredentialsState,
   ProbeResult,
   ReadSetupStateOptions,
   SecretFileHealth,
@@ -216,6 +222,96 @@ function nonEmpty(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+/** Mirrors the host's loader: enabled bundled modules, then installed artifacts, semver-newer wins. */
+async function defaultLoadedModules(manifest: ModuleManifest): Promise<LoadedModuleDeclaration[]> {
+  const winners = new Map<string, { mod: LoadedModuleDeclaration & { version: string }; }>();
+  for (const [id, entry] of Object.entries(manifest.modules)) {
+    const loader = KNOWN_MODULES[id];
+    if (!entry?.enabled || !loader) continue;
+    try {
+      const mod = await loader();
+      if (isCanvasToolchainModule(mod)) winners.set(id, { mod: { id, origin: 'bundled', version: mod.version, contractVersion: mod.contractVersion, credentials: mod.credentials } });
+    } catch { /* fail-soft, like the host */ }
+  }
+  const installed = await loadInstalledArtifacts(manifest);
+  for (const [id, mod] of installed) {
+    const bundled = winners.get(id)?.mod;
+    if (bundled && compareVersions(mod.version, bundled.version) <= 0) continue;
+    winners.set(id, { mod: { id, origin: 'channel', version: mod.version, contractVersion: mod.contractVersion, credentials: mod.credentials } });
+  }
+  return [...winners.values()].map(({ mod: { version: _v, ...rest } }) => rest);
+}
+
+const MODULE_FILE_ID = /^([a-z0-9][a-z0-9-]*)\.json$/;
+
+/**
+ * Per-module credential status (#201). Resolution is asked of the shared
+ * resolver, but only the outcome (`source` / `missing`) is kept, so no value
+ * can reach the report. The same goes for the stores no module row covers.
+ */
+async function readModuleCredentials(
+  manifest: ModuleManifest,
+  load: ((m: ModuleManifest) => Promise<LoadedModuleDeclaration[]>) | undefined,
+  candidateIds: string[],
+): Promise<ModuleCredentialsState> {
+  const secrets = appPaths('cc').secrets;
+  const dir = join(secrets, MODULE_CREDENTIALS_DIRNAME);
+  const rows: ModuleCredentialRow[] = [];
+  const legacy: ModuleCredentialsState['legacy'] = [];
+  let unavailable = false;
+  let modules: LoadedModuleDeclaration[] = [];
+  try {
+    modules = await (load ? load(manifest) : defaultLoadedModules(manifest));
+  } catch {
+    unavailable = true;
+  }
+  for (const mod of modules) {
+    if (mod.contractVersion !== 2) {
+      legacy.push({ id: mod.id, origin: mod.origin });
+      continue;
+    }
+    for (const d of mod.credentials ?? []) {
+      let status: ModuleCredentialRow['status'];
+      try {
+        const r = resolveModuleCredential(mod.id, d.kind, { shareDefault: mod.origin === 'bundled' });
+        status = 'source' in r ? r.source : r.missing;
+      } catch {
+        status = 'incomplete';
+      }
+      rows.push({ moduleId: mod.id, origin: mod.origin, kind: d.kind, required: d.required, status });
+    }
+  }
+
+  const ids = new Set<string>([...candidateIds, ...modules.map((m) => m.id)]);
+  try {
+    for (const name of readdirSync(dir)) {
+      const m = MODULE_FILE_ID.exec(name);
+      if (m) ids.add(m[1]);
+    }
+  } catch { /* directory absent */ }
+  const files: ModuleCredentialsState['files'] = [];
+  for (const id of [...ids].sort()) {
+    const health = inspectFile(join(dir, `${id}.json`));
+    if (!health.present) continue;
+    let holdsSecret = true;
+    try {
+      holdsSecret = Object.values(moduleCredentialPresence(id)).some((v) => v !== 'none');
+    } catch { /* keep the safe answer */ }
+    files.push({ moduleId: id, holdsSecret, health });
+  }
+  return {
+    rows: rows.sort((a, b) => a.moduleId.localeCompare(b.moduleId) || a.kind.localeCompare(b.kind)),
+    legacy: legacy.sort((a, b) => a.id.localeCompare(b.id)),
+    files,
+    stores: {
+      panoptoConfig: existsSync(join(secrets, 'panopto-config.json')),
+      moduleCredentialsDir: existsSync(dir),
+      rosterVault: existsSync(join(secrets, 'roster-vault')),
+    },
+    unavailable,
+  };
+}
+
 const PROBE_TIMEOUT_MS = 5000;
 
 /** Which of the three ways to reach Canvas Backup the machine has, in priority order. */
@@ -395,6 +491,11 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
         enabled: manifest.modules[id]?.enabled === true,
       })),
       pendingRequests: loadPendingRequests().modules,
+      credentials: await readModuleCredentials(
+        manifest,
+        opts.loadedModules ? () => opts.loadedModules!() : undefined,
+        [...knownModuleIds(), ...Object.keys(installedModules.modules)],
+      ),
     },
     // Read-only, and the only part of this read that looks outside the CC home.
     // Opt-out, so a caller that must not touch another app's files can say so.

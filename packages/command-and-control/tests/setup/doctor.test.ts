@@ -17,6 +17,7 @@ const CHECK_IDS = [
   'transcripts.source',
   'backup.sidecar',
   'modules.pending',
+  'modules.credentials',
   'hosts.wiring',
   'paths.homes',
 ];
