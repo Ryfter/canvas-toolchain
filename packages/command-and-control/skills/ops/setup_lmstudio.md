@@ -5,7 +5,7 @@ section: "admin"
 intent_tool: "ct_setup"
 intent_action: "lmstudio"
 exposure: "intent"
-related: [get_cc_status, set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_doctor, setup_llm_provider, setup_ollama]
+related: [get_cc_status, set_active_llm_provider, set_courses_root, setup_anthropic, setup_canvas, setup_cc, setup_llm_provider, setup_module_credentials, setup_ollama]
 ---
 <!-- generated:end -->
 

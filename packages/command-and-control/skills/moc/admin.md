@@ -2,14 +2,14 @@
 id: "admin"
 kind: "section"
 description: "Institution profile, dashboard, feedback, defaults."
-ops: 39
+ops: 40
 related: [ct_setup, ct_import, ct_inspect, ct_analyze, ct_plan, ct_build, ct_review, ct_ask, ct_advanced]
 ---
 # admin section
 
 Institution profile, dashboard, feedback, defaults.
 
-## Operations (39)
+## Operations (40)
 
 - [[setup_cc]] — Configure Command & Control: set mode (easy/advanced), Anthropic model, Ollama base URL and model, and routing preferences. Run this first.
 - [[setup_anthropic]] — Configure the Anthropic API key used by all AI tools. Validates it against the Anthropic API before saving, then stores it locally with 0o600 permissions.
@@ -17,6 +17,7 @@ Institution profile, dashboard, feedback, defaults.
 - [[setup_ollama]] — Configure Ollama as the local generation LLM. Discovery mode (no model) returns the recommended-models markdown. Commit mode (with model) validates the model is pulled and writes ollama-config.json.
 - [[setup_lmstudio]] — Configure LM Studio (OpenAI-compatible local server) as the generation LLM. Discovery mode lists loaded models from the running server; commit mode validates the model and writes lmstudio-config.json.
 - [[setup_llm_provider]] — Report the active and configured LLM providers, best first (LM Studio, Ollama, Anthropic); with no arguments it also probes the local servers. Pass provider to activate a configured one.
+- [[setup_module_credentials]] — Give one module its own Canvas/Anthropic/Panopto credential or let it use your main one: op set (validates first), test, share, unshare, clear (two-call confirm). Reports source only.
 - [[set_active_llm_provider]] — Set the active generation LLM provider. Must be lmstudio, ollama or anthropic. Refuses to set a provider whose config file is absent.
 - [[save_institution_profile]] — Write/merge the institution profile (master tool library) plus optional per-class deltas. Accretive — new tools added, existing preserved. This profile is the payload for usage feedback.
 - [[submit_usage_feedback]] — Submit an anonymized inventory of your institution's tools as a GitHub issue so the author can prioritize integrations. Opt-in two-call gate: review, then confirm:true via gh. named:true adds ids.
