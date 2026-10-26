@@ -40,6 +40,7 @@ const ORIGINAL = {
   home: process.env.HOME,
   userProfile: process.env.USERPROFILE,
   appData: process.env.APPDATA,
+  localAppData: process.env.LOCALAPPDATA,
 };
 
 /** Seed a config file, 0600 like every writer in the repo, under either home. */
@@ -92,6 +93,7 @@ beforeEach(() => {
   process.env.HOME = hostHome;
   process.env.USERPROFILE = hostHome;
   process.env.APPDATA = join(hostHome, 'AppData', 'Roaming');
+  process.env.LOCALAPPDATA = join(hostHome, 'AppData', 'Local');
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.CANVAS_BACKUP_COMMAND;
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network call in test'))));
@@ -109,6 +111,7 @@ afterEach(() => {
     HOME: ORIGINAL.home,
     USERPROFILE: ORIGINAL.userProfile,
     APPDATA: ORIGINAL.appData,
+    LOCALAPPDATA: ORIGINAL.localAppData,
   })) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
