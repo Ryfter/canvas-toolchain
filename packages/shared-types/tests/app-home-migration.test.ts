@@ -416,7 +416,10 @@ describe('migrateLegacyAppHome: concurrency', () => {
       migrateLegacyAppHome('cc', win()),
     ]);
     expect(results.filter((r) => r.outcome === 'failed')).toEqual([]);
-    expect(results.filter((r) => r.legacyRenamedTo)).toHaveLength(1);
+    expect(
+      results.filter((r) => r.legacyRenamedTo),
+      `renamed-to per run: ${JSON.stringify(results.map((r) => r.legacyRenamedTo))}`,
+    ).toHaveLength(1);
     expect(results.every((r) => r.conflicts.length === 0)).toBe(true);
     for (const [rel, content] of Object.entries(files)) {
       expect(readFileSync(expectedTarget(rel), 'utf8')).toBe(content);

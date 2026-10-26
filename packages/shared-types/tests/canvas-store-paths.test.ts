@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
 
 // CT200-01b: the canvas store's two homes delegate to the app-path resolver.
 // The resolver reads process.platform/process.env and os.homedir(); we stub all
@@ -35,11 +35,13 @@ afterEach(() => {
   }
 });
 
+// The platform is faked as 'linux', so the resolver joins with POSIX rules even on a
+// Windows host; expectations must use posix.join, not the host's join.
 describe('canvas store homes via the resolver', () => {
   it('POSIX default is the unchanged legacy dot-folder', () => {
     setPlatform('linux');
-    expect(ccHome()).toBe(join(fakeHome.dir, '.command-and-control'));
-    expect(canvasDesignHome()).toBe(join(fakeHome.dir, '.canvas-design-mcp'));
+    expect(ccHome()).toBe(posix.join(fakeHome.dir, '.command-and-control'));
+    expect(canvasDesignHome()).toBe(posix.join(fakeHome.dir, '.canvas-design-mcp'));
   });
 
   it('an env override is used verbatim', () => {
@@ -54,8 +56,8 @@ describe('canvas store homes via the resolver', () => {
     setPlatform('linux');
     process.env.CC_HOME = blank;
     process.env.CANVAS_DESIGN_HOME = blank;
-    expect(ccHome()).toBe(join(fakeHome.dir, '.command-and-control'));
-    expect(canvasDesignHome()).toBe(join(fakeHome.dir, '.canvas-design-mcp'));
+    expect(ccHome()).toBe(posix.join(fakeHome.dir, '.command-and-control'));
+    expect(canvasDesignHome()).toBe(posix.join(fakeHome.dir, '.canvas-design-mcp'));
   });
 
   it('win32 resolves the secrets roots under %LOCALAPPDATA%', () => {

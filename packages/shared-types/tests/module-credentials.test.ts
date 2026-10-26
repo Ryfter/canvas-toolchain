@@ -3,7 +3,7 @@ import {
   existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
 import {
   MODULE_CREDENTIALS_DIRNAME,
   clearModuleCredential,
@@ -482,7 +482,7 @@ describe('home resolution', () => {
       const o = { env: { CC_HOME: '   ' }, homedir: fakeHome, platform: 'linux' as const };
       setModuleShare('roster', 'anthropic', true, o);
       expect(existsSync(join(ccSecretsHome(o), MODULE_CREDENTIALS_DIRNAME, 'roster.json'))).toBe(true);
-      expect(ccSecretsHome(o)).toBe(join(fakeHome, '.command-and-control'));
+      expect(ccSecretsHome(o)).toBe(posix.join(fakeHome, '.command-and-control'));
     } finally {
       rmSync(fakeHome, { recursive: true, force: true });
     }
