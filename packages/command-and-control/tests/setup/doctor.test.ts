@@ -18,6 +18,7 @@ const CHECK_IDS = [
   'backup.sidecar',
   'modules.pending',
   'hosts.wiring',
+  'paths.homes',
 ];
 
 let ccHome: string;
@@ -107,7 +108,7 @@ afterEach(() => {
 });
 
 describe('runDoctor on an empty home', () => {
-  it('returns all ten checks without throwing, and makes no network call', async () => {
+  it('returns all eleven checks without throwing, and makes no network call', async () => {
     const report = await runDoctor();
 
     expect(report.checks.map((c) => c.id)).toEqual(CHECK_IDS);
@@ -560,7 +561,10 @@ describe('runDoctor secrets', () => {
       canvasUrl: 'https://example.instructure.com', apiToken: 'cds-tok', waveApiKey: 'wave-secret',
     }, cdsHome);
 
-    const dumped = JSON.stringify(await runDoctor());
+    const report = await runDoctor();
+    const dumped = JSON.stringify({ report, state: await readSetupState() });
+    // CT200-08: the new paths.homes rows are part of what must stay secret-free.
+    expect(check(report, 'paths.homes').detail?.length).toBeGreaterThanOrEqual(3);
 
     for (const secret of ['gh-secret', 'tok-secret', 'sk-ant-secret', 'pa-secret', 'wave-secret', 'cds-tok']) {
       expect(dumped).not.toContain(secret);
