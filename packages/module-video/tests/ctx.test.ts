@@ -77,7 +77,8 @@ describe('video module contract v2', () => {
       } as Response);
     const res = await tool('video_fetch_captions').handler({ videoId: 'vid-1', title: 'T' });
     const out = JSON.stringify(res);
-    expect(out).toContain(join(root, 'cds', 'transcripts'));
+    // Match the raw text: JSON.stringify doubles the backslashes of a Windows path.
+    expect((res as { content: Array<{ text: string }> }).content[0].text).toContain(join(root, 'cds', 'transcripts'));
     expect(readdirSync(join(root, 'cds', 'transcripts')).length).toBe(1);
     expect(out).not.toContain(SECRET);
   });
