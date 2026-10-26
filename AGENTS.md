@@ -292,7 +292,7 @@ GitHub Project view: [Canvas Toolchain Roadmap](https://github.com/users/Ryfter/
 - [`packages/curriculum-intelligence/AGENTS.md`](packages/curriculum-intelligence/AGENTS.md) — analysis engine internals
 
 <!-- grimdex:start -->
-<!-- grimdex:laws-version 19ec6fe832d7 -->
+<!-- grimdex:laws-version 56c176c9edd3 -->
 # Grimdex — coding rules (read first)
 
 > Generated from Grimdex (`~/.claude/knowledge/GRIMDEX.md`) — do not edit here; the law changes
@@ -398,6 +398,7 @@ This project's tier (its decisions and guidance): `~/.claude/knowledge/projects/
 | Converting a load-bearing rule into a hook (law #7) | `universal/playbooks/hooks-author.md` |
 | Delegating work to a CLI agent (Grok/Codex), or verifying one | `universal/playbooks/delegating-cli.md` |
 | Starting a non-trivial code item (small parcel · own worktree · fresh reviewer) | `universal/playbooks/disposable-worktrees.md` |
+| Proposing a cross-project rule or recommending a change to Grimdex | `pwsh scripts/propose-promotion.ps1` (see `universal/promotions/README.md`) |
 | Picking a model/tool for a task | `universal/routing.md` |
 | User preferences and standing orders | `universal/user-prefs.md` |
 <!-- grimdex:end -->
