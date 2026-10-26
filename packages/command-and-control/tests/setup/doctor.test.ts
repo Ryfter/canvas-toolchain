@@ -2,6 +2,13 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
 import { dirname, join } from 'node:path';
+// os.homedir() ignores a changed USERPROFILE/HOME once the test runs off the main
+// thread (libuv reads the real process environment), so follow the test's value.
+vi.mock('node:os', async (orig) => {
+  const real = await orig<typeof import('node:os')>();
+  return { ...real, homedir: () => process.env.USERPROFILE || process.env.HOME || real.homedir() };
+});
+
 import { runDoctor } from '../../src/setup/doctor.js';
 import { readSetupState } from '../../src/setup/read_state.js';
 import { buildRegistry } from '../../src/surface/registry.js';
@@ -469,7 +476,10 @@ describe('runDoctor journeys', () => {
 
     const report = await runDoctor();
 
-    expect(report.checks.map((c) => c.status)).toEqual(CHECK_IDS.map(() => 'ok'));
+    expect(
+      report.checks.map((c) => c.status),
+      JSON.stringify(report.checks.filter((c) => c.status !== 'ok').map((c) => [c.id, c.summary, c.detail])),
+    ).toEqual(CHECK_IDS.map(() => 'ok'));
     expect(report.overallStatus).toBe('ok');
     expect(report.readyJourneys).toEqual({
       localAuthoring: true, canvasConnected: true, aiAssisted: true,
