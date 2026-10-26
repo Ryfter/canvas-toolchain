@@ -73,9 +73,11 @@ function check(report: Awaited<ReturnType<typeof runDoctor>>, id: string) {
 }
 
 beforeEach(() => {
-  ccHome = mkdtempSync(join(tmpdir(), 'cc-home-'));
-  cdsHome = mkdtempSync(join(tmpdir(), 'cds-home-'));
   hostHome = mkdtempSync(join(tmpdir(), 'host-home-'));
+  // Inside the fake profile: on Windows the paths.homes check warns about a
+  // settings folder outside the user profile.
+  ccHome = mkdtempSync(join(hostHome, 'cc-home-'));
+  cdsHome = mkdtempSync(join(hostHome, 'cds-home-'));
   process.env.CC_HOME = ccHome;
   process.env.CANVAS_DESIGN_HOME = cdsHome;
   // Host detection reads the OS home, so point it at a temp dir: otherwise the

@@ -122,6 +122,7 @@ describe('bootAppHomes', () => {
 
   it('never throws with an unwritable home (real engine, win32 injected)', async () => {
     if (process.getuid?.() === 0) return; // root ignores permission bits
+    if (process.platform === 'win32') return; // chmod does not block writes on Windows
     const home = join(base, 'home');
     mkdirSync(join(home, '.command-and-control'), { recursive: true });
     writeFileSync(join(home, '.command-and-control', 'canvas-config.json'), JSON.stringify({ token: TOKEN }));
