@@ -369,10 +369,13 @@ const BASE_OPERATIONS: Operation[] = [
   {
     id: 'uninstall_module',
     section: 'modules',
-    description: 'Remove a channel-installed module (artifact + record) and disable it. Bundled modules cannot be uninstalled — disable those with set_module_enabled.',
+    description: 'Remove a channel-installed module and disable it. With stored credentials, confirm: true is required and they are deleted too. Bundled modules: use set_module_enabled.',
     inputSchema: {
       type: 'object' as const,
-      properties: { moduleId: { type: 'string', description: 'Installed module id.' } },
+      properties: {
+        moduleId: { type: 'string', description: 'Installed module id.' },
+        confirm: { type: 'boolean', description: 'Required (true) only when the module has stored credentials; they are deleted with it.' },
+      },
       required: ['moduleId'],
     },
     handler: (args) => uninstallModuleTool(args as never),

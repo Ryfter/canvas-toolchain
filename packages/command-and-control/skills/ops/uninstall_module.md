@@ -1,6 +1,6 @@
 ---
 id: "uninstall_module"
-description: "Remove a channel-installed module (artifact + record) and disable it. Bundled modules cannot be uninstalled — disable those with set_module_enabled."
+description: "Remove a channel-installed module and disable it. With stored credentials, confirm: true is required and they are deleted too. Bundled modules: use set_module_enabled."
 section: "modules"
 intent_tool: ""
 intent_action: ""

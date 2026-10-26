@@ -24,7 +24,7 @@ export async function installModuleTool(
 }
 
 export async function uninstallModuleTool(
-  args: { moduleId: string },
+  args: { moduleId: string; confirm?: boolean },
   deps: { knownIds?: string[]; fetchImpl?: typeof fetch } = {},
 ): Promise<Record<string, unknown>> {
   const res = uninstallModule(args, { knownIds: deps.knownIds });

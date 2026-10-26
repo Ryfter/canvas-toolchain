@@ -17,7 +17,7 @@ Less common operations, reached through ct_advanced describe/run.
 - [[list_modules]] — List all known plug-in modules with their id, name, enabled state, active provider, and the provider/tool types they handle.
 - [[browse_module_catalog]] — Module catalog: exists / installed / enabled / update state and installer-GUI requests, plus companion programs (e.g. Canvas Backup). Read-only; clearPending:true discards stale requests.
 - [[install_module]] — Install/upgrade a catalog module. Two-call gate: first call previews name/version/size/source/sha256 (no side effects); re-call with confirm:true to verify the sha256 and install. Needs a reconnect.
-- [[uninstall_module]] — Remove a channel-installed module (artifact + record) and disable it. Bundled modules cannot be uninstalled — disable those with set_module_enabled.
+- [[uninstall_module]] — Remove a channel-installed module and disable it. With stored credentials, confirm: true is required and they are deleted too. Bundled modules: use set_module_enabled.
 - [[discover_tools]] — Discover institutional tools: scans Canvas (account → course → self-report), matches findings to modules, and returns detected tools, enable suggestions, unmatched tools, and a pick-list. Read-only.
 - [[save_institution_profile]] — Write/merge the institution profile (master tool library) plus optional per-class deltas. Accretive — new tools added, existing preserved. This profile is the payload for usage feedback.
 - [[submit_usage_feedback]] — Submit an anonymized inventory of your institution's tools as a GitHub issue so the author can prioritize integrations. Opt-in two-call gate: review, then confirm:true via gh. named:true adds ids.

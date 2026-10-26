@@ -14,6 +14,7 @@ import { removePendingModule } from './pending.js';
 import { compareVersions, getInstalledVersion } from '../update/check.js';
 import { loadModuleManifest, saveModuleManifest } from '../modules/manifest.js';
 import { knownModuleIds } from '../modules/registry.js';
+import { clearModuleCredential, moduleCredentialFileExists } from '@canvas-toolchain/shared-types';
 
 const DOWNLOAD_TIMEOUT_MS = 60_000;
 
@@ -339,7 +340,7 @@ export async function installModule(
 }
 
 export function uninstallModule(
-  args: { moduleId: string },
+  args: { moduleId: string; confirm?: boolean },
   deps: { knownIds?: string[] } = {},
 ): Record<string, unknown> {
   const knownIds = deps.knownIds ?? knownModuleIds();
@@ -357,7 +358,16 @@ export function uninstallModule(
   if (!installed.modules[args.moduleId]) {
     return refusal('NOT_INSTALLED', `Module '${args.moduleId}' is not installed.`);
   }
+  // CT201-11: a module with stored credentials needs an explicit confirm, because
+  // uninstalling also deletes them. Credential-less uninstalls stay one call.
+  const hasCredentials = moduleCredentialFileExists(args.moduleId);
+  if (hasCredentials && args.confirm !== true) {
+    return refusal('CONFIRMATION_REQUIRED',
+      `Uninstalling '${args.moduleId}' will also delete its stored credentials. Nothing has been removed.`,
+      `Call uninstall_module({ moduleId: '${args.moduleId}', confirm: true }) to proceed.`);
+  }
   rmSync(join(getModulesRoot(), args.moduleId), { recursive: true, force: true });
+  if (hasCredentials) clearModuleCredential(args.moduleId);
   delete installed.modules[args.moduleId];
   saveInstalledModules(installed);
 
