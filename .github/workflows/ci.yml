@@ -35,6 +35,11 @@ jobs:
       - name: Institution scrub guard
         run: node scripts/check-institution-scrub.mjs
 
+      - name: App-home path guard
+        run: |
+          node scripts/check-app-paths.mjs
+          node scripts/check-app-paths.mjs --self-test
+
       - name: Build all packages
         run: npm run build
 
