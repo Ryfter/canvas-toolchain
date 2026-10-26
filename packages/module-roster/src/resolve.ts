@@ -17,11 +17,12 @@ export type CanvasUserFetcher = (canvasId: string) => Promise<CanvasUser | null>
 /**
  * Reverse-lookup: pseudonym -> vault -> canvas id -> live Canvas user. Caches nothing.
  * `fetchUser` is injected (production wraps the Canvas client; tests inject a fake).
+ * `secretsDir` is the host's secrets root (`ctx.paths.secrets`) that holds `roster-vault/`.
  */
 export async function resolveIdentity(
-  pseudonyms: string[], fetchUser: CanvasUserFetcher,
+  pseudonyms: string[], fetchUser: CanvasUserFetcher, secretsDir: string,
 ): Promise<ResolvedIdentity[]> {
-  const vault = loadVault();
+  const vault = loadVault(secretsDir);
   const byPseudonym = new Map(vault.map((r) => [r.pseudonym, r]));
   const out: ResolvedIdentity[] = [];
   for (const p of pseudonyms) {

@@ -15,6 +15,8 @@ export interface ProposeRosterInput {
   /** LLM for major normalization, or null to passthrough. */
   llm: LlmClient | null;
   aliases: Record<string, string>;
+  /** Host secrets root (`ctx.paths.secrets`) holding `roster-vault/`; read only. */
+  secretsDir: string;
 }
 
 /**
@@ -22,7 +24,7 @@ export interface ProposeRosterInput {
  * majors -> assemble report. Reads the vault but writes nothing.
  */
 export async function proposeRoster(input: ProposeRosterInput): Promise<ProposalReport> {
-  const vault = loadVault();
+  const vault = loadVault(input.secretsDir);
   const vaultIdx = indexByStudentNumber(vault);
 
   const match = matchStudents(input.peopleSoft, input.canvasUsers);

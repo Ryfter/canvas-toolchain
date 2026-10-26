@@ -1,10 +1,22 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { rosterVaultDir, vaultPath } from '../paths.js';
+import { join } from 'node:path';
 import type { VaultRecord, VaultCollision } from '../types.js';
 
-/** Load the vault, or [] if it does not exist yet. Throws only on corruption. */
-export function loadVault(): VaultRecord[] {
-  const path = vaultPath();
+/**
+ * The identity vault lives at `<secretsDir>/roster-vault/vault.json`. Callers pass the host's
+ * secrets root (`ctx.paths.secrets`); the vault never resolves a location on its own.
+ */
+export function rosterVaultDir(secretsDir: string): string {
+  return join(secretsDir, 'roster-vault');
+}
+
+export function vaultPath(secretsDir: string): string {
+  return join(rosterVaultDir(secretsDir), 'vault.json');
+}
+
+/** Load the vault from `secretsDir`, or [] if it does not exist yet. Throws only on corruption. */
+export function loadVault(secretsDir: string): VaultRecord[] {
+  const path = vaultPath(secretsDir);
   if (!existsSync(path)) return [];
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf-8')) as { records?: VaultRecord[] };
@@ -14,10 +26,13 @@ export function loadVault(): VaultRecord[] {
   }
 }
 
-/** Persist the vault, creating the dir and writing the file with 0600 perms. Returns the path. */
-export function saveVault(records: VaultRecord[]): string {
-  mkdirSync(rosterVaultDir(), { recursive: true });
-  const path = vaultPath();
+/**
+ * Persist the vault under `secretsDir`: creates the dir, writes a 0600 tmp file, then renames it
+ * over the vault so a crash never leaves a half-written vault. Returns the path.
+ */
+export function saveVault(secretsDir: string, records: VaultRecord[]): string {
+  mkdirSync(rosterVaultDir(secretsDir), { recursive: true });
+  const path = vaultPath(secretsDir);
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, JSON.stringify({ records }, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmp, path);
