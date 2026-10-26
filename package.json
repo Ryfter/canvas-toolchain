@@ -13,6 +13,7 @@
     "build:module": "node scripts/build-module.mjs",
     "verify:modules": "node scripts/verify-module-artifacts.mjs",
     "docs:modules": "node scripts/generate-module-docs.mjs",
+    "check:app-paths": "node scripts/check-app-paths.mjs && node scripts/check-app-paths.mjs --self-test",
     "test": "npm run test --workspaces --if-present",
     "prepare": "npm run build",
     "dev:ci": "npm run dev --workspace=packages/curriculum-intelligence",
