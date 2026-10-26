@@ -241,6 +241,8 @@ export interface SetupState {
     installed: Array<{ id: string; version: string; enabled: boolean }>;
     /** Module ids the installer's picker requested but nobody installed yet. */
     pendingRequests: string[];
+    /** Per-module credential status (#201). Presence and outcome codes only. */
+    credentials: ModuleCredentialsState;
   };
 
   /**
@@ -249,6 +251,36 @@ export interface SetupState {
    * was turned off, which the doctor reports as such instead of as "not wired".
    */
   hosts: HostWiringReport | null;
+}
+
+/**
+ * How a declared credential resolves for one module. `module` is the module's
+ * own saved entry, `shared` rides the global credential, `share-denied` means a
+ * shared one exists to give but the professor has not allowed it, `incomplete`
+ * is a half-saved or unreadable entry, `none` is nothing at all.
+ */
+export type ModuleCredentialStatus = 'module' | 'shared' | 'share-denied' | 'incomplete' | 'none';
+
+/** One declared credential kind of one loaded v2 module. */
+export interface ModuleCredentialRow {
+  moduleId: string;
+  origin: 'bundled' | 'channel';
+  kind: 'canvas' | 'anthropic' | 'panopto';
+  required: boolean;
+  status: ModuleCredentialStatus;
+}
+
+export interface ModuleCredentialsState {
+  /** One row per declared kind of each loaded v2 module. */
+  rows: ModuleCredentialRow[];
+  /** Loaded v1 modules: they read the shared files themselves and the host cannot scope them. */
+  legacy: Array<{ id: string; origin: 'bundled' | 'channel' }>;
+  /** Per-module credential files on disk (secrets root). Health only, never bodies. */
+  files: Array<{ moduleId: string; holdsSecret: boolean; health: SecretFileHealth }>;
+  /** Presence of the stores no module row covers. */
+  stores: { panoptoConfig: boolean; moduleCredentialsDir: boolean; rosterVault: boolean };
+  /** The modules could not be loaded to read their declarations. */
+  unavailable: boolean;
 }
 
 /** One app's resolved home, as the doctor reports it (#200). */
@@ -281,6 +313,20 @@ export interface ReadSetupStateOptions {
    * untouched entirely.
    */
   hosts?: boolean;
+  /**
+   * Test seam: the loaded modules whose credential declarations the doctor
+   * reports. Default: import the enabled bundled modules and the installed
+   * channel artifacts (no `init`, no tools exposed).
+   */
+  loadedModules?: () => Promise<LoadedModuleDeclaration[]>;
+}
+
+/** What the doctor needs to know about a loaded module. */
+export interface LoadedModuleDeclaration {
+  id: string;
+  origin: 'bundled' | 'channel';
+  contractVersion?: number;
+  credentials?: Array<{ kind: 'canvas' | 'anthropic' | 'panopto'; required: boolean }>;
 }
 
 export type DoctorStatus = 'ok' | 'warn' | 'fail';
@@ -295,6 +341,7 @@ export type DoctorCheckId =
   | 'transcripts.source'
   | 'backup.sidecar'
   | 'modules.pending'
+  | 'modules.credentials'
   | 'hosts.wiring'
   | 'paths.homes';
 
