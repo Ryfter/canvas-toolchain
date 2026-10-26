@@ -43,7 +43,7 @@ export interface ModuleContext {
     config: string;
     data: string;
     designStudioData: string;
-    /** Secret-bearing root. Used only for the roster vault; other modules reach secrets via `credentials`. */
+    /** Secret-bearing root. For module-owned secret files that cannot go through `credentials` (the roster vault and its column map, Panopto's setup tool); everything else reaches secrets via `credentials`. */
     secrets: string;
   };
   credentials: {
