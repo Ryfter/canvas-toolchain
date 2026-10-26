@@ -69,6 +69,7 @@ function seedLegacyCc(): Record<string, string> {
   const files: Record<string, string> = {
     'canvas-config.json': JSON.stringify({ host: 'school.instructure.com', token: TOKEN }),
     'anthropic-config.json': JSON.stringify({ apiKey: API_KEY }),
+    'lecture-answers-config.json': JSON.stringify({ provider: 'voyage', voyageApiKey: 'pa-secret' }),
     'roster-vault/vault.json': JSON.stringify({ students: [{ pseudonym: 'SU26-001' }] }),
     'modules.json': JSON.stringify({ enabled: ['video'] }),
     'groups/c1/pairing-history.json': '{"pairs":[]}',
@@ -112,6 +113,7 @@ describe('legacyEntryRoot (classification)', () => {
     expect(legacyEntryRoot('cc', 'panopto-config.json')).toBe('secrets');
     expect(legacyEntryRoot('cc', 'config.json')).toBe('secrets');
     expect(legacyEntryRoot('cc', 'roster-vault')).toBe('secrets');
+    expect(legacyEntryRoot('cc', 'lecture-answers-config.json')).toBe('secrets'); // voyageApiKey (CT200-04d)
     expect(legacyEntryRoot('cc', 'module-credentials')).toBe('secrets');
     expect(legacyEntryRoot('cc', 'modules')).toBe('data');
     expect(legacyEntryRoot('cc', 'registry')).toBe('data');
@@ -124,6 +126,8 @@ describe('legacyEntryRoot (classification)', () => {
   it('keeps stray temp/backup copies of secret files with the secrets', () => {
     expect(legacyEntryRoot('cc', 'canvas-config.json.tmp')).toBe('secrets');
     expect(legacyEntryRoot('cc', 'CANVAS-CONFIG.JSON')).toBe('secrets');
+    expect(legacyEntryRoot('cc', 'lecture-answers-config.json.tmp')).toBe('secrets');
+    expect(legacyEntryRoot('cc', 'lecture-answers-config.json.bak')).toBe('secrets');
   });
   it('routes CDS and CI names', () => {
     expect(legacyEntryRoot('cds', 'institution.json')).toBe('secrets');
@@ -178,6 +182,8 @@ describe('migrateLegacyAppHome: copy once', () => {
     // Secrets land in the local (non-roaming) secrets root, not in config.
     expect(existsSync(join(roots().secrets, 'canvas-config.json'))).toBe(true);
     expect(existsSync(join(roots().config, 'canvas-config.json'))).toBe(false);
+    expect(existsSync(join(roots().secrets, 'lecture-answers-config.json'))).toBe(true);
+    expect(existsSync(join(roots().config, 'lecture-answers-config.json'))).toBe(false);
     expect(existsSync(join(roots().data, 'modules', 'announcements', '1.1.0', 'announcements-1.1.0.mjs'))).toBe(true);
 
     // Legacy renamed, never deleted, contents intact.

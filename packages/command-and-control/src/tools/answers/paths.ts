@@ -1,12 +1,13 @@
 // packages/command-and-control/src/tools/answers/paths.ts
 
 import { join } from 'node:path';
-import { getCcHomePath } from '../../kb/config.js';
+import { getCcSecretsPath } from '../../kb/config.js';
 
 export const LECTURE_ANSWERS_CONFIG = 'lecture-answers-config.json';
 
 export function lectureAnswersConfigPath(): string {
-  return join(getCcHomePath(), LECTURE_ANSWERS_CONFIG);
+  // secrets-class (legacyEntryRoot): the file can carry voyageApiKey.
+  return join(getCcSecretsPath(), LECTURE_ANSWERS_CONFIG);
 }
 
 export function answersIndexRoot(courseDir: string): string {
