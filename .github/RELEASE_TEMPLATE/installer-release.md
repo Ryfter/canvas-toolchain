@@ -1,5 +1,19 @@
 # Canvas Toolchain Installer
 
+## What's new in v2.4.0
+
+**Windows now keeps your settings where Windows apps normally do, and each add-on module can have its own logins.**
+
+- **Cleaner folders on Windows.** Settings and saved logins used to live in hidden folders like `.command-and-control` in your user folder. On Windows they now live under `AppData`, where other apps keep theirs: settings in the roaming folder, saved logins in the local one so they don't follow you to other computers. **Mac and Linux are unchanged.**
+- **Your existing setup moves over by itself, safely.** The first time the new version starts it *copies* your old settings across. It never overwrites or deletes anything, and it only retires the old folder (renaming it, not deleting it) once everything is confirmed copied. If anything looks off it leaves the old folder in place and keeps using it. Nothing to do on your side.
+- **Add-on modules can have their own Canvas, Anthropic or Panopto login.** Until now every module shared one set. A module can now be given just the login it needs, and you can choose to share your existing one or give it a separate one. Modules you install from the catalog start with no access to your logins until you allow it. Ask Claude to set up module credentials.
+- **The health check covers the new pieces.** `doctor` now shows where each app keeps its settings, how the move went, and which modules have which logins. It shows what is present, never the secrets themselves.
+- **If something breaks on Windows,** the troubleshooting section in the README now covers the most common one: an AI app's command sandbox blocking the secure connection to Canvas.
+
+Nothing changes if you ignore all of this: your tools and workflows behave as before.
+
+Full diff: [v2.3.0...v2.4.0](https://github.com/Ryfter/canvas-toolchain/compare/v2.3.0...v2.4.0)
+
 ## What's new in v2.1.0
 
 **One product, one Releases page — and the update notice works again.**
