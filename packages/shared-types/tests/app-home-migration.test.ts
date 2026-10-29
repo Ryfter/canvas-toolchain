@@ -408,6 +408,17 @@ describe('migrateLegacyAppHome: staged switch', () => {
 });
 
 describe('migrateLegacyAppHome: concurrency', () => {
+  // A rejection nobody handles in time fails CI as an unhandled error; catch it here so the
+  // test itself says so (this is how a missing `await` in placeFile showed up on Windows).
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown): void => { unhandled.push(reason); };
+  beforeEach(() => { unhandled.length = 0; process.on('unhandledRejection', onUnhandled); });
+  afterEach(async () => {
+    await new Promise((r) => setTimeout(r, 20)); // let a late rejection surface
+    process.off('unhandledRejection', onUnhandled);
+    expect(unhandled).toEqual([]);
+  });
+
   it('concurrent runs are safe: one rename, every file intact, no leftovers', async () => {
     const files = seedLegacyCc();
     const results = await Promise.all([
