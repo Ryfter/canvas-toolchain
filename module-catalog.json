@@ -5,11 +5,11 @@
       "id": "announcements",
       "name": "Announcements Auditor",
       "description": "Find scheduled Canvas announcements whose fire dates are stale (typically after a course copy keeps last term's dates) and recreate them with corrected dates. Read-first; creation is confirm-gated; never deletes anything.",
-      "version": "1.1.0",
-      "minHostVersion": "2.1.0",
-      "artifactUrl": "https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.1.0/announcements-1.1.0.mjs",
-      "sha256": "821aae56e774b10c4ce643ca358052264e52d0db9491e8692370a461bb0aae35",
-      "sizeBytes": 9757,
+      "version": "1.2.0",
+      "minHostVersion": "2.4.0",
+      "artifactUrl": "https://raw.githubusercontent.com/Ryfter/canvas-toolchain/main/modules/announcements/1.2.0/announcements-1.2.0.mjs",
+      "sha256": "b4b13c7dd9b6a06662ff73f7b98ac804261100d4e1045f2c098c918ecf69dbcc",
+      "sizeBytes": 9690,
       "handles": ["announcements"]
     }
   ],

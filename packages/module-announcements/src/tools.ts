@@ -1,6 +1,7 @@
 import type { ModuleTool } from '@canvas-toolchain/module-contract';
 import { classifyAnnouncements, type TermWindow } from './audit.js';
-import { AnnouncementsClient, loadCanvasCreds, type CanvasClientOptions } from './canvas.js';
+import { AnnouncementsClient, type CanvasClientOptions } from './canvas.js';
+import { getCtx } from './ctx.js';
 
 export interface AuditArgs { courseId: number; termStart?: string; termEnd?: string }
 export interface RecreateArgs { courseId: number; announcementId: number; newDelayedPostAt: string; confirm?: boolean }
@@ -23,7 +24,7 @@ export async function handleAudit(args: AuditArgs, opts: CanvasClientOptions = {
       return { error: 'INVALID_TERM_WINDOW', message: `${name} is not a parseable ISO date: ${JSON.stringify(value)}.` };
     }
   }
-  const client = new AnnouncementsClient(loadCanvasCreds(), opts);
+  const client = new AnnouncementsClient(await getCtx().credentials.get('canvas'), opts);
   const rows = await client.listAnnouncements(args.courseId);
   const term: TermWindow = { termStart: args.termStart, termEnd: args.termEnd };
   const result = classifyAnnouncements(rows, Date.now(), term);
@@ -51,7 +52,7 @@ export async function handleRecreate(args: RecreateArgs, opts: CanvasClientOptio
         'Use e.g. "2026-08-25T09:00:00Z". Nothing was created.',
     };
   }
-  const client = new AnnouncementsClient(loadCanvasCreds(), opts);
+  const client = new AnnouncementsClient(await getCtx().credentials.get('canvas'), opts);
   const rows = await client.listAnnouncements(args.courseId);
   const original = rows.find((r) => r.id === args.announcementId);
   if (!original) {

@@ -1,21 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import type { AnnouncementRow } from './audit.js';
 
 export interface CanvasCreds { host: string; token: string }
 export interface CanvasClientOptions { fetchImpl?: typeof fetch }
-
-/** Same credential source + idiom as module-group-builder's canvas client. */
-export function loadCanvasCreds(): CanvasCreds {
-  const path = join(process.env.CC_HOME ?? join(homedir(), '.command-and-control'), 'canvas-config.json');
-  if (!existsSync(path)) throw new Error('CANVAS_NOT_CONFIGURED: Run setup_canvas with your Canvas host and token.');
-  let cfg: Partial<CanvasCreds>;
-  try { cfg = JSON.parse(readFileSync(path, 'utf-8')) as Partial<CanvasCreds>; }
-  catch { throw new Error('CANVAS_NOT_CONFIGURED: canvas-config.json is corrupt. Re-run setup_canvas.'); }
-  if (!cfg.host || !cfg.token) throw new Error('CANVAS_NOT_CONFIGURED: canvas-config.json missing host/token.');
-  return { host: cfg.host, token: cfg.token };
-}
 
 function parseNextLink(link: string | null): string | undefined {
   if (!link) return undefined;

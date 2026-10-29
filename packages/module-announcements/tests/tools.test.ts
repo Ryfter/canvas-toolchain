@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { announcementTools, handleAudit, handleRecreate } from '../src/tools.js';
 import announcementsModule from '../src/index.js';
 import { isCanvasToolchainModule } from '@canvas-toolchain/module-contract';
+import { resetCtxForTest } from '../src/ctx.js';
+import { fakeCtx } from './helpers/fake-ctx.js';
 
 const ROWS = [
   { id: 10, title: 'Week 1 kickoff', message: '<p>Hello</p>', posted_at: null, delayed_post_at: '2026-05-01T09:00:00Z' },
@@ -21,20 +23,42 @@ function fetchFor(routes: Record<string, unknown>): typeof fetch {
 }
 
 let home: string;
-beforeEach(() => {
+beforeEach(async () => {
   home = mkdtempSync(join(tmpdir(), 'ann-'));
-  process.env.CC_HOME = home;
-  mkdirSync(home, { recursive: true });
-  writeFileSync(join(home, 'canvas-config.json'),
-    JSON.stringify({ host: 'example.instructure.com', token: 'test-token' }));
+  await announcementsModule.init!(fakeCtx(home));
 });
-afterEach(() => { delete process.env.CC_HOME; rmSync(home, { recursive: true, force: true }); });
+afterEach(() => { resetCtxForTest(); rmSync(home, { recursive: true, force: true }); });
 
 describe('module contract', () => {
   it('default export satisfies the contract with both tools', () => {
     expect(isCanvasToolchainModule(announcementsModule)).toBe(true);
     expect(announcementsModule.id).toBe('announcements');
     expect(announcementTools.map((t) => t.schema.name)).toEqual(['audit_announcements', 'recreate_announcement']);
+  });
+});
+
+describe('contract v2', () => {
+  it('declares a required canvas credential and the 1.2.0 version', () => {
+    expect(announcementsModule.contractVersion).toBe(2);
+    expect(announcementsModule.version).toBe('1.2.0');
+    expect(announcementsModule.credentials).toEqual([expect.objectContaining({ kind: 'canvas', required: true })]);
+  });
+
+  it('tools fail with MODULE_NOT_INITIALIZED before init', async () => {
+    resetCtxForTest();
+    await expect(handleAudit({ courseId: 20244 }, { fetchImpl: fetchFor({}) })).rejects.toThrow(/MODULE_NOT_INITIALIZED/);
+  });
+
+  it('sends the host-provided credential to Canvas, not a file on disk', async () => {
+    await announcementsModule.init!(fakeCtx(home, { host: 'school.instructure.com', token: 'secret-tok' }));
+    const seen: string[] = [];
+    const f: typeof fetch = (async (url: string | URL, init?: RequestInit) => {
+      seen.push(String(url), String((init?.headers as Record<string, string>).Authorization));
+      return new Response('[]', { status: 200 });
+    }) as unknown as typeof fetch;
+    await handleAudit({ courseId: 20244 }, { fetchImpl: f });
+    expect(seen[0]).toContain('https://school.instructure.com/api/v1/courses/20244/discussion_topics');
+    expect(seen[1]).toBe('Bearer secret-tok');
   });
 });
 
