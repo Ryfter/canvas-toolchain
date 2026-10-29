@@ -1,6 +1,6 @@
 {
   "name": "canvas-toolchain",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Canvas Toolchain — course-refresh toolchain for Canvas LMS. Runs the unified MCP server; use from any MCP-capable AI client.",
   "license": "MIT",
   "type": "module",
@@ -25,6 +25,6 @@
     "directory": "packages/canvas-toolchain"
   },
   "dependencies": {
-    "@canvas-toolchain/command-and-control": "2.3.0"
+    "@canvas-toolchain/command-and-control": "2.4.0"
   }
 }
