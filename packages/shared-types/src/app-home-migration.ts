@@ -264,7 +264,9 @@ async function placeFile(src: string, target: string): Promise<Placed> {
       return 'copied';
     } catch (e) {
       const raced = await lstatOrNull(target);
-      if (raced) return judge(src, target, raced);
+      // `await`, not a bare return: the finally below awaits cleanup, and a rejection
+      // (the source vanished under a concurrent run) must have a handler by then.
+      if (raced) return await judge(src, target, raced);
       if (code(e) === 'EEXIST') throw e;
       // No hard-link support on this volume: check-then-rename fallback.
       await fsp.rename(tmp, target);
