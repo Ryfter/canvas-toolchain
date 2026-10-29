@@ -16,8 +16,8 @@ You never download a module by hand.
 
 Find scheduled Canvas announcements whose fire dates are stale (typically after a course copy keeps last term's dates) and recreate them with corrected dates. Read-first; creation is confirm-gated; never deletes anything.
 
-- **Current version:** 1.1.0
-- **Needs Canvas Toolchain:** v2.1.0 or newer
+- **Current version:** 1.2.0
+- **Needs Canvas Toolchain:** v2.4.0 or newer
 - **Install with:** `install_module({ moduleId: "announcements" })` — or just ask Claude for it by name
 
 ## Companion programs
