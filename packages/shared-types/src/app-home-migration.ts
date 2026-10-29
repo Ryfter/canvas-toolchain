@@ -12,7 +12,8 @@
  *  - No delete of user data: the legacy folder is renamed to
  *    `<legacy>.migrated-YYYYMMDD-HHmmss[-N]`, and only when every file is
  *    verified and there are no conflicts. The engine deletes only its own
- *    `.staging-*` folders and `.tmp-*` files.
+ *    `.staging-*` folders, `.tmp-*` files and the empty `<legacy>.migrating`
+ *    claim marker that makes the rename single-winner.
  *  - Commit point: when the config home does not exist yet, each root is
  *    built in a staging folder and renamed into place data -> secrets ->
  *    config. Creating the config home flips the resolver's upgrade-window
@@ -505,19 +506,53 @@ class Run {
   }
 
   async renameLegacy(at: Date): Promise<void> {
-    const base = `${this.legacy}.migrated-${stamp(at)}`;
-    for (let i = 1; i <= 100; i++) {
-      const name = i === 1 ? base : `${base}-${i}`;
-      if (await lstatOrNull(name)) continue;
+    // Single-winner claim. On Windows two runs can both "succeed" at renaming the
+    // same folder to the same name, so each run must first create an exclusive
+    // marker folder; only the run that creates it may rename. The marker is
+    // empty, owned by this run, and removed as soon as the rename is done.
+    const claim = `${this.legacy}.migrating`;
+    if (!(await this.claimRename(claim))) {
+      // Another run holds the claim: wait for it to finish, then leave the
+      // result (and the journal) to that run.
+      for (let i = 0; i < 60 && (await lstatOrNull(this.legacy)); i++) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      return;
+    }
+    try {
+      const base = `${this.legacy}.migrated-${stamp(at)}`;
+      for (let i = 1; i <= 100; i++) {
+        const name = i === 1 ? base : `${base}-${i}`;
+        if (await lstatOrNull(name)) continue;
+        try {
+          await fsp.rename(this.legacy, name);
+          this.j.legacyRenamedTo = name;
+          return;
+        } catch (e) {
+          if (await lstatOrNull(name)) continue; // lost a race for this name
+          return; // ENOENT (another run won) or a handle is open: partial, retried next boot
+        }
+      }
+    } finally {
+      await fsp.rmdir(claim).catch(() => undefined);
+    }
+  }
+
+  /** Create the exclusive claim marker. A marker left by a crashed run (older than
+   *  two minutes) is replaced once. Returns false when another run holds it. */
+  private async claimRename(claim: string): Promise<boolean> {
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        await fsp.rename(this.legacy, name);
-        this.j.legacyRenamedTo = name;
-        return;
+        await fsp.mkdir(claim);
+        return true;
       } catch (e) {
-        if (await lstatOrNull(name)) continue; // lost a race for this name
-        return; // ENOENT (another run won) or a handle is open: partial, retried next boot
+        if (code(e) !== 'EEXIST') return false;
+        const st = await lstatOrNull(claim);
+        if (!st || Date.now() - st.mtimeMs < 120_000) return false;
+        await fsp.rmdir(claim).catch(() => undefined);
       }
     }
+    return false;
   }
 
   async writeJournal(): Promise<void> {
