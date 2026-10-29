@@ -1,5 +1,14 @@
 # Canvas Toolchain Installer
 
+## What's new in v2.4.1
+
+**A small reliability and security update to 2.4.0. Nothing to do on your side.**
+
+- **Safer first start on Windows.** The one-time move of your settings to the new Windows folders could, if two copies of the toolchain started at the same instant, record the result wrongly or log a stray error. Your files were never at risk (the move only copies), but it now handles that case cleanly.
+- **A background library was updated** to clear a moderate-severity security notice, so the project's security checks are clean again.
+
+Full diff: [v2.4.0...v2.4.1](https://github.com/Ryfter/canvas-toolchain/compare/v2.4.0...v2.4.1)
+
 ## What's new in v2.4.0
 
 **Windows now keeps your settings where Windows apps normally do, and each add-on module can have its own logins.**
