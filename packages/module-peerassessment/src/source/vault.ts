@@ -5,8 +5,8 @@ import { loadVault } from '@canvas-toolchain/module-roster';
  * PeerAssessment builder turn a Canvas member into a PeopleSoft row for the ID columns.
  * Empty when the vault has never been committed.
  */
-export function buildVaultIndex(): Map<string, string> {
+export function buildVaultIndex(secretsDir: string): Map<string, string> {
   const idx = new Map<string, string>();
-  for (const r of loadVault()) idx.set(r.canvasId, r.studentNumber);
+  for (const r of loadVault(secretsDir)) idx.set(r.canvasId, r.studentNumber);
   return idx;
 }

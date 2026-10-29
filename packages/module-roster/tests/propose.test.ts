@@ -3,14 +3,13 @@ import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { proposeRoster } from '../src/propose.js';
-import { saveVault } from '../src/vault/store.js';
-import { vaultPath } from '../src/paths.js';
+import { saveVault, vaultPath } from '../src/vault/store.js';
 import type { CanvasUser, PeopleSoftRow } from '../src/types.js';
 import type { LlmClient } from '@canvas-toolchain/shared-llm';
 
 let home: string;
-beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'roster-propose-')); process.env.CC_HOME = home; });
-afterEach(() => { delete process.env.CC_HOME; rmSync(home, { recursive: true, force: true }); });
+beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'roster-propose-')); });
+afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
 const ps = (o: Partial<PeopleSoftRow>): PeopleSoftRow =>
   ({ studentNumber: '', email: '', userId: '', name: '', rawMajor: '', ...o });
@@ -22,9 +21,9 @@ const idLlm: LlmClient = { complete: async (_s, u) => {
 
 describe('proposeRoster', () => {
   it('matches, assigns pseudonyms, normalizes majors, and writes nothing', async () => {
-    saveVault([{ studentNumber: '100', canvasId: '900', pseudonym: 'SU26-001', firstSeenTerm: 'SU26' }]);
+    saveVault(home, [{ studentNumber: '100', canvasId: '900', pseudonym: 'SU26-001', firstSeenTerm: 'SU26' }]);
     const report = await proposeRoster({
-      term: 'FA26', courseId: '123',
+      term: 'FA26', courseId: '123', secretsDir: home,
       peopleSoft: [ps({ studentNumber: '100', name: 'Jane Doe', rawMajor: 'marketing' }),
                    ps({ studentNumber: '200', name: 'Bob Roe', rawMajor: 'accounting' })],
       canvasUsers: [cu({ canvasId: '900', sisUserId: '100', name: 'Jane Doe' }),
@@ -36,14 +35,14 @@ describe('proposeRoster', () => {
     expect(by('200')).toMatchObject({ pseudonym: 'FA26-001', returning: false });
     expect(report.llmUsed).toBe(true);
     // The proposal NEVER writes the roster, and the vault is only the pre-seeded one.
-    expect(existsSync(vaultPath())).toBe(true);          // pre-seeded, unchanged
+    expect(existsSync(vaultPath(home))).toBe(true);          // pre-seeded, unchanged
     expect(report.rows).toHaveLength(2);
   });
 
   it('surfaces collisions, ambiguity, and unmatched both directions', async () => {
-    saveVault([{ studentNumber: '100', canvasId: '900', pseudonym: 'SU26-001', firstSeenTerm: 'SU26' }]);
+    saveVault(home, [{ studentNumber: '100', canvasId: '900', pseudonym: 'SU26-001', firstSeenTerm: 'SU26' }]);
     const report = await proposeRoster({
-      term: 'FA26', courseId: '123',
+      term: 'FA26', courseId: '123', secretsDir: home,
       peopleSoft: [
         ps({ studentNumber: '100', name: 'Jane Doe' }),         // collision: now canvas 999
         ps({ studentNumber: 'z', name: 'Twin Name' }),          // ambiguous
@@ -65,7 +64,7 @@ describe('proposeRoster', () => {
 
   it('warns when no Canvas user carries a sis_user_id or login_id', async () => {
     const report = await proposeRoster({
-      term: 'FA26', courseId: '123',
+      term: 'FA26', courseId: '123', secretsDir: home,
       peopleSoft: [ps({ studentNumber: '100', email: 'a@x.edu', name: 'Jane Doe' })],
       canvasUsers: [cu({ canvasId: '900', email: 'a@x.edu', name: 'Jane Doe' })], // no sis/login
       llm: null, aliases: {},

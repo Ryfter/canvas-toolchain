@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadConfig, saveConfig, getCcHomePath } from '../../src/kb/config.js';
+import { loadConfig, saveConfig, getCcHomePath, getCcDataPath, getCcSecretsPath } from '../../src/kb/config.js';
 import { DEFAULT_CONFIG } from '../../src/types.js';
+import { readCanonicalCanvas } from '@canvas-toolchain/shared-types';
+import { setCoursesRoot } from '../../src/tools/set_courses_root.js';
+import { setupAnthropic, loadAnthropicConfig } from '../../src/tools/setup_anthropic.js';
+import { setupCanvas, loadCanvasConfig } from '../../src/tools/setup_canvas.js';
+import { isProviderConfigured } from '../../src/tools/set_active_llm_provider.js';
 
 let tmpHome: string;
 
@@ -91,5 +96,98 @@ describe('saveConfig storage hardening', () => {
     expect(statSync(configPath()).ino).not.toBe(before);
     expect(loadConfig().mode).toBe('advanced');
     expect(existsSync(`${configPath()}.tmp`)).toBe(false);
+  });
+});
+
+describe('config/data/secrets roots (#200, CT200-04a)', () => {
+  const win = {
+    platform: 'win32' as const,
+    env: { APPDATA: 'C:\\R', LOCALAPPDATA: 'C:\\L' },
+    homedir: 'C:\\Users\\p',
+    legacyExists: false,
+  };
+
+  it('CC_HOME override collapses all three roots to one folder', () => {
+    expect(getCcDataPath()).toBe(tmpHome);
+    expect(getCcSecretsPath()).toBe(tmpHome);
+    expect(getCcHomePath()).toBe(tmpHome);
+  });
+
+  it('on win32 the roots are split: config roaming, data local, secrets under local', () => {
+    expect(getCcHomePath(win)).toBe('C:\\R\\CanvasToolchain\\CommandAndControl');
+    expect(getCcDataPath(win)).toBe('C:\\L\\CanvasToolchain\\CommandAndControl');
+    expect(getCcSecretsPath(win)).toBe('C:\\L\\CanvasToolchain\\CommandAndControl\\secrets');
+  });
+
+  it('config.json (registry token) is saved under the secrets root', () => {
+    saveConfig(DEFAULT_CONFIG);
+    expect(existsSync(join(getCcSecretsPath(), 'config.json'))).toBe(true);
+  });
+});
+
+// CT200-04c: on Windows the three roots differ, so every secrets-class writer must
+// land in the exact folder its reader (and loadConfig) uses.
+describe('secrets-class tools agree with their readers on win32', () => {
+  const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  const KEYS = ['APPDATA', 'LOCALAPPDATA'];
+  const saved: Record<string, string | undefined> = {};
+  let fake: string;
+
+  beforeEach(() => {
+    delete process.env.CC_HOME; // use the platform default, not the override
+    fake = mkdtempSync(join(tmpdir(), 'cc-win-'));
+    for (const k of KEYS) saved[k] = process.env[k];
+    process.env.APPDATA = join(fake, 'Roaming');
+    process.env.LOCALAPPDATA = join(fake, 'Local');
+    // new config home present => the upgrade window never falls back to the real legacy folder
+    mkdirSync(join(fake, 'Roaming', 'CanvasToolchain', 'cc'), { recursive: true });
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+  });
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', realPlatform);
+    for (const k of KEYS) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }
+    rmSync(fake, { recursive: true, force: true });
+    // win32 path joins on a POSIX host yield backslash-named entries relative to the cwd; sweep them.
+    const stem = fake.replace(/\//g, '\\');
+    for (const name of readdirSync(process.cwd())) {
+      if (name.startsWith(stem)) rmSync(join(process.cwd(), name), { recursive: true, force: true });
+    }
+  });
+
+  it('roots really differ', () => {
+    expect(getCcSecretsPath()).not.toBe(getCcHomePath());
+  });
+
+  it('set_courses_root writes where loadConfig reads and reports that path', async () => {
+    const r = await setCoursesRoot({ coursesRoot: fake });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.configPath).toBe(join(getCcSecretsPath(), 'config.json'));
+    expect(existsSync(r.configPath)).toBe(true);
+    expect(loadConfig().coursesRoot).toBe(fake);
+  });
+
+  it('setup_anthropic writes where loadAnthropicConfig reads', async () => {
+    const r = await setupAnthropic({ apiKey: 'k', test: false });
+    expect(r.configured).toBe(true);
+    expect(existsSync(join(getCcSecretsPath(), 'anthropic-config.json'))).toBe(true);
+    expect(existsSync(join(getCcHomePath(), 'anthropic-config.json'))).toBe(false);
+    expect(loadAnthropicConfig().apiKey).toBe('k');
+    expect(isProviderConfigured('anthropic')).toBe(true);
+  });
+
+  it('setup_canvas writes where loadCanvasConfig and the canvas store read', async () => {
+    const r = await setupCanvas({ host: 'x.instructure.com', token: 't', test: false });
+    expect(r.configured).toBe(true);
+    expect(existsSync(join(getCcSecretsPath(), 'canvas-config.json'))).toBe(true);
+    expect(loadCanvasConfig().token).toBe('t');
+    expect(readCanonicalCanvas()?.token).toBe('t');
+  });
+
+  it('ollama/lmstudio provider configs stay in the config root', () => {
+    mkdirSync(getCcHomePath(), { recursive: true });
+    writeFileSync(join(getCcHomePath(), 'ollama-config.json'), '{}');
+    expect(isProviderConfigured('ollama')).toBe(true);
+    expect(isProviderConfigured('lmstudio')).toBe(false);
   });
 });

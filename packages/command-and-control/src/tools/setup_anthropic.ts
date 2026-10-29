@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getCcHomePath } from '../kb/config.js';
+import { getCcSecretsPath } from '../kb/config.js';
 import { autoActivateProvider, type AutoActivateResult } from './set_active_llm_provider.js';
 
 const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
@@ -32,7 +32,7 @@ export interface SetupAnthropicResult {
 }
 
 function getAnthropicConfigPath(): string {
-  return join(getCcHomePath(), 'anthropic-config.json');
+  return join(getCcSecretsPath(), 'anthropic-config.json');
 }
 
 export function loadAnthropicConfig(): AnthropicSetupConfig {
@@ -110,7 +110,7 @@ export async function setupAnthropic(input: SetupAnthropicInput): Promise<SetupA
     lastValidatedAt: test ? now : '',
   };
 
-  const home = getCcHomePath();
+  const home = getCcSecretsPath();
   mkdirSync(home, { recursive: true });
   const configPath = getAnthropicConfigPath();
   const tmpPath = `${configPath}.tmp`;

@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { CanvasClient, loadCanvasCreds } from '../../src/data/canvas-client.js';
-import { normalizeCanvasHost } from '../../../shared-types/src/canvas-host.js';
+import { CanvasClient } from '../../src/data/canvas-client.js';
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -61,50 +57,3 @@ describe('CanvasClient', () => {
   });
 });
 
-// #151 R7: this module reads ~/.command-and-control/canvas-config.json directly,
-// so it applies the same host rules as @canvas-toolchain/shared-types'
-// normalizeCanvasHost. That function IS the rule — these tests import it rather
-// than restating its table, so the two cannot drift apart.
-describe('loadCanvasCreds host normalization', () => {
-  const HOST_SPELLINGS = [
-    'https://example.instructure.com/',
-    'https://example.instructure.com/api/v1',
-    '  EXAMPLE.Instructure.COM.  ',
-    'exampleucanvas',
-    'canvas.exampleu.edu',
-  ];
-
-  let homes: string[] = [];
-  const savedCcHome = process.env.CC_HOME;
-
-  afterEach(() => {
-    for (const dir of homes) rmSync(dir, { recursive: true, force: true });
-    homes = [];
-    if (savedCcHome === undefined) delete process.env.CC_HOME;
-    else process.env.CC_HOME = savedCcHome;
-  });
-
-  function seed(host: string, token: string): void {
-    const home = mkdtempSync(join(tmpdir(), 'canvas-creds-'));
-    homes.push(home);
-    process.env.CC_HOME = home;
-    writeFileSync(join(home, 'canvas-config.json'), JSON.stringify({ host, token }), 'utf-8');
-  }
-
-  it('normalizes exactly as the shared implementation does', () => {
-    for (const saved of HOST_SPELLINGS) {
-      seed(saved, 'tok');
-      expect(loadCanvasCreds()).toEqual({ host: normalizeCanvasHost(saved), token: 'tok' });
-    }
-  });
-
-  it('still completes a bare school label', () => {
-    seed('exampleucanvas', 'tok');
-    expect(loadCanvasCreds().host).toBe('exampleucanvas.instructure.com');
-  });
-
-  it('throws rather than building a request against an unusable host', () => {
-    seed('   ', 'tok');
-    expect(() => loadCanvasCreds()).toThrow(/CANVAS_NOT_CONFIGURED/);
-  });
-});

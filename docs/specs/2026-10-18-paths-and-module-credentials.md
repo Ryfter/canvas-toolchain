@@ -421,6 +421,7 @@ Legacy-folder cleanup is **left to the professor**. The doctor says where the `.
 4. **Install dir on Windows:** leave `~/canvas-toolchain` (recommended for this round) or move to `%LOCALAPPDATA%\Programs\CanvasToolchain` in a separate issue?
 5. **Release vehicle:** which version tag carries this (it is unreleased on top of the unreleased v2.2.0 line)? Announcements 1.2.0's `minHostVersion` depends on it.
 6. **Legacy-folder naming:** is `.command-and-control.migrated-YYYYMMDD-HHmmss` (with a `-2`, `-3` collision suffix, §5.1) acceptable, or would you rather leave the legacy folder untouched and rely on the doctor? The second option is safer for data, but old artifacts keep reading a stale token.
+7. **Absolute paths stored inside config files (found by CT200-03).** Some config files record absolute paths, for example Curriculum Intelligence's `config.json` `courseRoot`, which defaults to `~/.curriculum-intelligence/courses/...`. After the migration renames the legacy folder to `.migrated-<stamp>`, such a stored path no longer exists. **Recommendation (A): remap on read.** When a stored absolute path falls under the legacy app folder (or its `.migrated-*` rename), the reader maps it to the equivalent path under the new root. No config file is rewritten and the original stays intact. Alternatives: (B) rewrite the fields during migration (riskier: it edits file contents), (C) never rename the legacy folder (Q6's second option; safe for data, but old artifacts keep reading stale tokens). **Needed before CT200-07 turns the migration on.**
 
 ## 10. Risks
 

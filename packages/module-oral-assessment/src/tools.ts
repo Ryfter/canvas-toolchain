@@ -1,5 +1,6 @@
 import type { ModuleTool } from '@canvas-toolchain/module-contract';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { getModuleCtx } from './ctx.js';
 import { designOralAssessment, type DesignOralAssessmentInput } from './design.js';
 
 const text = (s: string): CallToolResult => ({ content: [{ type: 'text', text: s }] });
@@ -34,6 +35,7 @@ const designTool: ModuleTool = {
     },
   },
   handler: async (args) => {
+    getModuleCtx(); // MODULE_NOT_INITIALIZED before init
     const result = await designOralAssessment(args as DesignOralAssessmentInput);
     return text(JSON.stringify(result, null, 2));
   },

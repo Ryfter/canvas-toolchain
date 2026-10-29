@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { getCcHomePath } from '../kb/config.js';
+import { getCcDataPath } from '../kb/config.js';
 
 export const REGISTRY_SCHEMA_VERSION = 1 as const;
 
@@ -81,7 +81,8 @@ const segmentPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 const versionPattern = /^[a-zA-Z0-9][a-zA-Z0-9._+-]*$/;
 
 export function getRegistryRootPath(): string {
-  return join(getCcHomePath(), 'registry');
+  // data-class (legacyEntryRoot): installed registry resources.
+  return join(getCcDataPath(), 'registry');
 }
 
 export function getResourceDirectory(kind: ResourceKind, id: string, version: string): string {

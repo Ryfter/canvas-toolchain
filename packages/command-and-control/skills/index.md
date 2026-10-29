@@ -1,8 +1,8 @@
 ---
 id: "index"
 kind: "index"
-description: "Full catalog: one line per operation (91 total), grouped by section. To act, start from moc/<intent tool>.md (e.g. moc/ct_build.md), then open ops/<id>.md for the one you picked."
-ops: 91
+description: "Full catalog: one line per operation (92 total), grouped by section. To act, start from moc/<intent tool>.md (e.g. moc/ct_build.md), then open ops/<id>.md for the one you picked."
+ops: 92
 related: [modules, registry, transcripts, research, accessibility, snapshots, design, admin]
 ---
 # Operation index
@@ -15,7 +15,7 @@ Sections: [[modules]] [[registry]] [[transcripts]] [[research]] [[accessibility]
 - [[list_modules]] — List all known plug-in modules with their id, name, enabled state, active provider, and the provider/tool types they handle.
 - [[browse_module_catalog]] — Module catalog: exists / installed / enabled / update state and installer-GUI requests, plus companion programs (e.g. Canvas Backup). Read-only; clearPending:true discards stale requests.
 - [[install_module]] — Install/upgrade a catalog module. Two-call gate: first call previews name/version/size/source/sha256 (no side effects); re-call with confirm:true to verify the sha256 and install. Needs a reconnect.
-- [[uninstall_module]] — Remove a channel-installed module (artifact + record) and disable it. Bundled modules cannot be uninstalled — disable those with set_module_enabled.
+- [[uninstall_module]] — Remove a channel-installed module and disable it. With stored credentials, confirm: true is required and they are deleted too. Bundled modules: use set_module_enabled.
 - [[discover_tools]] — Discover institutional tools: scans Canvas (account → course → self-report), matches findings to modules, and returns detected tools, enable suggestions, unmatched tools, and a pick-list. Read-only.
 
 ## registry — Resource registry: search, install, uninstall, lockfiles.
@@ -90,6 +90,7 @@ Sections: [[modules]] [[registry]] [[transcripts]] [[research]] [[accessibility]
 - [[setup_ollama]] — Configure Ollama as the local generation LLM. Discovery mode (no model) returns the recommended-models markdown. Commit mode (with model) validates the model is pulled and writes ollama-config.json.
 - [[setup_lmstudio]] — Configure LM Studio (OpenAI-compatible local server) as the generation LLM. Discovery mode lists loaded models from the running server; commit mode validates the model and writes lmstudio-config.json.
 - [[setup_llm_provider]] — Report the active and configured LLM providers, best first (LM Studio, Ollama, Anthropic); with no arguments it also probes the local servers. Pass provider to activate a configured one.
+- [[setup_module_credentials]] — Give one module its own Canvas/Anthropic/Panopto credential or let it use your main one: op set (validates first), test, share, unshare, clear (two-call confirm). Reports source only.
 - [[set_active_llm_provider]] — Set the active generation LLM provider. Must be lmstudio, ollama or anthropic. Refuses to set a provider whose config file is absent.
 - [[save_institution_profile]] — Write/merge the institution profile (master tool library) plus optional per-class deltas. Accretive — new tools added, existing preserved. This profile is the payload for usage feedback.
 - [[submit_usage_feedback]] — Submit an anonymized inventory of your institution's tools as a GitHub issue so the author can prioritize integrations. Opt-in two-call gate: review, then confirm:true via gh. named:true adds ids.

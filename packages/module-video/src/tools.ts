@@ -1,12 +1,19 @@
-import type { ModuleTool } from '@canvas-toolchain/module-contract';
+import { join } from 'node:path';
+import { requireCtx, type ModuleContext, type ModuleTool } from '@canvas-toolchain/module-contract';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { loadPanoptoConfig, setupPanopto } from './panopto/setup.js';
+import { setupPanopto } from './panopto/setup.js';
 import { setupPanoptoVocab } from './panopto/vocab.js';
 import {
   searchPanoptoVideos,
   embedPanoptoVideo,
   fetchPanoptoCaptions,
 } from './panopto/client.js';
+
+/** Set by the host through `init`; every handler reads it via requireCtx (MODULE_NOT_INITIALIZED before init). */
+let moduleCtx: ModuleContext | undefined;
+export function setVideoContext(ctx: ModuleContext | undefined): void {
+  moduleCtx = ctx;
+}
 
 const text = (s: string): CallToolResult => ({ content: [{ type: 'text', text: s }] });
 
@@ -25,7 +32,7 @@ const videoSearch: ModuleTool = {
   },
   handler: async (args) => {
     const input = args as { query?: string; limit?: number };
-    return text(await searchPanoptoVideos(input, loadPanoptoConfig()));
+    return text(await searchPanoptoVideos(input, await requireCtx(moduleCtx).credentials.get('panopto')));
   },
 };
 
@@ -46,7 +53,7 @@ const videoEmbed: ModuleTool = {
   },
   handler: async (args) => {
     const input = args as { videoId: string; placement: 'inline' | 'full-page'; title?: string };
-    const res = await embedPanoptoVideo(input, loadPanoptoConfig());
+    const res = await embedPanoptoVideo(input, await requireCtx(moduleCtx).credentials.get('panopto'));
     return text(res.html);
   },
 };
@@ -67,7 +74,14 @@ const videoFetchCaptions: ModuleTool = {
   },
   handler: async (args) => {
     const input = args as { videoId: string; title?: string };
-    return text(await fetchPanoptoCaptions(input, loadPanoptoConfig()));
+    const ctx = requireCtx(moduleCtx);
+    return text(
+      await fetchPanoptoCaptions(
+        input,
+        await ctx.credentials.get('panopto'),
+        join(ctx.paths.designStudioData, 'transcripts'),
+      ),
+    );
   },
 };
 
@@ -89,7 +103,8 @@ const setupPanoptoTool: ModuleTool = {
     },
   },
   handler: async (args) => {
-    const res = await setupPanopto(args as Parameters<typeof setupPanopto>[0]);
+    const ctx = requireCtx(moduleCtx);
+    const res = await setupPanopto(args as Parameters<typeof setupPanopto>[0], ctx.paths.secrets);
     return text(JSON.stringify(res, null, 2));
   },
 };
@@ -111,7 +126,8 @@ const setupPanoptoVocabTool: ModuleTool = {
     },
   },
   handler: async (args) => {
-    const res = setupPanoptoVocab(args as Parameters<typeof setupPanoptoVocab>[0]);
+    const ctx = requireCtx(moduleCtx);
+    const res = setupPanoptoVocab(args as Parameters<typeof setupPanoptoVocab>[0], ctx.paths.config);
     return text(JSON.stringify(res, null, 2));
   },
 };

@@ -10,11 +10,7 @@ import (
 // reads and merges the module manifest there; it writes no credentials — those
 // are collected in the professor's first chat (ct_setup).
 func CcHomePath() string {
-	if v := os.Getenv("CC_HOME"); v != "" {
-		return v
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".command-and-control")
+	return ResolveAppPaths("cc", AppPathEnv{}).Config
 }
 
 func atomicWriteJSON(path string, v any, mode os.FileMode) error {

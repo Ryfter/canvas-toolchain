@@ -1,4 +1,5 @@
 import { readSetupState } from './read_state.js';
+import { ALL_APP_HOMES, bootAppHomes } from './app_home_boot.js';
 import { PREFERRED_PROVIDER_ORDER } from '../tools/set_active_llm_provider.js';
 import type {
   ActiveProvider,
@@ -21,7 +22,9 @@ const ALL_CHECKS: DoctorCheckId[] = [
   'transcripts.source',
   'backup.sidecar',
   'modules.pending',
+  'modules.credentials',
   'hosts.wiring',
+  'paths.homes',
 ];
 
 /**
@@ -110,26 +113,31 @@ function filePermissionsCheck(state: SetupState): DoctorCheck {
       summary: 'POSIX file permissions do not apply on Windows.',
     };
   }
-  if (state.secretBearingFiles.length === 0) {
+  const moduleSecretFiles = state.modules.credentials.files.filter((f) => f.holdsSecret);
+  if (state.secretBearingFiles.length === 0 && moduleSecretFiles.length === 0) {
     return {
       id: 'security.file_permissions',
       status: 'ok',
       summary: 'No secret-bearing config files on disk yet.',
     };
   }
-  const loose = state.secretBearingFiles.filter((key) => state.files[key].permissionsOk === false);
+  const loose = [
+    ...state.secretBearingFiles.filter((key) => state.files[key].permissionsOk === false)
+      .map((key) => state.files[key].path),
+    ...moduleSecretFiles.filter((f) => f.health.permissionsOk === false).map((f) => f.health.path),
+  ];
   if (loose.length > 0) {
     return {
       id: 'security.file_permissions',
       status: 'warn',
       summary: `${loose.length} config file(s) holding a secret are readable by other users.`,
-      detail: loose.map((key) => state.files[key].path),
+      detail: loose,
       fix: {
         tool: 'ct_setup',
         action: 'canvas',
         hint:
           'Restrict each file to your account (chmod 600), or re-run the ct_setup action that ' +
-          'wrote it (canvas, anthropic, lecture_answers) to rewrite it with 0600 permissions.',
+          'wrote it (canvas, anthropic, lecture_answers, module_credentials) to rewrite it with 0600 permissions.',
       },
     };
   }
@@ -228,8 +236,8 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
     action: 'canvas',
     hint:
       'Re-run ct_setup action canvas (or restart Command & Control) to reconcile ' +
-      '~/.command-and-control/canvas-config.json with Canvas Design Studio\'s ' +
-      '~/.canvas-design-mcp/institution.json.',
+      `${state.files['canvas-config'].path} with Canvas Design Studio's ` +
+      `${state.files['institution-config'].path}.`,
   };
 
   // Neither store names a Canvas host: nothing to reconcile, even when one file
@@ -579,6 +587,68 @@ function modulesCheck(state: SetupState): DoctorCheck {
   };
 }
 
+const KIND_LABEL: Record<string, string> = { canvas: 'Canvas', anthropic: 'Anthropic', panopto: 'Panopto' };
+const CREDENTIAL_STATUS_TEXT: Record<string, string> = {
+  module: 'its own saved credential',
+  shared: 'using the shared credential',
+  'share-denied': 'not allowed to use the shared credential',
+  incomplete: 'saved credential is incomplete',
+  none: 'no credential',
+};
+
+/**
+ * Which credential each loaded module will actually use (#201). Presence and
+ * outcome only: a row names a module and a kind, never a value.
+ */
+function moduleCredentialsCheck(state: SetupState): DoctorCheck {
+  const c = state.modules.credentials;
+  const fix = {
+    tool: 'ct_setup' as const,
+    action: 'module_credentials',
+    hint:
+      'Run ct_setup action module_credentials with the module, the kind, and op set (save its own), ' +
+      'share (let it use your shared connection), or test.',
+  };
+  const detail: string[] = c.rows.map((r) =>
+    `${r.moduleId} / ${KIND_LABEL[r.kind]} (${r.required ? 'required' : 'optional'}): ${CREDENTIAL_STATUS_TEXT[r.status]}`);
+  const shared = [...new Set(c.rows.filter((r) => r.status === 'shared').map((r) => r.moduleId))];
+  if (shared.length > 0) detail.push(`Using the shared credential: ${shared.join(', ')}.`);
+  for (const m of c.legacy) {
+    detail.push(`${m.id}: legacy (shared files, Windows may need a module update)`);
+  }
+  detail.push(
+    `Other credential stores: Panopto setup ${c.stores.panoptoConfig ? 'present' : 'absent'}; ` +
+      `module-credentials folder ${c.stores.moduleCredentialsDir ? 'present' : 'absent'}; ` +
+      `roster-vault ${c.stores.rosterVault ? 'present' : 'absent'}.`,
+  );
+
+  if (c.unavailable) {
+    return {
+      id: 'modules.credentials', status: 'warn',
+      summary: 'The enabled modules could not be loaded, so their credentials were not checked.',
+      detail, fix,
+    };
+  }
+  const blocked = c.rows.filter((r) => r.required && r.status !== 'module' && r.status !== 'shared');
+  if (blocked.length > 0) {
+    return {
+      id: 'modules.credentials', status: 'warn',
+      summary:
+        `${blocked.length} required module credential(s) are not usable: ` +
+        `${blocked.map((r) => `${r.moduleId} (${KIND_LABEL[r.kind]}, ${r.status})`).join(', ')}.`,
+      detail, fix,
+    };
+  }
+  const total = c.rows.length + c.legacy.length;
+  return {
+    id: 'modules.credentials', status: 'ok',
+    summary: total === 0
+      ? 'No enabled module declares a credential.'
+      : `Module credentials look usable (${c.rows.length} declared, ${shared.length} module(s) on the shared credential, ${c.legacy.length} legacy).`,
+    detail,
+  };
+}
+
 /**
  * Whether the AI client the professor is talking through can reach the
  * toolchain. It is the one check whose fix is not a tool call — wiring a host is
@@ -639,6 +709,52 @@ function hostsWiringCheck(state: SetupState): DoctorCheck {
   };
 }
 
+/**
+ * Where each app keeps its settings (#200): what decided the folder, how the
+ * Windows migration last went, whether the old folder is still around, and a
+ * warning for a folder on a shared drive. Directory paths and statuses only.
+ */
+function pathsHomesCheck(state: SetupState): DoctorCheck {
+  const homes = state.appHomes;
+  const detail = homes.flatMap((h) => [
+    `${h.label}: ${h.config} (${h.source === 'env' ? 'set by environment override' : 'default location'}; ` +
+      `migration: ${h.migration}; old folder ${h.legacyPresent ? 'still present' : 'not present'})`,
+    ...(h.secrets !== h.config ? [`${h.label} credentials: ${h.secrets}`] : []),
+  ]);
+  const outside = homes.filter((h) => h.outsideProfile);
+  if (outside.length > 0) {
+    return {
+      id: 'paths.homes',
+      status: 'warn',
+      summary:
+        `${outside.map((h) => h.label).join(', ')} keep settings outside your user profile ` +
+        '(a network or shared drive). Credentials stored there may be readable by others.',
+      detail: [
+        ...detail,
+        'To fix: point the CC_HOME, CANVAS_DESIGN_HOME or CURRICULUM_INTELLIGENCE_HOME override at a ' +
+          'folder on your own computer, or remove it to use the default location.',
+      ],
+    };
+  }
+  const bad = homes.filter((h) => h.migration === 'failed' || h.migration === 'partial');
+  if (bad.length > 0) {
+    return {
+      id: 'paths.homes',
+      status: 'warn',
+      summary:
+        `Moving settings to the new folder did not finish for ${bad.map((h) => h.label).join(', ')}; ` +
+        'the old folder is still used and nothing was lost.',
+      detail,
+    };
+  }
+  return {
+    id: 'paths.homes',
+    status: 'ok',
+    summary: `Settings folders resolved for ${homes.length} apps.`,
+    detail,
+  };
+}
+
 /** Apply a journey's blockers to warnings, so an explicit ask is answered plainly. */
 function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): DoctorCheck[] {
   const blockers = JOURNEY_BLOCKERS[journey];
@@ -654,6 +770,7 @@ function escalateForJourney(checks: DoctorCheck[], journey: SetupJourney): Docto
  * and the exact operation that fixes each item.
  */
 export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorReport> {
+  if (!opts.state) await bootAppHomes(ALL_APP_HOMES);
   const journey = opts.journey ?? 'full';
   const state = opts.state ??
     (await readSetupState({ probe: opts.probe === true, hosts: opts.hosts !== false }));
@@ -668,7 +785,9 @@ export async function runDoctor(opts: RunDoctorOptions = {}): Promise<DoctorRepo
     transcriptCheck(state),
     backupCheck(state),
     modulesCheck(state),
+    moduleCredentialsCheck(state),
     hostsWiringCheck(state),
+    pathsHomesCheck(state),
   ], journey);
 
   const considered = new Set(JOURNEY_CHECKS[journey]);

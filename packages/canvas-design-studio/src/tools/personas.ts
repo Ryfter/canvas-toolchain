@@ -1,8 +1,10 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { cdsConfigHome } from '@canvas-toolchain/shared-types';
 import { join, dirname } from 'node:path';
 
-export const PERSONAS_PATH = join(homedir(), '.canvas-design-mcp', 'student-personas.md');
+export function personasPath(): string {
+  return join(cdsConfigHome(), 'student-personas.md');
+}
 
 export const PERSONAS_TEMPLATE = '# Student Personas\n\nNo personas generated yet. Call generate_student_personas to create a set.\n';
 
@@ -465,23 +467,23 @@ function buildPersona(index: number): string {
 
 export function generateStudentPersonas(
   input: GenerateStudentPersonasInput,
-  personasPath = PERSONAS_PATH,
+  filePath = personasPath(),
 ): string {
   const count = Math.min(20, Math.max(1, input.count ?? 3));
   const date = new Date().toISOString().slice(0, 10);
   const personas = Array.from({ length: count }, (_, i) => buildPersona(i + 1));
   const content = `# Student Personas\n\nGenerated: ${date} | Count: ${count}\n\n${personas.join('\n\n')}\n`;
-  ensureDir(personasPath);
-  writeFileSync(personasPath, content, 'utf-8');
-  return `✓ Generated ${count} student persona${count === 1 ? '' : 's'} and saved to ${personasPath}\n\n${content}`;
+  ensureDir(filePath);
+  writeFileSync(filePath, content, 'utf-8');
+  return `✓ Generated ${count} student persona${count === 1 ? '' : 's'} and saved to ${filePath}\n\n${content}`;
 }
 
-export function getStudentPersonas(personasPath = PERSONAS_PATH): GetStudentPersonasResult {
-  if (!existsSync(personasPath)) {
+export function getStudentPersonas(filePath = personasPath()): GetStudentPersonasResult {
+  if (!existsSync(filePath)) {
     return { content: PERSONAS_TEMPLATE, exists: false };
   }
   try {
-    return { content: readFileSync(personasPath, 'utf-8'), exists: true };
+    return { content: readFileSync(filePath, 'utf-8'), exists: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Cannot read student personas file: ${message}. Call generate_student_personas to rebuild.`);

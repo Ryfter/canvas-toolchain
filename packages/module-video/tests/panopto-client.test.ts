@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -213,7 +213,7 @@ describe('fetchPanoptoCaptions', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
 
   it('returns API_NOT_CONFIGURED when no credentials', async () => {
-    const result = await fetchPanoptoCaptions({ videoId: VIDEO_ID, title: TITLE }, CFG_NO_API);
+    const result = await fetchPanoptoCaptions({ videoId: VIDEO_ID, title: TITLE }, CFG_NO_API, tmpdir());
     expect(result).toContain('API_NOT_CONFIGURED');
   });
 
@@ -233,10 +233,12 @@ describe('fetchPanoptoCaptions', () => {
         text: async () => 'WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nHello students.\n\n00:00:05.000 --> 00:00:08.000\nWelcome to Tableau.\n',
       } as Response);
 
-    const result = await fetchPanoptoCaptions({ videoId: VIDEO_ID, title: TITLE }, CFG_API);
-    expect(result).toContain('transcripts');
+    const dir = join(mkdtempSync(join(tmpdir(), 'panopto-cap-')), 'transcripts');
+    const result = await fetchPanoptoCaptions({ videoId: VIDEO_ID, title: TITLE }, CFG_API, dir);
+    expect(result).toContain(dir);
     expect(result).toContain('.md');
     expect(result).toContain('Hello students.');
+    expect(readdirSync(dir).some((f) => f.endsWith('.md'))).toBe(true);
   });
 });
 

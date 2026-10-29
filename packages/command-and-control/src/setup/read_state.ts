@@ -1,11 +1,14 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { homedir, platform } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, win32 } from 'node:path';
 import {
+  MIGRATION_JOURNAL_FILE, appPaths, cdsSecretsHome, legacyAppHome, legacyEntryRoot,
   normalizeCanvasHost, readCanvasStoreJournal,
+  MODULE_CREDENTIALS_DIRNAME, moduleCredentialPresence, resolveModuleCredential,
+  type AppId,
 } from '@canvas-toolchain/shared-types';
 import { assertEndpointAllowed } from '@canvas-toolchain/shared-llm';
-import { getCcHomePath, loadConfig } from '../kb/config.js';
+import { loadConfig } from '../kb/config.js';
 import { loadCanvasConfig } from '../tools/setup_canvas.js';
 import { loadAnthropicConfig } from '../tools/setup_anthropic.js';
 import { loadOllamaConfig } from '../tools/setup_ollama.js';
@@ -15,15 +18,21 @@ import { loadTranscriptConfig } from '../tools/setup_transcript_source.js';
 import { loadLectureAnswersConfig } from '../tools/answers/config.js';
 import { lectureAnswersConfigPath } from '../tools/answers/paths.js';
 import { getModulesManifestPath, loadModuleManifest } from '../modules/manifest.js';
-import { knownModuleIds } from '../modules/registry.js';
+import { KNOWN_MODULES, knownModuleIds, loadInstalledArtifacts } from '../modules/registry.js';
+import { compareVersions } from '../update/check.js';
+import { isCanvasToolchainModule, type ModuleManifest } from '@canvas-toolchain/module-contract';
 import { loadInstalledModules } from '../channel/installed.js';
 import { loadPendingRequests } from '../channel/pending.js';
 import { managedCanvasBackupConfigExists } from '../passthrough/canvas_backup_config.js';
 import { isCanvasBackupConfigured } from '../passthrough/downloader_tools.js';
 import { detectHostWiring } from './hosts.js';
 import type {
+  AppHomeState,
   CanvasStoreMigrationRecord,
   ConfigFileKey,
+  LoadedModuleDeclaration,
+  ModuleCredentialRow,
+  ModuleCredentialsState,
   ProbeResult,
   ReadSetupStateOptions,
   SecretFileHealth,
@@ -36,24 +45,93 @@ import type {
  * all write into the same CC home this reads.
  */
 function filePaths(): Record<ConfigFileKey, string> {
-  const ccHome = getCcHomePath();
+  const cc = appPaths('cc');
+  // Classified by the same table the migration engine uses (#200): a
+  // secrets-class file lives in the secrets root (local, non-roaming on
+  // Windows), a settings file in the config root. Reading everything from the
+  // config root told a connected Windows professor Canvas was not connected.
+  const ccFile = (name: string): string => join(cc[legacyEntryRoot('cc', name)], name);
   return {
-    'cc-config': join(ccHome, 'config.json'),
-    'canvas-config': join(ccHome, 'canvas-config.json'),
+    'cc-config': ccFile('config.json'),
+    'canvas-config': ccFile('canvas-config.json'),
     // Canvas Design Studio's own home, the same rule its config.ts and C&C's
     // kb-bridge use. The two Canvas stores are the split this module reports on.
-    'institution-config': join(
-      process.env.CANVAS_DESIGN_HOME ?? join(homedir(), '.canvas-design-mcp'),
-      'institution.json',
-    ),
-    'anthropic-config': join(ccHome, 'anthropic-config.json'),
-    'ollama-config': join(ccHome, 'ollama-config.json'),
-    'lmstudio-config': join(ccHome, 'lmstudio-config.json'),
-    'llm-provider': join(ccHome, 'llm-provider.json'),
-    'transcript-config': join(ccHome, 'transcript-config.json'),
+    'institution-config': join(cdsSecretsHome(), 'institution.json'),
+    'anthropic-config': ccFile('anthropic-config.json'),
+    'ollama-config': ccFile('ollama-config.json'),
+    'lmstudio-config': ccFile('lmstudio-config.json'),
+    'llm-provider': ccFile('llm-provider.json'),
+    'transcript-config': ccFile('transcript-config.json'),
     'lecture-answers-config': lectureAnswersConfigPath(),
     'modules-manifest': getModulesManifestPath(),
   };
+}
+
+const APP_LABELS: Record<AppId, string> = {
+  cc: 'Command & Control',
+  cds: 'Canvas Design Studio',
+  ci: 'Curriculum Intelligence',
+};
+
+const JOURNAL_OUTCOMES = new Set(['migrated', 'partial', 'nothing-to-do', 'failed']);
+
+/** The migration journal's outcome. Missing is `nothing-to-do`; garbage is `unreadable`. */
+function readMigrationOutcome(configRoot: string): AppHomeState['migration'] {
+  const file = join(configRoot, MIGRATION_JOURNAL_FILE);
+  try {
+    if (!existsSync(file)) return 'nothing-to-do';
+    const outcome = (JSON.parse(readFileSync(file, 'utf-8')) as { outcome?: unknown } | null)?.outcome;
+    return typeof outcome === 'string' && JOURNAL_OUTCOMES.has(outcome)
+      ? (outcome as 'migrated' | 'partial' | 'nothing-to-do' | 'failed')
+      : 'unreadable';
+  } catch {
+    return 'unreadable';
+  }
+}
+
+/** True when `target` is a UNC path or sits outside `profile` (Windows semantics). */
+function outsideWindowsProfile(target: string, profile: string): boolean {
+  const norm = (v: string): string => win32.normalize(v).replace(/[\\/]+$/, '').toLowerCase();
+  const t = norm(target);
+  if (t.startsWith('\\\\')) return true;
+  const p = norm(profile);
+  return t !== p && !t.startsWith(`${p}\\`);
+}
+
+/** Home-relative display form (`~/.x`), like the host wiring paths: a report is
+ *  pasted into chats, so it should not carry the OS account name. */
+function tildify(p: string, home: string): string {
+  const sep = process.platform === 'win32' ? '\\' : '/';
+  const h = home.replace(/[\\/]+$/, '');
+  return h && p.startsWith(h + sep) ? `~${p.slice(h.length)}` : p;
+}
+
+function readAppHomes(): AppHomeState[] {
+  const onWindows = process.platform === 'win32';
+  const home = homedir();
+  return (['cc', 'cds', 'ci'] as const).map((app) => {
+    const paths = appPaths(app);
+    let legacyPresent = false;
+    try {
+      const legacy = legacyAppHome(app);
+      legacyPresent = legacy !== paths.config && existsSync(legacy);
+    } catch {
+      legacyPresent = false;
+    }
+    const outsideProfile = onWindows &&
+      [paths.config, paths.data, paths.secrets].some((r) => outsideWindowsProfile(r, homedir()));
+    return {
+      app,
+      label: APP_LABELS[app],
+      source: paths.source,
+      config: tildify(paths.config, home),
+      data: tildify(paths.data, home),
+      secrets: tildify(paths.secrets, home),
+      migration: readMigrationOutcome(paths.config),
+      legacyPresent,
+      outsideProfile,
+    };
+  });
 }
 
 /** Presence, JSON validity, and POSIX permissions. Never the file body. */
@@ -79,7 +157,7 @@ function inspectFile(path: string): SecretFileHealth {
 
   // Windows reports synthetic mode bits, so a permissions verdict there would be
   // noise. Null means "not applicable", which the doctor reports as such.
-  const isPosix = platform() !== 'win32';
+  const isPosix = process.platform !== 'win32';
   return {
     path,
     present: true,
@@ -142,6 +220,96 @@ function readRawJson(path: string): Record<string, unknown> | undefined {
 
 function nonEmpty(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+/** Mirrors the host's loader: enabled bundled modules, then installed artifacts, semver-newer wins. */
+async function defaultLoadedModules(manifest: ModuleManifest): Promise<LoadedModuleDeclaration[]> {
+  const winners = new Map<string, { mod: LoadedModuleDeclaration & { version: string }; }>();
+  for (const [id, entry] of Object.entries(manifest.modules)) {
+    const loader = KNOWN_MODULES[id];
+    if (!entry?.enabled || !loader) continue;
+    try {
+      const mod = await loader();
+      if (isCanvasToolchainModule(mod)) winners.set(id, { mod: { id, origin: 'bundled', version: mod.version, contractVersion: mod.contractVersion, credentials: mod.credentials } });
+    } catch { /* fail-soft, like the host */ }
+  }
+  const installed = await loadInstalledArtifacts(manifest);
+  for (const [id, mod] of installed) {
+    const bundled = winners.get(id)?.mod;
+    if (bundled && compareVersions(mod.version, bundled.version) <= 0) continue;
+    winners.set(id, { mod: { id, origin: 'channel', version: mod.version, contractVersion: mod.contractVersion, credentials: mod.credentials } });
+  }
+  return [...winners.values()].map(({ mod: { version: _v, ...rest } }) => rest);
+}
+
+const MODULE_FILE_ID = /^([a-z0-9][a-z0-9-]*)\.json$/;
+
+/**
+ * Per-module credential status (#201). Resolution is asked of the shared
+ * resolver, but only the outcome (`source` / `missing`) is kept, so no value
+ * can reach the report. The same goes for the stores no module row covers.
+ */
+async function readModuleCredentials(
+  manifest: ModuleManifest,
+  load: ((m: ModuleManifest) => Promise<LoadedModuleDeclaration[]>) | undefined,
+  candidateIds: string[],
+): Promise<ModuleCredentialsState> {
+  const secrets = appPaths('cc').secrets;
+  const dir = join(secrets, MODULE_CREDENTIALS_DIRNAME);
+  const rows: ModuleCredentialRow[] = [];
+  const legacy: ModuleCredentialsState['legacy'] = [];
+  let unavailable = false;
+  let modules: LoadedModuleDeclaration[] = [];
+  try {
+    modules = await (load ? load(manifest) : defaultLoadedModules(manifest));
+  } catch {
+    unavailable = true;
+  }
+  for (const mod of modules) {
+    if (mod.contractVersion !== 2) {
+      legacy.push({ id: mod.id, origin: mod.origin });
+      continue;
+    }
+    for (const d of mod.credentials ?? []) {
+      let status: ModuleCredentialRow['status'];
+      try {
+        const r = resolveModuleCredential(mod.id, d.kind, { shareDefault: mod.origin === 'bundled' });
+        status = 'source' in r ? r.source : r.missing;
+      } catch {
+        status = 'incomplete';
+      }
+      rows.push({ moduleId: mod.id, origin: mod.origin, kind: d.kind, required: d.required, status });
+    }
+  }
+
+  const ids = new Set<string>([...candidateIds, ...modules.map((m) => m.id)]);
+  try {
+    for (const name of readdirSync(dir)) {
+      const m = MODULE_FILE_ID.exec(name);
+      if (m) ids.add(m[1]);
+    }
+  } catch { /* directory absent */ }
+  const files: ModuleCredentialsState['files'] = [];
+  for (const id of [...ids].sort()) {
+    const health = inspectFile(join(dir, `${id}.json`));
+    if (!health.present) continue;
+    let holdsSecret = true;
+    try {
+      holdsSecret = Object.values(moduleCredentialPresence(id)).some((v) => v !== 'none');
+    } catch { /* keep the safe answer */ }
+    files.push({ moduleId: id, holdsSecret, health });
+  }
+  return {
+    rows: rows.sort((a, b) => a.moduleId.localeCompare(b.moduleId) || a.kind.localeCompare(b.kind)),
+    legacy: legacy.sort((a, b) => a.id.localeCompare(b.id)),
+    files,
+    stores: {
+      panoptoConfig: existsSync(join(secrets, 'panopto-config.json')),
+      moduleCredentialsDir: existsSync(dir),
+      rosterVault: existsSync(join(secrets, 'roster-vault')),
+    },
+    unavailable,
+  };
 }
 
 const PROBE_TIMEOUT_MS = 5000;
@@ -267,7 +435,7 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
   if (nonEmpty(answers?.voyageApiKey)) secretBearingFiles.push('lecture-answers-config');
 
   const state: SetupState = {
-    platform: platform(),
+    platform: process.platform,
     coursesRoot,
     coursesRootExists: coursesRoot !== null && existsSync(coursesRoot),
     files,
@@ -281,6 +449,7 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
     canvasConfig,
     storesInSync,
     canvasStoreMigration: safelyJournal(),
+    appHomes: readAppHomes(),
     llm: {
       activeProvider: safely(loadActiveProvider) ?? null,
       anthropic: {
@@ -322,6 +491,11 @@ export async function readSetupState(opts: ReadSetupStateOptions = {}): Promise<
         enabled: manifest.modules[id]?.enabled === true,
       })),
       pendingRequests: loadPendingRequests().modules,
+      credentials: await readModuleCredentials(
+        manifest,
+        opts.loadedModules ? () => opts.loadedModules!() : undefined,
+        [...knownModuleIds(), ...Object.keys(installedModules.modules)],
+      ),
     },
     // Read-only, and the only part of this read that looks outside the CC home.
     // Opt-out, so a caller that must not touch another app's files can say so.

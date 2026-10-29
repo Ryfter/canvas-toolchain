@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getCcHomePath } from '../kb/config.js';
+import { getCcSecretsPath } from '../kb/config.js';
 import { migrateCanvasStores, normalizeCanvasHost, writeCanvasConfig } from '@canvas-toolchain/shared-types';
 
 export interface CanvasSetupConfig {
@@ -42,7 +42,7 @@ export interface SetupCanvasResult {
 }
 
 function getCanvasConfigPath(): string {
-  return join(getCcHomePath(), 'canvas-config.json');
+  return join(getCcSecretsPath(), 'canvas-config.json');
 }
 
 export function loadCanvasConfig(): CanvasSetupConfig {

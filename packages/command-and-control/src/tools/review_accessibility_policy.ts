@@ -84,7 +84,7 @@ export function reviewAccessibilityPolicy(
     return {
       ok: false, error: 'NO_INSTITUTION_CONFIG',
       message: e instanceof Error ? e.message : String(e),
-      fix: ['The accessibility policy lives in ~/.canvas-design-mcp/institution.json. Run ct_setup action canvas — it creates that file and keeps it mirrored with Command & Control\'s Canvas store (#151) — or connect the Canvas Design Studio MCP server and run setup_institution there to set your institution name and brand colors.'],
+      fix: ['The accessibility policy lives in the institution.json file in your Canvas Toolchain settings folder (run the doctor to see it). Run ct_setup action canvas — it creates that file and keeps it mirrored with Command & Control\'s Canvas store (#151) — or connect the Canvas Design Studio MCP server and run setup_institution there to set your institution name and brand colors.'],
     };
   }
 }

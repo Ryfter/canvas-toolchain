@@ -2,6 +2,13 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
 import { dirname, join } from 'node:path';
+// os.homedir() ignores a changed USERPROFILE/HOME once the test runs off the main
+// thread (libuv reads the real process environment), so follow the test's value.
+vi.mock('node:os', async (orig) => {
+  const real = await orig<typeof import('node:os')>();
+  return { ...real, homedir: () => process.env.USERPROFILE || process.env.HOME || real.homedir() };
+});
+
 import { runDoctor } from '../../src/setup/doctor.js';
 import { readSetupState } from '../../src/setup/read_state.js';
 import { buildRegistry } from '../../src/surface/registry.js';
@@ -17,7 +24,9 @@ const CHECK_IDS = [
   'transcripts.source',
   'backup.sidecar',
   'modules.pending',
+  'modules.credentials',
   'hosts.wiring',
+  'paths.homes',
 ];
 
 let ccHome: string;
@@ -31,6 +40,7 @@ const ORIGINAL = {
   home: process.env.HOME,
   userProfile: process.env.USERPROFILE,
   appData: process.env.APPDATA,
+  localAppData: process.env.LOCALAPPDATA,
 };
 
 /** Seed a config file, 0600 like every writer in the repo, under either home. */
@@ -71,9 +81,11 @@ function check(report: Awaited<ReturnType<typeof runDoctor>>, id: string) {
 }
 
 beforeEach(() => {
-  ccHome = mkdtempSync(join(tmpdir(), 'cc-home-'));
-  cdsHome = mkdtempSync(join(tmpdir(), 'cds-home-'));
   hostHome = mkdtempSync(join(tmpdir(), 'host-home-'));
+  // Inside the fake profile: on Windows the paths.homes check warns about a
+  // settings folder outside the user profile.
+  ccHome = mkdtempSync(join(hostHome, 'cc-home-'));
+  cdsHome = mkdtempSync(join(hostHome, 'cds-home-'));
   process.env.CC_HOME = ccHome;
   process.env.CANVAS_DESIGN_HOME = cdsHome;
   // Host detection reads the OS home, so point it at a temp dir: otherwise the
@@ -81,6 +93,7 @@ beforeEach(() => {
   process.env.HOME = hostHome;
   process.env.USERPROFILE = hostHome;
   process.env.APPDATA = join(hostHome, 'AppData', 'Roaming');
+  process.env.LOCALAPPDATA = join(hostHome, 'AppData', 'Local');
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.CANVAS_BACKUP_COMMAND;
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network call in test'))));
@@ -98,6 +111,7 @@ afterEach(() => {
     HOME: ORIGINAL.home,
     USERPROFILE: ORIGINAL.userProfile,
     APPDATA: ORIGINAL.appData,
+    LOCALAPPDATA: ORIGINAL.localAppData,
   })) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
@@ -107,7 +121,7 @@ afterEach(() => {
 });
 
 describe('runDoctor on an empty home', () => {
-  it('returns all ten checks without throwing, and makes no network call', async () => {
+  it('returns all eleven checks without throwing, and makes no network call', async () => {
     const report = await runDoctor();
 
     expect(report.checks.map((c) => c.id)).toEqual(CHECK_IDS);
@@ -465,7 +479,10 @@ describe('runDoctor journeys', () => {
 
     const report = await runDoctor();
 
-    expect(report.checks.map((c) => c.status)).toEqual(CHECK_IDS.map(() => 'ok'));
+    expect(
+      report.checks.map((c) => c.status),
+      JSON.stringify(report.checks.filter((c) => c.status !== 'ok').map((c) => [c.id, c.summary, c.detail])),
+    ).toEqual(CHECK_IDS.map(() => 'ok'));
     expect(report.overallStatus).toBe('ok');
     expect(report.readyJourneys).toEqual({
       localAuthoring: true, canvasConnected: true, aiAssisted: true,
@@ -560,7 +577,10 @@ describe('runDoctor secrets', () => {
       canvasUrl: 'https://example.instructure.com', apiToken: 'cds-tok', waveApiKey: 'wave-secret',
     }, cdsHome);
 
-    const dumped = JSON.stringify(await runDoctor());
+    const report = await runDoctor();
+    const dumped = JSON.stringify({ report, state: await readSetupState() });
+    // CT200-08: the new paths.homes rows are part of what must stay secret-free.
+    expect(check(report, 'paths.homes').detail?.length).toBeGreaterThanOrEqual(3);
 
     for (const secret of ['gh-secret', 'tok-secret', 'sk-ant-secret', 'pa-secret', 'wave-secret', 'cds-tok']) {
       expect(dumped).not.toContain(secret);

@@ -23,6 +23,7 @@ import { listTools } from './surface/list_tools.js';
 import { dispatchSurface } from './surface/dispatch.js';
 import type { Operation } from './surface/operation.js';
 import { bridgeCanvasStoresAtStartup } from './setup/canvas_store_boot.js';
+import { ALL_APP_HOMES, bootAppHomes } from './setup/app_home_boot.js';
 
 const pkg = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -30,6 +31,12 @@ const server = new Server(
   { name: 'canvas-toolchain', version: pkg.version },
   { capabilities: { tools: {} } }
 );
+
+// Move a legacy Windows ~/.<app> folder into %APPDATA% / %LOCALAPPDATA% before
+// anything reads config (#200, spec 5.1). All three apps, because C&C reads the
+// Design Studio and Curriculum Intelligence homes too. Never throws, bounded
+// wait, no-op on macOS/Linux and under an env override.
+await bootAppHomes(ALL_APP_HOMES);
 
 // Bridge the two Canvas credential stores once at startup (#151 R7, D1):
 // ~/.command-and-control/canvas-config.json is canonical and Canvas Design

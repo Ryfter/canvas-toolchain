@@ -8,8 +8,8 @@
  *   node scripts/shell-edit-doctor.mjs --courseId ITM370 --semesterId Fall2026 --json --strict
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { cdsDataHome, ciDataHome } from '@canvas-toolchain/shared-types';
 
 function parseArgs(argv) {
   const out = { json: false, strict: false };
@@ -59,8 +59,8 @@ function checkJson(path) {
 }
 
 const { courseId, semesterId, json, strict } = parseArgs(process.argv);
-const ciHome = process.env.CURRICULUM_INTELLIGENCE_HOME ?? join(homedir(), '.curriculum-intelligence');
-const cdsHome = process.env.CANVAS_DESIGN_HOME ?? join(homedir(), '.canvas-design-studio');
+const ciHome = ciDataHome();
+const cdsHome = cdsDataHome();
 
 const courseRoot = join(ciHome, 'courses', courseId);
 const semesterRoot = join(courseRoot, 'semesters', semesterId);

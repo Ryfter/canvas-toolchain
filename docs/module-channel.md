@@ -63,6 +63,17 @@ module needs no re-download to roll back locally — it already retains the
 prior version's artifact and hash until the new one has loaded successfully
 once (surfaced as guidance in the load-failure warning).
 
+### Publishing a contract v2 module
+
+A module that needs Canvas, Anthropic or Panopto credentials, or the host's folders, should be a **contract v2** module (see [`architecture-modules.md`](architecture-modules.md) §1.1):
+
+- Set `contractVersion: 2` and declare each credential: `credentials: [{ kind, required, purpose }]`. `purpose` is the one line a professor reads to decide whether to allow it, so say what the module does with the credential. Declare only what you use; asking for an undeclared kind at runtime throws `CREDENTIAL_NOT_DECLARED`.
+- Take credentials and folders from the `ModuleContext` the host passes to `init`; keep it in module scope and use `ctx.credentials.get(kind)` (or `tryGet` for optional ones) and `ctx.paths`. Do not read `canvas-config.json` or any credential file yourself and do not compute `~/.command-and-control` paths: the host owns that, and a hash-pinned artifact cannot be patched when the layout changes. Tests should pass a fake `ctx`.
+- **Consent defaults.** A channel module gets **no** access to the professor's shared credentials until they allow it: the first call that needs one fails with a `<KIND>_NOT_CONFIGURED` message telling the professor to run `ct_setup action module_credentials` (`share` to use their main connection, or `set` for the module's own). Built-in (bundled) modules share by default; do not assume that for a channel module. Mention this in the module's description or README so the first-call message is not a surprise. `install_module` does not show declarations before download (that would need a catalog schema change, which the Go installer also reads, see `AGENTS.md`); the doctor's `modules.credentials` rows and the first-call message are where consent surfaces.
+- **`minHostVersion`.** A v2 module only works on a host that understands contract v2 (a host without it never calls `init`, so the module would load without a context and its tools would fail). Set the catalog entry's `minHostVersion` to the first toolchain release that ships contract v2, so older hosts get `HOST_TOO_OLD` guidance instead of a module that silently fails to load. Do not merge the catalog bump before that host release is published: the catalog has one entry per module id, and replacing it removes the module from every professor still on an older host.
+- A v1 module (no `contractVersion`) still loads and installs, but it must read credentials itself, cannot be given a module-specific credential, and is shown as "legacy" by the doctor.
+- Published artifacts are frozen: a published version never changes. Fixes and the move from v1 to v2 ship as a new version through the normal PR flow above.
+
 ## 3. Why there is no module release
 
 The old model tagged each module version (`module-<id>-v<version>`) and

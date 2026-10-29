@@ -16,15 +16,13 @@ let tmpHome: string;
 
 beforeEach(() => {
   tmpHome = mkdtempSync(join(tmpdir(), 'cc-panopto-setup-'));
-  process.env.CC_HOME = tmpHome;
 });
 
 afterEach(() => {
-  delete process.env.CC_HOME;
   rmSync(tmpHome, { recursive: true, force: true });
 });
 
-import { setupPanopto, loadPanoptoConfig } from '../src/panopto/setup.js';
+import { setupPanopto } from '../src/panopto/setup.js';
 
 const TEST_INPUT = {
   domain: 'example.hosted.panopto.com',
@@ -39,7 +37,7 @@ describe('setupPanopto', () => {
       json: async () => ({ access_token: 'test-token' }),
     } as Response);
 
-    const result = await setupPanopto(TEST_INPUT);
+    const result = await setupPanopto(TEST_INPUT, tmpHome);
 
     expect(result.configured).toBe(true);
     expect(result.domain).toBe('example.hosted.panopto.com');
@@ -56,7 +54,7 @@ describe('setupPanopto', () => {
       status: 401,
     } as Response);
 
-    const result = await setupPanopto(TEST_INPUT);
+    const result = await setupPanopto(TEST_INPUT, tmpHome);
 
     expect(result.configured).toBe(false);
     expect(result.error).toBe('CREDENTIAL_VALIDATION_FAILED');
@@ -64,7 +62,7 @@ describe('setupPanopto', () => {
   });
 
   it('saves without calling fetch when test:false', async () => {
-    const result = await setupPanopto({ ...TEST_INPUT, test: false });
+    const result = await setupPanopto({ ...TEST_INPUT, test: false }, tmpHome);
 
     expect(result.configured).toBe(true);
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
@@ -77,27 +75,8 @@ describe('setupPanopto', () => {
       json: async () => ({ access_token: 'test-token' }),
     } as Response);
 
-    const result = await setupPanopto(TEST_INPUT);
+    const result = await setupPanopto(TEST_INPUT, tmpHome);
 
     expect(JSON.stringify(result)).not.toContain('test-client-secret');
-  });
-});
-
-describe('loadPanoptoConfig', () => {
-  it('throws PANOPTO_NOT_CONFIGURED when file is absent', () => {
-    expect(() => loadPanoptoConfig()).toThrow('PANOPTO_NOT_CONFIGURED');
-  });
-
-  it('returns full config when file exists and is valid', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ access_token: 'test-token' }),
-    } as Response);
-    await setupPanopto(TEST_INPUT);
-
-    const config = loadPanoptoConfig();
-    expect(config.domain).toBe('example.hosted.panopto.com');
-    expect(config.clientId).toBe('test-client-id');
-    expect(config.clientSecret).toBe('test-client-secret');
   });
 });

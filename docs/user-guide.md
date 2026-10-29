@@ -102,7 +102,7 @@ setup_ollama          { baseUrl: "http://localhost:11434", model: "..." }   # lo
 setup_lecture_answers { provider: "ollama" }               # the course Q&A bot
 ```
 
-Every credential is **validated against the live service before it's saved**, written to `~/.command-and-control/` with `0o600` (owner-only) permissions, and **never echoed back**. See [section 8](#8-where-your-data-and-credentials-live) and the [credentials reference](commands-and-credentials.md#3-api-keys--secrets--what-s-asked-for-and-why).
+Every credential is **validated against the live service before it's saved**, written to your Canvas Toolchain settings folder (run the doctor to see it; [per-OS locations](commands-and-credentials.md#30-where-the-settings-folders-live)) with `0o600` (owner-only) permissions on macOS/Linux, and **never echoed back**. See [section 8](#8-where-your-data-and-credentials-live) and the [credentials reference](commands-and-credentials.md#3-api-keys--secrets--what-s-asked-for-and-why).
 
 Check everything is wired up:
 
@@ -278,7 +278,7 @@ These tools require the **Canvas Design Studio** MCP server. Asking C&C for them
 | `redesign_canvas_page` *(CDS only)* | **What:** apply critique fixes. **How:** mechanical fixes automatically; re-runs the WCAG check on the output. **Why:** close the loop from critique to a better page in one step. |
 | `load_canvas_page` / `save_canvas_page` *(CDS only)* | **What:** load/save generated HTML in `output/`. **How:** save auto-creates a `.bak`. **Why:** safe round-tripping while you iterate on a page. |
 | `fetch_brand_colors` *(CDS only)* | **What:** extract brand colors from a standards page. **How:** returns ranked candidates with a suggested primary/secondary. **Why:** match your institution's palette without eyedropping by hand. |
-| `setup_institution` / `get_setup_worksheet` / `validate_worksheet` *(CDS only)* | **What:** institution config (brand, Canvas URL, token) at `~/.canvas-design-mcp/institution.json`. **How:** fill a worksheet then submit it, or run the wizard; validate before applying. **Why:** set brand + connection once and reuse across courses. **Not on C&C** — from C&C use `setup_canvas` for the Canvas token. |
+| `setup_institution` / `get_setup_worksheet` / `validate_worksheet` *(CDS only)* | **What:** institution config (brand, Canvas URL, token) in `institution.json` in your Canvas Toolchain settings folder (run the doctor to see it). **How:** fill a worksheet then submit it, or run the wizard; validate before applying. **Why:** set brand + connection once and reuse across courses. **Not on C&C** — from C&C use `setup_canvas` for the Canvas token. |
 | `get_started` *(CDS tool)* | **What:** a tailored Design Studio orientation. **How:** reads your current CDS config and suggests next steps. **Why:** the "where do I begin?" command **on the Design Studio server** — a different tool from C&C's `get_started` (section 6.1), which reports what is ready on C&C and the exact call that finishes each step. |
 
 ### 6.8 Teaching-philosophy & student-persona context
@@ -394,7 +394,7 @@ Skip all `setup_*` credential tools. Use `import_course` → `generate_course` �
 ## 8. Where your data and credentials live
 
 - **Course content** lives in plain files on your disk — the local archive and `course/` folders are the source of truth. Cloud services are optional.
-- **Credentials** live under `~/.command-and-control/` (relocate with the `CC_HOME` env var), each written **atomically with `0o600`** (owner read/write only):
+- **Credentials** live in your Canvas Toolchain settings folder (run the doctor to see it; relocate with the `CC_HOME` env var), each written **atomically**, with `0o600` (owner read/write only) on macOS/Linux. On Windows they sit in your per-user local app-data folder instead; see [where the settings folders live](commands-and-credentials.md#30-where-the-settings-folders-live):
   - `anthropic-config.json`, `canvas-config.json`, `ollama-config.json`, `panopto-config.json`, `lecture-answers-config.json`, and `config.json` (the registry token, redacted in responses).
 - **Validation before save:** every key is checked against the live service (Anthropic `/v1/messages`, Canvas `/users/self`, Panopto OAuth, Voyage `/v1/embeddings`, Ollama `/api/tags`) before it's written.
 - **Never echoed, never transmitted:** keys are not printed back in tool output, and `submit_usage_feedback` is opt-in and anonymized and refuses to send tokens or student data.

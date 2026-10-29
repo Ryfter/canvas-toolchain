@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, expectTypeOf } from 'vitest';
 import { isCanvasToolchainModule, requireCtx, type ModuleContext } from '../src/index.js';
 
 const v1 = {
@@ -101,7 +101,7 @@ describe('isCanvasToolchainModule', () => {
 describe('requireCtx', () => {
   const ctx = {
     moduleId: 'group-builder',
-    paths: { config: '/cfg', data: '/data', designStudioData: '/cds' },
+    paths: { config: '/cfg', data: '/data', designStudioData: '/cds', secrets: '/sec' },
     credentials: {
       get: async () => ({ host: 'school.instructure.com', token: 't' }),
       tryGet: async () => null,
@@ -110,6 +110,27 @@ describe('requireCtx', () => {
 
   it('throws MODULE_NOT_INITIALIZED before init', () => {
     expect(() => requireCtx(undefined)).toThrow('MODULE_NOT_INITIALIZED');
+  });
+
+  it('exposes the secrets root alongside the other paths', () => {
+    expectTypeOf(ctx.paths).toEqualTypeOf<{
+      config: string;
+      data: string;
+      designStudioData: string;
+      secrets: string;
+    }>();
+    expect(requireCtx(ctx).paths.secrets).toBe('/sec');
+  });
+
+  it('keeps the thrown message free of any context values', () => {
+    try {
+      requireCtx(undefined);
+      expect.unreachable();
+    } catch (e) {
+      const err = e as Error;
+      expect(err.name).toBe('MODULE_NOT_INITIALIZED');
+      expect(err.message).toBe('MODULE_NOT_INITIALIZED: the host has not called init');
+    }
   });
 
   it('returns the context after init', () => {

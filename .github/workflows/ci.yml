@@ -35,6 +35,11 @@ jobs:
       - name: Institution scrub guard
         run: node scripts/check-institution-scrub.mjs
 
+      - name: App-home path guard
+        run: |
+          node scripts/check-app-paths.mjs
+          node scripts/check-app-paths.mjs --self-test
+
       - name: Build all packages
         run: npm run build
 
@@ -101,3 +106,71 @@ jobs:
           cd "$DEST"
           npm install
           node scripts/smoke-npx.mjs npx canvas-toolchain
+
+  # CT200-10: the path-and-credential tests must hold on every OS the professor
+  # might run on. This runs a NAMED SUBSET, not `npm test`: the full TypeScript
+  # suite on Windows has known failures unrelated to this work (issue #200,
+  # CT200-00 discovery), so a whole-suite Windows job would be permanently red
+  # and teach everyone to ignore it. Do not widen this to `npm test` or add
+  # continue-on-error; add files to the subset as they are proven green.
+  cross-os:
+    name: Path and credential tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      # Whole suites: these packages hold the resolver, migration, credential
+      # store, remap and canvas-store tests (shared-types) and the module guards.
+      - name: Shared and module packages (whole suites)
+        run: |
+          for ws in shared-types module-contract module-group-builder module-roster \
+                    module-peerassessment module-oral-assessment module-video module-announcements; do
+            npm test --workspace=packages/$ws
+          done
+
+      - name: Curriculum Intelligence and Design Studio (path and config tests)
+        run: |
+          npm test --workspace=packages/curriculum-intelligence -- \
+            tests/config.test.ts tests/kb tests/parsers tests/tools/setup_course.test.ts
+          npm test --workspace=packages/canvas-design-studio -- \
+            tests/app-paths-redirect.test.ts tests/canvas-store-bridge.test.ts \
+            tests/config.test.ts tests/config-atomic.test.ts tests/setup-course.test.ts \
+            tests/page-io.test.ts tests/course-config.test.ts
+
+      # Command & Control: only the setup, path, credential, channel, module and
+      # surface/skills files that do not shell out. The negative -t pattern skips
+      # the one subset test known to fail on Windows for reasons unrelated to
+      # paths (issue #200, CT200-00): "surfaces only booleans and our own script
+      # path" in tests/setup/hosts.test.ts. The other known failure, "repairs a
+      # stale generated region" (tests/skills/build-index.test.ts), is simply not
+      # in this subset because that file shells out.
+      - name: Command and Control (named subset)
+        run: |
+          npm test --workspace=packages/command-and-control -- \
+            -t '^(?!.*surfaces only booleans and our own script path).*$' \
+            tests/setup tests/kb tests/channel tests/modules \
+            tests/channel-catalog.test.ts tests/channel-install.test.ts \
+            tests/channel-loader.test.ts tests/channel-notices.test.ts \
+            tests/channel-stores.test.ts tests/module-channel-tools.test.ts \
+            tests/surface-registry.test.ts tests/surface-sections.test.ts \
+            tests/surface-invariants.test.ts tests/surface-intents.test.ts \
+            tests/skills/emit.test.ts tests/skills/frontmatter.test.ts \
+            tests/skills/graph.test.ts tests/skills/lint.test.ts tests/skills/related.test.ts

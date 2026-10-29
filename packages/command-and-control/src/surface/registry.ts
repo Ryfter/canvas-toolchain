@@ -7,6 +7,7 @@ import { setupCanvas } from '../tools/setup_canvas.js';
 import { setupOllama } from '../tools/setup_ollama.js';
 import { setupLmStudio } from '../tools/setup_lmstudio.js';
 import { setupLlmProvider } from '../tools/setup_llm_provider.js';
+import { setupModuleCredentials } from '../tools/setup_module_credentials.js';
 import { showCanvasCapabilities } from '../tools/showcase/show_canvas_capabilities.js';
 import { previewCanvasPattern } from '../tools/showcase/preview_canvas_pattern.js';
 import { PREFERRED_PROVIDER_ORDER, setActiveLlmProvider } from '../tools/set_active_llm_provider.js';
@@ -223,6 +224,39 @@ const BASE_OPERATIONS: Operation[] = [
     intentAction: 'llm_provider',
   },
   {
+    id: 'setup_module_credentials',
+    section: 'admin',
+    description:
+      "Give one module its own Canvas/Anthropic/Panopto credential or let it use your main one: op set (validates first), test, share, unshare, clear (two-call confirm). Reports source only.",
+    inputSchema: {
+      type: 'object' as const,
+      required: ['module', 'kind', 'op'],
+      properties: {
+        module: { type: 'string', description: 'Module id, e.g. "group-builder". Must be a built-in or installed module that declares this credential kind.' },
+        kind: { type: 'string', enum: ['canvas', 'anthropic', 'panopto'], description: 'Credential kind; must be one the module declares.' },
+        op: {
+          type: 'string',
+          enum: ['set', 'test', 'share', 'unshare', 'clear'],
+          description: 'set: validate live, then save the module\'s own credential. test: validate what the module uses now. share/unshare: allow or deny your main credential. clear: delete its own (needs confirm).',
+        },
+        host: { type: 'string', description: 'kind canvas, op set: Canvas hostname, e.g. "example.instructure.com".' },
+        token: { type: 'string', description: 'kind canvas, op set: Canvas API access token. Stored locally and never echoed back.' },
+        apiKey: { type: 'string', description: 'kind anthropic, op set: Anthropic API key. Stored locally and never echoed back.' },
+        model: { type: 'string', description: 'kind anthropic, op set: optional model the module should use.' },
+        domain: { type: 'string', description: 'kind panopto, op set: Panopto hostname, e.g. "example.hosted.panopto.com".' },
+        clientId: { type: 'string', description: 'kind panopto, op set: Panopto API client id.' },
+        clientSecret: { type: 'string', description: 'kind panopto, op set: Panopto API client secret. Stored locally and never echoed back.' },
+        iframeWhitelisted: { type: 'boolean', description: 'kind panopto, op set: optional, whether Canvas is on the Panopto iframe allowlist.' },
+        confirm: { type: 'boolean', description: 'op clear: set true on the second call to actually delete. The first call previews what happens next.' },
+      },
+    },
+    handler: (args) => setupModuleCredentials(args as never),
+    taskCategory: 'none',
+    exposure: 'intent',
+    intentTool: 'ct_setup',
+    intentAction: 'module_credentials',
+  },
+  {
     id: 'show_canvas_capabilities',
     section: 'design',
     description:
@@ -335,10 +369,13 @@ const BASE_OPERATIONS: Operation[] = [
   {
     id: 'uninstall_module',
     section: 'modules',
-    description: 'Remove a channel-installed module (artifact + record) and disable it. Bundled modules cannot be uninstalled — disable those with set_module_enabled.',
+    description: 'Remove a channel-installed module and disable it. With stored credentials, confirm: true is required and they are deleted too. Bundled modules: use set_module_enabled.',
     inputSchema: {
       type: 'object' as const,
-      properties: { moduleId: { type: 'string', description: 'Installed module id.' } },
+      properties: {
+        moduleId: { type: 'string', description: 'Installed module id.' },
+        confirm: { type: 'boolean', description: 'Required (true) only when the module has stored credentials; they are deleted with it.' },
+      },
       required: ['moduleId'],
     },
     handler: (args) => uninstallModuleTool(args as never),

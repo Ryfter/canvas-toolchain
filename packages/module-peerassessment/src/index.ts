@@ -1,7 +1,9 @@
-import type { CanvasToolchainModule } from '@canvas-toolchain/module-contract';
-import { peerAssessmentTools } from './tools.js';
+import { requireCtx, type CanvasToolchainModule, type ModuleContext } from '@canvas-toolchain/module-contract';
+import { createPeerAssessmentTools } from './tools.js';
 
 export const MODULE_ID = 'peerassessment';
+
+let ctx: ModuleContext | undefined;
 
 const peerAssessmentModule: CanvasToolchainModule = {
   id: MODULE_ID,
@@ -12,7 +14,14 @@ const peerAssessmentModule: CanvasToolchainModule = {
     'login/student-id columns a teacher token often withholds. Import-only; writes a local upload file.',
   version: '1.0.0',
   handles: [],
-  tools: peerAssessmentTools,
+  contractVersion: 2,
+  credentials: [
+    { kind: 'canvas', required: true, purpose: 'Read the group set and course students to build the import CSV.' },
+  ],
+  init(c: ModuleContext): void {
+    ctx = c;
+  },
+  tools: createPeerAssessmentTools(() => requireCtx(ctx)),
 };
 
 export default peerAssessmentModule;

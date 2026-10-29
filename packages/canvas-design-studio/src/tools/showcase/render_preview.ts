@@ -1,5 +1,5 @@
 import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { ccDataHome } from '@canvas-toolchain/shared-types';
 import { join } from 'node:path';
 import { getPatternById, type CapabilityCatalog, type CatalogPattern } from './catalog.js';
 
@@ -71,7 +71,7 @@ function buildHtml(pattern: CatalogPattern, categoryName: string): string {
 }
 
 function getCacheDir(): string {
-  return join(process.env.CC_HOME ?? join(homedir(), '.command-and-control'), 'showcase-previews');
+  return join(ccDataHome(), 'showcase-previews');
 }
 
 export function renderPreview(catalog: CapabilityCatalog, patternId: string): RenderPreviewResult {

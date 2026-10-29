@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Diagnostics, Grouping, StrategyId } from './types.js';
 import { CanvasClient } from './data/canvas-client.js';
-import { loadCanvasCreds } from './data/canvas-client.js';
+import { getCtx, courseDir } from './ctx.js';
 import { parseRosterFile } from './data/roster.js';
 import { buildStudentRecords } from './data/merge.js';
 import { getStrategy } from './strategies/index.js';
@@ -35,8 +35,9 @@ export interface CreateGroupsResult { grouping: Grouping; diagnostics: Diagnosti
 export interface RunDeps { client?: { listStudentEnrollments: CanvasClient['listStudentEnrollments']; listSubmissions: CanvasClient['listSubmissions']; createGroupCategory: CanvasClient['createGroupCategory']; createGroup: CanvasClient['createGroup']; addGroupMember: CanvasClient['addGroupMember'] }; }
 
 export async function createGroups(input: CreateGroupsInput, deps: RunDeps = {}): Promise<CreateGroupsResult> {
+  const ctx = getCtx();
   const courseIdNum = Number(input.courseId);
-  const client = deps.client ?? new CanvasClient(loadCanvasCreds());
+  const client = deps.client ?? new CanvasClient(await ctx.credentials.get('canvas'));
   const enrollments = await client.listStudentEnrollments(courseIdNum);
   const submissions = input.assignmentIds?.length ? await client.listSubmissions(courseIdNum, input.assignmentIds) : [];
   const roster = input.rosterFile ? parseRosterFile(input.rosterFile) : [];
@@ -63,7 +64,7 @@ export async function createGroups(input: CreateGroupsInput, deps: RunDeps = {})
     if (unmapped.length) diagnostics.unmappedMajors = unmapped;
   }
 
-  const outDir = input.outputDir ?? join(process.env.CC_HOME ?? '.', 'groups', input.courseId, 'output');
+  const outDir = input.outputDir ?? join(courseDir(input.courseId), 'output');
   mkdirSync(outDir, { recursive: true });
   const csvPath = join(outDir, `groups-${input.strategy}.csv`);
   const markdownPath = join(outDir, `groups-${input.strategy}.md`);

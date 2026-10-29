@@ -1,14 +1,14 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { initFake } from "../helpers/fake-ctx.js";
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { groupBuilderTools } from '../../src/tools.js';
 import { loadMajorBuckets } from '../../src/buckets/store.js';
 
-let dir: string; const savedHome = process.env.CC_HOME;
+let dir: string;
 afterEach(() => {
   if (dir) rmSync(dir, { recursive: true, force: true });
-  if (savedHome === undefined) delete process.env.CC_HOME; else process.env.CC_HOME = savedHome;
 });
 
 describe('propose_major_buckets tool', () => {
@@ -24,7 +24,7 @@ describe('propose_major_buckets tool', () => {
   });
 
   it('persists a reviewed buckets map when given the buckets input', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'gb-save-')); process.env.CC_HOME = dir;
+    dir = mkdtempSync(join(tmpdir(), 'gb-save-')); initFake(dir);
     const tool = groupBuilderTools.find((t) => t.schema.name === 'propose_major_buckets')!;
     const buckets = { 'IT Management': 'technical', Philosophy: 'other' };
     const res = await tool.handler({ courseId: '5', buckets });

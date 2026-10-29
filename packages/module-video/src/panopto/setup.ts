@@ -1,7 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPanoptoToken } from './client.js';
-import { getCcHomePath } from '../cc-home.js';
 
 export interface PanoptoSetupConfig {
   domain: string;
@@ -30,37 +29,16 @@ export interface SetupPanoptoResult {
   fix?: string[];
 }
 
-function getPanoptoConfigPath(): string {
-  return join(getCcHomePath(), 'panopto-config.json');
+function getPanoptoConfigPath(secretsDir: string): string {
+  return join(secretsDir, 'panopto-config.json');
 }
 
 /**
- * Loads the saved Panopto config. Throws with PANOPTO_NOT_CONFIGURED if absent or incomplete.
+ * Save the shared Panopto credential to `<secretsDir>/panopto-config.json` (the file the host's
+ * credential resolver reads as the shared Panopto credential). Reading is done by the host via
+ * `ctx.credentials`; this module has no no-arg loader.
  */
-export function loadPanoptoConfig(): PanoptoSetupConfig {
-  const configPath = getPanoptoConfigPath();
-  if (!existsSync(configPath)) {
-    throw new Error(
-      'PANOPTO_NOT_CONFIGURED: Run setup_panopto with your Panopto domain, clientId, and clientSecret.',
-    );
-  }
-  let config: Partial<PanoptoSetupConfig>;
-  try {
-    config = JSON.parse(readFileSync(configPath, 'utf-8'));
-  } catch {
-    throw new Error(
-      'PANOPTO_NOT_CONFIGURED: panopto-config.json is corrupt. Re-run setup_panopto.',
-    );
-  }
-  if (!config.domain || !config.clientId || !config.clientSecret) {
-    throw new Error(
-      'PANOPTO_NOT_CONFIGURED: panopto-config.json is missing required fields. Re-run setup_panopto.',
-    );
-  }
-  return config as PanoptoSetupConfig;
-}
-
-export async function setupPanopto(input: SetupPanoptoInput): Promise<SetupPanoptoResult> {
+export async function setupPanopto(input: SetupPanoptoInput, secretsDir: string): Promise<SetupPanoptoResult> {
   const { domain, clientId, clientSecret, iframeWhitelisted = null, test = true } = input;
   const now = new Date().toISOString();
 
@@ -90,9 +68,8 @@ export async function setupPanopto(input: SetupPanoptoInput): Promise<SetupPanop
     lastValidatedAt: test ? now : '',
   };
 
-  const home = getCcHomePath();
-  mkdirSync(home, { recursive: true });
-  const configPath = getPanoptoConfigPath();
+  mkdirSync(secretsDir, { recursive: true });
+  const configPath = getPanoptoConfigPath(secretsDir);
   const tmpPath = `${configPath}.tmp`;
   writeFileSync(tmpPath, JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 });
   renameSync(tmpPath, configPath);

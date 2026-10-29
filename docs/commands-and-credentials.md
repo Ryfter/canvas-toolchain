@@ -199,7 +199,7 @@ Connect the **Canvas Design Studio** server to use these. C&C does **not** expos
 | --- | --- | --- |
 | `get_started` | — | Tailored orientation based on current CDS config. **This CDS tool is not on C&C** — C&C's equivalent is the `ct_setup` action `get_started` (§2.1), or `get_cc_status` for a plain health snapshot. |
 | `get_setup_worksheet` | — | Return a blank setup worksheet for the professor to fill in. **Not on C&C.** |
-| `setup_institution` | *worksheetContent* | Set/update institution config (brand colors, Canvas URL, API token) at `~/.canvas-design-mcp/institution.json`. **Not on C&C** — from C&C use `setup_canvas` for the Canvas token. |
+| `setup_institution` | *worksheetContent* | Set/update institution config (brand colors, Canvas URL, API token) in `institution.json` in your Canvas Toolchain settings folder (run the doctor to see it). **Not on C&C** — from C&C use `setup_canvas` for the Canvas token. |
 | `validate_canvas_html` | **html** | Check HTML against Canvas RCE rules + WCAG 2.1 AA; list violations. |
 | `validate_worksheet` | **worksheetContent** | Validate a filled worksheet (hex colors, URLs) before setup. |
 | `update_canvas_kb` | *force* | Refresh the Canvas knowledge base from live Instructure docs (via Context7). |
@@ -280,22 +280,86 @@ See [`accessibility.md`](accessibility.md) for how the publishing gate, acknowle
 
 **Bottom line: every credential is optional.** With zero credentials you can still import a Canvas archive, analyze/plan a course, generate Canvas-safe HTML, and **paste it into Canvas by hand**. Each credential unlocks one optional enhancement.
 
-**The module channel adds no new credentials.** `browse_module_catalog`, `install_module`, and `uninstall_module` talk to the public `module-catalog.json` and module artifact files on `raw.githubusercontent.com` — no auth. The one channel-only module, Announcements Auditor, uses the existing Canvas token (§3.1) for its Canvas calls; it does not introduce a credential of its own.
+**Installing from the module channel needs no credential.** `browse_module_catalog`, `install_module`, and `uninstall_module` talk to the public `module-catalog.json` and module artifact files on `raw.githubusercontent.com` — no auth. What a *module* then uses is a separate question: modules that declare their credentials (module contract v2) can use your main (shared) connection or hold one of their own, and a downloaded channel module is denied your main connection until you allow it (§3.1.1). The current Announcements Auditor (1.1.0) predates that and still reads the shared Canvas token directly (§3.1.1, legacy modules).
 
-All secrets are stored **locally** under `~/.command-and-control/` (override with the `CC_HOME` env var). Every credential file is written **atomically (temp + rename) with `0o600` permissions** (owner read/write only). Keys are **validated against the live service before being saved**, are **never echoed back** in tool responses (the registry token is explicitly redacted), and are **never transmitted** to analytics — `submit_usage_feedback` is opt-in and anonymized and refuses to send tokens or student data.
+All secrets are stored **locally** in your Canvas Toolchain settings folder (run the doctor to see it; per-OS locations in §3.0 below; override with the `CC_HOME` env var). Every credential file is written **atomically (temp + rename)**, with `0o600` permissions (owner read/write only) on macOS/Linux; see the Windows note in §3.0. Keys are **validated against the live service before being saved**, are **never echoed back** in tool responses (the registry token is explicitly redacted), and are **never transmitted** to analytics — `submit_usage_feedback` is opt-in and anonymized and refuses to send tokens or student data.
+
+### 3.0 Where the settings folders live
+
+Each app keeps its settings in its own folder. Run the doctor (`canvas-toolchain doctor`, or ask your AI to run the Canvas Toolchain doctor) and look at the `paths.homes` check: it prints the exact folder for each app, whether it came from the default or an environment override, how the one-time Windows move went, and whether an old folder is still around. It reports folder paths and statuses only, never any credential value (and `get_cc_status` likewise reports presence only).
+
+| | macOS / Linux | Windows: settings (config) | Windows: data | Windows: credentials (secrets) |
+| --- | --- | --- | --- | --- |
+| Command & Control | `~/.command-and-control` | `%APPDATA%\CanvasToolchain\CommandAndControl` | `%LOCALAPPDATA%\CanvasToolchain\CommandAndControl` | `%LOCALAPPDATA%\CanvasToolchain\CommandAndControl\secrets` |
+| Canvas Design Studio | `~/.canvas-design-mcp` | `%APPDATA%\CanvasToolchain\CanvasDesignStudio` | `%LOCALAPPDATA%\CanvasToolchain\CanvasDesignStudio` | `%LOCALAPPDATA%\CanvasToolchain\CanvasDesignStudio\secrets` |
+| Curriculum Intelligence | `~/.curriculum-intelligence` | `%APPDATA%\CanvasToolchain\CurriculumIntelligence` | `%LOCALAPPDATA%\CanvasToolchain\CurriculumIntelligence` | `%LOCALAPPDATA%\CanvasToolchain\CurriculumIntelligence\secrets` |
+
+On macOS and Linux nothing changed: all three classes are the same dot-folder. On Windows the folder is split into three classes:
+
+| Class | What is in it |
+| --- | --- |
+| **Credentials (secrets)** | Command & Control: `config.json` (registry token), `canvas-config.json`, `anthropic-config.json`, `panopto-config.json`, `lecture-answers-config.json` (can hold the Voyage key), and the `module-credentials` and `roster-vault` folders. Canvas Design Studio: `institution.json`. |
+| **Data** | Command & Control: `modules`, `registry`, `publish-snapshots`, `showcase-previews`, `cache`, `module-catalog-cache.json`. Canvas Design Studio: `kb`, `transcripts`. Curriculum Intelligence: `courses`, `panopto`. |
+| **Settings (config)** | Everything else (for example `modules.json`, `ollama-config.json`, `lmstudio-config.json`, and the migration record `path-migration.json`). |
+
+**Environment overrides** (`CC_HOME`, `CANVAS_DESIGN_HOME`, `CURRICULUM_INTELLIGENCE_HOME`) mean "one folder for everything": when one is set, all three classes live in that single folder on every OS, and no migration runs.
+
+**One-time Windows migration.** On Windows, the first time an app starts after upgrading (or the first time the doctor runs), the old `~\.command-and-control`, `~\.canvas-design-mcp` or `~\.curriculum-intelligence` folder is **copied** into the folders above. Nothing is deleted. Once every file is verified, the old folder is renamed to `.<app>.migrated-<date>-<time>` (for example `.command-and-control.migrated-20261020-142233`). It still holds old copies of your credentials, so it is safe to delete after you have confirmed everything works; the doctor names its location. If a file differs between the old and new folder, both are left untouched and the old folder is not renamed. If the move cannot finish, the old folder keeps being used and the doctor warns.
+
+**Windows file permissions.** The `0o600` owner-only mode is a macOS/Linux feature and does not apply on Windows. There, credentials live in the per-user local app-data folder (`%LOCALAPPDATA%`), which is protected by your Windows profile permissions, and they are kept out of the roaming settings folder. If a settings folder points at a network or shared drive (an override, or a redirected profile), the doctor warns, because credentials stored there may be readable by others.
 
 ### 3.1 Credentials collected via setup tools / the installer (stored on disk)
 
-| Credential | Service | Why it's needed | Required? | Stored in (`~/.command-and-control/`) | Collected by |
+| Credential | Service | Why it's needed | Required? | Stored in (Command & Control settings folder) | Collected by |
 | --- | --- | --- | --- | --- | --- |
-| **Anthropic API key** | Anthropic Claude API | Powers AI generation: course analysis, brief drafting, rubric rewriting, planning, brainstorming. Without it, generation falls back to keyword/offline behavior. | No | `anthropic-config.json` | `setup_anthropic` · installer screen 3 (masked) |
-| **Canvas host + Canvas API token** | Your Canvas LMS instance | Direct page publishing and course listing. Optional — the generate-and-paste path needs neither. | No | `canvas-config.json` | `setup_canvas` · installer screen 3 (token masked) · CDS `setup_institution` |
-| **Panopto domain + client ID + client secret** | Panopto video API (OAuth2) | Lecture-video module: transcript download, video search, iframe embeds. Only when the Video module is enabled. | No | `panopto-config.json` | `setup_panopto` · installer screen 3 (secret masked, shown only if Panopto workflow selected) |
+| **Anthropic API key** | Anthropic Claude API | Powers AI generation: course analysis, brief drafting, rubric rewriting, planning, brainstorming. Without it, generation falls back to keyword/offline behavior. | No | `anthropic-config.json` | `setup_anthropic` (via `ct_setup`) |
+| **Canvas host + Canvas API token** | Your Canvas LMS instance | Direct page publishing and course listing. Optional — the generate-and-paste path needs neither. | No | `canvas-config.json` | `setup_canvas` (via `ct_setup`) · CDS `setup_institution` |
+| **Panopto domain + client ID + client secret** | Panopto video API (OAuth2) | Lecture-video module: transcript download, video search, iframe embeds. Only when the Video module is enabled. | No | `panopto-config.json` | `setup_panopto` |
 | **Voyage API key** | Voyage AI embeddings | Optional cloud embeddings for the lecture-answers index (alternative to local Ollama / transformers.js). Only when `provider="voyage"`. | No | `lecture-answers-config.json` | `setup_lecture_answers` / `reembed_course_index` |
 | **Premium registry token** | Ryfter premium resource registry (`ryfter://`) | Authenticates premium template/theme downloads. The free GitHub registry always works without it. | No | `config.json` (`registry.token`, redacted in responses) | `setup_cc` |
-| **WAVE API key** | WebAIM WAVE API | Paid deep accessibility checks of publicly visible pages via `wave_deep_check`. Every call is preceded by a preview + explicit `confirm` (nothing spends credits silently). | No | `~/.canvas-design-mcp/institution.json` (`waveApiKey`) — legacy data dir for Design Studio / CDS-owned config (not the npm package name), same atomic `0o600` write discipline | `wave_deep_check` (*apiKey*, persisted on first use) |
+| **WAVE API key** | WebAIM WAVE API | Paid deep accessibility checks of publicly visible pages via `wave_deep_check`. Every call is preceded by a preview + explicit `confirm` (nothing spends credits silently). | No | `institution.json` (`waveApiKey`) in the Canvas Design Studio settings folder (not the Command & Control one), same atomic write discipline | `wave_deep_check` (*apiKey*, persisted on first use) |
 | **Ollama base URL + model** | Local Ollama server (not a secret) | Local LLM alternative to Anthropic for generation. No key — just an endpoint, usually `http://localhost:11434`. | No | `ollama-config.json` | `setup_ollama` |
 | **LM Studio base URL + model** | Local LM Studio server (not a secret) | OpenAI-compatible local LLM alternative to Anthropic for generation. No key needed locally; a remote/LAN server may use `LMSTUDIO_API_KEY` (env only, sent as a Bearer header, never persisted or logged). | No | `lmstudio-config.json` | `setup_lmstudio` |
+
+> The installer no longer collects any credentials (since #197): it installs the toolchain and wires your AI apps, then your AI app finishes setup through `ct_setup` (say "get started" and it runs the doctor and walks you through what is left).
+
+#### 3.1.1 Module-specific credentials (contract v2 modules)
+
+A module that declares its credentials (`contractVersion: 2`, see [`architecture-modules.md`](architecture-modules.md) §1.1) can use your **shared** connection (the files in the table above) or hold a credential **of its own**, for example a Canvas token from a different account. The five built-in modules that need credentials (Group Builder, Roster, PeerAssessment, Oral Assessment, Lecture Video) all declare them; so can channel modules.
+
+**Where they live.** One file per module: `<secrets root>/module-credentials/<moduleId>.json` (the secrets folder of Command & Control from §3.0: the same dot-folder on macOS/Linux, `%LOCALAPPDATA%\CanvasToolchain\CommandAndControl\secrets` on Windows). On macOS/Linux the folder is `0700` and each file `0600`; files are written atomically. The file holds the module's own credentials and its share choices:
+
+```json
+{ "schemaVersion": 1,
+  "share": { "canvas": true },
+  "credentials": { "canvas": { "host": "school.instructure.com", "token": "…" } } }
+```
+
+**Which credential a module gets** (per kind; first match wins and nothing is ever mixed):
+
+1. The module's **own** credential for that kind, if it is complete.
+2. If it has an own credential that is **incomplete** (or its file cannot be parsed), the module gets nothing: the host never fills the gaps from the shared file, so one identity's token can never be sent to another identity's host.
+3. Otherwise your **shared** credential, but only if sharing is allowed: the module's explicit `share` flag for that kind if set, else the default for its origin. **Built-in modules share by default** (nothing changes for existing installs). **Channel modules are denied until you consent** with one `ct_setup` call (`share`, or `set` to give it its own).
+4. Otherwise the module reports `<KIND>_NOT_CONFIGURED` with the exact fix.
+
+There are no per-module environment variables.
+
+**Managing it: `ct_setup` with `action: module_credentials`**, input `{ module, kind, op, … }`, `kind` one of `canvas` / `anthropic` / `panopto` and a kind the module declares:
+
+| `op` | What it does |
+| --- | --- |
+| `set` | Validates the credential against the live service, then saves it as the module's own. Nothing is saved if validation fails. |
+| `test` | Validates the credential the module would use *right now* and reports whether it is `module` or `shared`. |
+| `share` / `unshare` | Allows or forbids the module using your main (shared) credential for that kind. |
+| `clear` | Two calls. The first previews and says plainly what happens next; `confirm: true` deletes. Clearing may switch the module to your shared identity (when sharing is allowed) or leave it with nothing; the preview tells you which. |
+
+Results report presence, source and outcome only, never a value. `uninstall_module` also deletes a module's stored credentials, behind a confirm gate: if a credential file exists the first call only previews (`CONFIRMATION_REQUIRED`) and `confirm: true` proceeds; a module with no stored credentials uninstalls in one call as before. Disabling a built-in module (`set_module_enabled`) keeps its credentials.
+
+**Doctor.** The `modules.credentials` check lists, for each enabled built-in and installed channel module, one row per declared kind: its own saved credential, using the shared credential, not allowed to use the shared credential, saved credential incomplete, or no credential, marked required or optional. It warns when a required kind is unusable, names the modules riding on the shared credential, and lists legacy modules. It reports presence only. The `security.file_permissions` check also covers module credential files.
+
+**Legacy modules.** A module without `contractVersion` (v1) is loaded unchanged but cannot be scoped: it reads the shared credential files itself, `ct_setup action module_credentials` refuses it (`LEGACY_MODULE`), and the doctor labels it "legacy". The channel's Announcements Auditor 1.1.0 is such a module (frozen: its published bytes cannot change) and keeps reading the shared `canvas-config.json`. On Windows, where that file moved in the #200 folder change, its own `CANVAS_NOT_CONFIGURED` error gets an added hint to update the module; on macOS/Linux the original error passes through untouched.
+
+**What this is, and is not.** Modules run inside the same process, with your OS permissions, as the rest of the toolchain. Per-module credentials are a **scoping and least-privilege feature**: a well-behaved module never receives a kind it did not declare, you can give one module a different Canvas identity, and the doctor can tell you who uses what. They are **not a sandbox**: a hostile or compromised module could read any file your account can read, including other modules' credential files. The defences against hostile code are the ones in [`module-channel.md`](module-channel.md) (catalog pinned to this repo, sha256 re-check at every load, PR review). Likewise, a Canvas personal access token carries the full permissions of the account that created it and professors cannot normally mint a narrower one, so a module-specific Canvas credential usually means "a token from a different account" (for example, Roster can match students by `login_id` / `sis_user_id`, which Canvas only returns for a token with extra permissions).
 
 > Note: `Canvas API token` and `Voyage API key` are **config-file keys, not environment variables** — they are not read from `process.env`. (See §3.2 for the actual env-var list.)
 
@@ -311,10 +375,10 @@ These are the only environment variables read anywhere in the TypeScript package
 | `CC_OLLAMA_TIMEOUT_MS` | No | Override the Ollama request timeout. |
 | `LMSTUDIO_API_KEY` | **Yes** | Optional Bearer token for a remote/LAN LM Studio server. Env-var only — never persisted by `setup_lmstudio` and never logged. |
 | `CC_LMSTUDIO_TIMEOUT_MS` | No | Override the LM Studio request timeout. |
-| `CC_HOME` | No | Relocate the config directory (default `~/.command-and-control`). |
+| `CC_HOME` | No | Relocate Command & Control's settings folder: one folder for everything (see §3.0). |
 | `CC_INSTALL_DIR` | No | Installer marker for the update-version check. |
 | `CC_RECOMMENDED_MODELS_URL` | No | Override the source URL for the Ollama recommended-models list. |
-| `CURRICULUM_INTELLIGENCE_HOME`, `CANVAS_DESIGN_HOME` | No | Path overrides for the CI / CDS app home directories. |
+| `CURRICULUM_INTELLIGENCE_HOME`, `CANVAS_DESIGN_HOME` | No | Path overrides for the CI / CDS settings folders: one folder for everything (see §3.0). |
 | `CANVAS_BACKUP_COMMAND`, `CANVAS_BACKUP_REPO` | No | Locate the Python Canvas Backup tool (discovery order: `CANVAS_BACKUP_COMMAND` → `CANVAS_BACKUP_REPO` → `../canvas-backup` → PATH). |
 | `PYTHONPATH` | No | Set transiently when invoking the Python downloader subprocess; not user-facing. |
 
@@ -337,7 +401,7 @@ The Go installer additionally reads OS env vars `CC_HOME` (config location) and 
 
 **Minimal (no credentials):** install, skip all credential screens. Import archives, analyze/plan, generate HTML, and paste into Canvas manually.
 
-**Via the native installer:** screen 3 collects the Anthropic key, Canvas host/token, and (if the Panopto workflow is selected) Panopto credentials — sensitive fields are masked — then validates and writes the config files.
+**Via the native installer:** the installer collects no credentials. It installs the toolchain and wires your AI apps; then say "get started" in your AI app and it runs the doctor and calls `ct_setup` for whatever is left.
 
 **Via MCP tools after install** (talk to C&C in your AI client):
 
@@ -358,7 +422,7 @@ setup_cc          { registryToken? }                   # only for the premium re
 - Tool registration & schemas: `packages/command-and-control/src/index.ts` and `packages/*/src/index.ts`.
 - Credential setup tools: `packages/command-and-control/src/tools/setup_*.ts`, `packages/module-video/src/panopto/setup.ts`.
 - Config path + `CC_HOME`: `packages/command-and-control/src/kb/config.ts`.
-- Installer credential screen: `installer/screens/credentials.go`; config writers: `installer/tasks/configs.go`.
+- Module credential store: `packages/shared-types/src/module-credentials.ts`; host context: `packages/command-and-control/src/modules/context.ts`; setup op: `packages/command-and-control/src/tools/setup_module_credentials.ts`.
 - Repo orientation for contributors: [`AGENTS.md`](../AGENTS.md). Project README: [`README.md`](../README.md).
 </content>
 </invoke>

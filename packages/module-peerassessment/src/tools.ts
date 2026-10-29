@@ -1,13 +1,19 @@
-import type { ModuleTool } from '@canvas-toolchain/module-contract';
+import { type ModuleContext, type ModuleTool } from '@canvas-toolchain/module-contract';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { PaCanvasClient, loadCanvasCreds } from './canvas/client.js';
+import { PaCanvasClient } from './canvas/client.js';
 import { buildVaultIndex } from './source/vault.js';
 import { loadPeopleSoftIndex } from './source/peoplesoft.js';
 import { buildPeerAssessmentImport } from './build.js';
+import { peerAssessmentDir } from './paths.js';
 
 const text = (s: string): CallToolResult => ({ content: [{ type: 'text', text: s }] });
 const json = (v: unknown): CallToolResult => text(JSON.stringify(v, null, 2));
 
+/**
+ * Build the tool list around a ctx accessor. The module keeps ctx in module scope (set by
+ * init) and passes `() => requireCtx(ctx)`, so a call before init fails MODULE_NOT_INITIALIZED.
+ */
+export function createPeerAssessmentTools(getCtx: () => ModuleContext): ModuleTool[] {
 const buildImportTool: ModuleTool = {
   schema: {
     name: 'build_peerassessment_import',
@@ -25,7 +31,7 @@ const buildImportTool: ModuleTool = {
         courseId: { type: 'string', description: 'Canvas course id.' },
         groupSetName: { type: 'string', description: 'Exact name of the Canvas group set (category) to read.' },
         peopleSoftFile: { type: 'string', description: 'Path to the PeopleSoft export CSV (ID backstop). Optional.' },
-        outputDir: { type: 'string', description: 'Directory for the CSV (default under CC_HOME/peerassessment).' },
+        outputDir: { type: 'string', description: 'Directory for the CSV (default: the peerassessment folder in the module config dir).' },
         dryRun: { type: 'boolean', description: 'When true, return the report only; write no file.' },
       },
     },
@@ -34,8 +40,9 @@ const buildImportTool: ModuleTool = {
     const a = args as {
       courseId: string; groupSetName: string; peopleSoftFile?: string; outputDir?: string; dryRun?: boolean;
     };
+    const ctx = getCtx(); // throws MODULE_NOT_INITIALIZED before init
     try {
-      const canvas = new PaCanvasClient(loadCanvasCreds());
+      const canvas = new PaCanvasClient(await ctx.credentials.get('canvas'));
       const groups = await canvas.readGroupSet(Number(a.courseId), a.groupSetName);
       const allStudents = await canvas.listCourseStudents(Number(a.courseId));
       const report = buildPeerAssessmentImport({
@@ -43,8 +50,8 @@ const buildImportTool: ModuleTool = {
         groupSetName: a.groupSetName,
         groups,
         allStudents,
-        sources: { vaultIndex: buildVaultIndex(), peopleSoftIndex: loadPeopleSoftIndex(a.peopleSoftFile) },
-        outputDir: a.outputDir,
+        sources: { vaultIndex: buildVaultIndex(ctx.paths.secrets), peopleSoftIndex: loadPeopleSoftIndex(ctx.paths.secrets, a.peopleSoftFile) },
+        outputDir: a.outputDir ?? peerAssessmentDir(ctx.paths.config),
         dryRun: a.dryRun,
       });
       return json(report);
@@ -60,4 +67,5 @@ const buildImportTool: ModuleTool = {
   },
 };
 
-export const peerAssessmentTools: ModuleTool[] = [buildImportTool];
+return [buildImportTool];
+}
