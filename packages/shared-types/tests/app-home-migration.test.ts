@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync,
-  rmSync, symlinkSync, writeFileSync,
+  rmSync, symlinkSync, utimesSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
@@ -104,7 +104,7 @@ function tree(dir = base): string[] {
   walk(dir);
   return out.sort();
 }
-const leftovers = () => tree().filter((p) => /\.staging-|\.tmp-/.test(p));
+const leftovers = () => tree().filter((p) => /\.staging-|\.tmp-|\.migrating$/.test(p));
 
 describe('legacyEntryRoot (classification)', () => {
   it('routes C&C names to config / data / secrets, unknown to config', () => {
@@ -431,6 +431,28 @@ describe('migrateLegacyAppHome: concurrency', () => {
     expect(journal.outcome).toBe('migrated');
     expect(existsSync(legacyCc())).toBe(false);
     expect(leftovers()).toEqual([]);
+  });
+
+  it('a fresh claim marker held by another run blocks the rename; nothing is lost', async () => {
+    seedLegacyCc();
+    mkdirSync(`${legacyCc()}.migrating`);
+    const r = await migrateLegacyAppHome('cc', win());
+    expect(r.legacyRenamedTo).toBeUndefined();
+    expect(r.outcome).not.toBe('failed');
+    expect(existsSync(legacyCc())).toBe(true);
+    expect(existsSync(`${legacyCc()}.migrating`)).toBe(true); // not ours to remove
+  });
+
+  it('a stale claim marker from a crashed run is replaced and the rename completes', async () => {
+    seedLegacyCc();
+    const marker = `${legacyCc()}.migrating`;
+    mkdirSync(marker);
+    const old = new Date(Date.now() - 10 * 60_000);
+    utimesSync(marker, old, old);
+    const r = await migrateLegacyAppHome('cc', win());
+    expect(r.legacyRenamedTo).toBeDefined();
+    expect(existsSync(marker)).toBe(false);
+    expect(existsSync(legacyCc())).toBe(false);
   });
 
   it('concurrent runs into an existing home are safe too', async () => {
