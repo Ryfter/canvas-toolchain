@@ -4,7 +4,8 @@
  *
  * Gives one contract-v2 module its own credential, or consent to use the
  * professor's shared one:
- *   - set:     validate against the live service, then save (nothing saved on failure)
+ *   - set:     validate against the live service, then save (nothing saved on failure);
+ *              `skipValidation: true` (literal boolean only) saves without any network check
  *   - test:    validate the credential the module would RESOLVE now; report its source
  *   - share / unshare: set the module's share flag for that kind
  *   - clear:   two calls; the preview says plainly whether the module will then
@@ -68,6 +69,8 @@ export interface SetupModuleCredentialsInput {
   clientSecret?: string;
   iframeWhitelisted?: boolean | null;
   confirm?: boolean;
+  /** Only the literal `true` skips the live check on op set (offline setup). */
+  skipValidation?: boolean;
 }
 
 export type ModuleLookup =
@@ -197,6 +200,7 @@ const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?
 function credentialFromInput(
   kind: CredentialKind,
   input: SetupModuleCredentialsInput,
+  validated = true,
 ): { value: CredentialInputMap[CredentialKind] } | { refusal: Result } {
   if (kind === 'canvas') {
     const host = normalizeCanvasHost(str(input.host));
@@ -233,7 +237,7 @@ function credentialFromInput(
       domain, clientId, clientSecret,
       iframeWhitelisted: typeof input.iframeWhitelisted === 'boolean' ? input.iframeWhitelisted : null,
       configuredAt: now,
-      lastValidatedAt: now,
+      lastValidatedAt: validated ? now : '',
     },
   };
 }
@@ -335,8 +339,17 @@ export async function setupModuleCredentials(
 
   switch (op) {
     case 'set': {
-      const built = credentialFromInput(kind, args as SetupModuleCredentialsInput);
+      const skip = args.skipValidation === true;
+      const built = credentialFromInput(kind, args as SetupModuleCredentialsInput, !skip);
       if ('refusal' in built) return { ...base, ...built.refusal, saved: false };
+      if (skip) {
+        setModuleCredential(id, kind, built.value);
+        return {
+          ok: true, ...base, saved: true, validated: false, source: 'module',
+          message: `${name} (${id}) now uses its own ${label}, saved WITHOUT checking it against the service. ` +
+            `Run op "test" later to check it.`,
+        };
+      }
       const outcome = await validate(kind, built.value, fetchImpl);
       if (!outcome.ok) {
         return refuse('CREDENTIAL_VALIDATION_FAILED', `${outcome.reason} Nothing was saved.`,

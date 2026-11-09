@@ -348,7 +348,7 @@ There are no per-module environment variables.
 
 | `op` | What it does |
 | --- | --- |
-| `set` | Validates the credential against the live service, then saves it as the module's own. Nothing is saved if validation fails. |
+| `set` | Validates the credential against the live service, then saves it as the module's own. Nothing is saved if validation fails. Pass `skipValidation: true` (the literal boolean only) to save without the network check, for setup while the service is unreachable; the result says `validated: false` and `op: test` checks it later. |
 | `test` | Validates the credential the module would use *right now* and reports whether it is `module` or `shared`. |
 | `share` / `unshare` | Allows or forbids the module using your main (shared) credential for that kind. |
 | `clear` | Two calls. The first previews and says plainly what happens next; `confirm: true` deletes. Clearing may switch the module to your shared identity (when sharing is allowed) or leave it with nothing; the preview tells you which. |
