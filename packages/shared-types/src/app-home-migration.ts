@@ -31,6 +31,10 @@ import { promises as fsp, type Stats } from 'node:fs';
 import path from 'node:path';
 import { appPaths, legacyAppHome, type AppId, type PathEnv } from './app-paths.js';
 
+/** Rename retry budget: 8 tries, 50 ms growing by 50 ms each (about 1.8 s in all). */
+const RENAME_RETRIES = 8;
+const RENAME_RETRY_MS = 50;
+
 export type MigrationRoot = 'config' | 'data' | 'secrets';
 export type MigrationOutcome = 'migrated' | 'partial' | 'nothing-to-do' | 'failed';
 /** link: symlink/junction, not followed. not-a-file: socket, device, etc.
@@ -527,16 +531,32 @@ class Run {
         const name = i === 1 ? base : `${base}-${i}`;
         if (await lstatOrNull(name)) continue;
         try {
-          await fsp.rename(this.legacy, name);
+          await this.renameWithRetry(name);
           this.j.legacyRenamedTo = name;
           return;
         } catch (e) {
           if (await lstatOrNull(name)) continue; // lost a race for this name
-          return; // ENOENT (another run won) or a handle is open: partial, retried next boot
+          return; // ENOENT (another run won) or a handle stayed open: partial, retried next boot
         }
       }
     } finally {
       await fsp.rmdir(claim).catch(() => undefined);
+    }
+  }
+
+  /** Rename the legacy folder, retrying briefly while Windows reports it busy. A
+   *  concurrent run may still hold a file inside it open (its byte comparison);
+   *  that handle closes within milliseconds, so waiting beats reporting 'partial'. */
+  private async renameWithRetry(name: string): Promise<void> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await fsp.rename(this.legacy, name);
+        return;
+      } catch (e) {
+        const busy = ['EPERM', 'EBUSY', 'EACCES'].includes(code(e) ?? '');
+        if (!busy || attempt >= RENAME_RETRIES) throw e;
+        await new Promise((r) => setTimeout(r, RENAME_RETRY_MS * (attempt + 1)));
+      }
     }
   }
 
