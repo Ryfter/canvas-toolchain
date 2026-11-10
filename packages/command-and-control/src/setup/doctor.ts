@@ -185,7 +185,7 @@ function canvasCredentialsCheck(state: SetupState): DoctorCheck {
     return {
       id: 'canvas.credentials',
       status: 'warn',
-      summary: `Canvas at ${state.canvas.host} did not accept the stored token (${reason}).`,
+      summary: `Canvas did not accept the stored token (${reason}).`,
       fix: {
         tool: 'ct_setup',
         action: 'canvas',
@@ -196,7 +196,7 @@ function canvasCredentialsCheck(state: SetupState): DoctorCheck {
   return {
     id: 'canvas.credentials',
     status: 'ok',
-    summary: `Canvas configured for ${state.canvas.host}${probe?.attempted ? ' and reachable' : ''}.`,
+    summary: `Canvas is configured${probe?.attempted ? ' and reachable' : ''}.`,
   };
 }
 
@@ -258,7 +258,7 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
       id: 'canvas.store_sync',
       status: 'warn',
       summary: designStudio.host !== null
-        ? `Canvas Design Studio points at ${designStudio.host} but has no API token, so it cannot authenticate.`
+        ? 'Canvas Design Studio has a Canvas host but no API token, so it cannot authenticate.'
         : 'Canvas is configured for Command & Control but not for Canvas Design Studio.',
       detail: [
         institutionFile.present ? institutionFile.path : `${institutionFile.path} (missing)`,
@@ -287,7 +287,7 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
       id: 'canvas.store_sync',
       status: 'warn',
       summary:
-        `The two Canvas stores point at different hosts (${canvasConfig.host} vs ${designStudio.host}).`,
+        'The two Canvas stores point at different hosts.',
       ...(notes.length > 0 && { detail: notes }),
       fix,
     };
@@ -295,7 +295,7 @@ function canvasStoreSyncCheck(state: SetupState): DoctorCheck {
   return {
     id: 'canvas.store_sync',
     status: 'ok',
-    summary: `Both Canvas stores agree on ${canvasConfig.host}.`,
+    summary: 'Both Canvas stores agree on the Canvas host.',
     ...(notes.length > 0 && { detail: notes }),
   };
 }
@@ -478,7 +478,7 @@ function llmCredentialsCheck(state: SetupState): DoctorCheck {
     return {
       id: 'llm.credentials',
       status: 'warn',
-      summary: `LM Studio at ${state.llm.lmstudio.host ?? 'the configured URL'} is not reachable (${reason}).`,
+      summary: `LM Studio is not reachable (${reason}).`,
       fix: {
         tool: 'ct_setup',
         action: 'lmstudio',

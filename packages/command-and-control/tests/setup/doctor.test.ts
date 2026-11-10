@@ -288,15 +288,15 @@ describe('runDoctor checks', () => {
   // Studio's loadConfig() overlays the canonical host and token, which made this
   // disagreement invisible (and the warn branch unreachable) even though the raw
   // files still disagree until the next save or restart reconciles them.
-  it('warns when the raw stores point at different hosts, naming both', async () => {
+  it('warns when the raw stores point at different hosts, naming neither', async () => {
     seed('canvas-config.json', { host: 'example.instructure.com', token: 'tok-secret' });
     seed('institution.json', { canvasUrl: 'https://other.instructure.com', apiToken: 'cds-tok' }, cdsHome);
 
     const sync = check(await runDoctor(), 'canvas.store_sync');
 
     expect(sync.status).toBe('warn');
-    expect(sync.summary).toContain('example.instructure.com');
-    expect(sync.summary).toContain('other.instructure.com');
+    expect(sync.summary).toMatch(/different hosts/);
+    expect(sync.summary).not.toContain('instructure.com');
     expect(sync.fix?.tool).toBe('ct_setup');
     expect(sync.fix?.action).toBe('canvas');
     expect(sync.fix?.hint).toMatch(/ct_setup action canvas/);
@@ -407,7 +407,7 @@ describe('runDoctor checks', () => {
     const sync = check(await runDoctor(), 'canvas.store_sync');
 
     expect(sync.status).toBe('warn');
-    expect(sync.summary).toContain('example.instructure.com');
+    expect(sync.summary).not.toContain('example.instructure.com');
     expect(sync.summary).toMatch(/no API token/);
     expect(sync.fix?.action).toBe('canvas');
   });
@@ -699,5 +699,54 @@ describe('ct_setup doctor dispatch', () => {
       if (!real) offenders.push(`${c.id} -> ${c.fix.tool} ${c.fix.action}`);
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+// #244: AGENTS.md says status results report presence only. A host value in a
+// doctor result flows straight into LLM context.
+describe('runDoctor never prints a host value', () => {
+  const CANVAS_HOST = 'secret-school.instructure.com';
+  const OTHER_HOST = 'other-secret-school.instructure.com';
+  const LM_HOST = 'lm.internal.example:1234';
+  const HOSTS = [CANVAS_HOST, OTHER_HOST, LM_HOST, 'secret-school', 'lm.internal'];
+
+  function expectNoHost(report: unknown) {
+    const dumped = JSON.stringify(report);
+    for (const h of HOSTS) expect(dumped).not.toContain(h);
+  }
+
+  it('stays clean when Canvas is ok and the stores agree', async () => {
+    seed('canvas-config.json', { host: CANVAS_HOST, token: 'tok-secret' });
+    seed('institution.json', { canvasUrl: `https://${CANVAS_HOST}`, apiToken: 'cds-tok' }, cdsHome);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
+    const report = await runDoctor({ probe: true });
+    expect(check(report, 'canvas.credentials').status).toBe('ok');
+    expectNoHost(report);
+  });
+
+  it('stays clean when Canvas rejects the token', async () => {
+    seed('canvas-config.json', { host: CANVAS_HOST, token: 'tok-secret' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })));
+    const report = await runDoctor({ probe: true });
+    expect(check(report, 'canvas.credentials').summary).toMatch(/HTTP 401/);
+    expectNoHost(report);
+  });
+
+  it('stays clean when the stores disagree or Design Studio has no token', async () => {
+    seed('canvas-config.json', { host: CANVAS_HOST, token: 'tok-secret' });
+    seed('institution.json', { canvasUrl: `https://${OTHER_HOST}`, apiToken: 'cds-tok' }, cdsHome);
+    expectNoHost(await runDoctor());
+    seed('institution.json', { canvasUrl: `https://${OTHER_HOST}` }, cdsHome);
+    rmSync(join(ccHome, 'canvas-config.json'), { force: true });
+    expectNoHost(await runDoctor());
+  });
+
+  it('stays clean when LM Studio is unreachable', async () => {
+    seed('lmstudio-config.json', { baseUrl: `http://${LM_HOST}/v1`, model: 'm' });
+    seed('llm-provider.json', { provider: 'lmstudio' });
+    vi.stubGlobal('fetch', vi.fn(async () => { throw Object.assign(new Error('x'), { code: 'ECONNREFUSED' }); }));
+    const report = await runDoctor({ probe: true });
+    expect(check(report, 'llm.credentials').summary).toMatch(/LM Studio is not reachable/);
+    expectNoHost(report);
   });
 });
