@@ -40,6 +40,11 @@ jobs:
           node scripts/check-app-paths.mjs
           node scripts/check-app-paths.mjs --self-test
 
+      - name: Release notes guard
+        run: |
+          node scripts/check-release-notes.mjs
+          node scripts/check-release-notes.mjs --self-test
+
       - name: Build all packages
         run: npm run build
 
