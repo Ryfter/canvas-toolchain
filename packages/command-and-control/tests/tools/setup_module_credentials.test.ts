@@ -204,6 +204,62 @@ describe('set', () => {
   });
 });
 
+describe('set with skipValidation (offline override, #245)', () => {
+  const canvasArgs = { module: 'group-builder', kind: 'canvas', op: 'set', host: MODULE_HOST, token: CANVAS_TOKEN };
+
+  it('saves without any network call and says it was not checked', async () => {
+    const deps = makeDeps();
+    const result = await run({ ...canvasArgs, skipValidation: true }, deps);
+    expect(result).toMatchObject({ ok: true, op: 'set', saved: true, validated: false, source: 'module' });
+    expect(deps.fetchImpl).not.toHaveBeenCalled();
+    expect(String(result.message)).toMatch(/without checking/i);
+    expect(String(result.message)).toContain('test');
+    expect(JSON.stringify(result)).not.toContain(MODULE_HOST);
+    expect(resolveModuleCredential('group-builder', 'canvas', { shareDefault: false }))
+      .toEqual({ value: { host: MODULE_HOST, token: CANVAS_TOKEN }, source: 'module' });
+  });
+
+  it('leaves Panopto lastValidatedAt empty when unvalidated', async () => {
+    const deps = makeDeps();
+    await run({
+      module: 'video', kind: 'panopto', op: 'set', skipValidation: true,
+      domain: 'school.hosted.panopto.com', clientId: PANOPTO_CLIENT_ID, clientSecret: PANOPTO_SECRET,
+    }, deps);
+    expect(deps.fetchImpl).not.toHaveBeenCalled();
+    const resolved = resolveModuleCredential('video', 'panopto', { shareDefault: false });
+    expect(resolved).toMatchObject({ source: 'module', value: { lastValidatedAt: '' } });
+  });
+
+  it('still refuses an incomplete credential', async () => {
+    const result = await run({ module: 'group-builder', kind: 'canvas', op: 'set', token: CANVAS_TOKEN, skipValidation: true });
+    expect(result).toMatchObject({ ok: false, error: 'CREDENTIAL_INCOMPLETE' });
+    expect(moduleCredentialFileExists('group-builder')).toBe(false);
+  });
+
+  it('op test still validates the unvalidated credential', async () => {
+    await run({ ...canvasArgs, skipValidation: true });
+    const deps = makeDeps(vi.fn(async () => statusResponse(401)));
+    const result = await run({ module: 'group-builder', kind: 'canvas', op: 'test' }, deps);
+    expect(deps.fetchImpl).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ ok: false, error: 'CREDENTIAL_VALIDATION_FAILED', validated: false });
+  });
+
+  it.each([['true'], [1], ['yes'], [false], [null]])('%j does not skip validation', async (flag) => {
+    const deps = makeDeps(vi.fn(async () => statusResponse(401)));
+    const result = await run({ ...canvasArgs, skipValidation: flag }, deps);
+    expect(deps.fetchImpl).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ ok: false, error: 'CREDENTIAL_VALIDATION_FAILED', saved: false });
+    expect(moduleCredentialFileExists('group-builder')).toBe(false);
+  });
+
+  it('default path still validates before saving', async () => {
+    const deps = makeDeps();
+    const result = await run(canvasArgs, deps);
+    expect(result).toMatchObject({ ok: true, saved: true, validated: true });
+    expect(deps.fetchImpl).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('test', () => {
   it('validates the module credential and reports source "module"', async () => {
     setModuleCredential('group-builder', 'canvas', { host: MODULE_HOST, token: CANVAS_TOKEN });

@@ -227,7 +227,7 @@ const BASE_OPERATIONS: Operation[] = [
     id: 'setup_module_credentials',
     section: 'admin',
     description:
-      "Give one module its own Canvas/Anthropic/Panopto credential or let it use your main one: op set (validates first), test, share, unshare, clear (two-call confirm). Reports source only.",
+      "Give one module its own Canvas/Anthropic/Panopto credential or let it use your main one: op set (validates first; skipValidation:true saves offline), test, share, unshare, clear (confirm).",
     inputSchema: {
       type: 'object' as const,
       required: ['module', 'kind', 'op'],
@@ -247,6 +247,7 @@ const BASE_OPERATIONS: Operation[] = [
         clientId: { type: 'string', description: 'kind panopto, op set: Panopto API client id.' },
         clientSecret: { type: 'string', description: 'kind panopto, op set: Panopto API client secret. Stored locally and never echoed back.' },
         iframeWhitelisted: { type: 'boolean', description: 'kind panopto, op set: optional, whether Canvas is on the Panopto iframe allowlist.' },
+        skipValidation: { type: 'boolean', description: 'op set: only the literal true skips the live check and saves the credential unchecked (for setup while the service is unreachable); the result says validated:false and op test checks it later. Default: validate first.' },
         confirm: { type: 'boolean', description: 'op clear: set true on the second call to actually delete. The first call previews what happens next.' },
       },
     },

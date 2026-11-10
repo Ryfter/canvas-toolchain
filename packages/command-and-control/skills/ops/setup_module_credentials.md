@@ -1,6 +1,6 @@
 ---
 id: "setup_module_credentials"
-description: "Give one module its own Canvas/Anthropic/Panopto credential or let it use your main one: op set (validates first), test, share, unshare, clear (two-call confirm). Reports source only."
+description: "Give one module its own Canvas/Anthropic/Panopto credential or let it use your main one: op set (validates first; skipValidation:true saves offline), test, share, unshare, clear (confirm)."
 section: "admin"
 intent_tool: "ct_setup"
 intent_action: "module_credentials"
