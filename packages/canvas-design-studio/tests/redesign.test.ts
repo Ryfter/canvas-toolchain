@@ -53,21 +53,19 @@ describe('redesignCanvasPage', () => {
     expect(result.appliedFixes).toHaveLength(0);
   });
 
-  it('runs accessibility check and populates accessibilityWarnings for low-contrast html', async () => {
+  it('reports low-contrast html through the conformance report', async () => {
     const html = '<h2>Title</h2><div style="background:#cccccc;color:#ffffff;">Low contrast text.</div>';
     const result = await redesignCanvasPage({ html, findings: [] });
-    expect(result.accessibilityWarnings).toBeDefined();
-    expect(result.accessibilityWarnings!.length).toBeGreaterThan(0);
+    expect(result.conformance.findings.some(f => f.sc === '1.4.3')).toBe(true);
   });
 
-  it('attaches a conformance report alongside deprecated accessibilityWarnings', async () => {
+  it('carries only the canonical conformance report (no legacy accessibilityWarnings)', async () => {
     const result = await redesignCanvasPage({
       html: '<p style="color:#999999;background:#ffffff">low</p>',
       findings: [],
     });
-    expect(result.accessibilityWarnings).toBeDefined();       // back-compat preserved
-    expect(result.conformance).toBeDefined();
-    expect(result.conformance!.verdict).toBe('fail');
+    expect(result.conformance.verdict).toBe('fail');
+    expect(result).not.toHaveProperty('accessibilityWarnings');
   });
 
   it('returns kbContext in comprehensive mode', async () => {

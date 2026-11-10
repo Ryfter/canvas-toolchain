@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 // Import tool modules directly — package main starts an MCP server on load.
 import { canvasSafeTransform } from '@canvas-toolchain/canvas-design-studio/dist/utils/transform.js';
-import { auditAccessibility } from '@canvas-toolchain/canvas-design-studio/dist/tools/accessibility.js';
+import { runPolicyConformanceCheck } from '@canvas-toolchain/canvas-design-studio/dist/tools/a11y/policy.js';
 import { installResourceAtomically } from '../registry/local_registry.js';
 import type { ResourceManifest } from '../registry/local_registry.js';
 
@@ -253,9 +253,9 @@ export async function pasteLayout(input: PasteLayoutInput): Promise<AdaptedLayou
 
   const { slotMap } = parseAndExtract(transformResult.html);
 
-  const a11yWarnings = auditAccessibility(transformResult.html);
+  const conformance = await runPolicyConformanceCheck(transformResult.html);
   const warnings = [
-    ...a11yWarnings.map(w => w.context ? `${w.message} [Context: ${w.context}]` : w.message),
+    ...conformance.findings.map(f => f.context ? `${f.message} [Context: ${f.context}]` : f.message),
     ...transformResult.violations.map(v => `${v.issue}: ${v.suggestion}`)
   ];
 

@@ -77,8 +77,8 @@ These are non-negotiable constraints sourced from the Canvas RCE sanitizer. Viol
 
 Use `runConformanceCheck` (`src/tools/a11y/conformance.ts`) for all new
 accessibility checking — it runs the in-house + axe-core engines and returns a
-canonical WCAG 2.2 `ConformanceReport`. `auditAccessibility` is deprecated
-(kept for command-and-control compatibility). Full reference: `docs/accessibility.md`.
+canonical WCAG 2.2 `ConformanceReport`. `auditAccessibility` is only the in-house
+engine primitive behind it and is not exported from the package. Full reference: `docs/accessibility.md`.
 
 Publishing gates on the conformance verdict (Phase 2): `publish_to_canvas` blocks with
 `ACCESSIBILITY_ACK_REQUIRED` until the professor acknowledges — `acknowledgeAccessibility: true`

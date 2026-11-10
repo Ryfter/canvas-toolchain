@@ -222,6 +222,7 @@ describe('publishToCanvas', () => {
 
     expect(result).toMatchObject({ action: 'created' });
     expect((result as PublishSuccess).conformance).toBeDefined();
+    expect(result).not.toHaveProperty('accessibilityWarnings');
   });
 
   // Deterministic in-house findings:

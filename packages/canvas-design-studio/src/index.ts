@@ -673,14 +673,7 @@ async function main() {
             result.skippedFindings.map(s => `  • ${s}`).join('\n'));
         }
 
-        if (result.accessibilityWarnings?.length) {
-          lines.push(`\n\nAccessibility (WCAG 2.1 AA — advisory):\n` +
-            result.accessibilityWarnings.map(w => `  ⚠ ${w.check}: ${w.message}`).join('\n'));
-        }
-
-        if (result.conformance) {
-          lines.push(`\n\n${formatConformanceReport(result.conformance)}`);
-        }
+        lines.push(`\n\n${formatConformanceReport(result.conformance)}`);
 
         if (result.kbContext) {
           lines.push(`\n\n---\nDesign KB (use this to complete remaining fixes):\n${result.kbContext}`);
@@ -914,6 +907,4 @@ export { canvasSafeTransform } from './utils/transform.js';
 export type { TransformResult } from './utils/transform.js';
 export { renderPageDecoupled } from './utils/render-engine.js';
 export type { RenderEngineInput, RenderEngineResult } from './utils/render-engine.js';
-export { auditAccessibility } from './tools/accessibility.js';
-export type { AccessibilityWarning } from './tools/accessibility.js';
 
