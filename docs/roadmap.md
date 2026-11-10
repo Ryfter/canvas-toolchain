@@ -11,12 +11,12 @@ Release line since the last version of this page:
 | Release | Date | Headline |
 |---|---|---|
 | v2.2.0 / v2.2.1 | 2026-08-21 | Unification: `npx canvas-toolchain`, `@canvas-toolchain/*` packages, npm publish on tag (OIDC trusted publishing), model-agnostic copy |
-| v2.3.0 | 2026-08-29 | One registry-driven tool surface (nine intent tools plus an advanced sidecar), quiz validate/generate, weekly shell-readiness spot-check |
-| v2.4.0 | 2026-10-29 | Per-OS Windows app folders with safe migration (#200), per-module credentials on module contract v2 (#201) |
+| v2.3.0 | 2026-08-29 | Quiz tools (`validate_quiz`, `generate_quiz`), weekly live-Canvas shell-readiness spot-check, `install.sh` helper and `doctor --json`, installer-first README |
+| v2.4.0 | 2026-10-29 | The big one: per-OS Windows app folders with safe migration (#200), per-module credentials on contract v2 (#201), plus everything that had landed since v2.3.0: the registry-driven tool surface (nine intent tools and an advanced sidecar), the setup/readiness engine (#151), the skill graph, the LM Studio provider and a slimmed installer |
 | v2.4.1 | 2026-10-29 | Windows migration race fixes, `@hono/node-server` security update |
 | v2.4.2 | 2026-11-10 | Doctor no longer prints hosts (#244), offline `skipValidation` for module credentials (#245), Windows rename retry (#248) |
 
-Also landed on `main` between v2.3.0 and v2.4.0 (shipped in v2.4.0): the **setup/readiness engine** (#151, closed): `ct_setup doctor` / `get_started` / `apply`, `npx canvas-toolchain doctor [--json]`, MCP host wiring detection, a single Canvas credential store, an LM Studio provider, a slimmed installer with no secrets or client-side build, and the generated **skill graph** (86 operations, topic maps, lint and freshness gates in CI). Specs: [`docs/2026-08-21-install-simplification.md`](2026-08-21-install-simplification.md), [`docs/skill-graph.md`](skill-graph.md), [`docs/specs/2026-10-18-paths-and-module-credentials.md`](specs/2026-10-18-paths-and-module-credentials.md).
+The setup/readiness engine (#151, closed) shipped in v2.4.0: `ct_setup doctor` / `get_started` / `apply`, `npx canvas-toolchain doctor [--json]`, MCP host wiring detection, a single Canvas credential store, an LM Studio provider, a slimmed installer with no secrets or client-side build, and the generated **skill graph** (86 operations, topic maps, lint and freshness gates in CI). Specs: [`docs/2026-08-21-install-simplification.md`](2026-08-21-install-simplification.md), [`docs/skill-graph.md`](skill-graph.md), [`docs/specs/2026-10-18-paths-and-module-credentials.md`](specs/2026-10-18-paths-and-module-credentials.md).
 
 **Health snapshot (2026-11-10):** `npm audit` reports 0 vulnerabilities; no open Dependabot alerts; all five bundled modules and the channel module are on contract v2.
 
