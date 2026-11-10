@@ -147,6 +147,14 @@ after editing its config. That includes hosts the installer does not auto-wire.
 `canvas-toolchain-server`, `canvas-toolchain-design-studio`,
 `canvas-toolchain-curriculum-intelligence` if you still want a single-package server).
 
+### Check your setup
+
+```bash
+npx canvas-toolchain doctor
+```
+
+Prints what is set up, what is not, and the exact fix for each item. It never shows secrets, and it exits 0 unless the chosen journey (`--journey local-authoring | canvas-connected | ai-assisted | full`) is not ready. `--json` prints one machine-readable report; `--probe` also runs short live network checks (off by default). Inside your AI client, ask for `get_started` for the same picture in chat. Where each app keeps its settings on your OS: [User Guide](docs/user-guide.md#8-where-your-data-and-credentials-live).
+
 **Working on this repo (human or AI agent)?** Read [`AGENTS.md`](AGENTS.md) first.
 
 ## Documentation
@@ -154,7 +162,7 @@ after editing its config. That includes hosts the installer does not auto-wire.
 | Doc | What's in it |
 | --- | --- |
 | 🧭 [**Feature overview**](docs/tool-overview.md) | Concise outcome-focused summary of what Canvas Toolchain helps instructors do, with emphasis on accessibility, Canvas management, shell speed/quality, and instructor-led AI review |
-| 🗺️ [**Roadmap**](docs/roadmap.md) | What ships next and in what order — the WCAG 2.2 gate phases, upcoming releases, the v2.0 plug-in direction, and the unscheduled ideas backlog |
+| 🗺️ [**Roadmap**](docs/roadmap.md) | What ships next and in what order, the release history since v2.1, a code-health backlog, and the unscheduled ideas |
 | 🚀 [**User Guide & Tutorial**](docs/user-guide.md) | **Start here.** What you can do, how to use it, a hands-on end-to-end tutorial, and a task-by-task command catalog (*what each command is · how it works · why you'd use it*) |
 | 📘 [**Commands & Credentials reference**](docs/commands-and-credentials.md) | Every command (MCP tool) with its parameters, and every API key/secret — what it's for, why, and whether it's optional |
 | 🧩 [**Module view**](docs/architecture-modules.md) | The toolchain broken into modules: what each is, why it exists, what it does, and its commands |
@@ -176,7 +184,7 @@ Full table: [User Guide §9](docs/user-guide.md#9-troubleshooting). The one that
 | `packages/canvas-design-studio/` | `@canvas-toolchain/canvas-design-studio` | Canvas-safe HTML generation (`canvas-toolchain-design-studio`), design review, transcript enrichment |
 | `packages/curriculum-intelligence/` | `@canvas-toolchain/curriculum-intelligence` | Course analysis, semester comparison, topic currency, planning (`canvas-toolchain-curriculum-intelligence`) |
 | `packages/shared-types/` | `@canvas-toolchain/shared-types` | TypeScript contracts shared across packages |
-| `packages/shared-llm/` | `@canvas-toolchain/shared-llm` | Shared LLM client (Anthropic + Ollama providers) |
+| `packages/shared-llm/` | `@canvas-toolchain/shared-llm` | Shared LLM client (Anthropic, Ollama and LM Studio providers) |
 | `packages/module-contract/` | `@canvas-toolchain/module-contract` | The `CanvasToolchainModule` plug-in contract for opt-in capability modules |
 | `packages/module-video/` | `@canvas-toolchain/module-video` | Lecture Video module (Panopto as the first provider) |
 | `packages/module-oral-assessment/` | `@canvas-toolchain/module-oral-assessment` | Oral/video assessment authoring (Rhetorix-first) |
