@@ -1,23 +1,41 @@
 # Canvas Toolchain Roadmap
 
-_Last updated: 2026-08-13. This is the planned order of work — what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent; the order is the commitment, not the calendar._
+_Last updated: 2026-11-10. This is the planned order of work: what ships next, what release it lands in, and what is parked as an idea. Dates are intentionally absent from the plan; the order is the commitment, not the calendar. Shipped sections below carry their real dates._
 
 ## Where we are
 
-**Current release: v2.1.0 — one release surface** (released 2026-07-14, catalog cutover completed the same day). Module artifacts are now repo-hosted files under `modules/` — hash-pinned, rebuilt-and-verified by CI — the catalog is `catalogVersion: 2` with companion-program listings, and the update check accepts only strict `vX.Y.Z` tags. The Releases page carries only toolchain releases again. Open issues (verified 2026-08-13): **#150** and **#151** — treat `gh issue list --state open` as the source of truth. Details in "Shipped in v2.1.0" below.
+**Current release: v2.4.2** (2026-11-10). Open issues: **#199** only (the manual fresh-machine install check). Treat `gh issue list --state open` as the source of truth, not this page.
 
-**Next release: v2.2.0 — Canvas Toolchain unification** (merged to `main` as `e2e1b74` / #140; still unreleased — no `v2.2.0` tag). `npx canvas-toolchain` everywhere, packages under `@canvas-toolchain/*`, model-agnostic copy, npm publish workflow (needs org + `NPM_TOKEN` before tag). Details in "v2.2.0 on main, awaiting release" below.
+Release line since the last version of this page:
 
-Recent history: **v2.0.0** (plug-in module channel, closed #78) and the **v2.0.1 hardening pass** (PR #130, closed #121–#129) — a post-ship security review executed in full, whose headline fix was repo-wide: all seven Canvas clients refuse off-origin `Link: rel="next"` pagination, so a hostile or injected pagination URL can never receive the professor's Canvas token. **Announcements Auditor 1.1.0** (carrying those fixes) is the version the catalog serves.
+| Release | Date | Headline |
+|---|---|---|
+| v2.2.0 / v2.2.1 | 2026-08-21 | Unification: `npx canvas-toolchain`, `@canvas-toolchain/*` packages, npm publish on tag (OIDC trusted publishing), model-agnostic copy |
+| v2.3.0 | 2026-08-29 | One registry-driven tool surface (nine intent tools plus an advanced sidecar), quiz validate/generate, weekly shell-readiness spot-check |
+| v2.4.0 | 2026-10-29 | Per-OS Windows app folders with safe migration (#200), per-module credentials on module contract v2 (#201) |
+| v2.4.1 | 2026-10-29 | Windows migration race fixes, `@hono/node-server` security update |
+| v2.4.2 | 2026-11-10 | Doctor no longer prints hosts (#244), offline `skipValidation` for module credentials (#245), Windows rename retry (#248) |
 
-**Immediate next steps, in order:**
+Also landed on `main` between v2.3.0 and v2.4.0 (shipped in v2.4.0): the **setup/readiness engine** (#151, closed): `ct_setup doctor` / `get_started` / `apply`, `npx canvas-toolchain doctor [--json]`, MCP host wiring detection, a single Canvas credential store, an LM Studio provider, a slimmed installer with no secrets or client-side build, and the generated **skill graph** (86 operations, topic maps, lint and freshness gates in CI). Specs: [`docs/2026-08-21-install-simplification.md`](2026-08-21-install-simplification.md), [`docs/skill-graph.md`](skill-graph.md), [`docs/specs/2026-10-18-paths-and-module-credentials.md`](specs/2026-10-18-paths-and-module-credentials.md).
 
-1. **[#150](https://github.com/Ryfter/canvas-toolchain/issues/150) — Tag and publish v2.2.0** — unification is already on `main` (`e2e1b74`, #140). Remaining, blocked on the maintainer: create the `canvas-toolchain` npm org, add the `NPM_TOKEN` repo secret, tag `v2.2.0` (see [`docs/npm-publishing.md`](npm-publishing.md)), then cut an installer release.
-2. **[#151](https://github.com/Ryfter/canvas-toolchain/issues/151) — One setup/readiness engine** — umbrella: make "installed" mean one thing across the installer, the README, `get_cc_status`, and the tutorial. Design pending; do not implement unasked.
-3. **Canvas capability showcase → assisted template creator + information hierarchy** — one combined design effort. The browse half exists (`show_canvas_capabilities` / `preview_canvas_pattern`); what's missing is the assisted "build a valid page from structured choices" flow, and the at-a-glance / working-detail / deep-support content-priority tiers are the structure that flow should ask about.
-4. **Rubric persona tie-in** — `draft_student_rubric` accepts course personas but does not yet emit per-persona criterion explanations. Small, well-bounded.
-5. **Module migration pilot (decision pending)** — five modules are still compiled into the base install (video, oral-assessment, group-builder, roster, peerassessment) while the catalog channel has only ever carried one. Candidate: migrate `module-video` alone first, proving the channel with more than one module before moving the rest.
-6. **Generation-quality eval harness** — a golden-input regression suite for the LLM-generated outputs (rubric rewrites, page generation), so model upgrades — including refreshing the aging default model id — become verifiable diffs instead of judgment calls.
+**Health snapshot (2026-11-10):** `npm audit` reports 0 vulnerabilities; no open Dependabot alerts; all five bundled modules and the channel module are on contract v2.
+
+## Next releases, in order
+
+1. **#199: fresh-machine install verification** (maintainer, needs real desktops). Run the native installer on a Mac desktop and on Windows; the `npx` path is already verified on 2.4.0 through 2.4.2. Pair it with **CT-99**, the manual Windows proof of the app-folder migration (seed an old-style home, run the doctor).
+2. **v2.4.3 housekeeping (no behavior change).** Rewrite this page and the `AGENTS.md` status (this PR); drop Node 20 (end of life) from the CI matrix and `engines`, then remove the `undici` override it pinned and try `juice` 12; apply the minor dependency bumps (`@modelcontextprotocol/sdk`, `axe-core`, `tsx`, `esbuild`, `fast-xml-parser`); delete merged local and remote branches; remove the leftover `release-checklist-v2.2.0.md` and `release-notes-v2.2.0.draft.md`. Major bumps (`jsdom` 31, `better-sqlite3` 13, `color` 5, `@inquirer/prompts` 8) each get their own issue and PR.
+3. **v2.5.0: generation-quality eval harness, then the model and SDK refresh.** A golden-input regression suite for the LLM-generated outputs (rubric rewrites, page generation, quiz generation), so moving off the aging default model ids (`claude-haiku-4-5-20251001`, `claude-sonnet-4-6`) and the `@anthropic-ai/sdk` 0.36 line (latest is 1.x) becomes a verifiable diff instead of a judgment call. Needs a short design conversation first (what the goldens are, who grades them, cost per run).
+4. **v2.6.0: module migration pilot.** Five modules are still compiled into the base install (video, oral-assessment, group-builder, roster, peerassessment) while the catalog channel has carried only the Announcements Auditor. Candidate: move `module-video` alone first, which proves the channel with a second module before moving the rest. **Decision pending (Kevin).** The open question about credential-kind lookup for disabled channel modules belongs here.
+5. **v2.7.0: assisted template creator plus information hierarchy, and rubric persona explanations.** One combined design effort: the browse half exists (`show_canvas_capabilities` / `preview_canvas_pattern`); what is missing is the assisted "build a valid page from structured choices" flow, with the at-a-glance / working-detail / deep-support content tiers as the structure it asks about. `draft_student_rubric` accepts course personas but does not yet emit per-persona criterion explanations (small, well-bounded). Needs a brainstorm before any build.
+
+## Code health backlog (unscheduled; pick up alongside the releases above)
+
+- **`surface/registry.ts` is ~2,000 lines.** Split by intent area once the surface stops changing; the generated skill tree and CI gates make the split safe.
+- **Deprecated shims still have callers:** Design Studio's `auditAccessibility` / `accessibilityWarnings` (marked "kept for C&C until Phase 2"; Phase 2 shipped, but `layout_adapter.ts` and `lib/page-renderer.ts` still call `auditAccessibility`) and the old `snapshotDir` / `createSnapshotDir` helpers in `publish/snapshot_store.ts` (still imported by `rollback_course_publish.ts` and `breadcrumbs.ts`). Move those callers to the canonical conformance report and the `*For(snapshotId, courseDir)` variants, then delete the shims.
+- **Launcher edge case:** the `canvas-toolchain` bin silently starts the MCP server on an unknown first argument; a typo such as `doctr` looks like a hang. Print usage instead.
+- **Release notes hygiene:** the GitHub release bodies for v2.2.0 through v2.3.0 carry the v2.1.0 text, because the notes template was not updated for those tags. Add a release-checklist step (and a CI guard) that the top of `installer-release.md` names the tag being released.
+- **Doctor honesty:** `ct_setup module_credentials set` now has an offline path; consider surfacing "saved unvalidated" credentials in the doctor so they are not forgotten.
+
 
 The accessibility system landed in two steps. **Phase 1** (in v1.10.0, built first) is the canonical conformance engine — shared WCAG 2.2 types, an in-house Canvas-aware check engine plus an axe-core engine behind one adapter, and a conformance report attached to generate, redesign, validate, and publish outputs. **Phase 2** (the headline of v1.10.0) turns that report into a gate at publish time. Both shipped together in v1.10.0; v1.9.0 was the prior release (host-config fan-out for model-agnostic MCP hosts + accessibility documentation).
 
@@ -82,18 +100,10 @@ Release sequence as it actually shipped: PR → CI green → squash-merge → ta
 
 **Sequencing as executed (order was load-bearing):** the v2.1.0 PR merged to `main` with the live catalog still `catalogVersion: 1`, so no installed toolchain was affected. The `v2.1.0` release was cut next — restoring the "Latest" badge the update nudge depends on for every v1.x/v2.0.x professor. Only then did the catalog-cutover PR merge (`catalogVersion: 2`, the Announcements artifact re-pointed at its `modules/` path using the exact already-published bytes — no rebuild, no version bump — plus `minHostVersion: "2.1.0"` and companion listings). Finally the old module release tags were deleted and the live catalog verified end to end — fetched over HTTPS from `raw.githubusercontent.com`, artifact bytes hashed against the catalog pin — before calling it done.
 
-## v2.2.0 on main, awaiting release — Canvas Toolchain unification
+## Shipped in v2.2.0 to v2.4.2: unification, a single tool surface, readiness, per-OS paths
 
-**Merged** to `main` as `e2e1b74` (#140). **Not tagged** — there is no `v2.2.0` release yet. One product name, any model, `npx` everywhere. Remaining publish steps (do not redo the merge): create the npm org, add `NPM_TOKEN`, tag `v2.2.0`, then cut an installer release.
+Summarized in the table under "Where we are". The design records live with the work: `docs/2026-08-21-install-simplification.md` (install path), `docs/2026-08-22-npm-oidc-decision.md` (publishing), `docs/skill-graph.md` (tool surface and skills), and `docs/specs/2026-10-18-paths-and-module-credentials.md` (app folders and module credentials, with the migration engine's guarantees: copy-only, never overwrite or delete, rename the old folder only when fully verified).
 
-- **`npx canvas-toolchain` entrypoint + `prepare` auto-build** — root launcher package (`packages/canvas-toolchain`); in-repo smoke green at `canvas-toolchain@2.2.0`. Registry-side smoke waits until after first publish.
-- **Scoped package renames** — unscoped packages → `@canvas-toolchain/*` (directories unchanged; installer wiring untouched). C&C registers as `canvas-toolchain`. All workspace versions locked to **2.2.0**.
-- **npm publish on tag** — `.github/workflows/release-npm.yml` with provenance. **Before tagging:** create the `canvas-toolchain` npm org and add `NPM_TOKEN` repo secret (runbook: [`docs/npm-publishing.md`](npm-publishing.md)).
-- **Model-agnostic copy** — shipped strings and installer screens no longer name a single AI host; launch button is host-driven.
-- **Institution scrub restored + CI guard** — `scripts/check-institution-scrub.mjs` (and the matching CI job).
-- **is-main guards** — realpath-based guards on CDS/CI/C&C so deep imports never double-boot MCP on shared stdio.
-- **Runtime assets in `dist`** — CDS templates and C&C `recommended-models.fallback.md` are copied at build so they survive `npm pack`.
-- **Version lockstep guard** — release check covers every workspace package and every intra-workspace dependency pin.
 
 ## Ideas backlog (unscheduled)
 
@@ -105,5 +115,5 @@ Captured, not committed. (The showcase/template-creator, information-hierarchy, 
 
 ## Housekeeping riding the next releases
 
-- Refresh the generation default model id alongside the eval harness (next step 4), so the change is verified rather than assumed.
 - Keep `docs/accessibility.md`, `docs/tool-overview.md`, and the generated `docs/modules.md` current as features land (the modules page is CI-enforced; the others are manual).
+- Refresh this page and the `AGENTS.md` status paragraph at every minor release; both went stale for three months because nothing prompted it.
