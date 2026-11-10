@@ -1,6 +1,5 @@
 import { writeFileSync } from 'node:fs';
 import { generatePage } from '@canvas-toolchain/canvas-design-studio/dist/tools/generate-page.js';
-import { auditAccessibility } from '@canvas-toolchain/canvas-design-studio/dist/tools/accessibility.js';
 import { redesignCanvasPage } from '@canvas-toolchain/canvas-design-studio/dist/tools/redesign.js';
 import { validateCanvasHtml } from '@canvas-toolchain/canvas-design-studio/dist/tools/validate.js';
 import type { UpdateCourseMaterialsPage, Verdict } from '@canvas-toolchain/shared-types';
@@ -45,12 +44,13 @@ export async function renderPageWithA11y(input: RenderPageInput): Promise<Update
     writeFileSync(pageResult.savedTo, html, 'utf-8');
   }
 
-  // Audit fixed HTML for accessibility and Canvas constraints
-  const warnings = auditAccessibility(html);
+  // Accessibility comes from the canonical conformance report redesign computed on the fixed
+  // HTML (policy-aware); advisories beyond the required level do not force review.
+  const a11yFindings = redesignResult.conformance.findings;
   const validationResult = validateCanvasHtml(html);
 
   const needsReviewReasons: string[] = [
-    ...warnings.map((w) => `${w.check}: ${w.message}`),
+    ...a11yFindings.map((f) => `${f.sc} ${f.scName}: ${f.message}`),
     ...validationResult.violations.map((v) => `validation: ${v.rule}`),
   ];
 

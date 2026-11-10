@@ -1,6 +1,5 @@
 import { loadTemplate, loadTheme, loadPromptSet } from './registry.js';
 import { canvasSafeTransform } from './transform.js';
-import { auditAccessibility } from '../tools/accessibility.js';
 import { runPolicyConformanceCheck } from '../tools/a11y/policy.js';
 import { markdownToHtml } from '../tools/course-templates.js';
 import type { CourseConfig, PageContent, LlmClient } from '../course-types.js';
@@ -25,7 +24,6 @@ export interface RenderEngineResult {
   finalHtml: string;
   unresolvedImagePrompts: Record<string, string>;
   violations: { issue: string; suggestion: string }[];
-  accessibility: any[];
   conformance: ConformanceReport;
 }
 
@@ -261,15 +259,13 @@ export async function renderPageDecoupled(input: RenderEngineInput): Promise<Ren
   // 4. Pipe stitched HTML and global CSS through canvasSafeTransform
   const transformResult = canvasSafeTransform(stitchedHtml, theme.themeJson.globalCss || '');
 
-  // 5. Run accessibility audits
-  const a11yResult = auditAccessibility(transformResult.html);
+  // 5. Run the canonical WCAG conformance check
   const conformance = await runPolicyConformanceCheck(transformResult.html);
 
   return {
     finalHtml: transformResult.html,
     unresolvedImagePrompts,
     violations: transformResult.violations,
-    accessibility: a11yResult,
     conformance,
   };
 }

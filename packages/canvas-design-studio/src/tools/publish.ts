@@ -3,7 +3,6 @@ import type { CanvasPage, CollisionAction, InstitutionConfig, ToolError } from '
 import { ferpaGotcha, titleCollisionGotcha, versionControlTip } from './gotchas.js';
 import { formatError } from '../utils/errors.js';
 import { validateCanvasHtml } from './validate.js';
-import { auditAccessibility, type AccessibilityWarning } from './accessibility.js';
 import { formatConformanceReport } from './a11y/conformance.js';
 import { runPolicyConformanceCheck } from './a11y/policy.js';
 import { evaluateAcknowledgment, type A11yAcknowledgment, type AckEvaluation, type ConformanceReport } from '@canvas-toolchain/shared-types';
@@ -35,7 +34,6 @@ export interface PublishSuccess {
   action: 'created' | 'updated';
   pageTitle: string;
   tip: string;
-  accessibilityWarnings?: AccessibilityWarning[];
   conformance?: ConformanceReport;
   /** Present when this publish went through on an acknowledgment. */
   acknowledgment?: AcknowledgmentRecord;
@@ -205,7 +203,6 @@ function recordAcknowledgment(record: AcknowledgmentRecord, courseDir?: string):
 function publishSuccess(
   page: CanvasPage,
   action: 'created' | 'updated',
-  a11yWarnings: AccessibilityWarning[],
   conformance: ConformanceReport,
   ackEval: AckEvaluation,
   input: PublishToCanvasInput,
@@ -215,7 +212,6 @@ function publishSuccess(
     action,
     pageTitle: page.title,
     tip: versionControlTip(),
-    ...(a11yWarnings.length > 0 && { accessibilityWarnings: a11yWarnings }),
     conformance,
   };
   if (ackEval.tier === 'none') return base;
@@ -352,7 +348,6 @@ export async function publishToCanvas(
     if (validationError) return validationError;
   }
 
-  const a11yWarnings = auditAccessibility(input.html);
   const conformance = await runPolicyConformanceCheck(input.html);
 
   const ackEval = evaluateAcknowledgment(conformance, input.acknowledgeAccessibility);
@@ -380,7 +375,7 @@ export async function publishToCanvas(
       }
 
       const updated = await api.updatePage(input.courseId, collision.page.url, input.html);
-      return publishSuccess(updated, 'updated', a11yWarnings, conformance, ackEval, input);
+      return publishSuccess(updated, 'updated', conformance, ackEval, input);
     }
 
     const title = input.collisionAction === 'related' ? input.relatedPageTitle?.trim() : input.pageTitle;
@@ -392,7 +387,7 @@ export async function publishToCanvas(
     }
 
     const created = await api.createPage(input.courseId, title ?? input.pageTitle, input.html);
-    return publishSuccess(created, 'created', a11yWarnings, conformance, ackEval, input);
+    return publishSuccess(created, 'created', conformance, ackEval, input);
   } catch (err) {
     if (err instanceof CanvasApiError) return apiError(err, config);
 

@@ -26,7 +26,7 @@ whether it blocks publishing, and its limitations.
 
 Source of truth (for developers):
 
-- `packages/canvas-design-studio/src/tools/accessibility.ts` — the WCAG audit (`auditAccessibility`)
+- `packages/canvas-design-studio/src/tools/accessibility.ts` — the in-house WCAG audit (`auditAccessibility`), one engine behind `runConformanceCheck`
 - `packages/canvas-design-studio/src/tools/contrast.ts` — the contrast-ratio math
 - `packages/canvas-design-studio/src/tools/validate.ts` — Canvas RCE validation + the blocking `alt` rule
 - `packages/canvas-design-studio/src/tools/widget/a11y.ts` — widget accessibility scaffolding
@@ -217,7 +217,9 @@ reports it.
 
 ## Layer 1 — the WCAG content audit
 
-`auditAccessibility(html)` runs six independent checks and returns a list of warnings.
+`auditAccessibility(html)` is the in-house engine: it runs six independent checks and returns a
+list of warnings that `runConformanceCheck` merges with axe-core into the canonical report (every
+tool and workflow reads that report; none call this function directly).
 Each warning has a `check` id, a plain-English `message`, and a `context` snippet
 showing the offending markup. HTML comments are stripped before analysis.
 
@@ -340,7 +342,7 @@ Every rendered widget includes (`widget/a11y.ts`):
 |---|---|---|
 | `validate_canvas_html` | ✅ sets `isError` on failure | ✅ reported as advisory |
 | `generate_canvas_page` / `generate_page` / `generate_week` / `generate_course` | ✅ | ✅ appended to warnings |
-| `redesign_canvas_page` | — | ✅ carried in `accessibilityWarnings` |
+| `redesign_canvas_page` | — | ✅ carried in the `conformance` report |
 | `publish_to_canvas` / course publish (V&R) | ✅ | ✅ via `scanWarnings` (`kind: 'a11y'`, `severity: 'warn'`) |
 
 In the **publish / Versioning & Rollback** flow, the audit runs as part of the

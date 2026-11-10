@@ -103,6 +103,8 @@ describe('renderPageDecoupled', () => {
       config,
     });
 
+    expect(result).not.toHaveProperty('accessibility');
+    expect(result.conformance).toBeDefined();
     expect(result.unresolvedImagePrompts).toBeDefined();
     expect(result.unresolvedImagePrompts['hero']).toBeDefined();
 

@@ -1,9 +1,11 @@
 import { wcagContrastRatio } from './contrast.js';
 
 /**
- * @deprecated Prefer the canonical `AccessibilityFinding` model from
- * `@canvas-toolchain/shared-types` via `runConformanceCheck` (src/tools/a11y/).
- * Kept for command-and-control compatibility; removal tracked for Phase 2.
+ * The in-house WCAG content audit: the Canvas-aware checks that back the in-house
+ * engine (`src/tools/a11y/inhouse.ts`). This is an engine primitive, not a public
+ * API: callers wanting an accessibility result should use `runConformanceCheck` /
+ * `runPolicyConformanceCheck` (src/tools/a11y/), which merge this with axe-core and
+ * return the canonical `ConformanceReport`.
  */
 export interface AccessibilityWarning {
   check: string;

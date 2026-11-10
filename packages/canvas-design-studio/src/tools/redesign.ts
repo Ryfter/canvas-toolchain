@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { auditAccessibility, type AccessibilityWarning } from './accessibility.js';
 import { runPolicyConformanceCheck } from './a11y/policy.js';
 import type { CritiqueFinding } from './critique.js';
 import type { ConformanceReport } from '@canvas-toolchain/shared-types';
@@ -18,9 +17,7 @@ export interface RedesignResult {
   html: string;
   appliedFixes: string[];
   skippedFindings: string[];
-  /** @deprecated Use `conformance`. Kept for command-and-control until Phase 2. */
-  accessibilityWarnings?: AccessibilityWarning[];
-  conformance?: ConformanceReport;
+  conformance: ConformanceReport;
   kbContext?: string;
 }
 
@@ -77,14 +74,12 @@ export async function redesignCanvasPage(input: RedesignInput): Promise<Redesign
     skippedFindings.push(finding.suggestion);
   }
 
-  const a11y = auditAccessibility(html);
   const conformance = await runPolicyConformanceCheck(html);
 
   const result: RedesignResult = {
     html,
     appliedFixes,
     skippedFindings,
-    ...(a11y.length > 0 && { accessibilityWarnings: a11y }),
     conformance,
   };
 
