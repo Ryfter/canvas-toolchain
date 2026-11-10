@@ -33,6 +33,43 @@ Nothing changes if you ignore all of this: your tools and workflows behave as be
 
 Full diff: [v2.3.0...v2.4.0](https://github.com/Ryfter/canvas-toolchain/compare/v2.3.0...v2.4.0)
 
+## What's new in v2.3.0
+
+**Quiz checking and drafting, a weekly "are my course shells ready" check, and an easier install.**
+
+- **Check your quizzes before students see them.** Ask Claude to review a Classic quiz in Canvas (or a local quiz file) and it reports missing answer keys, empty or duplicated questions, point totals that don't add up, and dates that don't match your week plan. It only reads; it never changes the quiz. It also flags features that New Quizzes handles differently, so a move later is not a surprise.
+- **Draft a quiz from your own material.** Point Claude at a book chapter, slides or a lecture and it writes a local quiz draft with your difficulty mix, saved under the week's folder. It does not publish to Canvas; you review it first.
+- **A weekly shell-readiness check.** Ask Claude to look over your live Canvas shell for the current week: it works out "Week N" from your module titles and term start, and checks that due, unlock and lock dates line up. You can opt in to a weekly reminder day (Saturday is suggested). It only saves your preference; nothing is scheduled on your computer.
+- **Easier install and health check.** A one-line helper script downloads the latest installer, and the health check can now print a machine-readable report, which helps when someone else is setting up your machine.
+
+Nothing to do on your side; everything above is new and optional.
+
+Full diff: [v2.2.1...v2.3.0](https://github.com/Ryfter/canvas-toolchain/compare/v2.2.1...v2.3.0)
+
+## What's new in v2.2.1
+
+**`npx canvas-toolchain` really works now.**
+
+- **The `npx` path is live on npm.** v2.2.0 was meant to publish to npm but the publish was rejected (npm no longer accepts long-lived tokens that skip two-factor sign-in). v2.2.1 publishes through npm's trusted-publishing sign-in from our build system instead, so anyone with Node can run `npx canvas-toolchain` without cloning anything.
+- **The installer has no new features.** If you already installed 2.2.0 you are not missing anything but the version number; this release exists to put the npm packages out.
+
+Full diff: [v2.2.0...v2.2.1](https://github.com/Ryfter/canvas-toolchain/compare/v2.2.0...v2.2.1)
+
+## What's new in v2.2.0
+
+**One product name, any AI client, and the installer's module picker works again.**
+
+- **One command, one name.** The toolchain is now just **Canvas Toolchain**. Talk to it from any MCP-capable AI client, through the native installer or (from v2.2.1) `npx canvas-toolchain`. The installer still auto-wires Claude Desktop, Claude Code, Codex CLI, Gemini CLI, Cursor, VS Code, Kiro and Antigravity.
+- **The installer's "Additional modules" list works again.** After v2.1.0 the live module catalog moved to a newer format, and every published installer showed "Module catalog unavailable." This installer understands both formats, so the list loads.
+- **Canvas host names are forgiven everywhere.** Typing `yourschool` (or pasting a full `https://...` link) becomes a real Canvas address whether you enter it in the installer or in chat. Addresses already saved wrongly fix themselves the next time they are read.
+- **The status check tells the truth about your key.** `get_cc_status` now counts an Anthropic key saved in your settings, not only one set as an environment variable.
+- **Canvas Backup's link is the real one.** The module directory no longer points to a missing page.
+- **The manuals match the product.** The guides now agree on which AI apps the installer wires and which tools exist.
+
+Nothing you already do goes away. Generate-and-paste without a Canvas token is still first-class.
+
+Full diff: [v2.1.0...v2.2.0](https://github.com/Ryfter/canvas-toolchain/compare/v2.1.0...v2.2.0)
+
 ## What's new in v2.1.0
 
 **One product, one Releases page — and the update notice works again.**

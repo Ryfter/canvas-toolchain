@@ -36,6 +36,13 @@ intra-workspace dependency pin (`@canvas-toolchain/*` or `canvas-toolchain`) equ
 the tag version exactly (no `*`, no ranges). Workspaces with `"private": true` are
 skipped by the guard (and by `npm publish --workspaces`).
 
+**Before you tag:** put the release's plain-English notes at the top of
+`.github/RELEASE_TEMPLATE/installer-release.md` as `## What's new in vX.Y.Z`. The
+installer workflow publishes that file as the GitHub Release body. CI runs
+`node scripts/check-release-notes.mjs`, which fails when the top section does not name
+the version in the root `package.json`, so the notes have to land in the same PR as
+the version bump.
+
 ## Post-publish smoke (run once after each release)
 
 ```bash
