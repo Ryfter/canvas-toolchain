@@ -5,9 +5,9 @@
  * the suite runs on any OS and never touches the real home directory.
  * `env: {}` is always passed so the real APPDATA / CC_HOME are never read.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync,
+  promises as fsp, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync,
   rmSync, symlinkSync, utimesSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -516,5 +516,40 @@ describe('migrateLegacyAppHome: journal and failures', () => {
   it('never throws, even on nonsense input', async () => {
     const r = await migrateLegacyAppHome('nope' as never, win());
     expect(['failed', 'nothing-to-do']).toContain(r.outcome);
+  });
+});
+
+describe('migrateLegacyAppHome: rename while a file is open (Windows)', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  // Windows refuses to rename a folder while another run holds a file inside it open.
+  // The handle closes within milliseconds, so the rename is retried, not given up.
+  const busyThenOk = (times: number, errno: string) => {
+    const real = fsp.rename.bind(fsp);
+    let n = 0;
+    return vi.spyOn(fsp, 'rename').mockImplementation(async (from, to) => {
+      if (String(from).endsWith('.command-and-control') && n++ < times) {
+        throw Object.assign(new Error(errno), { code: errno });
+      }
+      return real(from, to);
+    });
+  };
+
+  it.each(['EPERM', 'EBUSY', 'EACCES'])('retries a transient %s and still renames', async (errno) => {
+    seedLegacyCc();
+    const spy = busyThenOk(2, errno);
+    const r = await migrateLegacyAppHome('cc', win());
+    expect(r.outcome).toBe('migrated');
+    expect(r.legacyRenamedTo).toMatch(/\.migrated-/);
+    expect(spy.mock.calls.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('gives up after the retry budget and reports partial (retried next boot)', async () => {
+    seedLegacyCc();
+    busyThenOk(1000, 'EPERM');
+    const r = await migrateLegacyAppHome('cc', win());
+    expect(r.outcome).toBe('partial');
+    expect(r.legacyRenamedTo ?? null).toBeNull();
+    expect(existsSync(join(home, '.command-and-control'))).toBe(true);
   });
 });
