@@ -1,5 +1,15 @@
 # Canvas Toolchain Installer
 
+## What's new in v2.4.2
+
+**A small polish and reliability update. Nothing to do on your side.**
+
+- **The health check no longer prints your Canvas address.** `doctor` now says things like "Canvas did not accept the stored token" instead of repeating the web address, so that detail stays out of your AI chat.
+- **You can save a module's login while offline.** Setting up a module's own Canvas, Anthropic or Panopto login normally checks it against the service first. If you're offline or the service is down, you can now ask to save it without that check; Claude tells you it was saved unchecked, and you can test it later.
+- **More reliable first start on Windows.** If two copies of the toolchain started at the same instant, the one-time move of your settings could occasionally stop short and finish on the next start. It now waits a moment and finishes the first time. Your files were never at risk.
+
+Full diff: [v2.4.1...v2.4.2](https://github.com/Ryfter/canvas-toolchain/compare/v2.4.1...v2.4.2)
+
 ## What's new in v2.4.1
 
 **A small reliability and security update to 2.4.0. Nothing to do on your side.**
